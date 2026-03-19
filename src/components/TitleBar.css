@@ -1,0 +1,71 @@
+.titlebar {
+  display: flex;
+  align-items: center;
+  height: var(--titlebar-height);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.titlebar-drag-region {
+  position: absolute;
+  inset: 0;
+  -webkit-app-region: drag;
+}
+
+.titlebar-app-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 16px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.titlebar-logo {
+  color: var(--accent);
+  font-size: 16px;
+}
+
+.titlebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.titlebar-version {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 1px 6px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+}
+
+.titlebar-controls {
+  display: flex;
+  margin-left: auto;
+  z-index: 1;
+  -webkit-app-region: no-drag;
+}
+
+.titlebar-btn {
+  width: 46px;
+  height: var(--titlebar-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background var(--transition), color var(--transition);
+}
+
+.titlebar-btn:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.titlebar-btn.close:hover {
+  background: var(--danger);
+  color: #fff;
+}
