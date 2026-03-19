@@ -1,0 +1,1718 @@
+[
+  {
+    "name": "山形鋼",
+    "sizes": [
+      {
+        "size": "100x100x10",
+        "weightPerMeter": 19.0
+      },
+      {
+        "size": "100x100x13",
+        "weightPerMeter": 24.31
+      },
+      {
+        "size": "100x100x7",
+        "weightPerMeter": 13.62
+      },
+      {
+        "size": "100x75x10",
+        "weightPerMeter": 16.5
+      },
+      {
+        "size": "100x75x7",
+        "weightPerMeter": 11.87
+      },
+      {
+        "size": "120x120x8",
+        "weightPerMeter": 18.76
+      },
+      {
+        "size": "125x75x10",
+        "weightPerMeter": 19.0
+      },
+      {
+        "size": "125x75x13",
+        "weightPerMeter": 24.31
+      },
+      {
+        "size": "125x75x7",
+        "weightPerMeter": 13.62
+      },
+      {
+        "size": "125x90x10",
+        "weightPerMeter": 20.5
+      },
+      {
+        "size": "125x90x13",
+        "weightPerMeter": 26.26
+      },
+      {
+        "size": "130x130x12",
+        "weightPerMeter": 29.76
+      },
+      {
+        "size": "130x130x15",
+        "weightPerMeter": 36.75
+      },
+      {
+        "size": "130x130x9",
+        "weightPerMeter": 22.74
+      },
+      {
+        "size": "150x100x12",
+        "weightPerMeter": 28.56
+      },
+      {
+        "size": "150x100x15",
+        "weightPerMeter": 35.25
+      },
+      {
+        "size": "150x100x9",
+        "weightPerMeter": 21.84
+      },
+      {
+        "size": "150x150x12",
+        "weightPerMeter": 34.77
+      },
+      {
+        "size": "150x150x15",
+        "weightPerMeter": 42.74
+      },
+      {
+        "size": "150x150x19",
+        "weightPerMeter": 53.38
+      },
+      {
+        "size": "150x90x12",
+        "weightPerMeter": 27.36
+      },
+      {
+        "size": "150x90x9",
+        "weightPerMeter": 20.94
+      },
+      {
+        "size": "175x175x12",
+        "weightPerMeter": 40.52
+      },
+      {
+        "size": "175x175x15",
+        "weightPerMeter": 50.21
+      },
+      {
+        "size": "200x200x15",
+        "weightPerMeter": 57.75
+      },
+      {
+        "size": "200x200x20",
+        "weightPerMeter": 76.0
+      },
+      {
+        "size": "200x200x25",
+        "weightPerMeter": 93.75
+      },
+      {
+        "size": "200x90x9",
+        "weightPerMeter": 29.66
+      },
+      {
+        "size": "200x90x9/14",
+        "weightPerMeter": 29.66
+      },
+      {
+        "size": "200x90x9x14",
+        "weightPerMeter": 29.66
+      },
+      {
+        "size": "250x250x25",
+        "weightPerMeter": 119.4
+      },
+      {
+        "size": "250x250x35",
+        "weightPerMeter": 162.6
+      },
+      {
+        "size": "250x90x10",
+        "weightPerMeter": 37.47
+      },
+      {
+        "size": "250x90x10/15",
+        "weightPerMeter": 37.47
+      },
+      {
+        "size": "250x90x10x15",
+        "weightPerMeter": 37.47
+      },
+      {
+        "size": "250x90x12",
+        "weightPerMeter": 42.95
+      },
+      {
+        "size": "250x90x12/16",
+        "weightPerMeter": 42.95
+      },
+      {
+        "size": "250x90x12x16",
+        "weightPerMeter": 42.95
+      },
+      {
+        "size": "25x25x3",
+        "weightPerMeter": 1.427
+      },
+      {
+        "size": "300x90x11",
+        "weightPerMeter": 46.22
+      },
+      {
+        "size": "300x90x11/16",
+        "weightPerMeter": 46.22
+      },
+      {
+        "size": "300x90x11x16",
+        "weightPerMeter": 46.22
+      },
+      {
+        "size": "300x90x13",
+        "weightPerMeter": 52.67
+      },
+      {
+        "size": "300x90x13/17",
+        "weightPerMeter": 52.67
+      },
+      {
+        "size": "300x90x13x17",
+        "weightPerMeter": 52.67
+      },
+      {
+        "size": "30x30x3",
+        "weightPerMeter": 1.727
+      },
+      {
+        "size": "350x100x12",
+        "weightPerMeter": 57.74
+      },
+      {
+        "size": "350x100x12/17",
+        "weightPerMeter": 57.74
+      },
+      {
+        "size": "350x100x12x17",
+        "weightPerMeter": 57.74
+      },
+      {
+        "size": "400x100x13",
+        "weightPerMeter": 68.59
+      },
+      {
+        "size": "400x100x13/18",
+        "weightPerMeter": 68.59
+      },
+      {
+        "size": "400x100x13x18",
+        "weightPerMeter": 68.59
+      },
+      {
+        "size": "40x40x3",
+        "weightPerMeter": 2.336
+      },
+      {
+        "size": "40x40x5",
+        "weightPerMeter": 3.755
+      },
+      {
+        "size": "45x45x4",
+        "weightPerMeter": 3.492
+      },
+      {
+        "size": "45x45x5",
+        "weightPerMeter": 4.302
+      },
+      {
+        "size": "50x50x4",
+        "weightPerMeter": 3.892
+      },
+      {
+        "size": "50x50x5",
+        "weightPerMeter": 4.802
+      },
+      {
+        "size": "50x50x6",
+        "weightPerMeter": 5.644
+      },
+      {
+        "size": "60x60x4",
+        "weightPerMeter": 4.692
+      },
+      {
+        "size": "60x60x5",
+        "weightPerMeter": 5.802
+      },
+      {
+        "size": "65x65x5",
+        "weightPerMeter": 6.367
+      },
+      {
+        "size": "65x65x6",
+        "weightPerMeter": 7.527
+      },
+      {
+        "size": "65x65x8",
+        "weightPerMeter": 9.761
+      },
+      {
+        "size": "70x70x6",
+        "weightPerMeter": 8.127
+      },
+      {
+        "size": "75x75x12",
+        "weightPerMeter": 16.56
+      },
+      {
+        "size": "75x75x6",
+        "weightPerMeter": 8.727
+      },
+      {
+        "size": "75x75x9",
+        "weightPerMeter": 12.69
+      },
+      {
+        "size": "80x80x6",
+        "weightPerMeter": 9.327
+      },
+      {
+        "size": "90x75x9",
+        "weightPerMeter": 14.04
+      },
+      {
+        "size": "90x90x10",
+        "weightPerMeter": 17.0
+      },
+      {
+        "size": "90x90x13",
+        "weightPerMeter": 21.71
+      },
+      {
+        "size": "90x90x6",
+        "weightPerMeter": 10.55
+      },
+      {
+        "size": "90x90x7",
+        "weightPerMeter": 12.22
+      }
+    ]
+  },
+  {
+    "name": "溝形鋼",
+    "sizes": [
+      {
+        "size": "100x50x5",
+        "weightPerMeter": 11.92
+      },
+      {
+        "size": "100x50x5.5",
+        "weightPerMeter": 11.92
+      },
+      {
+        "size": "100x50x5/7.5",
+        "weightPerMeter": 11.92
+      },
+      {
+        "size": "100x50x5x7.5",
+        "weightPerMeter": 11.92
+      },
+      {
+        "size": "125x65x6",
+        "weightPerMeter": 17.11
+      },
+      {
+        "size": "125x65x6/8",
+        "weightPerMeter": 17.11
+      },
+      {
+        "size": "125x65x6x8",
+        "weightPerMeter": 17.11
+      },
+      {
+        "size": "150x75x6.5",
+        "weightPerMeter": 23.71
+      },
+      {
+        "size": "150x75x6.5/10",
+        "weightPerMeter": 23.71
+      },
+      {
+        "size": "150x75x6.50",
+        "weightPerMeter": 23.71
+      },
+      {
+        "size": "150x75x6.5x10",
+        "weightPerMeter": 23.71
+      },
+      {
+        "size": "150x75x9",
+        "weightPerMeter": 30.59
+      },
+      {
+        "size": "150x75x9/12.5",
+        "weightPerMeter": 30.59
+      },
+      {
+        "size": "150x75x92.5",
+        "weightPerMeter": 30.59
+      },
+      {
+        "size": "150x75x9x12.5",
+        "weightPerMeter": 30.59
+      },
+      {
+        "size": "180x75x7",
+        "weightPerMeter": 27.2
+      },
+      {
+        "size": "180x75x7/10.5",
+        "weightPerMeter": 27.2
+      },
+      {
+        "size": "180x75x70.5",
+        "weightPerMeter": 27.2
+      },
+      {
+        "size": "180x75x7x10.5",
+        "weightPerMeter": 27.2
+      },
+      {
+        "size": "200x80x7.5",
+        "weightPerMeter": 31.33
+      },
+      {
+        "size": "200x80x7.5/11",
+        "weightPerMeter": 31.33
+      },
+      {
+        "size": "200x80x7.51",
+        "weightPerMeter": 31.33
+      },
+      {
+        "size": "200x80x7.5x11",
+        "weightPerMeter": 31.33
+      },
+      {
+        "size": "200x90x8",
+        "weightPerMeter": 38.65
+      },
+      {
+        "size": "200x90x8/13.5",
+        "weightPerMeter": 38.65
+      },
+      {
+        "size": "200x90x83.5",
+        "weightPerMeter": 38.65
+      },
+      {
+        "size": "200x90x8x13.5",
+        "weightPerMeter": 38.65
+      },
+      {
+        "size": "250x90x11",
+        "weightPerMeter": 51.17
+      },
+      {
+        "size": "250x90x11/14.5",
+        "weightPerMeter": 51.17
+      },
+      {
+        "size": "250x90x114.5",
+        "weightPerMeter": 51.17
+      },
+      {
+        "size": "250x90x11x14.5",
+        "weightPerMeter": 51.17
+      },
+      {
+        "size": "250x90x9",
+        "weightPerMeter": 44.07
+      },
+      {
+        "size": "250x90x9/13",
+        "weightPerMeter": 44.07
+      },
+      {
+        "size": "250x90x93",
+        "weightPerMeter": 44.07
+      },
+      {
+        "size": "250x90x9x13",
+        "weightPerMeter": 44.07
+      },
+      {
+        "size": "300x90x10",
+        "weightPerMeter": 55.74
+      },
+      {
+        "size": "300x90x10/15.5",
+        "weightPerMeter": 55.74
+      },
+      {
+        "size": "300x90x105.5",
+        "weightPerMeter": 55.74
+      },
+      {
+        "size": "300x90x10x15.5",
+        "weightPerMeter": 55.74
+      },
+      {
+        "size": "300x90x12",
+        "weightPerMeter": 61.9
+      },
+      {
+        "size": "300x90x12/16",
+        "weightPerMeter": 61.9
+      },
+      {
+        "size": "300x90x126",
+        "weightPerMeter": 61.9
+      },
+      {
+        "size": "300x90x12x16",
+        "weightPerMeter": 61.9
+      },
+      {
+        "size": "300x90x9",
+        "weightPerMeter": 48.57
+      },
+      {
+        "size": "300x90x9/13",
+        "weightPerMeter": 48.57
+      },
+      {
+        "size": "300x90x93",
+        "weightPerMeter": 48.57
+      },
+      {
+        "size": "300x90x9x13",
+        "weightPerMeter": 48.57
+      },
+      {
+        "size": "380x100x10.5",
+        "weightPerMeter": 69.39
+      },
+      {
+        "size": "380x100x10.5/16",
+        "weightPerMeter": 69.39
+      },
+      {
+        "size": "380x100x10.56",
+        "weightPerMeter": 69.39
+      },
+      {
+        "size": "380x100x10.5x16",
+        "weightPerMeter": 69.39
+      },
+      {
+        "size": "380x100x13",
+        "weightPerMeter": 85.71
+      },
+      {
+        "size": "380x100x13/16.5",
+        "weightPerMeter": 78.96
+      },
+      {
+        "size": "380x100x13/20",
+        "weightPerMeter": 85.71
+      },
+      {
+        "size": "380x100x130",
+        "weightPerMeter": 85.71
+      },
+      {
+        "size": "380x100x136.5",
+        "weightPerMeter": 78.96
+      },
+      {
+        "size": "380x100x13x16.5",
+        "weightPerMeter": 78.96
+      },
+      {
+        "size": "380x100x13x20",
+        "weightPerMeter": 85.71
+      },
+      {
+        "size": "75x40x5",
+        "weightPerMeter": 8.818
+      },
+      {
+        "size": "75x40x5/7",
+        "weightPerMeter": 8.818
+      },
+      {
+        "size": "75x40x5x7",
+        "weightPerMeter": 8.818
+      }
+    ]
+  },
+  {
+    "name": "Ｈ形鋼",
+    "sizes": [
+      {
+        "size": "100x100x6",
+        "weightPerMeter": 21.59
+      },
+      {
+        "size": "100x100x6/8",
+        "weightPerMeter": 21.59
+      },
+      {
+        "size": "100x100x6x8",
+        "weightPerMeter": 21.59
+      },
+      {
+        "size": "100x50x5",
+        "weightPerMeter": 11.85
+      },
+      {
+        "size": "100x50x5/7",
+        "weightPerMeter": 11.85
+      },
+      {
+        "size": "100x50x5x7",
+        "weightPerMeter": 11.85
+      },
+      {
+        "size": "125x125x6.5",
+        "weightPerMeter": 30.0
+      },
+      {
+        "size": "125x125x6.5/9",
+        "weightPerMeter": 30.0
+      },
+      {
+        "size": "125x125x6.5x9",
+        "weightPerMeter": 30.0
+      },
+      {
+        "size": "125x60x6",
+        "weightPerMeter": 16.69
+      },
+      {
+        "size": "125x60x6/8",
+        "weightPerMeter": 16.69
+      },
+      {
+        "size": "125x60x6x8",
+        "weightPerMeter": 16.69
+      },
+      {
+        "size": "150x100x6",
+        "weightPerMeter": 26.35
+      },
+      {
+        "size": "150x100x6/9",
+        "weightPerMeter": 26.35
+      },
+      {
+        "size": "150x100x6x9",
+        "weightPerMeter": 26.35
+      },
+      {
+        "size": "150x150x7",
+        "weightPerMeter": 39.65
+      },
+      {
+        "size": "150x150x7/10",
+        "weightPerMeter": 39.65
+      },
+      {
+        "size": "150x150x70",
+        "weightPerMeter": 39.65
+      },
+      {
+        "size": "150x150x7x10",
+        "weightPerMeter": 39.65
+      },
+      {
+        "size": "150x75x5",
+        "weightPerMeter": 17.85
+      },
+      {
+        "size": "150x75x5/7",
+        "weightPerMeter": 17.85
+      },
+      {
+        "size": "150x75x5x7",
+        "weightPerMeter": 17.85
+      },
+      {
+        "size": "175x175x7.5",
+        "weightPerMeter": 51.42
+      },
+      {
+        "size": "175x175x7.5/11",
+        "weightPerMeter": 51.42
+      },
+      {
+        "size": "175x175x7.51",
+        "weightPerMeter": 51.42
+      },
+      {
+        "size": "175x175x7.5x11",
+        "weightPerMeter": 51.42
+      },
+      {
+        "size": "175x90x5",
+        "weightPerMeter": 22.9
+      },
+      {
+        "size": "175x90x5/8",
+        "weightPerMeter": 22.9
+      },
+      {
+        "size": "175x90x5x8",
+        "weightPerMeter": 22.9
+      },
+      {
+        "size": "200x100x4.5",
+        "weightPerMeter": 22.69
+      },
+      {
+        "size": "200x100x4.5/7",
+        "weightPerMeter": 22.69
+      },
+      {
+        "size": "200x100x4.5x7",
+        "weightPerMeter": 22.69
+      },
+      {
+        "size": "200x100x5.5",
+        "weightPerMeter": 26.67
+      },
+      {
+        "size": "200x100x5.5/8",
+        "weightPerMeter": 26.67
+      },
+      {
+        "size": "200x100x5.5x8",
+        "weightPerMeter": 26.67
+      },
+      {
+        "size": "200x150x6",
+        "weightPerMeter": 38.11
+      },
+      {
+        "size": "200x150x6/9",
+        "weightPerMeter": 38.11
+      },
+      {
+        "size": "200x150x6x9",
+        "weightPerMeter": 38.11
+      },
+      {
+        "size": "200x200x12",
+        "weightPerMeter": 71.53
+      },
+      {
+        "size": "200x200x12/12",
+        "weightPerMeter": 71.53
+      },
+      {
+        "size": "200x200x122",
+        "weightPerMeter": 71.53
+      },
+      {
+        "size": "200x200x12x12",
+        "weightPerMeter": 71.53
+      },
+      {
+        "size": "200x200x8",
+        "weightPerMeter": 63.53
+      },
+      {
+        "size": "200x200x8/12",
+        "weightPerMeter": 63.53
+      },
+      {
+        "size": "200x200x82",
+        "weightPerMeter": 63.53
+      },
+      {
+        "size": "200x200x8x12",
+        "weightPerMeter": 63.53
+      },
+      {
+        "size": "250x125x5",
+        "weightPerMeter": 31.99
+      },
+      {
+        "size": "250x125x5/8",
+        "weightPerMeter": 31.99
+      },
+      {
+        "size": "250x125x5x8",
+        "weightPerMeter": 31.99
+      },
+      {
+        "size": "250x125x6",
+        "weightPerMeter": 36.97
+      },
+      {
+        "size": "250x125x6/9",
+        "weightPerMeter": 36.97
+      },
+      {
+        "size": "250x125x6x9",
+        "weightPerMeter": 36.97
+      },
+      {
+        "size": "250x175x7",
+        "weightPerMeter": 55.49
+      },
+      {
+        "size": "250x175x7/11",
+        "weightPerMeter": 55.49
+      },
+      {
+        "size": "250x175x71",
+        "weightPerMeter": 55.49
+      },
+      {
+        "size": "250x175x7x11",
+        "weightPerMeter": 55.49
+      },
+      {
+        "size": "250x250x14",
+        "weightPerMeter": 103.9
+      },
+      {
+        "size": "250x250x14/14",
+        "weightPerMeter": 103.9
+      },
+      {
+        "size": "250x250x144",
+        "weightPerMeter": 103.9
+      },
+      {
+        "size": "250x250x14x14",
+        "weightPerMeter": 103.9
+      },
+      {
+        "size": "250x250x9",
+        "weightPerMeter": 91.43
+      },
+      {
+        "size": "250x250x9/14",
+        "weightPerMeter": 91.43
+      },
+      {
+        "size": "250x250x94",
+        "weightPerMeter": 91.43
+      },
+      {
+        "size": "250x250x9x14",
+        "weightPerMeter": 91.43
+      },
+      {
+        "size": "300x150x5.5",
+        "weightPerMeter": 40.8
+      },
+      {
+        "size": "300x150x5.5/8",
+        "weightPerMeter": 40.8
+      },
+      {
+        "size": "300x150x5.5x8",
+        "weightPerMeter": 40.8
+      },
+      {
+        "size": "300x150x6.5",
+        "weightPerMeter": 46.78
+      },
+      {
+        "size": "300x150x6.5/9",
+        "weightPerMeter": 46.78
+      },
+      {
+        "size": "300x150x6.5x9",
+        "weightPerMeter": 46.78
+      },
+      {
+        "size": "300x200x8",
+        "weightPerMeter": 71.05
+      },
+      {
+        "size": "300x200x8/12",
+        "weightPerMeter": 71.05
+      },
+      {
+        "size": "300x200x82",
+        "weightPerMeter": 71.05
+      },
+      {
+        "size": "300x200x8x12",
+        "weightPerMeter": 71.05
+      },
+      {
+        "size": "300x300x10",
+        "weightPerMeter": 118.4
+      },
+      {
+        "size": "300x300x10/15",
+        "weightPerMeter": 118.4
+      },
+      {
+        "size": "300x300x105",
+        "weightPerMeter": 118.4
+      },
+      {
+        "size": "300x300x10x15",
+        "weightPerMeter": 118.4
+      },
+      {
+        "size": "300x300x12",
+        "weightPerMeter": 106.3
+      },
+      {
+        "size": "300x300x12/12",
+        "weightPerMeter": 106.3
+      },
+      {
+        "size": "300x300x122",
+        "weightPerMeter": 106.3
+      },
+      {
+        "size": "300x300x12x12",
+        "weightPerMeter": 106.3
+      },
+      {
+        "size": "300x300x15",
+        "weightPerMeter": 133.4
+      },
+      {
+        "size": "300x300x15/15",
+        "weightPerMeter": 133.4
+      },
+      {
+        "size": "300x300x155",
+        "weightPerMeter": 133.4
+      },
+      {
+        "size": "300x300x15x15",
+        "weightPerMeter": 133.4
+      },
+      {
+        "size": "350x175x6",
+        "weightPerMeter": 52.45
+      },
+      {
+        "size": "350x175x6/9",
+        "weightPerMeter": 52.45
+      },
+      {
+        "size": "350x175x6x9",
+        "weightPerMeter": 52.45
+      },
+      {
+        "size": "350x175x7",
+        "weightPerMeter": 62.91
+      },
+      {
+        "size": "350x175x7/11",
+        "weightPerMeter": 62.91
+      },
+      {
+        "size": "350x175x71",
+        "weightPerMeter": 62.91
+      },
+      {
+        "size": "350x175x7x11",
+        "weightPerMeter": 62.91
+      },
+      {
+        "size": "350x250x9",
+        "weightPerMeter": 99.53
+      },
+      {
+        "size": "350x250x9/14",
+        "weightPerMeter": 99.53
+      },
+      {
+        "size": "350x250x94",
+        "weightPerMeter": 99.53
+      },
+      {
+        "size": "350x250x9x14",
+        "weightPerMeter": 99.53
+      },
+      {
+        "size": "350x350x10",
+        "weightPerMeter": 144.0
+      },
+      {
+        "size": "350x350x10/16",
+        "weightPerMeter": 144.0
+      },
+      {
+        "size": "350x350x106",
+        "weightPerMeter": 144.0
+      },
+      {
+        "size": "350x350x10x16",
+        "weightPerMeter": 144.0
+      },
+      {
+        "size": "350x350x12",
+        "weightPerMeter": 171.9
+      },
+      {
+        "size": "350x350x12/19",
+        "weightPerMeter": 171.9
+      },
+      {
+        "size": "350x350x129",
+        "weightPerMeter": 171.9
+      },
+      {
+        "size": "350x350x12x19",
+        "weightPerMeter": 171.9
+      },
+      {
+        "size": "400x200x7",
+        "weightPerMeter": 71.41
+      },
+      {
+        "size": "400x200x7/11",
+        "weightPerMeter": 71.41
+      },
+      {
+        "size": "400x200x71",
+        "weightPerMeter": 71.41
+      },
+      {
+        "size": "400x200x7x11",
+        "weightPerMeter": 71.41
+      },
+      {
+        "size": "400x200x8",
+        "weightPerMeter": 83.37
+      },
+      {
+        "size": "400x200x8/13",
+        "weightPerMeter": 83.37
+      },
+      {
+        "size": "400x200x83",
+        "weightPerMeter": 83.37
+      },
+      {
+        "size": "400x200x8x13",
+        "weightPerMeter": 83.37
+      },
+      {
+        "size": "400x300x10",
+        "weightPerMeter": 133.2
+      },
+      {
+        "size": "400x300x10/16",
+        "weightPerMeter": 133.2
+      },
+      {
+        "size": "400x300x106",
+        "weightPerMeter": 133.2
+      },
+      {
+        "size": "400x300x10x16",
+        "weightPerMeter": 133.2
+      },
+      {
+        "size": "400x400x11",
+        "weightPerMeter": 186.8
+      },
+      {
+        "size": "400x400x11/18",
+        "weightPerMeter": 186.8
+      },
+      {
+        "size": "400x400x118",
+        "weightPerMeter": 186.8
+      },
+      {
+        "size": "400x400x11x18",
+        "weightPerMeter": 186.8
+      },
+      {
+        "size": "400x400x13",
+        "weightPerMeter": 218.7
+      },
+      {
+        "size": "400x400x13/21",
+        "weightPerMeter": 218.7
+      },
+      {
+        "size": "400x400x131",
+        "weightPerMeter": 218.7
+      },
+      {
+        "size": "400x400x13x21",
+        "weightPerMeter": 218.7
+      },
+      {
+        "size": "400x400x15",
+        "weightPerMeter": 178.5
+      },
+      {
+        "size": "400x400x15/15",
+        "weightPerMeter": 178.5
+      },
+      {
+        "size": "400x400x155",
+        "weightPerMeter": 178.5
+      },
+      {
+        "size": "400x400x15x15",
+        "weightPerMeter": 178.5
+      },
+      {
+        "size": "400x400x18",
+        "weightPerMeter": 295.4
+      },
+      {
+        "size": "400x400x18/28",
+        "weightPerMeter": 295.4
+      },
+      {
+        "size": "400x400x188",
+        "weightPerMeter": 295.4
+      },
+      {
+        "size": "400x400x18x28",
+        "weightPerMeter": 295.4
+      },
+      {
+        "size": "400x400x20",
+        "weightPerMeter": 360.7
+      },
+      {
+        "size": "400x400x20/35",
+        "weightPerMeter": 360.7
+      },
+      {
+        "size": "400x400x205",
+        "weightPerMeter": 360.7
+      },
+      {
+        "size": "400x400x20x35",
+        "weightPerMeter": 360.7
+      },
+      {
+        "size": "400x400x21",
+        "weightPerMeter": 250.7
+      },
+      {
+        "size": "400x400x21/21",
+        "weightPerMeter": 250.7
+      },
+      {
+        "size": "400x400x211",
+        "weightPerMeter": 250.7
+      },
+      {
+        "size": "400x400x21x21",
+        "weightPerMeter": 250.7
+      },
+      {
+        "size": "400x400x30",
+        "weightPerMeter": 528.6
+      },
+      {
+        "size": "400x400x30/50",
+        "weightPerMeter": 528.6
+      },
+      {
+        "size": "400x400x300",
+        "weightPerMeter": 528.6
+      },
+      {
+        "size": "400x400x30x50",
+        "weightPerMeter": 528.6
+      },
+      {
+        "size": "400x400x45",
+        "weightPerMeter": 770.1
+      },
+      {
+        "size": "400x400x45/70",
+        "weightPerMeter": 770.1
+      },
+      {
+        "size": "400x400x450",
+        "weightPerMeter": 770.1
+      },
+      {
+        "size": "400x400x45x70",
+        "weightPerMeter": 770.1
+      },
+      {
+        "size": "450x200x8",
+        "weightPerMeter": 82.97
+      },
+      {
+        "size": "450x200x8/12",
+        "weightPerMeter": 82.97
+      },
+      {
+        "size": "450x200x82",
+        "weightPerMeter": 82.97
+      },
+      {
+        "size": "450x200x8x12",
+        "weightPerMeter": 82.97
+      },
+      {
+        "size": "450x200x9",
+        "weightPerMeter": 95.43
+      },
+      {
+        "size": "450x200x9/14",
+        "weightPerMeter": 95.43
+      },
+      {
+        "size": "450x200x94",
+        "weightPerMeter": 95.43
+      },
+      {
+        "size": "450x200x9x14",
+        "weightPerMeter": 95.43
+      },
+      {
+        "size": "450x300x11",
+        "weightPerMeter": 153.9
+      },
+      {
+        "size": "450x300x11/18",
+        "weightPerMeter": 153.9
+      },
+      {
+        "size": "450x300x118",
+        "weightPerMeter": 153.9
+      },
+      {
+        "size": "450x300x11x18",
+        "weightPerMeter": 153.9
+      },
+      {
+        "size": "500x200x10",
+        "weightPerMeter": 112.2
+      },
+      {
+        "size": "500x200x10/16",
+        "weightPerMeter": 112.2
+      },
+      {
+        "size": "500x200x106",
+        "weightPerMeter": 112.2
+      },
+      {
+        "size": "500x200x10x16",
+        "weightPerMeter": 112.2
+      },
+      {
+        "size": "500x200x11",
+        "weightPerMeter": 129.3
+      },
+      {
+        "size": "500x200x11/19",
+        "weightPerMeter": 129.3
+      },
+      {
+        "size": "500x200x119",
+        "weightPerMeter": 129.3
+      },
+      {
+        "size": "500x200x11x19",
+        "weightPerMeter": 129.3
+      },
+      {
+        "size": "500x200x9",
+        "weightPerMeter": 99.29
+      },
+      {
+        "size": "500x200x9/14",
+        "weightPerMeter": 99.29
+      },
+      {
+        "size": "500x200x94",
+        "weightPerMeter": 99.29
+      },
+      {
+        "size": "500x200x9x14",
+        "weightPerMeter": 99.29
+      },
+      {
+        "size": "500x300x11",
+        "weightPerMeter": 159.2
+      },
+      {
+        "size": "500x300x11/15",
+        "weightPerMeter": 141.2
+      },
+      {
+        "size": "500x300x11/18",
+        "weightPerMeter": 159.2
+      },
+      {
+        "size": "500x300x115",
+        "weightPerMeter": 141.2
+      },
+      {
+        "size": "500x300x118",
+        "weightPerMeter": 159.2
+      },
+      {
+        "size": "500x300x11x15",
+        "weightPerMeter": 141.2
+      },
+      {
+        "size": "500x300x11x18",
+        "weightPerMeter": 159.2
+      },
+      {
+        "size": "600x200x10",
+        "weightPerMeter": 117.8
+      },
+      {
+        "size": "600x200x10/15",
+        "weightPerMeter": 117.8
+      },
+      {
+        "size": "600x200x105",
+        "weightPerMeter": 117.8
+      },
+      {
+        "size": "600x200x10x15",
+        "weightPerMeter": 117.8
+      },
+      {
+        "size": "600x200x11",
+        "weightPerMeter": 131.7
+      },
+      {
+        "size": "600x200x11/17",
+        "weightPerMeter": 131.7
+      },
+      {
+        "size": "600x200x117",
+        "weightPerMeter": 131.7
+      },
+      {
+        "size": "600x200x11x17",
+        "weightPerMeter": 131.7
+      },
+      {
+        "size": "600x200x12",
+        "weightPerMeter": 149.8
+      },
+      {
+        "size": "600x200x12/20",
+        "weightPerMeter": 149.8
+      },
+      {
+        "size": "600x200x120",
+        "weightPerMeter": 149.8
+      },
+      {
+        "size": "600x200x12x20",
+        "weightPerMeter": 149.8
+      },
+      {
+        "size": "600x300x12",
+        "weightPerMeter": 187.2
+      },
+      {
+        "size": "600x300x12/17",
+        "weightPerMeter": 169.2
+      },
+      {
+        "size": "600x300x12/20",
+        "weightPerMeter": 187.2
+      },
+      {
+        "size": "600x300x120",
+        "weightPerMeter": 187.2
+      },
+      {
+        "size": "600x300x127",
+        "weightPerMeter": 169.2
+      },
+      {
+        "size": "600x300x12x17",
+        "weightPerMeter": 169.2
+      },
+      {
+        "size": "600x300x12x20",
+        "weightPerMeter": 187.2
+      },
+      {
+        "size": "600x300x14",
+        "weightPerMeter": 217.1
+      },
+      {
+        "size": "600x300x14/23",
+        "weightPerMeter": 217.1
+      },
+      {
+        "size": "600x300x143",
+        "weightPerMeter": 217.1
+      },
+      {
+        "size": "600x300x14x23",
+        "weightPerMeter": 217.1
+      },
+      {
+        "size": "700x300x13",
+        "weightPerMeter": 231.5
+      },
+      {
+        "size": "700x300x13/20",
+        "weightPerMeter": 207.5
+      },
+      {
+        "size": "700x300x13/24",
+        "weightPerMeter": 231.5
+      },
+      {
+        "size": "700x300x130",
+        "weightPerMeter": 207.5
+      },
+      {
+        "size": "700x300x134",
+        "weightPerMeter": 231.5
+      },
+      {
+        "size": "700x300x13x20",
+        "weightPerMeter": 207.5
+      },
+      {
+        "size": "700x300x13x24",
+        "weightPerMeter": 231.5
+      },
+      {
+        "size": "800x300x14",
+        "weightPerMeter": 263.5
+      },
+      {
+        "size": "800x300x14/22",
+        "weightPerMeter": 239.5
+      },
+      {
+        "size": "800x300x14/26",
+        "weightPerMeter": 263.5
+      },
+      {
+        "size": "800x300x142",
+        "weightPerMeter": 239.5
+      },
+      {
+        "size": "800x300x146",
+        "weightPerMeter": 263.5
+      },
+      {
+        "size": "800x300x14x22",
+        "weightPerMeter": 239.5
+      },
+      {
+        "size": "800x300x14x26",
+        "weightPerMeter": 263.5
+      },
+      {
+        "size": "900x300x15",
+        "weightPerMeter": 266.9
+      },
+      {
+        "size": "900x300x15/23",
+        "weightPerMeter": 266.9
+      },
+      {
+        "size": "900x300x153",
+        "weightPerMeter": 266.9
+      },
+      {
+        "size": "900x300x15x23",
+        "weightPerMeter": 266.9
+      },
+      {
+        "size": "900x300x16",
+        "weightPerMeter": 305.8
+      },
+      {
+        "size": "900x300x16/28",
+        "weightPerMeter": 305.8
+      },
+      {
+        "size": "900x300x168",
+        "weightPerMeter": 305.8
+      },
+      {
+        "size": "900x300x16x28",
+        "weightPerMeter": 305.8
+      },
+      {
+        "size": "900x300x18",
+        "weightPerMeter": 360.1
+      },
+      {
+        "size": "900x300x18/34",
+        "weightPerMeter": 360.1
+      },
+      {
+        "size": "900x300x184",
+        "weightPerMeter": 360.1
+      },
+      {
+        "size": "900x300x18x34",
+        "weightPerMeter": 360.1
+      }
+    ]
+  },
+  {
+    "name": "Ｉ形鋼",
+    "sizes": [
+      {
+        "size": "100x75x5",
+        "weightPerMeter": 16.43
+      },
+      {
+        "size": "100x75x5/8",
+        "weightPerMeter": 16.43
+      },
+      {
+        "size": "100x75x5x8",
+        "weightPerMeter": 16.43
+      },
+      {
+        "size": "125x75x5.5",
+        "weightPerMeter": 20.45
+      },
+      {
+        "size": "125x75x5.5/9.5",
+        "weightPerMeter": 20.45
+      },
+      {
+        "size": "125x75x5.5x9.5",
+        "weightPerMeter": 20.45
+      },
+      {
+        "size": "150x125x8.5",
+        "weightPerMeter": 46.15
+      },
+      {
+        "size": "150x125x8.5/14",
+        "weightPerMeter": 46.15
+      },
+      {
+        "size": "150x125x8.5x14",
+        "weightPerMeter": 46.15
+      },
+      {
+        "size": "150x75x5.5",
+        "weightPerMeter": 21.83
+      },
+      {
+        "size": "150x75x5.5/9.5",
+        "weightPerMeter": 21.83
+      },
+      {
+        "size": "150x75x5.5x9.5",
+        "weightPerMeter": 21.83
+      },
+      {
+        "size": "180x100x6",
+        "weightPerMeter": 30.06
+      },
+      {
+        "size": "180x100x6/10",
+        "weightPerMeter": 30.06
+      },
+      {
+        "size": "180x100x6x10",
+        "weightPerMeter": 30.06
+      },
+      {
+        "size": "200x100x7",
+        "weightPerMeter": 33.06
+      },
+      {
+        "size": "200x100x7/10",
+        "weightPerMeter": 33.06
+      },
+      {
+        "size": "200x100x7x10",
+        "weightPerMeter": 33.06
+      },
+      {
+        "size": "200x150x9",
+        "weightPerMeter": 64.16
+      },
+      {
+        "size": "200x150x9/16",
+        "weightPerMeter": 64.16
+      },
+      {
+        "size": "200x150x9x16",
+        "weightPerMeter": 64.16
+      },
+      {
+        "size": "250x125x10",
+        "weightPerMeter": 70.73
+      },
+      {
+        "size": "250x125x10/19",
+        "weightPerMeter": 70.73
+      },
+      {
+        "size": "250x125x10x19",
+        "weightPerMeter": 70.73
+      },
+      {
+        "size": "250x125x7.5",
+        "weightPerMeter": 48.79
+      },
+      {
+        "size": "250x125x7.5/12.5",
+        "weightPerMeter": 48.79
+      },
+      {
+        "size": "250x125x7.5x12.5",
+        "weightPerMeter": 48.79
+      },
+      {
+        "size": "300x150x10",
+        "weightPerMeter": 83.47
+      },
+      {
+        "size": "300x150x10/18.5",
+        "weightPerMeter": 83.47
+      },
+      {
+        "size": "300x150x10x18.5",
+        "weightPerMeter": 83.47
+      },
+      {
+        "size": "300x150x11.5",
+        "weightPerMeter": 97.88
+      },
+      {
+        "size": "300x150x11.5/22",
+        "weightPerMeter": 97.88
+      },
+      {
+        "size": "300x150x11.5x22",
+        "weightPerMeter": 97.88
+      },
+      {
+        "size": "300x150x8",
+        "weightPerMeter": 61.58
+      },
+      {
+        "size": "300x150x8/13",
+        "weightPerMeter": 61.58
+      },
+      {
+        "size": "300x150x8x13",
+        "weightPerMeter": 61.58
+      },
+      {
+        "size": "350x150x12",
+        "weightPerMeter": 111.1
+      },
+      {
+        "size": "350x150x12/24",
+        "weightPerMeter": 111.1
+      },
+      {
+        "size": "350x150x12x24",
+        "weightPerMeter": 111.1
+      },
+      {
+        "size": "350x150x9",
+        "weightPerMeter": 74.58
+      },
+      {
+        "size": "350x150x9/15",
+        "weightPerMeter": 74.58
+      },
+      {
+        "size": "350x150x9x15",
+        "weightPerMeter": 74.58
+      },
+      {
+        "size": "400x150x10",
+        "weightPerMeter": 91.73
+      },
+      {
+        "size": "400x150x10/18",
+        "weightPerMeter": 91.73
+      },
+      {
+        "size": "400x150x10x18",
+        "weightPerMeter": 91.73
+      },
+      {
+        "size": "400x150x12.5",
+        "weightPerMeter": 122.1
+      },
+      {
+        "size": "400x150x12.5/25",
+        "weightPerMeter": 122.1
+      },
+      {
+        "size": "400x150x12.5x25",
+        "weightPerMeter": 122.1
+      },
+      {
+        "size": "450x175x11",
+        "weightPerMeter": 116.8
+      },
+      {
+        "size": "450x175x11/20",
+        "weightPerMeter": 116.8
+      },
+      {
+        "size": "450x175x11x20",
+        "weightPerMeter": 116.8
+      },
+      {
+        "size": "450x175x13",
+        "weightPerMeter": 146.1
+      },
+      {
+        "size": "450x175x13/26",
+        "weightPerMeter": 146.1
+      },
+      {
+        "size": "450x175x13x26",
+        "weightPerMeter": 146.1
+      },
+      {
+        "size": "600x190x13",
+        "weightPerMeter": 169.4
+      },
+      {
+        "size": "600x190x13/25",
+        "weightPerMeter": 169.4
+      },
+      {
+        "size": "600x190x13x25",
+        "weightPerMeter": 169.4
+      },
+      {
+        "size": "600x190x16",
+        "weightPerMeter": 224.5
+      },
+      {
+        "size": "600x190x16/35",
+        "weightPerMeter": 224.5
+      },
+      {
+        "size": "600x190x16x35",
+        "weightPerMeter": 224.5
+      }
+    ]
+  }
+]
