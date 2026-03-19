@@ -14,6 +14,8 @@
 
 .app-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   padding: 24px 28px;
   background: var(--bg-primary);
@@ -76,6 +78,36 @@
   border: 1px solid var(--border);
 }
 .btn-ghost:hover { background: var(--bg-surface-hover); color: var(--text-primary); }
+
+/* Glass Buttons */
+.glass-btn {
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.glass-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.glass-btn.active {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--success);
+  border-color: rgba(63, 185, 80, 0.3);
+  box-shadow: 0 0 15px rgba(63, 185, 80, 0.15);
+}
 
 /* Inputs */
 .input {

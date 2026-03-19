@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { charsApi } from '../services/api'
 import type { ICharacterMapping } from '../types'
+import Alert from '../components/Alert'
 
 export default function CharacterSearch() {
   const [query, setQuery] = useState('')
@@ -26,51 +27,113 @@ export default function CharacterSearch() {
     if (e.key === 'Enter') handleSearch()
   }
 
+  const templates = ['φ×-', '□×', '××', '××-', 'φ×', '×φ', 'φ', '□', '×', '-']
+  const [copiedIndex, setCopiedIndex] = useState<number | string | null>(null)
+
+  const handleCopy = (text: string, id: number | string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedIndex(id)
+    setTimeout(() => setCopiedIndex(null), 1500)
+  }
+
   return (
-    <div>
-      <div className="page-header">
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div className="page-header" style={{ flexShrink: 0 }}>
         <h1 className="page-title">Character Search</h1>
-        <p className="page-subtitle">Search English ↔ Japanese character mappings</p>
+        <p className="page-subtitle">Search English ↔ Japanese character mappings & Drafting Templates</p>
       </div>
 
-      <div className="card" style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <input
-          className="input"
-          placeholder="Search by English or Japanese character..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoFocus
-        />
-        <button className="btn btn-primary" onClick={handleSearch}>Search</button>
-      </div>
-
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Searching...</div>
-        ) : results.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
-            {query ? 'No results found.' : 'Enter a search term above.'}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, alignItems: 'start', flex: 1, minHeight: 0 }}>
+        {/* Left Column: Search & Results */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', minHeight: 0 }}>
+          <div className="card" style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+            <input
+              className="input"
+              placeholder="Search by English or Japanese character..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={handleKeyDown}
+              autoFocus
+            />
+            <button className="btn btn-primary" onClick={handleSearch}>Search</button>
           </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>English Character</th>
-                <th>Japanese Character</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map((r, i) => (
-                <tr key={i}>
-                  <td>{r.englishChar}</td>
-                  <td style={{ fontFamily: 'serif', fontSize: 16 }}>{r.japaneseChar}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+
+          <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {loading ? (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Searching...</div>
+            ) : results.length === 0 ? (
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+                {query ? 'No results found.' : 'Enter a search term above.'}
+              </div>
+            ) : (
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>English Character</th>
+                      <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>Japanese Character</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {results.map((r, i) => (
+                      <tr key={i} className="hoverable-row">
+                        <td
+                          onClick={() => handleCopy(r.englishChar, `eng-${i}`)}
+                          style={{ cursor: 'pointer', position: 'relative' }}
+                          title="Click to copy"
+                        >
+                          {r.englishChar}
+                        </td>
+                        <td
+                          onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
+                          style={{ fontFamily: 'serif', fontSize: 16, cursor: 'pointer', position: 'relative' }}
+                          title="Click to copy"
+                        >
+                          {r.japaneseChar}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Templates */}
+        <div className="card" style={{ padding: 24, flexShrink: 0 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700, marginBottom: 20, color: 'var(--text-muted)' }}>DRAFTING TEMPLATES</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {templates.map((tpl, i) => (
+              <button
+                key={i}
+                onClick={() => handleCopy(tpl, `tpl-${i}`)}
+                style={{
+                  height: 60,
+                  backgroundColor: 'var(--bg-card-hover)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 6,
+                  fontSize: 26,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s, color 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontFamily: 'monospace'
+                }}
+              >
+                {tpl}
+              </button>
+            ))}
+          </div>
+          <p style={{ marginTop: 16, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Click any template symbol above to copy it to your clipboard for use in CAD or drafting tools.
+          </p>
+        </div>
       </div>
+      <Alert message="Copied!" isVisible={!!copiedIndex} />
     </div>
   )
 }

@@ -38,8 +38,8 @@ function createWindow() {
   })
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
-    mainWindow.webContents.openDevTools()
+    mainWindow.loadURL('http://localhost:5174')
+    // DevTools can be opened manually with Ctrl+Shift+I
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
   }

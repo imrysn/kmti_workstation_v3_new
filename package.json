@@ -5,7 +5,7 @@
   "author": "Kusakabe && Maeno Tech Inc",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "concurrently \"vite\" \"electron .\"",
+    "dev": "concurrently \"vite --port 5174\" \"wait-on http://localhost:5174 && electron .\"",
     "build": "vite build",
     "preview": "vite preview",
     "electron": "electron ."
@@ -25,6 +25,7 @@
     "electron": "^31.0.0",
     "electron-builder": "^24.9.1",
     "typescript": "^5.2.2",
-    "vite": "^5.3.1"
+    "vite": "^5.3.1",
+    "wait-on": "^9.0.4"
   }
 }

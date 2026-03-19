@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { charsApi } from '../services/api'
 import type { IHeatTreatment } from '../types'
+import Alert from '../components/Alert'
 
 export default function HeatTreatment() {
   const [categories, setCategories] = useState<string[]>([])
@@ -8,6 +9,7 @@ export default function HeatTreatment() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<IHeatTreatment[]>([])
   const [loading, setLoading] = useState(false)
+  const [copiedIndex, setCopiedIndex] = useState<number | string | null>(null)
 
   useEffect(() => {
     // Load all heat treatment to extract categories
@@ -29,52 +31,84 @@ export default function HeatTreatment() {
     setLoading(false)
   }
 
+  const handleCopy = (text: string, id: number | string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedIndex(id)
+    setTimeout(() => setCopiedIndex(null), 1500)
+  }
+
   return (
-    <div>
-      <div className="page-header">
-        <h1 className="page-title">Heat Treatment</h1>
-        <p className="page-subtitle">Browse heat treatment categories and character mappings</p>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div className="page-header" style={{ flexShrink: 0 }}>
+        <h1 className="page-title">Special Process</h1>
+        <p className="page-subtitle">Browse special process categories and character mappings</p>
       </div>
 
-      <div className="card" style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <select className="input" style={{ maxWidth: 220 }} value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-          <option value="">All Categories</option>
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+      <div className="card" style={{ display: 'flex', gap: 10, marginBottom: 16, flexShrink: 0 }}>
         <input
           className="input"
           placeholder="Search characters..."
           value={query}
           onChange={e => setQuery(e.target.value)}
+          autoFocus
         />
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
         ) : results.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No results found.</div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Category</th>
-                <th>English</th>
-                <th>Japanese</th>
-              </tr>
-            </thead>
-            <tbody>
-              {results.map(r => (
-                <tr key={r.id}>
-                  <td><span className="badge badge-green">{r.category}</span></td>
-                  <td>{r.englishChar}</td>
-                  <td style={{ fontFamily: 'serif', fontSize: 16 }}>{r.japaneseChar}</td>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>English</th>
+                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>Japanese</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {results.map((r, i) => (
+                  <tr key={i} className="hoverable-row">
+                    <td
+                      onClick={() => handleCopy(r.englishChar, `eng-${i}`)}
+                      style={{ cursor: 'pointer', position: 'relative' }}
+                      title="Click to copy English character"
+                    >
+                      {r.englishChar}
+                    </td>
+                    <td
+                      onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
+                      style={{ fontFamily: 'serif', fontSize: 16, cursor: 'pointer', position: 'relative' }}
+                      title="Click to copy Japanese character"
+                    >
+                      {r.japaneseChar}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
+
+      {/* Category Filter Buttons - Permanently Footed */}
+      <div className="card" style={{ marginTop: 16, padding: '16px 20px', flexShrink: 0 }}>
+        <h3 style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12, fontWeight: 700 }}>Filter by Category</h3>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {categories.map(c => (
+            <button
+              key={c}
+              onClick={() => setSelectedCategory(selectedCategory === c ? '' : c)}
+              className={`glass-btn ${selectedCategory === c ? 'active' : ''}`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Alert message="Copied!" isVisible={!!copiedIndex} />
     </div>
   )
 }

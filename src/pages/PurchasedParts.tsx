@@ -47,7 +47,7 @@ export default function PurchasedParts() {
   const handleDownload = async (part: IPurchasedPart) => {
     setDownloading(part.id)
     try {
-      const res = await partsApi.downloadPart(part.id)
+      const res = await partsApi.downloadPart(String(part.id))
       const url = URL.createObjectURL(new Blob([res.data]))
       const a = document.createElement('a')
       a.href = url
@@ -76,13 +76,13 @@ export default function PurchasedParts() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this part?')) return
-    await partsApi.deletePart(id)
+    await partsApi.deletePart(String(id))
     loadParts()
   }
 
   return (
-    <div>
-      <div className="page-header pp-header">
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+      <div className="page-header pp-header" style={{ flexShrink: 0 }}>
         <div>
           <h1 className="page-title">Purchased Parts</h1>
           <p className="page-subtitle">Manage and download drawing files</p>
@@ -91,7 +91,7 @@ export default function PurchasedParts() {
       </div>
 
       {/* Filters */}
-      <div className="card pp-filters">
+      <div className="card pp-filters" style={{ flexShrink: 0 }}>
         <select className="input" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
           <option value="">All Categories</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
@@ -109,45 +109,47 @@ export default function PurchasedParts() {
       </div>
 
       {/* Parts table */}
-      <div className="card pp-table-card">
+      <div className="card pp-table-card" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {loading ? (
-          <div className="pp-loading">Loading parts...</div>
+          <div className="pp-loading" style={{ margin: 'auto' }}>Loading parts...</div>
         ) : parts.length === 0 ? (
-          <div className="pp-empty">No parts found. Try adjusting your filters.</div>
+          <div className="pp-empty" style={{ margin: 'auto' }}>No parts found. Try adjusting your filters.</div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>File Name</th>
-                <th>Category</th>
-                <th>Part Type</th>
-                <th style={{ width: 120 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {parts.map(part => (
-                <tr key={part.id}>
-                  <td>
-                    <span className="pp-filename">📄 {part.fileName}</span>
-                  </td>
-                  <td><span className="badge badge-blue">{part.category}</span></td>
-                  <td>{part.partsType}</td>
-                  <td>
-                    <div className="pp-actions">
-                      <button
-                        className="btn btn-ghost pp-btn-sm"
-                        onClick={() => handleDownload(part)}
-                        disabled={downloading === part.id}
-                      >
-                        {downloading === part.id ? '...' : '↓'}
-                      </button>
-                      <button className="btn btn-danger pp-btn-sm" onClick={() => handleDelete(part.id)}>✕</button>
-                    </div>
-                  </td>
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>File Name</th>
+                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>Category</th>
+                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>Part Type</th>
+                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10, width: 120 }}>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {parts.map(part => (
+                  <tr key={part.id} className="hoverable-row">
+                    <td>
+                      <span className="pp-filename">📄 {part.fileName}</span>
+                    </td>
+                    <td><span className="badge badge-blue">{part.category}</span></td>
+                    <td>{part.partsType}</td>
+                    <td>
+                      <div className="pp-actions">
+                        <button
+                          className="btn btn-ghost pp-btn-sm"
+                          onClick={() => handleDownload(part)}
+                          disabled={downloading === part.id}
+                        >
+                          {downloading === part.id ? '...' : '↓'}
+                        </button>
+                        <button className="btn btn-danger pp-btn-sm" onClick={() => handleDelete(part.id)}>✕</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
