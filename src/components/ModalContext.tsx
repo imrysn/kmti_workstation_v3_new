@@ -24,16 +24,24 @@ interface ConfirmationState {
   onCancel?: () => void;
 }
 
+interface ProgressState {
+  isOpen: boolean;
+  message: string;
+}
+
 interface ModalContextType {
   notify: (message: string, type?: NotificationType) => void;
   alert: (message: string, title?: string) => void;
   confirm: (message: string, onConfirm: () => void, onCancel?: () => void, type?: ConfirmationType) => void;
+  showProgress: (message: string) => void;
+  hideProgress: () => void;
   notifications: Notification[];
   removeNotification: (id: string) => void;
   alertState: AlertState;
   closeAlert: () => void;
   confirmationState: ConfirmationState;
   closeConfirmation: () => void;
+  progressState: ProgressState;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -50,6 +58,10 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     message: '',
     type: 'primary',
     onConfirm: () => {},
+  });
+  const [progressState, setProgressState] = useState<ProgressState>({
+    isOpen: false,
+    message: '',
   });
 
   const notify = useCallback((message: string, type: NotificationType = 'info') => {
@@ -92,18 +104,29 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setConfirmationState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
+  const showProgress = useCallback((message: string) => {
+    setProgressState({ isOpen: true, message });
+  }, []);
+
+  const hideProgress = useCallback(() => {
+    setProgressState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
   return (
     <ModalContext.Provider
       value={{
         notify,
         alert,
         confirm,
+        showProgress,
+        hideProgress,
         notifications,
         removeNotification,
         alertState,
         closeAlert,
         confirmationState,
         closeConfirmation,
+        progressState,
       }}
     >
       {children}

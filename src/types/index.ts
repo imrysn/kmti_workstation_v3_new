@@ -67,9 +67,11 @@ export interface IApiResponse<T> {
 // Electron IPC bridge types (injected by preload.js)
 export interface ElectronAPI {
   openFolder: (path: string) => Promise<void>
+  openFile: (path: string) => Promise<void>
   minimizeWindow: () => Promise<void>
   maximizeWindow: () => Promise<void>
   closeWindow: () => Promise<void>
+  selectFolder: () => Promise<string | null>
 }
 
 declare global {

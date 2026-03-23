@@ -59,25 +59,12 @@ def _word_match(text: str, query: str) -> bool:
 
 @router.get("/projects/browse")
 async def browse_folder():
-    py_script = """
-import tkinter as tk
-from tkinter import filedialog
-import sys
-root = tk.Tk()
-root.withdraw()
-root.attributes('-topmost', True)
-path = filedialog.askdirectory(parent=root, title="Select Project Folder for findr")
-root.destroy()
-if path:
-    sys.stdout.write(path)
-"""
-    process = await asyncio.create_subprocess_exec(
-        "python", "-c", py_script,
-        stdout=asyncio.subprocess.PIPE
+    # Deprecated: Spawning a GUI from the backend is unreliable on Windows/asyncio.
+    # The frontend should use native Electron dialogs.
+    raise HTTPException(
+        status_code=400, 
+        detail="Backend folder browsing is disabled. Please use the native Electron folder picker."
     )
-    stdout, _ = await process.communicate()
-    path = stdout.decode('utf-8').strip()
-    return {"path": path}
 
 @router.get("/projects")
 async def get_projects(db: AsyncSession = Depends(get_db)):

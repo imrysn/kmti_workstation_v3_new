@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { partsApi } from '../services/api'
 import { fileService } from '../services/fileService'
 import type { IPurchasedPart, IProject } from '../types'
@@ -170,7 +170,7 @@ function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, sea
 // ──────────────────────────────────────────────────────────────────────
 
 export default function PurchasedParts() {
-  const { notify, alert, confirm } = useModal()
+  const { notify, alert, confirm, showProgress, hideProgress } = useModal()
   const [projects, setProjects] = useState<IProject[]>([])
   const [selectedProject, setSelectedProject] = useState<IProject | null>(null)
 
@@ -223,13 +223,39 @@ export default function PurchasedParts() {
   // Poll for scanning progress
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
+    
+    // If any project is scanning, start polling
     if (projects.some(p => p.isScanning)) {
-      interval = setInterval(() => {
-        partsApi.getProjects().then(res => setProjects(res.data)).catch(() => {})
-      }, 3000)
+      interval = setInterval(async () => {
+        try {
+          const res = await partsApi.getProjects()
+          const updatedProjects = res.data
+          setProjects(updatedProjects)
+          
+          // If the selected project was scanning and now it's not, close progress and refresh
+          const wasScanning = selectedProject?.isScanning
+          const nowScanning = updatedProjects.find(p => p.id === selectedProject?.id)?.isScanning
+          
+          if (wasScanning && !nowScanning) {
+            hideProgress()
+            notify("Scan complete!", "success")
+            // Refresh tree and results for the selected project
+            if (selectedProject) {
+              const treeRes = await partsApi.getTree(selectedProject.id)
+              setRawTreeNodes(treeRes.data)
+              handleSearch()
+            }
+          }
+        } catch (e) {
+          console.error("Polling error", e)
+        }
+      }, 2000)
+    } else {
+      hideProgress() // Safety: if no projects are scanning, ensure progress is hidden
     }
+    
     return () => clearInterval(interval)
-  }, [projects])
+  }, [projects, selectedProject, hideProgress, notify])
 
   useEffect(() => {
     setSelectedTreePath('')
@@ -252,12 +278,22 @@ export default function PurchasedParts() {
 
   const handleAddProjectDirectly = async () => {
     try {
-      const res = await partsApi.browseProjectFolder()
-      if (res.data.path) {
-        const parts = res.data.path.split(/[\\/]/)
-        const autoName = parts[parts.length - 1].toUpperCase()
-        await partsApi.addProject(autoName, res.data.path)
-        notify(`Project '${autoName}' added! The server is now indexing it.`, 'success')
+      // Use native Electron dialog first
+      let folderPath: string | null = null
+      if (window.electronAPI && window.electronAPI.selectFolder) {
+        folderPath = await window.electronAPI.selectFolder()
+      } else {
+        // Fallback or warning for web (though backend endpoint is now disabled)
+        alert("Native folder selection is only available in the findr Desktop App.", "Feature Unavailable")
+        return
+      }
+
+      if (folderPath) {
+        const parts = folderPath.split(/[\\/]/)
+        const autoName = parts[parts.length - 1].toUpperCase() || "NEW PROJECT"
+        await partsApi.addProject(autoName, folderPath)
+        showProgress("Indexing Project...")
+        notify(`Project '${autoName}' added! Starting index...`, 'success')
         loadProjects()
       }
     } catch (e) {
@@ -267,8 +303,14 @@ export default function PurchasedParts() {
   }
 
   const handleScanProject = async (id: number) => {
-    await partsApi.scanProject(id)
-    notify("Background scan started on the NAS.", "info")
+    try {
+      showProgress("Scanning NAS...")
+      await partsApi.scanProject(id)
+      // Polling useEffect will handle hiding the progress modal
+    } catch (e) {
+      hideProgress()
+      notify("Failed to start scan.", "error")
+    }
   }
 
   const handleDeleteProject = async (id: number) => {
@@ -289,28 +331,33 @@ export default function PurchasedParts() {
     )
   }
 
-  // Search results effect
-  useEffect(() => {
+  // Consolidate search logic into a reusable function
+  const handleSearch = useCallback(async () => {
     if (!selectedProject && projects.length === 0) return
     const start = performance.now()
     setIsSearching(true)
-    partsApi.listParts(
-      selectedProject?.id,
-      search || undefined,
-      caseSensitive,
-      cadOnly,
-      includeFolders,
-      folderFilter || undefined
-    ).then(res => {
+    try {
+      const res = await partsApi.listParts(
+        selectedProject?.id,
+        search || undefined,
+        caseSensitive,
+        cadOnly,
+        includeFolders,
+        folderFilter || undefined
+      )
       setSearchResults(res.data)
       setSearchTime((performance.now() - start) / 1000)
-      setIsSearching(false)
-    }).catch(err => {
+    } catch (err) {
       console.error(err)
-      setSearchResults([])
+    } finally {
       setIsSearching(false)
-    })
-  }, [selectedProject, search, caseSensitive, cadOnly, includeFolders, folderFilter])
+    }
+  }, [selectedProject, projects.length, search, caseSensitive, cadOnly, includeFolders, folderFilter])
+
+  // Search results effect
+  useEffect(() => {
+    handleSearch()
+  }, [handleSearch])
 
   // Resolve deferred file selection after folder navigation reloads results
   useEffect(() => {
@@ -607,20 +654,25 @@ export default function PurchasedParts() {
               </div>
 
               <div className="findr-location-card">
-                <div className="findr-location-label">Location Information</div>
-                <input className="findr-location-input" readOnly value={selectedResult.filePath} />
+                <div className="findr-location-header">
+                  <div className="findr-location-label">Location Information</div>
+                </div>
+                
+                <div className="findr-location-content">
+                  <input className="findr-location-input" readOnly value={selectedResult.filePath} />
 
-                <button className="findr-btn-primary" onClick={() => handleOpen(selectedResult)}>
-                  <ExternalLinkIcon size={16} color="white" /> Open {selectedResult.isFolder ? 'Folder' : 'File'}
-                </button>
+                  <button className="findr-btn-primary" onClick={() => handleOpen(selectedResult)}>
+                    <ExternalLinkIcon size={16} color="white" /> Open {selectedResult.isFolder ? 'Folder' : 'File'}
+                  </button>
 
-                <div className="findr-btn-secondary-group">
-                  <button className="findr-btn-icon" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); notify("Copied path to clipboard!", "success") }}>
-                    <CopyIcon size={18} />
-                  </button>
-                  <button className="findr-btn-icon" title="Open containing folder" onClick={() => handleOpenLocation(selectedResult)}>
-                    <FileIcon isFolder size={18} color="var(--text-secondary)" />
-                  </button>
+                  <div className="findr-btn-row">
+                    <button className="findr-btn-secondary" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); notify("Copied path to clipboard!", "success") }}>
+                      <CopyIcon size={18} /> Copy Path
+                    </button>
+                    <button className="findr-btn-secondary" title="Open containing folder" onClick={() => handleOpenLocation(selectedResult)}>
+                      <FileIcon isFolder size={18} color="var(--text-secondary)" /> Open Location
+                    </button>
+                  </div>
                 </div>
               </div>
             </>

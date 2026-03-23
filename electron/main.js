@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
 const { spawn } = require('child_process')
 const path = require('path')
 
@@ -72,3 +72,20 @@ ipcMain.handle('maximize-window', () => {
   mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize()
 })
 ipcMain.handle('close-window', () => mainWindow.close())
+
+ipcMain.handle('select-folder', async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  try {
+    const result = await dialog.showOpenDialog(window, {
+      properties: ['openDirectory'],
+      title: 'Select Project Folder'
+    })
+    if (result.canceled) return null
+    return result.filePaths[0] || null
+  } catch (err) {
+    console.error('Error in select-folder IPC:', err)
+    return null
+  }
+})
+
+console.log('Main process reached end of main.js - IPC Handlers registered.')
