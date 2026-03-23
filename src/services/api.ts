@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { IProject } from '../types'
 
 const API_BASE = 'http://127.0.0.1:8000/api'
 
@@ -9,15 +10,19 @@ const api = axios.create({
 
 // --- Purchased Parts ---
 export const partsApi = {
-  getCategories: () => api.get<string[]>('/parts/categories'),
-  getTypes: (category?: string) => api.get<string[]>('/parts/types', { params: { category } }),
-  listParts: (category?: string, partsType?: string, search?: string) =>
-    api.get('/parts/', { params: { category, parts_type: partsType, search } }),
-  downloadPart: (filename: string) =>
-    api.get('/parts/download', { params: { filename }, responseType: 'blob' }),
-  uploadPart: (formData: FormData) =>
-    api.post('/parts/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  deletePart: (filename: string) => api.delete('/parts/', { params: { filename } }),
+  getProjects: () => api.get<IProject[]>('/parts/projects'),
+  browseProjectFolder: () => api.get<{path: string}>('/parts/projects/browse'),
+  addProject: (name: string, rootPath: string) => api.post('/parts/projects', { name, root_path: rootPath }),
+  deleteProject: (id: number) => api.delete(`/parts/projects/${id}`),
+  scanProject: (id: number) => api.post(`/parts/projects/${id}/scan`),
+  listParts: (projectId?: number, search?: string, caseSensitive?: boolean, cadOnly?: boolean, includeFolders?: boolean, folderPath?: string) =>
+    api.get('/parts/', { params: { project_id: projectId, search, case_sensitive: caseSensitive, cad_only: cadOnly, include_folders: includeFolders, folder_path: folderPath } }),
+  downloadPart: (fileId: number) =>
+    api.get('/parts/download', { params: { file_id: fileId }, responseType: 'blob' }),
+  deleteItem: (fileId: number) => api.delete(`/parts/${fileId}`),
+  getTree: (projectId: number) => api.get(`/parts/tree/${projectId}`),
+  createFolder: (projectName: string, basePath?: string) => 
+    api.post('/parts/folders', { project_name: projectName, base_path: basePath || '' }),
 }
 
 // --- Character Search ---

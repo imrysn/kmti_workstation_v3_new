@@ -5,9 +5,34 @@
 
 export interface IPurchasedPart {
   id: number
+  projectId: number
+  isFolder: boolean
   category: string
   partsType: string
   fileName: string
+  fileType: string
+  filePath: string
+  size: number
+  lastModified: number
+  partGeomName?: string
+  boundX?: number
+  boundY?: number
+  boundZ?: number
+}
+
+export interface IProject {
+  id: number
+  name: string
+  rootPath: string
+  totalFiles: number
+  cadFiles: number
+  isScanning?: boolean
+}
+
+export interface ITreeNode {
+  name: string
+  isDir: boolean
+  path: string
 }
 
 export interface ICharacterMapping {

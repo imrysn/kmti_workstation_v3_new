@@ -2,7 +2,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import parts, characters, settings
 
+from database import engine, Base
+try:
+    from core.nas_indexer import indexer
+except ImportError:
+    indexer = None
+
 app = FastAPI(title="KMTI Workstation API", version="3.0.0")
+
+@app.on_event("startup")
+async def startup_event():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    if indexer:
+        indexer.start()
+
+@app.on_event("shutdown")
+def shutdown_event():
+    if indexer:
+        indexer.stop()
 
 app.add_middleware(
     CORSMiddleware,

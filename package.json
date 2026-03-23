@@ -5,9 +5,10 @@
   "author": "Kusakabe && Maeno Tech Inc",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "concurrently \"vite --port 5174\" \"wait-on http://localhost:5174 && electron .\"",
+    "dev": "concurrently -n \"Vite,Desktop\" -c \"cyan,magenta\" \"vite --port 5174\" \"wait-on http://localhost:5174 && electron .\"",
     "build": "vite build",
     "preview": "vite preview",
+    "backend": "cd backend && python main.py",
     "electron": "electron ."
   },
   "dependencies": {

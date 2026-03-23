@@ -14,7 +14,8 @@ function startPythonServer() {
   const cmd = isDev ? 'python' : path.join(process.resourcesPath, 'backend', 'server.exe')
   const args = isDev ? [pythonPath] : []
 
-  pythonProcess = spawn(cmd, args, { stdio: 'ignore' })
+  // Pipe stdio to inherit so we can see python logs in the terminal
+  pythonProcess = spawn(cmd, args, { stdio: 'inherit' })
   pythonProcess.on('error', (err) => {
     console.error('Failed to start Python server:', err)
   })
@@ -39,14 +40,13 @@ function createWindow() {
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5174')
-    // DevTools can be opened manually with Ctrl+Shift+I
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
   }
 }
 
 app.whenReady().then(() => {
-  startPythonServer()
+  // startPythonServer() // Disabled as per user request to run backend manually
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -54,13 +54,17 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (pythonProcess) pythonProcess.kill()
+  // if (pythonProcess) pythonProcess.kill()
   if (process.platform !== 'darwin') app.quit()
 })
 
 // --- IPC Handlers ---
 ipcMain.handle('open-folder', async (_, folderPath) => {
   shell.openPath(folderPath)
+})
+
+ipcMain.handle('open-file', async (_, filePath) => {
+  shell.openPath(filePath)
 })
 
 ipcMain.handle('minimize-window', () => mainWindow.minimize())
