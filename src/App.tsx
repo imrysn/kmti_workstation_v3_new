@@ -5,27 +5,32 @@ import CharacterSearch from './pages/CharacterSearch'
 import HeatTreatment from './pages/HeatTreatment'
 import MaterialCalculator from './pages/MaterialCalculator'
 import Settings from './pages/Settings'
+import { ModalProvider } from './components/ModalContext'
+import { ModalContainer } from './components/Modals'
 import './styles/App.css'
 
 function App() {
   return (
-    <BrowserRouter>
-      <div className="app-shell">
-        <TitleBar />
-        <div className="app-body">
-          <main className="app-content">
-            <Routes>
-              <Route path="/" element={<Navigate to="/parts" replace />} />
-              <Route path="/parts" element={<PurchasedParts />} />
-              <Route path="/characters" element={<CharacterSearch />} />
-              <Route path="/heat-treatment" element={<HeatTreatment />} />
-              <Route path="/calculator" element={<MaterialCalculator />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </main>
+    <ModalProvider>
+      <BrowserRouter>
+        <div className="app-shell">
+          <TitleBar />
+          <div className="app-body">
+            <main className="app-content">
+              <Routes>
+                <Route path="/" element={<Navigate to="/parts" replace />} />
+                <Route path="/parts" element={<PurchasedParts />} />
+                <Route path="/characters" element={<CharacterSearch />} />
+                <Route path="/heat-treatment" element={<HeatTreatment />} />
+                <Route path="/calculator" element={<MaterialCalculator />} />
+                <Route path="/settings" element={<Settings />} />
+              </Routes>
+            </main>
+          </div>
         </div>
-      </div>
-    </BrowserRouter>
+        <ModalContainer />
+      </BrowserRouter>
+    </ModalProvider>
   )
 }
 

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { charsApi } from '../services/api'
 import type { ICharacterMapping } from '../types'
-import Alert from '../components/Alert'
+import { useModal } from '../components/ModalContext'
+import { SearchIcon } from '../components/FileIcons'
 
 export default function CharacterSearch() {
+  const { notify } = useModal()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ICharacterMapping[]>([])
   const [loading, setLoading] = useState(false)
@@ -28,12 +30,13 @@ export default function CharacterSearch() {
   }
 
   const templates = ['φ×-', '□×', '××', '××-', 'φ×', '×φ', 'φ', '□', '×', '-']
-  const [copiedIndex, setCopiedIndex] = useState<number | string | null>(null)
+  const [copiedId, setCopiedId] = useState<number | string | null>(null)
 
   const handleCopy = (text: string, id: number | string) => {
     navigator.clipboard.writeText(text)
-    setCopiedIndex(id)
-    setTimeout(() => setCopiedIndex(null), 1500)
+    setCopiedId(id)
+    notify(`Copied: ${text}`, 'success')
+    setTimeout(() => setCopiedId(null), 1500)
   }
 
   return (
@@ -47,14 +50,18 @@ export default function CharacterSearch() {
         {/* Left Column: Search & Results */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%', minHeight: 0 }}>
           <div className="card" style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-            <input
-              className="input"
-              placeholder="Search by English or Japanese character..."
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              autoFocus
-            />
+            <div className="input-with-icon" style={{ flex: 1, position: 'relative' }}>
+              <SearchIcon size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                className="input"
+                style={{ paddingLeft: 40, width: '100%' }}
+                placeholder="Search by English or Japanese character..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={handleKeyDown}
+                autoFocus
+              />
+            </div>
             <button className="btn btn-primary" onClick={handleSearch}>Search</button>
           </div>
 
@@ -79,14 +86,14 @@ export default function CharacterSearch() {
                       <tr key={i} className="hoverable-row">
                         <td
                           onClick={() => handleCopy(r.englishChar, `eng-${i}`)}
-                          style={{ cursor: 'pointer', position: 'relative' }}
+                          style={{ cursor: 'pointer', position: 'relative', backgroundColor: copiedId === `eng-${i}` ? 'var(--bg-card-hover)' : 'transparent' }}
                           title="Click to copy"
                         >
                           {r.englishChar}
                         </td>
                         <td
                           onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
-                          style={{ fontFamily: 'serif', fontSize: 16, cursor: 'pointer', position: 'relative' }}
+                          style={{ fontFamily: 'serif', fontSize: 16, cursor: 'pointer', position: 'relative', backgroundColor: copiedId === `jp-${i}` ? 'var(--bg-card-hover)' : 'transparent' }}
                           title="Click to copy"
                         >
                           {r.japaneseChar}
@@ -110,8 +117,8 @@ export default function CharacterSearch() {
                 onClick={() => handleCopy(tpl, `tpl-${i}`)}
                 style={{
                   height: 60,
-                  backgroundColor: 'var(--bg-card-hover)',
-                  color: 'var(--text-primary)',
+                  backgroundColor: copiedId === `tpl-${i}` ? 'var(--accent)' : 'var(--bg-card-hover)',
+                  color: copiedId === `tpl-${i}` ? 'white' : 'var(--text-primary)',
                   border: '1px solid var(--border-color)',
                   borderRadius: 6,
                   fontSize: 26,
@@ -133,7 +140,6 @@ export default function CharacterSearch() {
           </p>
         </div>
       </div>
-      <Alert message="Copied!" isVisible={!!copiedIndex} />
     </div>
   )
 }

@@ -40,8 +40,10 @@ class MultiProjectIndexer:
         self.scanning_tasks = {}
 
     def start(self):
-        # On boot, scan all active projects asynchronously
-        asyncio.create_task(self._scan_all_projects_on_boot())
+        # Scan on boot is disabled as requested by user. 
+        # Scans now only happen when manually triggered.
+        pass
+        # asyncio.create_task(self._scan_all_projects_on_boot())
         
     def stop(self):
         for t in self.scanning_tasks.values():
@@ -84,13 +86,24 @@ class MultiProjectIndexer:
             print(f"Path not found: {root_path}")
             return
 
-        print(f"Starting CAD scan for Project {project_id} at {root_path}...")
+        print(f"Starting incremental CAD scan for Project {project_id} at {root_path}...")
         
         async with AsyncSessionLocal() as session:
-            from sqlalchemy import delete
-            # Delete old entries
-            await session.execute(delete(CadFileIndex).where(CadFileIndex.project_id == project_id))
-            await session.commit()
+            from sqlalchemy import delete, select
+            
+            # Fetch existing paths to avoid duplicates during incremental scan
+            # We map {normalized_path: original_db_path} to handle cleanup correctly
+            existing_result = await session.execute(
+                select(CadFileIndex.file_path).where(CadFileIndex.project_id == project_id)
+            )
+            # Normalize for comparison but keep original for deletion
+            path_map = {}
+            for r in existing_result.scalars():
+                if r:
+                    path_map[r.replace("\\", "/").lower()] = r
+            
+            existing_paths_norm = set(path_map.keys())
+            seen_now_norm = set()
             
             total_files = 0
             cad_files = 0
@@ -99,18 +112,26 @@ class MultiProjectIndexer:
             
             import queue
             import threading
-            scan_queue = queue.Queue(maxsize=2000)
+            scan_queue = queue.Queue(maxsize=50000)
             
             def _walk_thread():
                 try:
                     def walk_onerror(err):
                         pass # Ignore permission errors
                         
+                    norm_root_path = str(Path(root_path)).replace("\\", "/").lower().rstrip("/")
+                    
                     for root, dirs, files in os.walk(root_path, onerror=walk_onerror):
-                        try:
-                            meta = get_file_metadata(Path(root), project_id)
-                            scan_queue.put(("folder", meta))
-                        except Exception: pass
+                        curr_root = str(Path(root)).replace("\\", "/").lower().rstrip("/")
+                        
+                        # Skip the root path itself to avoid duplication in the tree
+                        if curr_root == norm_root_path:
+                            pass
+                        else:
+                            try:
+                                meta = get_file_metadata(Path(root), project_id)
+                                scan_queue.put(("folder", meta))
+                            except Exception: pass
                         
                         for f in files:
                             try:
@@ -125,36 +146,65 @@ class MultiProjectIndexer:
             # Spawn worker thread
             threading.Thread(target=_walk_thread, daemon=True).start()
             
-            # Consume queue asynchronously
             while True:
                 try:
-                    # fetch up to 100 items at once if available
-                    for _ in range(100):
-                        item_type, meta = scan_queue.get_nowait()
+                    is_done = False
+                    # Fetch batch of items from the thread-safe queue
+                    for _ in range(200):
+                        try:
+                            item_type, meta = scan_queue.get_nowait()
+                        except queue.Empty:
+                            break
+
                         if item_type == "DONE":
+                            is_done = True
                             break
                             
-                        batch.append(CadFileIndex(**meta))
+                        # Normalize path for comparison (case-insensitive)
+                        norm_path = meta['file_path'].replace("\\", "/").lower()
+                        seen_now_norm.add(norm_path)
+                        
+                        # Only add if completely new to the index (Incremental)
+                        if norm_path not in existing_paths_norm:
+                            batch.append(CadFileIndex(**meta))
+                        
                         total_files += 1
                         if item_type == "file" and meta['file_type'] in cad_exts:
                             cad_files += 1
                             
-                    if item_type == "DONE":
-                        break
-                        
-                except queue.Empty:
-                    # Queue is empty, yield back to FastAPI explicitly
-                    await asyncio.sleep(0.05)
-                    continue
+                    if is_done: break
+                except Exception as e:
+                    print(f"Error in scan consumption loop: {e}")
+                    break
                     
+                if not batch and scan_queue.empty():
+                    await asyncio.sleep(0.1)
+                    continue
+
                 if len(batch) >= 100:
                     session.add_all(batch)
                     await session.commit()
                     batch.clear()
-                    await asyncio.sleep(0.01) # Yield after commit
+                    await asyncio.sleep(0.01)
                     
             if batch:
                 session.add_all(batch)
+                await session.commit()
+
+            # Cleanup: Remove files that no longer exist on NAS
+            orphans_norm = existing_paths_norm - seen_now_norm
+            if orphans_norm:
+                # Use the map to get original DB paths for deletion
+                orphans_orig = [path_map[p] for p in orphans_norm if p in path_map]
+                print(f"Cleaning up {len(orphans_orig)} stale entries for project {project_id}...")
+                for i in range(0, len(orphans_orig), 500):
+                    chunk = orphans_orig[i:i+500]
+                    await session.execute(
+                        delete(CadFileIndex).where(
+                            (CadFileIndex.project_id == project_id) & 
+                            (CadFileIndex.file_path.in_(chunk))
+                        )
+                    )
                 await session.commit()
                 
             # Update counts

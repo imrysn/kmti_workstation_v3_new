@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { settingsApi } from '../services/api'
 import type { IAppSettings } from '../types'
+import { StatusIcon } from '../components/FileIcons'
 import './Settings.css'
 
 const DEFAULT: IAppSettings = {
@@ -70,8 +71,8 @@ export default function Settings() {
           <button className="btn btn-ghost" onClick={handleTestConn} disabled={testing}>
             {testing ? 'Testing...' : 'Test Connection'}
           </button>
-          {testResult === 'ok' && <span className="sett-status ok">✓ Connected</span>}
-          {testResult === 'error' && <span className="sett-status error">✗ Failed</span>}
+          {testResult === 'ok' && <span className="sett-status ok"><StatusIcon type="success" size={14} /> Connected</span>}
+          {testResult === 'error' && <span className="sett-status error"><StatusIcon type="error" size={14} /> Failed</span>}
         </div>
       </div>
 

@@ -142,40 +142,48 @@ async def get_project_tree(project_id: int, db: AsyncSession = Depends(get_db)):
         return []
 
     result = await db.execute(
-        select(CadFileIndex.file_path, CadFileIndex.file_name)
+        select(CadFileIndex.file_path, CadFileIndex.file_name, CadFileIndex.is_folder, CadFileIndex.file_type)
         .where(CadFileIndex.project_id == project_id)
-        .where(CadFileIndex.is_folder == True)
         .order_by(CadFileIndex.file_path)
     )
-    folders = result.all()
-    if not folders: return []
+    items = result.all()
+    if not items: return []
     
-    # Fully resolve the root path to match the CadFileIndex paths
-    try:
-        root_norm = str(Path(proj.root_path).resolve()).replace("\\", "/") + "/"
-    except Exception:
-        root_norm = str(proj.root_path).replace("\\", "/") + "/"
-        
-    root_depth = len([p for p in root_norm.split("/") if p])
+    # Normalize root path — use forward slashes, strip trailing slash
+    root_path = proj.root_path.replace("\\", "/").rstrip("/")
+    # Count non-empty parts so we can compute relative depth
+    root_parts = [p for p in root_path.split("/") if p]
+    root_parts_count = len(root_parts)
     
     nodes = []
-    # Add root node explicitly
+    # Root node is always depth 0
     nodes.append({
         "name": proj.name,
-        "path": root_norm.rstrip("/"),
-        "depth": 0
+        "path": root_path,
+        "depth": 0,
+        "isFolder": True,
+        "fileType": ""
     })
     
-    for fp, fn in folders:
-        norm_fp = fp.replace("\\", "/") + "/"
-        if norm_fp == root_norm:
-            continue # don't duplicate root node
+    for fp, fn, is_folder, ftype in items:
+        fp_norm = fp.replace("\\", "/").rstrip("/")
+        
+        # Skip if this IS the root
+        if fp_norm == root_path:
+            continue
+        
+        # Calculate depth by counting path parts relative to root
+        fp_parts = [p for p in fp_norm.split("/") if p]
+        depth = len(fp_parts) - root_parts_count
+        if depth < 1:
+            depth = 1
             
-        depth = len([p for p in norm_fp.split("/") if p]) - root_depth
         nodes.append({
             "name": fn,
-            "path": fp,
-            "depth": max(1, depth)
+            "path": fp_norm,
+            "depth": depth,
+            "isFolder": is_folder,
+            "fileType": ftype or ""
         })
         
     return nodes
@@ -198,11 +206,40 @@ async def list_parts(
     if not include_folders:
         query = query.where(CadFileIndex.is_folder == False)
     if folder_path:
-        norm_folder = folder_path.replace("\\", "/")
-        query = query.where(CadFileIndex.file_path.like(f"{norm_folder}%"))
-        
+        norm_folder = folder_path.replace("\\", "/").rstrip("/")
+    # Fetch all parts for the project first
+    # We do filtering in Python to handle path normalization (UNC vs drive letters) robustly
     result = await db.execute(query)
     rows = result.scalars().all()
+    
+    # 1. If folder_path is provided -> show matches INSIDE that folder
+    # 2. If NO search term -> show DIRECT CHILDREN only
+    # 3. If search term is present -> show RECURSIVE matches inside that folder
+    # 4. Always exclude the folder itself from its own results
+    if folder_path:
+        filtered = []
+        # Normalize filter path: handle Windows separators and UNC vs Drive letter discrepancies
+        norm_fp_filter = folder_path.replace("\\", "/").lower().rstrip("/")
+        prefix = norm_fp_filter + "/"
+        
+        for r in rows:
+            fp_norm = (r.file_path or "").replace("\\", "/").lower().rstrip("/")
+            
+            # Exclude the exact folder itself
+            if fp_norm == norm_fp_filter:
+                continue
+                
+            # Check if it's inside the folder
+            if fp_norm.startswith(prefix):
+                if search:
+                    # Recursive search
+                    filtered.append(r)
+                else:
+                    # Direct children only: no more slashes after the prefix
+                    remainder = fp_norm[len(prefix):]
+                    if remainder and "/" not in remainder:
+                        filtered.append(r)
+        rows = filtered
     
     cad_exts = {'.icd', '.dwg', '.dxf', '.sldprt', '.slddrw', '.sldasm', '.step', '.stp', '.iges', '.igs'}
     
@@ -220,20 +257,27 @@ async def list_parts(
         def relevance_score(r):
             text = r.file_name if case_sensitive else r.file_name.lower()
             scores = []
+            # 1. Folders always first
+            scores.append(0 if r.is_folder else 1)
+            # 2. Exact matches
             scores.append(0 if text == search_query else 1)
+            # 3. Starts-with matches
             scores.append(0 if text.startswith(search_query) else 1)
+            # 4. Position in string
             try:
                 scores.append(text.index(search_query))
             except ValueError:
                 scores.append(len(text))
-            scores.append(r.size or 0)
+            # 5. Fallback to name
             scores.append(text)
             return tuple(scores)
             
-        rows = sorted(matched_rows, key=relevance_score)[:500]
+        rows = sorted(matched_rows, key=relevance_score)
     else:
-        if project_id is None:
-            rows = rows[:500]
+        # Default browse view: 1. Folders first, 2. Alphabetical
+        rows = sorted(rows, key=lambda x: (0 if x.is_folder else 1, x.file_name.lower()))
+        
+    rows = rows[:500]
     
     return [
         {
