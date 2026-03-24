@@ -5,3 +5,4 @@ aiomysql
 python-multipart
 watchdog
 Pillow
+python-dotenv

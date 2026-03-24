@@ -192,7 +192,7 @@ function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, sea
 // ──────────────────────────────────────────────────────────────────────
 
 export default function PurchasedParts() {
-  const { notify, alert, confirm, showProgress, hideProgress } = useModal()
+  const { notify, alert, confirm, prompt, showProgress, hideProgress } = useModal()
   const [projects, setProjects] = useState<IProject[]>([])
   const [selectedProject, setSelectedProject] = useState<IProject | null>(null)
 
@@ -203,6 +203,8 @@ export default function PurchasedParts() {
   const [includeFolders, setIncludeFolders] = useState(true)
 
   const [searchResults, setSearchResults] = useState<IPurchasedPart[]>([])
+  const [resultTotal, setResultTotal] = useState(0)
+  const [resultCapped, setResultCapped] = useState(false)
   const [selectedResult, setSelectedResult] = useState<IPurchasedPart | null>(null)
 
   const [isSearching, setIsSearching] = useState(false)
@@ -244,18 +246,26 @@ export default function PurchasedParts() {
 
   // Initialization
   useEffect(() => {
-    loadProjects()
+    loadProjects(true)  // isMount=true: reattach overlay if a scan is already running
   }, [])
 
-  const loadProjects = async () => {
+  const loadProjects = async (isMount = false) => {
     try {
       const res = await partsApi.getProjects()
       setProjects(res.data)
       if (res.data.length > 0 && !selectedProject) {
         setSelectedProject(res.data[0])
       }
+      // On mount: if any project is already scanning (e.g. UI was refreshed mid-scan),
+      // reattach the progress overlay + SSE stream so the user can see it's still running.
+      if (isMount) {
+        const alreadyScanning = res.data.find((p: IProject) => p.isScanning)
+        if (alreadyScanning) {
+          showProgress(`Resuming index of '${alreadyScanning.name}'...`, alreadyScanning.id)
+        }
+      }
     } catch {
-      console.error("Failed to load projects")
+      console.error('Failed to load projects')
     }
   }
 
@@ -316,39 +326,49 @@ export default function PurchasedParts() {
   }, [selectedProject])
 
   const handleAddProjectDirectly = async () => {
-    try {
-      // Use native Electron dialog first
-      let folderPath: string | null = null
-      if (window.electronAPI && window.electronAPI.selectFolder) {
-        folderPath = await window.electronAPI.selectFolder()
-      } else {
-        // Fallback or warning for web (though backend endpoint is now disabled)
-        alert("Native folder selection is only available in the findr Desktop App.", "Feature Unavailable")
-        return
-      }
-
-      if (folderPath) {
-        const parts = folderPath.split(/[\\/]/)
-        const autoName = parts[parts.length - 1].toUpperCase() || "NEW PROJECT"
-        await partsApi.addProject(autoName, folderPath)
-        showProgress("Indexing Project...")
-        showToast(`Project '${autoName}' added!`)
-        loadProjects()
-      }
-    } catch (e) {
-      console.error("Failed to add project", e)
-      notify("Failed to add project folder.", "error")
+    // Step 1: Pick a folder via native Electron dialog
+    if (!window.electronAPI?.selectFolder) {
+      alert("Native folder selection is only available in the findr Desktop App.", "Feature Unavailable")
+      return
     }
+    const folderPath = await window.electronAPI.selectFolder()
+    if (!folderPath) return
+
+    // Step 2: Derive a default name from the folder, then ask user to confirm/rename
+    const segments = folderPath.split(/[\\/]/)
+    const defaultName = segments[segments.length - 1].toUpperCase() || 'NEW PROJECT'
+
+    prompt({
+      title: 'Name This Project',
+      message: `Folder: ${folderPath}`,
+      placeholder: 'Project name',
+      defaultValue: defaultName,
+      confirmLabel: 'Add & Index',
+      onConfirm: async (projectName) => {
+        try {
+          const res = await partsApi.addProject(projectName, folderPath)
+          const newProjectId = res.data?.id
+          showProgress('Indexing Project...', newProjectId)
+          showToast(`Project '${projectName}' added!`)
+          loadProjects()
+        } catch (e: any) {
+          const detail = e?.response?.data?.detail
+          if (e?.response?.status === 409) {
+            alert(detail ?? 'This folder is already indexed.', 'Duplicate Folder')
+          } else {
+            notify(detail ?? 'Failed to add project folder.', 'error')
+          }
+        }
+      }
+    })
   }
 
   const handleScanProject = async (id: number) => {
     try {
-      showProgress("Scanning NAS...")
       await partsApi.scanProject(id)
-      // Polling useEffect will handle hiding the progress modal
+      showProgress('Scanning NAS...', id)  // pass id so SSE overlay can subscribe
     } catch (e) {
-      hideProgress()
-      notify("Failed to start scan.", "error")
+      notify('Failed to start scan.', 'error')
     }
   }
 
@@ -384,7 +404,10 @@ export default function PurchasedParts() {
         includeFolders,
         folderFilter || undefined
       )
-      setSearchResults(res.data)
+      const payload = res.data
+      setSearchResults(Array.isArray(payload) ? payload : (payload.items ?? []))
+      setResultTotal(Array.isArray(payload) ? payload.length : (payload.total ?? 0))
+      setResultCapped(!Array.isArray(payload) && !!payload.capped)
       setSearchTime((performance.now() - start) / 1000)
     } catch (err) {
       console.error(err)
@@ -655,7 +678,14 @@ export default function PurchasedParts() {
                 </React.Fragment>
               ))}
             </div>
-            <span>{isSearching ? "Searching..." : `${searchResults.length} found (${searchTime.toFixed(2)}s)`}</span>
+            <span>
+              {isSearching
+                ? "Searching..."
+                : resultCapped
+                  ? `Showing 500 of ${resultTotal.toLocaleString()} — refine your search`
+                  : `${searchResults.length} found (${searchTime.toFixed(2)}s)`
+              }
+            </span>
           </div>
 
           <div className="findr-results-list" ref={resultsListRef} tabIndex={0}>

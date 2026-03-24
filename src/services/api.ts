@@ -36,6 +36,7 @@ export const charsApi = {
 export const settingsApi = {
   get: () => api.get('/settings/'),
   save: (settings: object) => api.post('/settings/', settings),
+  clearCache: () => api.delete('/settings/cache'),
 }
 
 export default api

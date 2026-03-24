@@ -1,24 +1,31 @@
 """
 Enterprise CAD File Search router (findr clone).
 """
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, distinct, delete
-from models import CadFileIndex, Project
-from database import get_db
-import os
-import re
-import io
 import asyncio
+import io
+import os
+import hashlib
+from fastapi import APIRouter, Depends, Query, Response, HTTPException
+from fastapi.responses import FileResponse, StreamingResponse
+from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import or_, and_, asc, desc, func, select, distinct, delete
+from sqlalchemy.future import select as future_select # Renamed to avoid conflict with sqlalchemy.select
+
+from models.part import CadFileIndex, Project
+from db.database import get_db, AsyncSessionLocal
+import re
 from pathlib import Path
 import urllib.parse
 from pydantic import BaseModel
 from core.icd_parser import SimpleICDParser, PointCloudRenderer
+from core.thumbnail_helper import get_shell_thumbnail
+from core.dwg_forensic import get_dwg_preview
 try:
-    from core.nas_indexer import indexer
+    from core.nas_indexer import indexer, enrich_icd_metadata
 except ImportError:
     indexer = None
+    enrich_icd_metadata = None
 
 class CreateProjectRequest(BaseModel):
     name: str
@@ -29,6 +36,8 @@ class CreateFolderRequest(BaseModel):
     base_path: str = ""
 
 router = APIRouter()
+
+cad_extensions = {'.icd', '.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'}
 
 def _levenshtein_distance(s1: str, s2: str) -> int:
     if len(s1) < len(s2): return _levenshtein_distance(s2, s1)
@@ -83,22 +92,32 @@ async def get_projects(db: AsyncSession = Depends(get_db)):
 async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_db)):
     if not os.path.exists(req.root_path):
         raise HTTPException(status_code=400, detail="Invalid root path. Directory does not exist.")
-        
+
+    # Normalize the incoming path for a case-insensitive, separator-agnostic comparison.
+    norm_new = req.root_path.replace("\\", "/").rstrip("/").lower()
+    existing = await db.execute(select(Project))
+    for proj in existing.scalars().all():
+        if proj.root_path.replace("\\", "/").rstrip("/").lower() == norm_new:
+            raise HTTPException(
+                status_code=409,
+                detail=f"A project already points to this folder: '{proj.name}'. Remove it first or choose a different folder."
+            )
+
     p = Project(name=req.name, root_path=req.root_path)
     db.add(p)
     try:
         await db.commit()
         await db.refresh(p)
-    except Exception as e:
+    except Exception:
         await db.rollback()
         raise HTTPException(status_code=400, detail="Project name already exists")
-    
+
     # Trigger scan
     p.is_scanning = True
     await db.commit()
     if indexer:
         asyncio.create_task(indexer.scan_project_async(p.id, p.root_path))
-        
+
     return {"id": p.id, "name": p.name, "rootPath": p.root_path, "totalFiles": 0, "cadFiles": 0, "isScanning": True}
 
 @router.delete("/projects/{project_id}")
@@ -121,6 +140,55 @@ async def scan_project_endpoint(project_id: int, db: AsyncSession = Depends(get_
     if indexer:
         asyncio.create_task(indexer.scan_project_async(proj.id, proj.root_path))
     return {"success": True, "message": "Scan started"}
+
+
+@router.get("/projects/{project_id}/scan-status")
+async def scan_status_stream(project_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Server-Sent Events stream for real-time scan progress.
+    Emits a JSON object every second while scanning is active:
+      { isScanning, filesIndexed, message }
+    Client closes the connection when isScanning becomes false.
+    """
+    from fastapi.responses import StreamingResponse as SSEStreamingResponse
+    import json
+
+    async def event_generator():
+        while True:
+            async with AsyncSessionLocal() as session:
+                proj = await session.get(Project, project_id)
+                if not proj:
+                    payload = json.dumps({"isScanning": False, "filesIndexed": 0, "message": "Project not found"})
+                    yield f"data: {payload}\n\n"
+                    break
+
+                # Count indexed files live from the DB
+                from sqlalchemy import func as sqlfunc
+                count_result = await session.execute(
+                    select(sqlfunc.count(CadFileIndex.id)).where(CadFileIndex.project_id == project_id)
+                )
+                files_indexed = count_result.scalar_one() or 0
+
+                payload = json.dumps({
+                    "isScanning": bool(proj.is_scanning),
+                    "filesIndexed": files_indexed,
+                    "message": f"Indexed {files_indexed:,} files..."
+                })
+                yield f"data: {payload}\n\n"
+
+                if not proj.is_scanning:
+                    break
+
+            await asyncio.sleep(1)
+
+    return SSEStreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 @router.get("/tree/{project_id}")
 async def get_project_tree(project_id: int, db: AsyncSession = Depends(get_db)):
@@ -264,25 +332,31 @@ async def list_parts(
         # Default browse view: 1. Folders first, 2. Alphabetical
         rows = sorted(rows, key=lambda x: (0 if x.is_folder else 1, x.file_name.lower()))
         
+    total_count = len(rows)
     rows = rows[:500]
-    
-    return [
-        {
-            "id": r.id, 
-            "projectId": r.project_id,
-            "isFolder": r.is_folder,
-            "fileName": r.file_name, 
-            "fileType": r.file_type,
-            "filePath": r.file_path,
-            "size": r.size,
-            "lastModified": r.last_modified,
-            "partGeomName": r.part_geom_name,
-            "boundX": r.bound_x,
-            "boundY": r.bound_y,
-            "boundZ": r.bound_z
-        } 
-        for r in rows
-    ]
+
+    return {
+        "total": total_count,
+        "showing": len(rows),
+        "capped": total_count > 500,
+        "items": [
+            {
+                "id": r.id,
+                "projectId": r.project_id,
+                "isFolder": r.is_folder,
+                "fileName": r.file_name,
+                "fileType": r.file_type,
+                "filePath": r.file_path,
+                "size": r.size,
+                "lastModified": r.last_modified,
+                "partGeomName": r.part_geom_name,
+                "boundX": r.bound_x,
+                "boundY": r.bound_y,
+                "boundZ": r.bound_z
+            }
+            for r in rows
+        ]
+    }
 
 @router.get("/preview/{file_id}")
 async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
@@ -295,7 +369,96 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
     file_path = record.file_path
     ext = record.file_type.lower() if record.file_type else ""
     
-    # Support common image formats and PDF
+    # --- CACHE LOGIC ---
+    try:
+        file_stat = os.stat(file_path)
+        cache_key = hashlib.md5(f"{file_path}_{file_stat.st_mtime}".encode('utf-8')).hexdigest()
+        cache_dir = os.path.join(os.path.dirname(__file__), '..', '.preview_cache')
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_path = os.path.join(cache_dir, f"{cache_key}.png")
+        if os.path.exists(cache_path):
+            def _read_cache():
+                with open(cache_path, 'rb') as f:
+                    return f.read()
+            cache_data = await asyncio.to_thread(_read_cache)
+            return Response(content=cache_data, media_type="image/png")
+    except Exception:
+        cache_path = None
+        
+    def return_and_cache(content, media_type="image/png"):
+        if cache_path and content and media_type == "image/png":
+            try:
+                def _write_cache():
+                    with open(cache_path, 'wb') as f:
+                        f.write(content)
+                # Don't await the write, just do it inline or sync since it's small,
+                # but to be perfectly safe, we do it inline blocking for a few ms
+                with open(cache_path, 'wb') as f:
+                    f.write(content)
+            except Exception:
+                pass
+        return Response(content=content, media_type=media_type)
+    # -------------------
+
+    # 1. Direct Media Serving: PDF (via iframe)
+    if ext == '.pdf':
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File missing")
+        def _read_file():
+            with open(file_path, 'rb') as f:
+                return f.read()
+        file_data = await asyncio.to_thread(_read_file)
+        return Response(content=file_data, media_type="application/pdf")
+
+    # 2. Forensic Binary Extraction (Priority for CAD formats)
+    if ext == '.dwg':
+        try:
+            dwg_data = await asyncio.to_thread(get_dwg_preview, file_path)
+            if dwg_data:
+                return return_and_cache(dwg_data)
+        except Exception as e:
+            print(f"DWG Forensic extraction failed for {file_path}: {e}")
+
+    # 3. Universal Choice: Windows Shell Thumbnail (Forced for CAD/complex files)
+    # We now use SIIGBF_THUMBNAILONLY in thumbnail_helper to ensure real drawings.
+    if ext in cad_extensions or ext in {'.rvt', '.ifc', '.3dm'}:
+        try:
+            def _get_thumb():
+                img = get_shell_thumbnail(file_path, size=1024)
+                if img:
+                    buf = io.BytesIO()
+                    img.save(buf, format="PNG")
+                    return buf.getvalue()
+                return None
+            thumb_data = await asyncio.to_thread(_get_thumb)
+            if thumb_data:
+                return return_and_cache(thumb_data)
+        except Exception as e:
+            print(f"Shell thumbnail failed for {file_path}: {e}")
+
+    # 3. Specialized ICD Point Cloud Rendering (Fallback for .icd if Shell fails)
+    if ext == '.icd':
+        # Trigger lazy geometry enrichment in the background if not yet populated.
+        # This fills in bound_x/y/z and part_geom_name for files scanned without parse_icd.
+        if enrich_icd_metadata and record.bound_x is None:
+            asyncio.create_task(enrich_icd_metadata(record.id, file_path))
+        try:
+            parser = SimpleICDParser()
+            def _parse_and_render():
+                if parser.parse_file(file_path):
+                    renderer = PointCloudRenderer(width=1024, height=768)
+                    img = renderer.render(parser)
+                    if img:
+                        buf = io.BytesIO()
+                        img.save(buf, format="PNG")
+                        return buf.getvalue()
+                return None
+            render_data = await asyncio.to_thread(_parse_and_render)
+            if render_data:
+                return return_and_cache(render_data)
+        except Exception: pass
+
+    # 4. Standard Images (Direct Serving)
     preview_extensions = {
         '.png': 'image/png',
         '.jpg': 'image/jpeg',
@@ -303,20 +466,16 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
         '.gif': 'image/gif',
         '.bmp': 'image/bmp',
         '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
-        '.pdf': 'application/pdf'
+        '.svg': 'image/svg+xml'
     }
-    
     if ext in preview_extensions:
         if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="File missing")
-        
-        def _read_file():
+            raise HTTPException(status_code=404, detail="Image file missing")
+        def _read_img():
             with open(file_path, 'rb') as f:
                 return f.read()
-        
-        file_data = await asyncio.to_thread(_read_file)
-        return Response(content=file_data, media_type=preview_extensions[ext])
+        img_data = await asyncio.to_thread(_read_img)
+        return Response(content=img_data, media_type=preview_extensions[ext])
 
     # Default ICD parsing logic
     if not ext == '.icd':
@@ -337,7 +496,7 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
     img_data = await asyncio.to_thread(_generate_preview)
     
     if img_data:
-        return Response(content=img_data, media_type="image/png")
+        return return_and_cache(img_data)
             
     raise HTTPException(status_code=500, detail="Failed to generate preview")
 
@@ -387,15 +546,31 @@ async def delete_item(file_id: int, db: AsyncSession = Depends(get_db)):
             
     # 2. Delete database records
     if record.is_folder:
-        # Delete the folder and all children
-        await db.execute(delete(CadFileIndex).where(CadFileIndex.file_path.like(f"{record.file_path}%")))
+        # Delete the folder itself AND all children.
+        # Use exact match OR children with trailing slash to prevent matching
+        # sibling folders that share a common prefix (e.g. /foo vs /foobar).
+        folder_prefix = record.file_path.rstrip('/\\') + '/'
+        folder_prefix_back = record.file_path.rstrip('/\\') + '\\'
+        await db.execute(
+            delete(CadFileIndex).where(
+                (CadFileIndex.project_id == record.project_id) &
+                (
+                    (CadFileIndex.file_path == record.file_path) |
+                    (CadFileIndex.file_path.like(f"{folder_prefix}%")) |
+                    (CadFileIndex.file_path.like(f"{folder_prefix_back}%"))
+                )
+            )
+        )
     else:
         await db.delete(record)
         
     await db.commit()
     
-    # Rescan project to fix counts asynchronously
+    # Rescan project to fix counts asynchronously.
+    # Fetch the project to get the actual root_path — passing "" caused silent scan failures.
     if indexer and getattr(record, 'project_id', None):
-        asyncio.create_task(indexer.scan_project_async(record.project_id, ""))
-        
+        proj = await db.get(Project, record.project_id)
+        if proj:
+            asyncio.create_task(indexer.scan_project_async(proj.id, proj.root_path))
+
     return {"success": True}

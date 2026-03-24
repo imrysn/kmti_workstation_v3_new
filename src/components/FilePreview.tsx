@@ -15,16 +15,20 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
   const [isZoomed, setIsZoomed] = useState(false);
   
   const previewUrl = `http://127.0.0.1:8000/api/parts/preview/${fileId}`;
-  const isImage = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'].includes(fileType.toLowerCase());
+  const cadExtensions = ['.icd', '.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'];
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
+  
+  const isImage = imageExtensions.includes(fileType.toLowerCase());
   const isPdf = fileType.toLowerCase() === '.pdf';
   const isIcd = fileType.toLowerCase() === '.icd';
+  const isCad = cadExtensions.includes(fileType.toLowerCase()) && !isIcd;
   
   useEffect(() => {
     setLoading(true);
     setError(false);
   }, [fileId]);
 
-  if (!isImage && !isIcd && !isPdf) {
+  if (!isImage && !isCad && !isPdf && !isIcd) {
     return null;
   }
 
@@ -48,7 +52,9 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
         {loading && (
           <div className="file-preview-loading">
             <div className="file-preview-spinner"></div>
-            <div className="file-preview-error-text">{isIcd ? 'Generating' : 'Loading'} Preview...</div>
+            <div className="file-preview-error-text">
+              {(isIcd || isCad) ? 'Generating CAD Snapshot...' : 'Loading Preview...'}
+            </div>
           </div>
         )}
         

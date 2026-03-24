@@ -126,12 +126,12 @@ class SimpleICDParser:
         }
 
     def _filter_points(self):
-        if len(self.points) > 2000:
-            step = len(self.points) // 2000
-            self.points = self.points[::step][:2000]
+        if len(self.points) > 10000:
+            step = len(self.points) // 10000
+            self.points = self.points[::step][:10000]
 
 class PointCloudRenderer:
-    def __init__(self, width: int = 800, height: int = 600):
+    def __init__(self, width: int = 1200, height: int = 900):
         self.width = width
         self.height = height
         
@@ -155,8 +155,9 @@ class PointCloudRenderer:
                 
                 if 0 <= screen_x <= self.width and 0 <= screen_y <= self.height:
                     depth_factor = (point.z - parser.bounds['min'].z) / (b_size.z or 1)
-                    radius = 1 + int(depth_factor * 2)
-                    c = (min(255, 50 + int(depth_factor * 50)), min(255, 150 + int(depth_factor * 30)), 50)
+                    # Smaller radius for sharper high-res look
+                    radius = 0.5 + (depth_factor * 1.5)
+                    c = (min(255, 40 + int(depth_factor * 40)), min(255, 140 + int(depth_factor * 20)), 40)
                     draw.ellipse([screen_x - radius, screen_y - radius, screen_x + radius, screen_y + radius], fill=c)
                     
             try:

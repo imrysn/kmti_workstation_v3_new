@@ -2,11 +2,21 @@ import os
 import asyncio
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import AsyncSessionLocal
-from models import CadFileIndex, Project
+from db.database import AsyncSessionLocal
+from db.models import CadFileIndex, Project
 from core.icd_parser import SimpleICDParser
 
-def get_file_metadata(filepath: Path, project_id: int):
+def get_file_metadata(filepath: Path, project_id: int, parse_icd: bool = False):
+    """
+    Extract file metadata for indexing.
+
+    parse_icd=False (default, used during scans): skips heavy ICD geometry
+    parsing so scans stay fast. Geometry fields are populated lazily on the
+    first preview request via enrich_icd_metadata().
+
+    parse_icd=True: forces ICD parsing immediately (used by preview endpoint
+    when a file has never been enriched yet).
+    """
     stat = filepath.stat()
     meta = {
         "project_id": project_id,
@@ -23,8 +33,8 @@ def get_file_metadata(filepath: Path, project_id: int):
         "bound_y": None,
         "bound_z": None
     }
-    
-    if not filepath.is_dir() and meta["file_type"] == ".icd":
+
+    if parse_icd and not filepath.is_dir() and meta["file_type"] == ".icd":
         parser = SimpleICDParser()
         if parser.parse_file(str(filepath)):
             meta["part_geom_name"] = parser.part_name
@@ -32,8 +42,38 @@ def get_file_metadata(filepath: Path, project_id: int):
                 meta["bound_x"] = parser.bounds['size'].x
                 meta["bound_y"] = parser.bounds['size'].y
                 meta["bound_z"] = parser.bounds['size'].z
-                
+
     return meta
+
+
+async def enrich_icd_metadata(record_id: int, file_path: str):
+    """
+    Lazily parses ICD geometry for a single file and writes it back to the DB.
+    Called on first preview of an .icd file that was indexed without geometry data.
+    Safe to call multiple times — exits early if bounds are already populated.
+    """
+    from db.database import AsyncSessionLocal
+    from db.models import CadFileIndex
+
+    async with AsyncSessionLocal() as session:
+        record = await session.get(CadFileIndex, record_id)
+        if not record or record.bound_x is not None:
+            return  # Already enriched or not found
+
+        def _parse():
+            parser = SimpleICDParser()
+            if parser.parse_file(file_path):
+                return parser
+            return None
+
+        parser = await asyncio.to_thread(_parse)
+        if parser:
+            record.part_geom_name = parser.part_name
+            if parser.bounds:
+                record.bound_x = parser.bounds['size'].x
+                record.bound_y = parser.bounds['size'].y
+                record.bound_z = parser.bounds['size'].z
+            await session.commit()
 
 class MultiProjectIndexer:
     def __init__(self):

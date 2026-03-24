@@ -300,7 +300,7 @@
   cursor: pointer;
   align-items: center;
   transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  margin-bottom: 12px;
+  margin-bottom: 4px;
   background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.03);
   animation: resultEntry 0.4s cubic-bezier(0, 0, 0.2, 1) backwards;
@@ -335,7 +335,7 @@
 }
 
 .findr-result-name {
-  font-weight: 700;
+  font-weight: 400;
   font-size: 15px;
   color: var(--text-primary);
 }

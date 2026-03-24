@@ -8,7 +8,7 @@
   border: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  min-height: 120px;
+  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -23,7 +23,7 @@
 .file-preview-image {
   width: 100%;
   height: auto;
-  max-height: 220px;
+  max-height: 450px;
   object-fit: contain;
   display: block;
   animation: fadeIn 0.5s ease-out;
@@ -115,27 +115,33 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
+  padding: 20px;
   animation: overlayFadeIn 0.3s ease-out;
 }
 
 .preview-modal {
   position: relative;
-  max-width: 90%;
-  max-height: 90%;
+  width: 98%;
+  max-width: 1000px;
+  max-height: 98%;
+  min-height: 300px;
   background: white;
   border-radius: 16px;
   padding: 12px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
 }
 
 .preview-modal-image {
   display: block;
-  max-width: 100%;
-  max-height: calc(100vh - 120px);
+  width: 100%;
+  height: auto;
+  max-height: calc(100vh - 180px);
   border-radius: 8px;
   object-fit: contain;
+  background: #f8fafc;
 }
 
 .preview-close-btn {
@@ -175,7 +181,8 @@
 }
 
 .file-preview-pdf {
-  pointer-events: none; /* Disable interaction in the small sidebar preview */
+  pointer-events: none;
+  /* Disable interaction in the small sidebar preview */
   background: white;
 }
 
@@ -184,7 +191,8 @@
   height: 90vh;
   display: flex;
   flex-direction: column;
-  padding: 0; /* Remove padding for PDF modal */
+  padding: 0;
+  /* Remove padding for PDF modal */
   overflow: hidden;
 }
 
@@ -203,15 +211,29 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes overlayFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes modalScaleUp {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

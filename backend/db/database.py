@@ -1,0 +1,43 @@
+"""
+Database configuration and session management.
+Connects to the existing MySQL instance from kmtiworkstationvb.
+
+Credentials are loaded exclusively from environment variables or a .env file.
+Never hardcode credentials here — see backend/.env.example for required keys.
+"""
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
+import os
+
+try:
+    from dotenv import load_dotenv
+    # Load .env from the backend directory (one level up from db/)
+    _env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+    load_dotenv(dotenv_path=_env_path)
+except ImportError:
+    pass  # python-dotenv not installed; fall back to environment variables only
+
+# Credentials loaded exclusively from environment — no hardcoded fallbacks.
+# Missing vars will raise a clear KeyError at startup rather than silently
+# connecting with wrong/stale credentials.
+DB_HOST = os.environ["DB_HOST"]
+DB_NAME = os.environ["DB_NAME"]
+DB_USER = os.environ["DB_USER"]
+DB_PASS = os.environ["DB_PASS"]
+
+DATABASE_URL = f"mysql+aiomysql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}?charset=utf8"
+
+engine = create_async_engine(DATABASE_URL, pool_size=5, max_overflow=10)
+
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+class Base(DeclarativeBase):
+    pass
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session

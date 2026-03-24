@@ -7,7 +7,7 @@ Based on exact VB source queries from mod_login.getDbChar():
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from database import get_db
+from db.database import get_db
 
 router = APIRouter()
 
@@ -45,21 +45,23 @@ async def get_heat_treatment_categories(db: AsyncSession = Depends(get_db)):
 async def get_heat_treatment(category: str = None, q: str = "", db: AsyncSession = Depends(get_db)):
     """
     Fetches heat treatment data, optionally filtered by category and search term.
-    Equivalent to: SELECT eng_char, jp_char FROM heat_trmnt WHERE category = 'X'
+    Uses SQLAlchemy ORM conditions instead of f-string SQL to eliminate any
+    future risk of SQL injection from the query assembly pattern.
     """
-    conditions = []
-    params = {}
+    from sqlalchemy import select as sa_select
+    from models import HeatTreatment
+
+    query = sa_select(HeatTreatment)
 
     if category:
-        conditions.append("category = :category")
-        params["category"] = category
+        query = query.where(HeatTreatment.category == category)
     if q:
-        conditions.append("(eng_char LIKE :q OR jp_char LIKE :q)")
-        params["q"] = f"%{q}%"
+        like_q = f"%{q}%"
+        query = query.where(
+            (HeatTreatment.eng_char.like(like_q)) |
+            (HeatTreatment.jp_char.like(like_q))
+        )
 
-    where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    sql = text(f"SELECT eng_char, jp_char, category FROM heat_trmnt {where_clause}")
-
-    result = await db.execute(sql, params)
-    rows = result.fetchall()
-    return [{"englishChar": r[0], "japaneseChar": r[1], "category": r[2]} for r in rows]
+    result = await db.execute(query)
+    rows = result.scalars().all()
+    return [{"englishChar": r.eng_char, "japaneseChar": r.jp_char, "category": r.category} for r in rows]

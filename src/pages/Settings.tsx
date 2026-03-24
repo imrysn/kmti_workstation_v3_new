@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { settingsApi } from '../services/api'
+import { useModal } from '../components/ModalContext'
 import type { IAppSettings } from '../types'
 import { StatusIcon } from '../components/FileIcons'
 import './Settings.css'
@@ -14,6 +15,10 @@ export default function Settings() {
   const [saved, setSaved] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<'ok' | 'error' | null>(null)
+  const [clearing, setClearing] = useState(false)
+  const [cleared, setCleared] = useState(false)
+  
+  const { confirm, alert, notify } = useModal()
 
   useEffect(() => {
     settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res.data }))
@@ -35,6 +40,26 @@ export default function Settings() {
       setTestResult('error')
     }
     setTesting(false)
+  }
+
+  const handleClearCache = async () => {
+    confirm(
+      "Are you sure you want to delete all cached CAD previews? They will be regenerated on next use.",
+      async () => {
+        setClearing(true)
+        try {
+          await settingsApi.clearCache()
+          setCleared(true)
+          notify("Cache cleared successfully", "success")
+          setTimeout(() => setCleared(false), 3000)
+        } catch (err) {
+          alert("Failed to clear cache", "Error")
+        }
+        setClearing(false)
+      },
+      undefined,
+      'danger'
+    )
   }
 
   const set = (key: keyof IAppSettings, value: string | boolean) =>
@@ -89,6 +114,24 @@ export default function Settings() {
         <div className="sett-toggle-row">
           <label className="form-label" style={{ margin: 0 }}>Auto-delete downloads on next startup</label>
           <input type="checkbox" checked={settings.autoDel} onChange={e => set('autoDel', e.target.checked)} className="sett-checkbox" />
+        </div>
+      </div>
+
+      <div className="card sett-card">
+        <h2 className="sett-section-title">Storage & Cache</h2>
+        <div className="sett-field">
+          <label className="form-label">Preview Cache</label>
+          <div className="sett-info-text">
+            For forensic CAD previews, the system stores small PNG snapshots to improve load times.
+          </div>
+          <button
+            className={`btn ${cleared ? 'btn-success' : 'btn-ghost'}`}
+            onClick={handleClearCache}
+            disabled={clearing}
+            style={{ marginTop: 8 }}
+          >
+            {clearing ? 'Clearing...' : cleared ? '✓ Cache Cleared' : 'Clear Cache'}
+          </button>
         </div>
       </div>
 

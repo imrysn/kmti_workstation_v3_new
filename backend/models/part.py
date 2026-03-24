@@ -7,7 +7,7 @@ Real schema confirmed from VB source:
   heat_trmnt: see VB mod files
 """
 from sqlalchemy import Column, String, LargeBinary, Text, Integer, Float, Boolean, ForeignKey
-from database import Base
+from db.database import Base
 
 class Project(Base):
     __tablename__ = "projects"
