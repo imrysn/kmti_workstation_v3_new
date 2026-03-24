@@ -53,3 +53,12 @@ pnpm-debug.log*
 
 # data
 *.xlsx
+backend/.preview_cache/
+backend/scripts/diagnostics/
+backend/data/
+
+# Temporary CAD/Binary Artifacts
+*.bin
+*.wmf
+*.dwg_preview.png
+*.icd_preview.png
