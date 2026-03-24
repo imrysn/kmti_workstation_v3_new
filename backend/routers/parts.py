@@ -31,6 +31,7 @@ except ImportError:
 class CreateProjectRequest(BaseModel):
     name: str
     root_path: str
+    category: str = "PROJECTS"
 
 class CreateFolderRequest(BaseModel):
     project_name: str
@@ -77,8 +78,11 @@ async def browse_folder():
     )
 
 @router.get("/projects")
-async def get_projects(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Project))
+async def get_projects(category: str = None, db: AsyncSession = Depends(get_db)):
+    query = select(Project)
+    if category:
+        query = query.where(Project.category == category)
+    result = await db.execute(query)
     projs = result.scalars().all()
     return [{
         "id": p.id,
@@ -104,7 +108,7 @@ async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_
                 detail=f"A project already points to this folder: '{proj.name}'. Remove it first or choose a different folder."
             )
 
-    p = Project(name=req.name, root_path=req.root_path)
+    p = Project(name=req.name, root_path=req.root_path, category=req.category)
     db.add(p)
     try:
         await db.commit()
@@ -142,6 +146,24 @@ async def scan_project_endpoint(project_id: int, db: AsyncSession = Depends(get_
         asyncio.create_task(indexer.scan_project_async(proj.id, proj.root_path))
     return {"success": True, "message": "Scan started"}
 
+
+@router.delete("/projects/category/{category}")
+async def delete_projects_by_category(category: str, db: AsyncSession = Depends(get_db)):
+    # 1. Find all projects in this category
+    result = await db.execute(select(Project).where(Project.category == category))
+    projs = result.scalars().all()
+    
+    if not projs:
+        # Check if we should still return success if the category is just empty
+        return {"success": True, "count": 0}
+
+    for proj in projs:
+        # Delete associated file indexes first (cascading might handle this, but let's be safe)
+        await db.execute(delete(CadFileIndex).where(CadFileIndex.project_id == proj.id))
+        await db.delete(proj)
+        
+    await db.commit()
+    return {"success": True, "count": len(projs)}
 
 @router.get("/projects/{project_id}/scan-status")
 async def scan_status_stream(project_id: int, db: AsyncSession = Depends(get_db)):

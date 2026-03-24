@@ -192,7 +192,7 @@ function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, sea
 // ──────────────────────────────────────────────────────────────────────
 
 export default function PurchasedParts() {
-  const { notify, alert, confirm, prompt, showProgress, hideProgress } = useModal()
+  const { notify, alert, confirm, showProgress, hideProgress } = useModal()
   const [projects, setProjects] = useState<IProject[]>([])
   const [selectedProject, setSelectedProject] = useState<IProject | null>(null)
 
@@ -209,6 +209,21 @@ export default function PurchasedParts() {
 
   const [isSearching, setIsSearching] = useState(false)
   const [searchTime, setSearchTime] = useState(0)
+
+  // --- Navigation State ---
+  const [availableTabs, setAvailableTabs] = useState<string[]>(() => {
+    const saved = localStorage.getItem('findr_available_tabs')
+    return saved ? JSON.parse(saved) : ['PROJECTS', 'PURCHASED PARTS', 'OTHERS']
+  })
+  const [activeSideTab, setActiveSideTab] = useState(availableTabs[0])
+  const [isSwitcherOpen, setIsSwitcherOpen] = useState(false)
+  const [isAddingTab, setIsAddingTab] = useState(false)
+  const [newTabValue, setNewTabValue] = useState('')
+
+  useEffect(() => {
+    localStorage.setItem('findr_available_tabs', JSON.stringify(availableTabs))
+  }, [availableTabs])
+  const [isProjectsExpanded, setIsProjectsExpanded] = useState(true)
 
   // Tree state
   const [rawTreeNodes, setRawTreeNodes] = useState<any[]>([])
@@ -236,6 +251,18 @@ export default function PurchasedParts() {
   }
 
   const treeContainerRef = React.useRef<HTMLDivElement>(null)
+  const switcherRef = React.useRef<HTMLDivElement>(null)
+
+  // Click outside listener for switcher
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (switcherRef.current && !switcherRef.current.contains(event.target as Node)) {
+        setIsSwitcherOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Build the tree from raw nodes
   const treeRoot = useMemo(() => {
@@ -246,28 +273,50 @@ export default function PurchasedParts() {
 
   // Initialization
   useEffect(() => {
-    loadProjects(true)  // isMount=true: reattach overlay if a scan is already running
-  }, [])
-
-  const loadProjects = async (isMount = false) => {
-    try {
-      const res = await partsApi.getProjects()
-      setProjects(res.data)
-      if (res.data.length > 0 && !selectedProject) {
-        setSelectedProject(res.data[0])
-      }
-      // On mount: if any project is already scanning (e.g. UI was refreshed mid-scan),
-      // reattach the progress overlay + SSE stream so the user can see it's still running.
-      if (isMount) {
+    // This initial call handles reattaching progress overlay if a scan was running
+    const initialLoad = async () => {
+      try {
+        const res = await partsApi.getProjects(activeSideTab) // Use activeSideTab for initial load
+        setProjects(res.data)
+        if (res.data.length > 0 && !selectedProject) {
+          // setSelectedProject(res.data[0]) // Only auto-select if we don't have a selection
+        }
         const alreadyScanning = res.data.find((p: IProject) => p.isScanning)
         if (alreadyScanning) {
           showProgress(`Resuming index of '${alreadyScanning.name}'...`, alreadyScanning.id)
         }
+      } catch (err) {
+        console.error('Failed to load projects on mount:', err)
       }
-    } catch {
-      console.error('Failed to load projects')
     }
-  }
+    initialLoad()
+  }, []) // Empty dependency array for mount effect
+
+  const loadProjects = useCallback(async (category?: string) => {
+    try {
+      const res = await partsApi.getProjects(category)
+      setProjects(res.data)
+      if (res.data.length > 0 && !selectedProject) {
+        // Only auto-select if we don't have a selection
+        // setSelectedProject(res.data[0]) 
+      }
+    } catch (err) {
+      console.error('Failed to load projects:', err)
+    }
+  }, [selectedProject])
+
+  useEffect(() => {
+    loadProjects(activeSideTab)
+  }, [loadProjects, activeSideTab])
+
+  // Clear selection and results when tab changes
+  useEffect(() => {
+    setSelectedProject(null)
+    setSearchResults([])
+    setResultTotal(0)
+    setFolderFilter('')
+    setSearch('')
+  }, [activeSideTab])
 
   // Poll for scanning progress
   useEffect(() => {
@@ -326,41 +375,29 @@ export default function PurchasedParts() {
   }, [selectedProject])
 
   const handleAddProjectDirectly = async () => {
-    // Step 1: Pick a folder via native Electron dialog
     if (!window.electronAPI?.selectFolder) {
       alert("Native folder selection is only available in the findr Desktop App.", "Feature Unavailable")
       return
     }
-    const folderPath = await window.electronAPI.selectFolder()
-    if (!folderPath) return
+    const path = await window.electronAPI?.selectFolder()
+    if (!path) return
+    
+    const segments = path.split(/[\\/]/)
+    const name = (segments[segments.length - 1] || 'NEW PROJECT').toUpperCase()
 
-    // Step 2: Derive a default name from the folder, then ask user to confirm/rename
-    const segments = folderPath.split(/[\\/]/)
-    const defaultName = segments[segments.length - 1].toUpperCase() || 'NEW PROJECT'
-
-    prompt({
-      title: 'Name This Project',
-      message: `Folder: ${folderPath}`,
-      placeholder: 'Project name',
-      defaultValue: defaultName,
-      confirmLabel: 'Add & Index',
-      onConfirm: async (projectName) => {
-        try {
-          const res = await partsApi.addProject(projectName, folderPath)
-          const newProjectId = res.data?.id
-          showProgress('Indexing Project...', newProjectId)
-          showToast(`Project '${projectName}' added!`)
-          loadProjects()
-        } catch (e: any) {
-          const detail = e?.response?.data?.detail
-          if (e?.response?.status === 409) {
-            alert(detail ?? 'This folder is already indexed.', 'Duplicate Folder')
-          } else {
-            notify(detail ?? 'Failed to add project folder.', 'error')
-          }
-        }
+    try {
+      const res = await partsApi.addProject(name, path, activeSideTab)
+      const newProj = res.data as IProject
+      setProjects(prev => [...prev, newProj])
+      setSelectedProject(newProj)
+      notify(`Added ${name} to ${activeSideTab}`, 'success')
+      if (res.data?.id) {
+        showProgress('Indexing Progress...', res.data.id)
       }
-    })
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || "Failed to add project"
+      alert(msg, "Error")
+    }
   }
 
   const handleScanProject = async (id: number) => {
@@ -378,11 +415,44 @@ export default function PurchasedParts() {
       async () => {
         try {
           await partsApi.deleteProject(id)
-          if (selectedProject?.id === id) setSelectedProject(null)
-          showToast("Project removed from index.")
-          loadProjects()
+          notify(`Project ${id} deleted`, 'success')
+          setSelectedProject(null)
+          loadProjects(activeSideTab)
         } catch {
           alert("Failed to delete project. Please wait for any active scans to finish.", "Delete Error")
+        }
+      },
+      undefined,
+      'danger'
+    )
+  }
+
+  const handleCreateTab = () => {
+    const name = newTabValue.trim().toUpperCase()
+    if (name && !availableTabs.includes(name)) {
+      setAvailableTabs([...availableTabs, name])
+      setActiveSideTab(name)
+    }
+    setIsAddingTab(false)
+    setNewTabValue('')
+    setIsSwitcherOpen(false)
+  }
+
+  const handleDeleteCategory = (category: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    confirm(
+      `Are you sure you want to delete the "${category}" tab and ALL indexed folders inside it?`,
+      async () => {
+        try {
+          await partsApi.deleteCategoryProjects(category)
+          const remaining = availableTabs.filter(t => t !== category)
+          setAvailableTabs(remaining)
+          if (activeSideTab === category) {
+            setActiveSideTab(remaining[0] || 'PROJECTS')
+          }
+          notify(`Deleted tab ${category}`, 'success')
+        } catch (err) {
+          alert('Failed to delete category data', 'Error')
         }
       },
       undefined,
@@ -571,8 +641,94 @@ export default function PurchasedParts() {
       <div className="findr-body">
         {/* LEFT SIDEBAR */}
         <div className="findr-sidebar-left">
+          {/* Section Switcher Dropdown */}
+          <div className="findr-switcher-container" ref={switcherRef}>
+            <button 
+              className={`findr-switcher-header ${isSwitcherOpen ? 'open' : ''}`}
+              onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
+            >
+              <span className="findr-switcher-label">{activeSideTab}</span>
+              <span className="findr-switcher-chevron">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </span>
+            </button>
+
+            {isSwitcherOpen && (
+              <div className="findr-switcher-menu">
+                {availableTabs.map(tab => (
+                  <div 
+                    key={tab}
+                    className={`findr-switcher-item ${activeSideTab === tab ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveSideTab(tab)
+                      setIsSwitcherOpen(false)
+                    }}
+                  >
+                    <span>{tab}</span>
+                    <button 
+                      className="tab-delete-btn" 
+                      onClick={(e) => handleDeleteCategory(tab, e)}
+                      title="Delete category"
+                    >
+                      <TrashIcon size={12} />
+                    </button>
+                  </div>
+                ))}
+                
+                <div className="findr-switcher-separator" />
+                
+                {isAddingTab ? (
+                  <div className="findr-switcher-input-container" onClick={e => e.stopPropagation()}>
+                    <input 
+                      autoFocus
+                      className="findr-switcher-input"
+                      placeholder="ENTER TITLE..."
+                      value={newTabValue}
+                      onChange={e => setNewTabValue(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleCreateTab()
+                        if (e.key === 'Escape') setIsAddingTab(false)
+                      }}
+                      onBlur={() => {
+                        if (!newTabValue.trim()) setIsAddingTab(false)
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div 
+                    className="findr-switcher-item add-more"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsAddingTab(true)
+                    }}
+                  >
+                    <span>ADD MORE</span>
+                    <PlusIcon size={14} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Common Sidebar Content for all tabs */}
           <div className="findr-section-title">
-            <span>PROJECTS</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span 
+                className={`section-toggle-arrow ${isProjectsExpanded ? 'open' : ''}`}
+                onClick={() => setIsProjectsExpanded(!isProjectsExpanded)}
+                style={{ cursor: 'pointer' }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                  <path d="M3 2l4 3-4 3z"/>
+                </svg>
+              </span>
+              <span>
+                {activeSideTab === 'PROJECTS' ? 'INDEXED PROJECTS' : 
+                 activeSideTab === 'PURCHASED PARTS' ? 'INDEXED PARTS' : 'OTHER DATA'}
+              </span>
+            </div>
             <div style={{ display: 'flex', gap: 4 }}>
               <button className="findr-action-btn" onClick={handleAddProjectDirectly} title="Add Project"><PlusIcon /></button>
               {selectedProject && (
@@ -584,33 +740,35 @@ export default function PurchasedParts() {
             </div>
           </div>
 
-          <div className="findr-projects-list">
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8, paddingLeft: 8, fontWeight: 500 }}>
-              {projects.length} PROJECTS • {projects.reduce((sum, p) => sum + p.totalFiles, 0).toLocaleString()} FILES
-            </div>
+          <div className={`findr-projects-collapsible ${isProjectsExpanded ? 'expanded' : 'collapsed'}`}>
+            <div className="findr-projects-list">
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8, paddingLeft: 8, fontWeight: 500, opacity: 0.7 }}>
+                {projects.length} {activeSideTab === 'PROJECTS' ? 'PROJECTS' : activeSideTab === 'PURCHASED PARTS' ? 'INDEXES' : 'FOLDERS'} • {projects.reduce((sum, p) => sum + p.totalFiles, 0).toLocaleString()} FILES
+              </div>
 
-            {projects.map(p => (
-              <div
-                key={p.id}
-                className={`findr-project-card ${selectedProject?.id === p.id ? 'active' : ''}`}
-                onClick={() => setSelectedProject(p)}
-              >
-                <div className="findr-project-icon">
-                  <FileIcon 
-                    isFolder 
-                    size={20} 
-                    color={p.isScanning ? "var(--warning)" : "var(--accent)"} 
-                    filePath={p.rootPath}
-                  />
-                </div>
-                <div className="findr-project-details">
-                  <div className="findr-project-name">{p.name}</div>
-                  <div className="findr-project-sub" style={{ color: p.isScanning ? 'var(--warning)' : 'var(--text-muted)' }}>
-                    {p.isScanning ? "Indexing..." : `${p.totalFiles.toLocaleString()} files`}
+              {projects.map(p => (
+                <div
+                  key={p.id}
+                  className={`findr-project-card ${selectedProject?.id === p.id ? 'active' : ''}`}
+                  onClick={() => setSelectedProject(p)}
+                >
+                  <div className="findr-project-icon">
+                    <FileIcon 
+                      isFolder 
+                      size={20} 
+                      color={p.isScanning ? "var(--warning)" : "var(--accent)"} 
+                      filePath={p.rootPath}
+                    />
+                  </div>
+                  <div className="findr-project-details">
+                    <div className="findr-project-name">{p.name}</div>
+                    <div className="findr-project-sub" style={{ color: p.isScanning ? 'var(--warning)' : 'var(--text-muted)' }}>
+                      {p.isScanning ? "Indexing..." : `${p.totalFiles.toLocaleString()} files`}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           <div className="findr-section-title" style={{ marginTop: 4 }}>
@@ -756,8 +914,8 @@ export default function PurchasedParts() {
           ['.icd', '.dwg', '.sldprt'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-cad' :
           selectedResult?.fileType?.includes('.zip') ? 'accent-zip' : ''
         }`}>
-          <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            File Details
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 800, borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            File Information
           </div>
 
           {selectedResult ? (

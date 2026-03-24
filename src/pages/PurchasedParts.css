@@ -1,4 +1,4 @@
-/* === PurchasedParts Modern Minimalist UI === */
+/* === PurchasedParts Clean Light UI === */
 
 .findr-app {
   display: flex;
@@ -22,7 +22,7 @@
   overflow: hidden;
   gap: 20px;
   /* Increased whitespace between panels */
-  animation: fadeIn 0.8s ease-out;
+  animation: fadeIn 0.4s ease-out;
 }
 
 /* Base Panel Style - Clean Minimalist Look */
@@ -30,27 +30,192 @@
 .findr-center,
 .findr-sidebar-right {
   background-color: var(--bg-secondary);
-  border: none;
-  /* Removed borders for minimalism */
+  border: 1px solid var(--border);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-  /* Soft shadow instead of border */
-  animation: panelEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation: panelEntry 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  position: relative;
+  overflow: hidden;
 }
 
 .findr-sidebar-left {
-  animation-delay: 0.1s;
+  animation-delay: 0.05s;
 }
 
 .findr-center {
-  animation-delay: 0.2s;
+  animation-delay: 0.1s;
 }
 
 .findr-sidebar-right {
-  animation-delay: 0.3s;
+  animation-delay: 0.15s;
 }
 
-/* Left Sidebar */
+/* Sidebar Navigation Switcher */
+.findr-switcher-container {
+  position: relative;
+  padding: 16px;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+}
+
+.findr-switcher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.findr-switcher-header:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--text-muted);
+}
+
+.findr-switcher-header.open {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+.findr-switcher-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.findr-switcher-chevron {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.findr-switcher-header.open .findr-switcher-chevron {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.findr-switcher-menu {
+  position: absolute;
+  top: calc(100% - 8px);
+  left: 16px;
+  right: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+  overflow: hidden;
+  animation: dropdownFade 0.2s ease-out;
+  z-index: 101;
+}
+
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.findr-switcher-item {
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.findr-switcher-item:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.findr-switcher-item.active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.findr-switcher-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+  opacity: 0.5;
+}
+
+.tab-delete-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.findr-switcher-item:hover .tab-delete-btn {
+  opacity: 1;
+}
+
+.tab-delete-btn:hover {
+  background: var(--bg-surface);
+  color: #ff4d4f;
+}
+
+.findr-switcher-input-container {
+  padding: 8px 12px;
+  background: var(--bg-surface);
+}
+
+.findr-switcher-input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 700;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.findr-switcher-input:focus {
+  border-color: var(--accent);
+}
+
+.findr-switcher-item.add-more {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.findr-switcher-item.add-more:hover {
+  background: var(--accent-subtle);
+}
+
+/* Left Sidebar Inner Sections */
 .findr-sidebar-left {
   width: 300px;
   display: flex;
@@ -58,16 +223,16 @@
   overflow: hidden;
   transition: width 0.3s ease;
   background-color: var(--bg-secondary);
-  border-right: 1px solid rgba(0, 0, 0, 0.03);
-  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.02);
-  color: var(--text-primary);
 }
 
 .findr-section-title {
   font-size: 10px;
   color: var(--text-muted);
   font-weight: 800;
-  padding: 24px 20px 12px;
+  padding: 16px 16px 8px;
+  /* Slightly tightened inner padding */
+  margin-top: 12px;
+  /* Added spacing between categories */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -75,17 +240,54 @@
   letter-spacing: 0.1em;
 }
 
+.findr-section-title:first-child {
+  margin-top: 0;
+}
+
+.findr-section-title.clickable {
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.findr-section-title.clickable:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.section-toggle-arrow {
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+  color: var(--text-muted);
+}
+
+.section-toggle-arrow.open {
+  transform: rotate(90deg);
+}
+
+.findr-projects-collapsible {
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.findr-projects-collapsible.expanded {
+  max-height: 600px;
+  /* Large enough to fit many projects */
+}
+
+.findr-projects-collapsible.collapsed {
+  max-height: 0;
+}
+
 .findr-projects-list {
-  padding: 0 12px;
-  flex: 0 0 auto;
-  max-height: 40%;
+  padding: 0 10px 10px;
   overflow-y: auto;
 }
 
 .findr-project-card {
   background: transparent;
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   margin-bottom: 4px;
   cursor: pointer;
   display: flex;
@@ -109,7 +311,7 @@
 
 .findr-project-icon {
   font-size: 18px;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .findr-project-details {
@@ -121,6 +323,9 @@
   font-weight: 700;
   font-size: 13px;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .findr-project-sub {
@@ -132,7 +337,7 @@
 .findr-file-tree {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 12px 24px;
+  padding: 8px 10px 20px;
 }
 
 .tree-node-item {
@@ -190,34 +395,33 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 32px 40px;
-  overflow-y: auto;
+  padding: 24px 32px;
+  overflow: hidden;
 }
 
 .findr-search-container {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .findr-search-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
-  max-width: 100%;
 }
 
 .findr-search-icon {
   position: absolute;
-  left: 20px;
+  left: 18px;
   color: var(--accent);
-  opacity: 0.8;
+  opacity: 0.6;
 }
 
 .findr-search-input {
   width: 100%;
-  padding: 18px 24px 18px 56px;
-  font-size: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
+  padding: 14px 20px 14px 48px;
+  font-size: 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   background-color: var(--bg-surface);
   color: var(--text-primary);
   outline: none;
@@ -225,17 +429,16 @@
 }
 
 .findr-search-input:focus {
-  background-color: white;
+  background-color: var(--bg-secondary);
   border-color: var(--accent);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-  transform: scale(1.002);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
 }
 
 .findr-search-filters {
   display: flex;
-  gap: 32px;
-  margin-top: 20px;
-  padding-left: 8px;
+  gap: 24px;
+  margin-top: 16px;
+  padding-left: 4px;
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -243,7 +446,7 @@
 .findr-filter {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
   font-weight: 500;
 }
@@ -278,200 +481,133 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 12px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  padding: 0 8px 12px;
+  border-bottom: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
 }
 
 .findr-results-list {
-  flex: none;
-  overflow: visible;
+  flex: 1;
+  overflow-y: auto;
   padding: 12px 0;
 }
 
 .findr-result-item {
   display: flex;
-  padding: 16px 20px;
-  border-radius: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
   cursor: pointer;
   align-items: center;
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  margin-bottom: 4px;
-  background-color: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  animation: resultEntry 0.4s cubic-bezier(0, 0, 0.2, 1) backwards;
+  transition: all 0.2s ease;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
 }
 
 .findr-result-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-  /* transform: translateY(-2px) scale(1.01); */
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+  background-color: var(--bg-surface);
 }
 
 .findr-result-item.selected {
-  background-color: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
-  transform: translateY(-2px);
+  background-color: var(--accent-subtle);
+  border-color: rgba(2, 132, 199, 0.2);
 }
 
 .findr-result-item.focused {
-  background-color: var(--bg-surface);
-  outline: 2px solid var(--accent-subtle);
+  outline: 2px solid var(--accent);
   outline-offset: -2px;
-  transform: translateX(4px);
 }
 
 .findr-result-icon {
-  width: 40px;
+  width: 32px;
   display: flex;
   justify-content: center;
-  margin-right: 14px;
+  margin-right: 12px;
 }
 
 .findr-result-name {
-  font-weight: 400;
-  font-size: 15px;
+  font-weight: 500;
+  font-size: 14px;
   color: var(--text-primary);
 }
 
-.findr-result-path {
+.findr-result-meta {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 4px;
-}
-
-.findr-result-meta {
-  font-size: 12px;
-  color: var(--text-muted);
   text-align: right;
-  min-width: 100px;
-  font-weight: 600;
+  min-width: 80px;
 }
 
 /* Right Sidebar */
 .findr-sidebar-right {
   width: 320px;
-  padding: 32px 24px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   overflow-y: auto;
   background-color: var(--bg-secondary);
-  border-left: 1px solid rgba(0, 0, 0, 0.03);
-  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.02);
-  color: var(--text-primary);
-}
-
-/* --- Premium File Type Accents --- */
-.findr-sidebar-right.accent-pdf {
-  border-left: 3px solid rgba(220, 38, 38, 0.35);
-}
-
-.findr-sidebar-right.accent-excel {
-  border-left: 3px solid rgba(22, 163, 74, 0.35);
-}
-
-.findr-sidebar-right.accent-cad {
-  border-left: 3px solid rgba(2, 132, 199, 0.35);
-}
-
-.findr-sidebar-right.accent-zip {
-  border-left: 3px solid rgba(234, 88, 12, 0.35);
-}
-
-.findr-sidebar-right .findr-detail-title-group .findr-detail-name {
-  color: var(--text-primary);
-}
-
-.findr-sidebar-right .findr-detail-title-group .findr-detail-path {
-  color: var(--text-muted);
 }
 
 .findr-info-card {
   text-align: center;
-  padding-bottom: 24px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
 }
 
 .findr-info-icon {
-  margin: 0 auto 20px;
+  margin: 0 auto 16px;
   display: flex;
   justify-content: center;
-  align-items: center;
-  opacity: 1;
 }
 
 .findr-info-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 16px;
-  line-height: 1.2;
-}
-
-/* Sidebar Detail Header */
-.findr-detail-header {
-  margin-bottom: 24px;
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-
-.findr-detail-icon {
-  flex-shrink: 0;
-  width: 56px;
-  height: 56px;
-  background: white;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-}
-
-.findr-detail-title-group {
-  flex: 1;
-  overflow: hidden;
-}
-
-.findr-detail-name {
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 700;
   color: var(--text-primary);
-  word-break: break-all;
+  margin-bottom: 12px;
   line-height: 1.3;
-  margin-bottom: 4px;
-}
-
-.findr-detail-path {
-  font-size: 11px;
-  color: var(--text-muted);
-  word-break: break-all;
-  opacity: 0.7;
-  font-family: inherit;
 }
 
 .findr-badges {
-  margin-top: 12px;
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  justify-content: center;
 }
 
 .findr-badge {
-  padding: 3px 12px;
+  padding: 2px 10px;
   border-radius: 4px;
   font-size: 9px;
-  font-weight: 900;
-  color: white;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.05em;
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.findr-badge.folder {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.findr-badge.icd {
+  background: #e0f2fe;
+  color: #075985;
+  border-color: #bae6fd;
+}
+
+.findr-badge.cad {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
 }
 
 .findr-props-card {
@@ -481,29 +617,23 @@
 .findr-prop-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   font-size: 12px;
 }
 
 .findr-prop-label {
   color: var(--text-muted);
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
 }
 
 .findr-prop-value {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
-/* Location Card Styles - Simplified Minimalist */
 .findr-location-card {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding-top: 8px;
+  gap: 16px;
 }
 
 .findr-location-label {
@@ -511,86 +641,75 @@
   font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
 }
 
 .findr-location-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .findr-location-input {
   width: 100%;
-  padding: 12px 0;
+  padding: 8px 0;
   background: transparent;
   border: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border);
   font-size: 11px;
   color: var(--text-secondary);
   outline: none;
-  cursor: text;
-  word-break: break-all;
-  border-radius: 0;
 }
 
 .findr-btn-primary {
   width: 100%;
-  padding: 16px;
-  background-color: var(--text-primary);
-  /* Minimal black/dark button */
+  padding: 12px;
+  background-color: var(--accent);
   color: white;
-  border-radius: 8px;
+  border-radius: 6px;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.findr-btn-primary:hover {
-  background-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
-}
-
-.findr-btn-row {
-  display: flex;
-  gap: 12px;
-}
-
-.findr-btn-secondary {
-  flex: 1;
-  padding: 12px;
-  background: var(--bg-surface);
-  border: none;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.findr-btn-primary:hover {
+  background-color: var(--accent-hover);
+}
+
+.findr-btn-row {
+  display: flex;
+  gap: 8px;
+}
+
+.findr-btn-secondary {
+  flex: 1;
+  padding: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   cursor: pointer;
   color: var(--text-secondary);
   font-size: 11px;
-  font-weight: 700;
-  transition: all 0.2s ease;
+  font-weight: 600;
 }
 
 .findr-btn-secondary:hover {
   background: var(--bg-surface-hover);
-  color: var(--text-primary);
 }
 
 .findr-action-btn {
   background: transparent;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -605,21 +724,20 @@
 
 .findr-action-btn.delete:hover {
   color: var(--danger);
-  background-color: rgba(220, 38, 38, 0.05);
 }
 
-/* Modern Scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--border);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.1);
+  background: var(--text-muted);
 }
 
 /* Animations */
@@ -636,24 +754,23 @@
 @keyframes panelEntry {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.98);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* --- Rich DateTime Overlay --- */
-@keyframes resultEntry {
-  from {
-    opacity: 0;
     transform: translateY(10px);
   }
 
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes resultEntry {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }

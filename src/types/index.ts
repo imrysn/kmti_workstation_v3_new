@@ -24,6 +24,7 @@ export interface IProject {
   id: number
   name: string
   rootPath: string
+  category?: string
   totalFiles: number
   cadFiles: number
   isScanning?: boolean

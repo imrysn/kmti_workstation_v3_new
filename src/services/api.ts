@@ -10,10 +10,12 @@ const api = axios.create({
 
 // --- Purchased Parts ---
 export const partsApi = {
-  getProjects: () => api.get<IProject[]>('/parts/projects'),
+  getProjects: (category?: string) => api.get<IProject[]>('/parts/projects', { params: { category } }),
   browseProjectFolder: () => api.get<{path: string}>('/parts/projects/browse'),
-  addProject: (name: string, rootPath: string) => api.post('/parts/projects', { name, root_path: rootPath }),
+  addProject: (name: string, rootPath: string, category: string = "PROJECTS") => 
+    api.post('/parts/projects', { name, root_path: rootPath, category }),
   deleteProject: (id: number) => api.delete(`/parts/projects/${id}`),
+  deleteCategoryProjects: (category: string) => api.delete(`/parts/projects/category/${category}`),
   scanProject: (id: number) => api.post(`/parts/projects/${id}/scan`),
   listParts: (projectId?: number, search?: string, caseSensitive?: boolean, cadOnly?: boolean, includeFolders?: boolean, folderPath?: string) =>
     api.get('/parts/', { params: { project_id: projectId, search, case_sensitive: caseSensitive, cad_only: cadOnly, include_folders: includeFolders, folder_path: folderPath } }),

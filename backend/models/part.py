@@ -14,6 +14,7 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, index=True)
     root_path = Column(String(1024))
+    category = Column(String(50), default="PROJECTS", index=True)
     total_files = Column(Integer, default=0)
     cad_files = Column(Integer, default=0)
     is_scanning = Column(Boolean, default=False)
