@@ -6,7 +6,8 @@ import HeatTreatment from './pages/HeatTreatment'
 import MaterialCalculator from './pages/MaterialCalculator'
 import Settings from './pages/Settings'
 import { ModalProvider } from './components/ModalContext'
-import { ModalContainer } from './components/Modals'
+import { ModalContainer } from './components/modals'
+import DateTimeOverlay from './components/DateTimeOverlay'
 import './styles/App.css'
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           </div>
         </div>
         <ModalContainer />
+        <DateTimeOverlay />
       </BrowserRouter>
     </ModalProvider>
   )

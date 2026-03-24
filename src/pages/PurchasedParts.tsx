@@ -16,6 +16,29 @@ import Alert from '../components/Alert'
 import './PurchasedParts.css'
 
 // ──────────────────────────────────────────────────────────────────────
+// UI Helpers
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Returns a human-friendly relative time string (e.g. "Yesterday", "2 days ago")
+ */
+function getRelativeTimeString(timestamp: number): string {
+  const now = new Date();
+  const date = new Date(timestamp * 1000);
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  
+  const diffInDays = Math.floor(diffInSeconds / 86400);
+  if (diffInDays === 1) return 'Yesterday';
+  if (diffInDays < 7) return `${diffInDays} days ago`;
+  
+  return date.toLocaleDateString();
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // Tree Helpers
 // ──────────────────────────────────────────────────────────────────────
 
@@ -671,7 +694,6 @@ export default function PurchasedParts() {
                 </div>
                 <div className="findr-result-details">
                   <div className="findr-result-name">{res.fileName}</div>
-                  <div className="findr-result-path">{res.filePath}</div>
                 </div>
                 <div className="findr-result-meta">
                   <div className="findr-result-size">{res.isFolder ? '--' : formatFileSize(res.size)}</div>
@@ -697,15 +719,20 @@ export default function PurchasedParts() {
         </div>
 
         {/* RIGHT SIDEBAR */}
-        <div className="findr-sidebar-right">
-          <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 700, borderBottom: '1px solid var(--border)', paddingBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div className={`findr-sidebar-right ${
+          selectedResult?.fileType?.includes('.pdf') ? 'accent-pdf' : 
+          ['.xls', '.xlsx', '.csv'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-excel' :
+          ['.icd', '.dwg', '.sldprt'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-cad' :
+          selectedResult?.fileType?.includes('.zip') ? 'accent-zip' : ''
+        }`}>
+          <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 700, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             File Details
           </div>
 
           {selectedResult ? (
             <>
               <div className="findr-info-card">
-                <div className="findr-info-icon">
+                <div className="findr-info-icon findr-detail-icon">
                   <FileIcon 
                     isFolder={selectedResult.isFolder} 
                     fileType={selectedResult.fileType} 
@@ -715,7 +742,6 @@ export default function PurchasedParts() {
                   />
                 </div>
                 <div className="findr-info-title">{selectedResult.fileName}</div>
-                <div className="findr-info-path" style={{ fontSize: '11px', color: 'var(--text-muted)', wordBreak: 'break-all', marginTop: '4px', opacity: 0.7 }}>{selectedResult.filePath}</div>
 
                 <div className="findr-badges">
                   {selectedResult.isFolder && <span className="findr-badge folder">FOLDER</span>}
@@ -742,7 +768,7 @@ export default function PurchasedParts() {
                 </div>
                 <div className="findr-prop-row">
                   <span className="findr-prop-label">Modified</span>
-                  <span className="findr-prop-value">{new Date(selectedResult.lastModified * 1000).toLocaleDateString()}</span>
+                  <span className="findr-prop-value">{getRelativeTimeString(selectedResult.lastModified)}</span>
                 </div>
                 <div className="findr-prop-row">
                   <span className="findr-prop-label">Type</span>

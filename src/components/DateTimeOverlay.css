@@ -1,0 +1,48 @@
+.findr-global-datetime {
+  position: fixed;
+  z-index: 9999;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  padding: 10px 24px;
+  border-radius: 100px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  cursor: grab;
+  user-select: none;
+  transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.findr-global-datetime:active {
+  cursor: grabbing;
+}
+
+.findr-global-datetime.dragging {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+  transform: scale(1.02);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.findr-datetime-time {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  transition: color 0.4s ease;
+}
+
+.findr-datetime-separator {
+  width: 1px;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.findr-datetime-date {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: color 0.4s ease;
+}
