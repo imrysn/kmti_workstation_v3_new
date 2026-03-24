@@ -1,0 +1,138 @@
+import React, { useState, useEffect } from 'react';
+import { ExternalLinkIcon, SearchIcon } from './FileIcons';
+import './FilePreview.css';
+
+interface FilePreviewProps {
+  fileId: number;
+  fileName: string;
+  fileType: string;
+  onOpen: () => void;
+}
+
+const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, onOpen }) => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
+  
+  const previewUrl = `http://127.0.0.1:8000/api/parts/preview/${fileId}`;
+  const isImage = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'].includes(fileType.toLowerCase());
+  const isPdf = fileType.toLowerCase() === '.pdf';
+  const isIcd = fileType.toLowerCase() === '.icd';
+  
+  useEffect(() => {
+    setLoading(true);
+    setError(false);
+  }, [fileId]);
+
+  if (!isImage && !isIcd && !isPdf) {
+    return null;
+  }
+
+  const handleLoad = () => {
+    setLoading(false);
+  };
+
+  const handleError = () => {
+    setLoading(false);
+    setError(true);
+  };
+
+  const toggleZoom = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsZoomed(!isZoomed);
+  };
+
+  return (
+    <>
+      <div className={`file-preview-container ${isPdf ? 'is-pdf' : ''}`}>
+        {loading && (
+          <div className="file-preview-loading">
+            <div className="file-preview-spinner"></div>
+            <div className="file-preview-error-text">{isIcd ? 'Generating' : 'Loading'} Preview...</div>
+          </div>
+        )}
+        
+        {error ? (
+          <div className="file-preview-error">
+            <div className="file-preview-error-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                <path d="M13 2v7h7"></path>
+                <circle cx="12" cy="14" r="3"></circle>
+                <line x1="12" y1="17" x2="12" y2="18"></line>
+              </svg>
+            </div>
+            <div className="file-preview-error-text">Preview Unavailable</div>
+          </div>
+        ) : (
+          <>
+            {isPdf ? (
+              <iframe
+                src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                className="file-preview-image file-preview-pdf"
+                onLoad={handleLoad}
+                onError={handleError}
+                style={{ display: loading ? 'none' : 'block', border: 'none', height: 180 }}
+                title={fileName}
+              />
+            ) : (
+              <img
+                src={previewUrl}
+                alt={fileName}
+                className="file-preview-image"
+                onLoad={handleLoad}
+                onError={handleError}
+                style={{ display: loading ? 'none' : 'block' }}
+                onClick={toggleZoom}
+                title="Click to expand"
+              />
+            )}
+            {!loading && !isPdf && (
+              <div className="file-preview-expand-btn" onClick={toggleZoom} title="Expand Preview">
+                <SearchIcon size={16} />
+              </div>
+            )}
+            {!loading && isPdf && (
+              <div className="file-preview-expand-btn" onClick={toggleZoom} title="Fullscreen Preview">
+                <ExternalLinkIcon size={16} />
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Lightbox / Fullscreen Overlay */}
+      {isZoomed && (
+        <div className="preview-overlay" onClick={toggleZoom}>
+          <div className={`preview-modal ${isPdf ? 'preview-modal-pdf' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <div className="preview-close-btn" onClick={toggleZoom}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </div>
+            
+            {isPdf ? (
+              <iframe src={previewUrl} className="preview-modal-image preview-modal-pdf-iframe" style={{ width: '80vw', height: '80vh', border: 'none' }} />
+            ) : (
+              <img src={previewUrl} alt={fileName} className="preview-modal-image" />
+            )}
+            
+            <div className="preview-modal-info">
+              <span>{fileName}</span>
+              <button 
+                className="btn btn-primary" 
+                style={{ padding: '4px 12px', fontSize: '11px' }}
+                onClick={() => { toggleZoom(new MouseEvent('click') as any); onOpen(); }}
+              >
+                <ExternalLinkIcon size={14} color="white" /> Open File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default FilePreview;

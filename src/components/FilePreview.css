@@ -1,0 +1,217 @@
+.file-preview-container {
+  margin-top: 20px;
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-preview-container:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+  border-color: var(--accent-subtle);
+}
+
+.file-preview-image {
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  object-fit: contain;
+  display: block;
+  animation: fadeIn 0.5s ease-out;
+  cursor: zoom-in;
+  padding: 8px;
+}
+
+.file-preview-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 20px;
+}
+
+.file-preview-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--accent-subtle);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.file-preview-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.file-preview-error-icon {
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+
+.file-preview-error-text {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.file-preview-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  z-index: 2;
+}
+
+.file-preview-container:hover .file-preview-expand-btn {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.file-preview-expand-btn:hover {
+  background: white;
+  color: var(--accent);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Lightbox / Fullscreen Preview */
+.preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: overlayFadeIn 0.3s ease-out;
+}
+
+.preview-modal {
+  position: relative;
+  max-width: 90%;
+  max-height: 90%;
+  background: white;
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  animation: modalScaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.preview-modal-image {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 120px);
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.preview-close-btn {
+  position: absolute;
+  top: -48px;
+  right: -8px;
+  background: transparent;
+  color: white;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.preview-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: rotate(90deg);
+}
+
+.preview-modal-info {
+  margin-top: 12px;
+  padding: 4px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.file-preview-container.is-pdf {
+  min-height: 200px;
+}
+
+.file-preview-pdf {
+  pointer-events: none; /* Disable interaction in the small sidebar preview */
+  background: white;
+}
+
+.preview-modal-pdf {
+  width: 85vw;
+  height: 90vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0; /* Remove padding for PDF modal */
+  overflow: hidden;
+}
+
+.preview-modal-pdf-iframe {
+  flex: 1;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+
+.preview-modal-pdf .preview-modal-info {
+  background: white;
+  padding: 12px 20px;
+  border-radius: 0 0 16px 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalScaleUp {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}

@@ -13,6 +13,7 @@ import {
   ExternalLinkIcon 
 } from '../components/FileIcons'
 import Alert from '../components/Alert'
+import FilePreview from '../components/FilePreview'
 import './PurchasedParts.css'
 
 // ──────────────────────────────────────────────────────────────────────
@@ -749,15 +750,13 @@ export default function PurchasedParts() {
                   {['.icd', '.dwg', '.sldprt'].includes(selectedResult.fileType || '') && <span className="findr-badge cad">CAD</span>}
                 </div>
 
-                {!selectedResult.isFolder && selectedResult.fileType === '.icd' && (
-                  <div style={{ marginTop: 20, background: 'white', padding: 8, borderRadius: 12 }}>
-                    <img
-                      src={`http://127.0.0.1:8000/api/parts/preview/${selectedResult.id}`}
-                      alt="Preview"
-                      style={{ width: '100%', height: 'auto', maxHeight: 180, objectFit: 'contain' }}
-                      onError={(e) => { e.currentTarget.style.display = 'none' }}
-                    />
-                  </div>
+                {selectedResult.fileType && (
+                  <FilePreview 
+                    fileId={selectedResult.id} 
+                    fileName={selectedResult.fileName} 
+                    fileType={selectedResult.fileType}
+                    onOpen={() => handleOpen(selectedResult)}
+                  />
                 )}
               </div>
 

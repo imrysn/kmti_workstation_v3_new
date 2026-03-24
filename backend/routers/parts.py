@@ -289,13 +289,43 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(CadFileIndex).where(CadFileIndex.id == file_id))
     record = result.scalar_one_or_none()
     
-    if not record or not record.file_path.lower().endswith('.icd'):
-        raise HTTPException(status_code=404, detail="Preview unavailable")
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    file_path = record.file_path
+    ext = record.file_type.lower() if record.file_type else ""
+    
+    # Support common image formats and PDF
+    preview_extensions = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
+        '.pdf': 'application/pdf'
+    }
+    
+    if ext in preview_extensions:
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File missing")
+        
+        def _read_file():
+            with open(file_path, 'rb') as f:
+                return f.read()
+        
+        file_data = await asyncio.to_thread(_read_file)
+        return Response(content=file_data, media_type=preview_extensions[ext])
+
+    # Default ICD parsing logic
+    if not ext == '.icd':
+        raise HTTPException(status_code=404, detail="Preview unavailable for this file type")
         
     parser = SimpleICDParser()
     
     def _generate_preview():
-        if parser.parse_file(record.file_path):
+        if parser.parse_file(file_path):
             renderer = PointCloudRenderer(width=800, height=600)
             img = renderer.render(parser)
             if img:
