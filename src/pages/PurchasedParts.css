@@ -1,38 +1,47 @@
-/* === PurchasedParts Modern UI — findr premium aesthetic === */
+/* === PurchasedParts Modern Minimalist UI === */
 
 .findr-app {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - var(--titlebar-height));
-  width: 100%;
+  /* Aggressively override global padding: 32px 150px from App.css */
+  width: calc(100% + 300px);
+  height: calc(100vh - var(--titlebar-height) + 64px);
+  margin-left: -150px;
+  margin-right: -150px;
+  margin-top: -32px;
+  margin-bottom: -32px;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   overflow: hidden;
-  padding: 12px 16px; /* "Occupy both left and right with a little margins both side" */
+  padding: 24px 32px; 
 }
 
 .findr-body {
   display: flex;
   flex: 1;
   overflow: hidden;
-  gap: 12px; /* Add some margins each panel vertically (and horizontally) */
+  gap: 20px; /* Increased whitespace between panels */
+  animation: fadeIn 0.8s ease-out;
 }
 
-/* Base Panel Style - Premium Floating Look */
+/* Base Panel Style - Clean Minimalist Look */
 .findr-sidebar-left,
 .findr-center,
 .findr-sidebar-right {
-  background-color: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  background-color: var(--bg-secondary);
+  border: none; /* Removed borders for minimalism */
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04); /* Soft shadow instead of border */
+  animation: panelEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
+
+.findr-sidebar-left { animation-delay: 0.1s; }
+.findr-center { animation-delay: 0.2s; }
+.findr-sidebar-right { animation-delay: 0.3s; }
 
 /* Left Sidebar */
 .findr-sidebar-left {
-  width: 280px;
+  width: 300px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -40,45 +49,43 @@
 }
 
 .findr-section-title {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-muted);
-  font-weight: 700;
-  padding: 20px 16px 8px;
+  font-weight: 800;
+  padding: 24px 20px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
 }
 
 .findr-projects-list {
-  padding: 0 8px;
+  padding: 0 12px;
   flex: 0 0 auto;
-  max-height: 45%;
+  max-height: 40%;
   overflow-y: auto;
 }
 
 .findr-project-card {
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  margin-bottom: 2px;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 12px;
-  transition: var(--transition);
+  transition: all 0.2s ease;
 }
 
 .findr-project-card:hover {
-  background-color: var(--bg-surface-hover);
+  background-color: var(--bg-surface);
 }
 
 .findr-project-card.active {
   background-color: var(--accent-subtle);
   color: var(--accent);
-  border-color: rgba(2, 132, 199, 0.2);
 }
 
 .findr-project-card.active .findr-project-name {
@@ -87,7 +94,7 @@
 
 .findr-project-icon {
   font-size: 18px;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
 .findr-project-details {
@@ -96,50 +103,44 @@
 }
 
 .findr-project-name {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .findr-project-sub {
   font-size: 11px;
   color: var(--text-muted);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
 .findr-file-tree {
   flex: 1;
   overflow-y: auto;
-  padding: 0 8px 16px;
+  padding: 8px 12px 24px;
 }
 
 .tree-node-item {
-  padding: 6px 8px 6px 4px;
+  padding: 8px 10px;
   font-size: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  border-radius: var(--radius-sm);
-  transition: background-color 0.15s, color 0.15s;
+  gap: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
   color: var(--text-secondary);
-  user-select: none;
-  white-space: nowrap;
-  overflow: hidden;
 }
 
 .tree-node-item:hover {
-  background-color: var(--bg-surface-hover);
+  background-color: var(--bg-surface);
   color: var(--text-primary);
 }
 
 .tree-node-item.active {
   background-color: var(--accent-subtle);
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* Arrow toggle */
@@ -151,42 +152,21 @@
   height: 14px;
   flex-shrink: 0;
   color: var(--text-muted);
-  transition: transform 0.18s ease;
-  transform: rotate(0deg);
+  transition: transform 0.2s ease;
 }
 
 .tree-arrow.open {
   transform: rotate(90deg);
 }
 
-.tree-arrow-spacer {
-  display: inline-block;
-  width: 14px;
-  flex-shrink: 0;
-}
-
-/* Node name */
-.tree-node-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
 /* File count badge */
 .tree-node-badge {
   font-size: 10px;
-  background: var(--bg-surface-hover);
+  background: rgba(0,0,0,0.03);
   color: var(--text-muted);
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 1px 6px;
-  flex-shrink: 0;
-  line-height: 1.4;
-}
-
-.tree-node-item.active .tree-node-badge {
-  background: var(--accent-subtle);
-  color: var(--accent);
+  font-weight: 700;
 }
 
 
@@ -195,12 +175,12 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 24px 32px;
+  padding: 32px 40px;
   overflow: hidden;
 }
 
 .findr-search-container {
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
 .findr-search-input-wrapper {
@@ -214,32 +194,32 @@
   position: absolute;
   left: 20px;
   color: var(--accent);
-  margin-top: 2px;
+  opacity: 0.8;
 }
 
 .findr-search-input {
   width: 100%;
-  padding: 16px 20px 16px 52px;
+  padding: 18px 24px 18px 56px;
   font-size: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: white;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 12px;
+  background-color: var(--bg-surface);
   color: var(--text-primary);
   outline: none;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: all 0.2s ease;
 }
 
 .findr-search-input:focus {
+  background-color: white;
   border-color: var(--accent);
-  box-shadow: 0 4px 20px rgba(2, 132, 199, 0.12);
-  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  transform: scale(1.002);
 }
 
 .findr-search-filters {
   display: flex;
-  gap: 24px;
-  margin-top: 16px;
+  gap: 32px;
+  margin-top: 20px;
   padding-left: 8px;
   font-size: 13px;
   color: var(--text-secondary);
@@ -248,328 +228,373 @@
 .findr-filter {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   cursor: pointer;
-  user-select: none;
   font-weight: 500;
 }
 
-.findr-filter input[type="checkbox"] {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
+/* Breadcrumbs */
+.findr-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.breadcrumb-item {
   cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.breadcrumb-item:hover {
+  background-color: var(--bg-surface);
+  color: var(--accent);
+}
+
+.breadcrumb-separator {
+  opacity: 0.3;
+  font-weight: 400;
 }
 
 .findr-results-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 8px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 0 12px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
   color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .findr-results-list {
   flex: 1;
   overflow-y: auto;
-  padding: 8px 4px;
+  padding: 12px 0;
 }
 
 .findr-result-item {
   display: flex;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  border-radius: 10px;
   cursor: pointer;
   align-items: center;
-  transition: var(--transition);
-  margin-bottom: 4px;
-  animation: fade-slide-up 0.35s cubic-bezier(0, 0, 0.2, 1) backwards;
-  border: 1px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 6px;
+  background-color: transparent;
+  animation: resultEntry 0.4s cubic-bezier(0, 0, 0.2, 1) backwards;
 }
 
 .findr-result-item:hover {
-  background-color: white;
-  border-color: var(--border);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
-  transform: translateX(2px);
+  background-color: var(--bg-surface);
+  transform: translateX(4px) scale(1.005);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
 }
 
 .findr-result-item.selected {
   background-color: var(--accent-subtle);
-  border-color: rgba(2, 132, 199, 0.3);
+  transform: translateX(4px);
+}
+
+.findr-result-item.focused {
+  background-color: var(--bg-surface);
+  outline: 2px solid var(--accent-subtle);
+  outline-offset: -2px;
+  transform: translateX(4px);
 }
 
 .findr-result-icon {
-  width: 36px;
+  width: 40px;
   display: flex;
   justify-content: center;
-  margin-right: 12px;
-}
-
-.findr-result-details {
-  flex: 1;
-  min-width: 0;
+  margin-right: 14px;
 }
 
 .findr-result-name {
-  font-weight: 600;
-  font-size: 14.5px;
+  font-weight: 700;
+  font-size: 15px;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .findr-result-path {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--text-muted);
-  margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-top: 4px;
 }
 
 .findr-result-meta {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-muted);
   text-align: right;
-  min-width: 90px;
-  font-weight: 500;
+  min-width: 100px;
+  font-weight: 600;
 }
 
 /* Right Sidebar */
 .findr-sidebar-right {
   width: 320px;
-  padding: 24px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   overflow-y: auto;
 }
 
 .findr-info-card {
-  background-color: white;
-  border-radius: var(--radius-lg);
-  padding: 28px 24px;
   text-align: center;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(0,0,0,0.03);
 }
 
 .findr-info-icon {
   margin-bottom: 20px;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.08));
   display: flex;
   justify-content: center;
+  opacity: 0.9;
 }
 
-.findr-info-title {
-  font-size: 17px;
+/* Sidebar Detail Header */
+.findr-detail-header {
+  margin-bottom: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.findr-detail-icon {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  background: white;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+}
+
+.findr-detail-title-group {
+  flex: 1;
+  overflow: hidden;
+}
+
+.findr-detail-name {
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 16px;
   word-break: break-all;
-  line-height: 1.4;
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.findr-detail-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+  opacity: 0.7;
+  font-family: inherit;
 }
 
 .findr-badges {
+  margin-top: 12px;
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .findr-badge {
-  padding: 3px 10px;
-  border-radius: 6px;
-  font-size: 10px;
-  font-weight: 800;
+  padding: 3px 12px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 900;
   color: white;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.1em;
 }
 
-.findr-badge.icd { background-color: var(--success); }
-.findr-badge.cad { background-color: var(--accent); }
-.findr-badge.folder { background-color: var(--warning); }
-.findr-badge.generic { background-color: var(--text-muted); }
-
 .findr-props-card {
-  background-color: white;
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  border: 1px solid var(--border);
+  padding: 8px 0;
 }
 
 .findr-prop-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 12.5px;
-}
-
-.findr-prop-row:last-child {
-  margin-bottom: 0;
+  margin-bottom: 16px;
+  font-size: 12px;
 }
 
 .findr-prop-label {
   color: var(--text-muted);
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.05em;
 }
 
 .findr-prop-value {
   font-weight: 700;
-  color: var(--text-secondary);
-  text-align: right;
+  color: var(--text-primary);
 }
 
-/* Location Card Styles */
+/* Location Card Styles - Simplified Minimalist */
 .findr-location-card {
-  background-color: white;
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.findr-location-header {
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
+  gap: 20px;
+  padding-top: 8px;
 }
 
 .findr-location-label {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
 }
 
 .findr-location-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .findr-location-input {
   width: 100%;
-  padding: 10px 12px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 11.5px;
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  font-size: 11px;
   color: var(--text-secondary);
   outline: none;
   cursor: text;
   word-break: break-all;
+  border-radius: 0;
 }
 
 .findr-btn-primary {
   width: 100%;
-  padding: 14px;
-  background-color: var(--accent);
+  padding: 16px;
+  background-color: var(--text-primary); /* Minimal black/dark button */
   color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 700;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+  gap: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .findr-btn-primary:hover {
-  background-color: var(--accent-hover);
+  background-color: var(--accent);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.3);
-}
-
-.findr-btn-primary:active {
-  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
 }
 
 .findr-btn-row {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .findr-btn-secondary {
   flex: 1;
-  padding: 10px;
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  padding: 12px;
+  background: var(--bg-surface);
+  border: none;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
   color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   transition: all 0.2s ease;
 }
 
 .findr-btn-secondary:hover {
   background: var(--bg-surface-hover);
-  border-color: var(--text-muted);
   color: var(--text-primary);
 }
 
 .findr-action-btn {
   background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 14px;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--transition);
+  transition: all 0.2s ease;
+  color: var(--text-muted);
 }
 
 .findr-action-btn:hover {
-  background-color: var(--bg-surface-hover);
-  color: var(--accent);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .findr-action-btn.delete:hover {
   color: var(--danger);
-  background-color: rgba(220, 38, 38, 0.1);
+  background-color: rgba(220, 38, 38, 0.05);
 }
 
-@keyframes fade-slide-up {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Modern Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
 }
 
-/* Scrollbar tweaks */
-.findr-projects-list::-webkit-scrollbar,
-.findr-file-tree::-webkit-scrollbar,
-.findr-results-list::-webkit-scrollbar,
-.findr-sidebar-right::-webkit-scrollbar {
-  width: 5px;
-}
-
-.findr-projects-list::-webkit-scrollbar-thumb,
-.findr-file-tree::-webkit-scrollbar-thumb,
-.findr-results-list::-webkit-scrollbar-thumb,
-.findr-sidebar-right::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.1);
+::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.05);
   border-radius: 10px;
 }
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes panelEntry {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px) scale(0.98); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0) scale(1); 
+  }
+}
+
+@keyframes resultEntry {
+  from { 
+    opacity: 0; 
+    transform: translateX(-10px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateX(0); 
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 

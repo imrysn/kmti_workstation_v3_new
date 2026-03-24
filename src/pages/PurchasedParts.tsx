@@ -12,6 +12,7 @@ import {
   CopyIcon, 
   ExternalLinkIcon 
 } from '../components/FileIcons'
+import Alert from '../components/Alert'
 import './PurchasedParts.css'
 
 // ──────────────────────────────────────────────────────────────────────
@@ -96,10 +97,6 @@ interface TreeItemProps {
 function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, searchFilter }: TreeItemProps) {
   const isExpanded = expandedFolders.has(node.path)
   const isSelected = selectedPath === node.path
-  const hasChildren = node.children.length > 0
-  const fileCount = node.isFolder ? node.children.filter(c => !c.isFolder).length : 0
-  const folderCount = node.isFolder ? node.children.filter(c => c.isFolder).length : 0
-
   // Show file count badge
   const totalCount = node.isFolder ? node.children.length : 0
 
@@ -134,6 +131,7 @@ function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, sea
           fileType={node.fileType}
           size={15} 
           color={isSelected ? "var(--accent)" : (node.isFolder ? "var(--warning)" : "var(--text-muted)")} 
+          filePath={node.path}
         />
 
         {/* Name */}
@@ -194,6 +192,23 @@ export default function PurchasedParts() {
   // When a tree file is clicked outside current results, we navigate to its parent.
   // After results reload, pendingSelectPath resolves to set selectedResult.
   const [pendingSelectPath, setPendingSelectPath] = useState<string>('')
+  // Breadcrumb / Folder navigation
+  const [breadcrumbParts, setBreadcrumbParts] = useState<{name: string, path: string}[]>([])
+
+  // Toast state
+  const [toastVisible, setToastVisible] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
+
+  // Keyboard navigation
+  const [focusedIndex, setFocusedIndex] = useState(-1)
+  const resultsListRef = React.useRef<HTMLDivElement>(null)
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg)
+    setToastVisible(true)
+    setTimeout(() => setToastVisible(false), 3000)
+  }
+
   const treeContainerRef = React.useRef<HTMLDivElement>(null)
 
   // Build the tree from raw nodes
@@ -238,7 +253,7 @@ export default function PurchasedParts() {
           
           if (wasScanning && !nowScanning) {
             hideProgress()
-            notify("Scan complete!", "success")
+            showToast("Scan complete!")
             // Refresh tree and results for the selected project
             if (selectedProject) {
               const treeRes = await partsApi.getTree(selectedProject.id)
@@ -293,7 +308,7 @@ export default function PurchasedParts() {
         const autoName = parts[parts.length - 1].toUpperCase() || "NEW PROJECT"
         await partsApi.addProject(autoName, folderPath)
         showProgress("Indexing Project...")
-        notify(`Project '${autoName}' added! Starting index...`, 'success')
+        showToast(`Project '${autoName}' added!`)
         loadProjects()
       }
     } catch (e) {
@@ -320,7 +335,7 @@ export default function PurchasedParts() {
         try {
           await partsApi.deleteProject(id)
           if (selectedProject?.id === id) setSelectedProject(null)
-          notify("Project removed from index.", "success")
+          showToast("Project removed from index.")
           loadProjects()
         } catch {
           alert("Failed to delete project. Please wait for any active scans to finish.", "Delete Error")
@@ -426,6 +441,57 @@ export default function PurchasedParts() {
     setFolderFilter('')
   }
 
+  // Update breadcrumbs when folderFilter changes
+  useEffect(() => {
+    if (!folderFilter) {
+      setBreadcrumbParts([])
+      return
+    }
+    const parts = folderFilter.split('/')
+    const bcs: {name: string, path: string}[] = []
+    let currentPath = ''
+    parts.forEach(p => {
+      if (!p) return
+      currentPath = currentPath ? `${currentPath}/${p}` : p
+      bcs.push({ name: p, path: currentPath })
+    })
+    setBreadcrumbParts(bcs)
+  }, [folderFilter])
+
+  // Keyboard Navigation Logic
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (searchResults.length === 0) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setFocusedIndex(prev => Math.min(prev + 1, searchResults.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setFocusedIndex(prev => Math.max(prev - 1, 0))
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      e.preventDefault()
+      const item = searchResults[focusedIndex]
+      if (item.isFolder) {
+        const normPath = item.filePath.split('\\').join('/')
+        handleTreeSelect(normPath, true)
+      } else {
+        handleOpen(item)
+      }
+    }
+  }
+
+  // Scroll focused item into view
+  useEffect(() => {
+    if (focusedIndex >= 0) {
+      const activeItem = resultsListRef.current?.children[focusedIndex] as HTMLElement
+      if (activeItem) {
+        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+        // Also auto-select it for details
+        setSelectedResult(searchResults[focusedIndex])
+      }
+    }
+  }, [focusedIndex, searchResults])
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0 || !bytes) return "0 B"
     const k = 1024
@@ -453,7 +519,8 @@ export default function PurchasedParts() {
   }
 
   return (
-    <div className="findr-app">
+    <div className="findr-app" onKeyDown={handleKeyDown}>
+      <Alert message={toastMessage} isVisible={toastVisible} />
       <div className="findr-body">
         {/* LEFT SIDEBAR */}
         <div className="findr-sidebar-left">
@@ -482,7 +549,12 @@ export default function PurchasedParts() {
                 onClick={() => setSelectedProject(p)}
               >
                 <div className="findr-project-icon">
-                  <FileIcon isFolder size={20} color={p.isScanning ? "var(--warning)" : "var(--accent)"} />
+                  <FileIcon 
+                    isFolder 
+                    size={20} 
+                    color={p.isScanning ? "var(--warning)" : "var(--accent)"} 
+                    filePath={p.rootPath}
+                  />
                 </div>
                 <div className="findr-project-details">
                   <div className="findr-project-name">{p.name}</div>
@@ -550,17 +622,26 @@ export default function PurchasedParts() {
           </div>
 
           <div className="findr-results-header">
-            <span>RESULTS{folderFilter ? ` — ${folderFilter.split('/').pop()}` : ''}</span>
+            <div className="findr-breadcrumbs">
+              <span className="breadcrumb-item" onClick={() => setFolderFilter('')}>ROOT</span>
+              {breadcrumbParts.map((bc) => (
+                <React.Fragment key={bc.path}>
+                  <span className="breadcrumb-separator">/</span>
+                  <span className="breadcrumb-item" title={bc.path} onClick={() => setFolderFilter(bc.path)}>{bc.name}</span>
+                </React.Fragment>
+              ))}
+            </div>
             <span>{isSearching ? "Searching..." : `${searchResults.length} found (${searchTime.toFixed(2)}s)`}</span>
           </div>
 
-          <div className="findr-results-list">
+          <div className="findr-results-list" ref={resultsListRef} tabIndex={0}>
             {searchResults.map((res, index) => (
               <div
                 key={res.id}
-                className={`findr-result-item ${selectedResult?.id === res.id ? 'selected' : ''}`}
+                className={`findr-result-item ${selectedResult?.id === res.id ? 'selected' : ''} ${focusedIndex === index ? 'focused' : ''}`}
                 style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
                 onClick={() => {
+                  setFocusedIndex(index)
                   if (res.isFolder) {
                     // Normalize path: fold backslashes to forward slashes
                     const normPath = res.filePath.split('\\').join('/')
@@ -580,21 +661,36 @@ export default function PurchasedParts() {
                 onDoubleClick={() => !res.isFolder && handleOpen(res)}
               >
                 <div className="findr-result-icon">
-                  <FileIcon isFolder={res.isFolder} fileType={res.fileType} size={18} />
+                  <FileIcon 
+                    isFolder={res.isFolder} 
+                    fileType={res.fileType} 
+                    fileName={res.fileName}
+                    filePath={res.filePath}
+                    size={18} 
+                  />
                 </div>
                 <div className="findr-result-details">
                   <div className="findr-result-name">{res.fileName}</div>
                   <div className="findr-result-path">{res.filePath}</div>
                 </div>
                 <div className="findr-result-meta">
-                  {res.isFolder ? '--' : formatFileSize(res.size)}
+                  <div className="findr-result-size">{res.isFolder ? '--' : formatFileSize(res.size)}</div>
                 </div>
               </div>
             ))}
 
             {searchResults.length === 0 && !isSearching && (
-              <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-                No results found matching your criteria.
+              <div style={{ padding: 100, textAlign: 'center' }}>
+                <div style={{ fontSize: 40, marginBottom: 20 }}>🔍</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>No results found</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 300, margin: '0 auto' }}>
+                  Try adjusting your search terms or clearing filters like "CAD only" or folder restrictions.
+                </div>
+                {folderFilter && (
+                  <button className="findr-btn-secondary" style={{ marginTop: 24, marginInline: 'auto', padding: '10px 20px' }} onClick={() => setFolderFilter('')}>
+                    Clear folder filter
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -610,9 +706,16 @@ export default function PurchasedParts() {
             <>
               <div className="findr-info-card">
                 <div className="findr-info-icon">
-                  <FileIcon isFolder={selectedResult.isFolder} fileType={selectedResult.fileType} size={48} />
+                  <FileIcon 
+                    isFolder={selectedResult.isFolder} 
+                    fileType={selectedResult.fileType} 
+                    fileName={selectedResult.fileName}
+                    filePath={selectedResult.filePath}
+                    size={48} 
+                  />
                 </div>
                 <div className="findr-info-title">{selectedResult.fileName}</div>
+                <div className="findr-info-path" style={{ fontSize: '11px', color: 'var(--text-muted)', wordBreak: 'break-all', marginTop: '4px', opacity: 0.7 }}>{selectedResult.filePath}</div>
 
                 <div className="findr-badges">
                   {selectedResult.isFolder && <span className="findr-badge folder">FOLDER</span>}
@@ -666,7 +769,7 @@ export default function PurchasedParts() {
                   </button>
 
                   <div className="findr-btn-row">
-                    <button className="findr-btn-secondary" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); notify("Copied path to clipboard!", "success") }}>
+                    <button className="findr-btn-secondary" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); showToast("Copied path to clipboard!") }}>
                       <CopyIcon size={18} /> Copy Path
                     </button>
                     <button className="findr-btn-secondary" title="Open containing folder" onClick={() => handleOpenLocation(selectedResult)}>

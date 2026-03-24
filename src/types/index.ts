@@ -72,6 +72,7 @@ export interface ElectronAPI {
   maximizeWindow: () => Promise<void>
   closeWindow: () => Promise<void>
   selectFolder: () => Promise<string | null>
+  getFileIcon: (filePath: string) => Promise<string | null>
 }
 
 declare global {
