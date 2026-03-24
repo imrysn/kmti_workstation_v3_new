@@ -1,0 +1,45 @@
+.users-page {
+  padding: 20px;
+}
+.users-card {
+  margin-top: 24px;
+  overflow: hidden;
+}
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.users-table th {
+  text-align: left;
+  padding: 12px 16px;
+  background: rgba(255,255,255,0.03);
+  font-size: 13px;
+  color: #888;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.users-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 14px;
+}
+.role-badge {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.role-badge.it { background: rgba(0, 153, 255, 0.2); color: #0099ff; }
+.role-badge.admin { background: rgba(155, 89, 182, 0.2); color: #9b59b6; }
+.role-badge.viewer { background: rgba(255, 255, 255, 0.1); color: #ccc; }
+
+.status-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.users-loading {
+  padding: 40px;
+  text-align: center;
+  color: #888;
+}

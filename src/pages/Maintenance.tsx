@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import './Maintenance.css';
 
 const ServerHeroSVG = () => (
@@ -88,7 +88,7 @@ const SystemTape = ({ rotation, top, speed }: { rotation: number, top: string, s
 );
 
 const Maintenance: React.FC = () => {
-    const navigate = useNavigate();
+    const { logout } = useAuth();
 
     return (
         <div className="maint-root">
@@ -109,7 +109,7 @@ const Maintenance: React.FC = () => {
                     <p className="maint-primary-msg">We're currently performing some updates.</p>
                     <p className="maint-secondary-msg">The system will be back online shortly.</p>
 
-                    <button className="maint-btn-tech" onClick={() => navigate(-1)}>
+                    <button className="maint-btn-tech" onClick={() => logout()}>
                         <div className="btn-bg-glitch"></div>
                         <span className="btn-content">← Return to Shell</span>
                     </button>

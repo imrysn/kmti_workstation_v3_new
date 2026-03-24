@@ -281,7 +281,31 @@
 
 .findr-projects-list {
   padding: 0 10px 10px;
+}
+
+.findr-projects-scroll {
+  max-height: 214px;
+  /* Exactly 4.2 cards for clear scroll indicator */
   overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Custom scrollbar for projects */
+.findr-projects-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.findr-projects-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.findr-projects-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+
+.findr-projects-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 .findr-project-card {
@@ -361,6 +385,14 @@
   background-color: var(--accent-subtle);
   color: var(--accent);
   font-weight: 700;
+}
+
+.tree-node-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* Arrow toggle */
@@ -451,32 +483,6 @@
   font-weight: 500;
 }
 
-/* Breadcrumbs */
-.findr-breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  flex: 1;
-}
-
-.breadcrumb-item {
-  cursor: pointer;
-  transition: all 0.2s ease;
-  padding: 2px 4px;
-  border-radius: 4px;
-}
-
-.breadcrumb-item:hover {
-  background-color: var(--bg-surface);
-  color: var(--accent);
-}
-
-.breadcrumb-separator {
-  opacity: 0.3;
-  font-weight: 400;
-}
-
 .findr-results-header {
   display: flex;
   justify-content: space-between;
@@ -532,6 +538,14 @@
   font-weight: 500;
   font-size: 14px;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.findr-result-details {
+  flex: 1;
+  min-width: 0;
 }
 
 .findr-result-meta {
@@ -570,6 +584,13 @@
   color: var(--text-primary);
   margin-bottom: 12px;
   line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
 }
 
 .findr-badges {

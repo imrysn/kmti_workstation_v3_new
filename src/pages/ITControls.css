@@ -1,0 +1,61 @@
+.it-controls-page {
+  padding: 20px;
+}
+.it-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+.it-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+}
+.it-card-info {
+  flex: 1;
+}
+.it-card-label {
+  margin: 0;
+  font-size: 16px;
+  color: #fff;
+}
+.it-card-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #888;
+  max-width: 240px;
+}
+
+.it-toggle-btn {
+  position: relative;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 16px;
+  border: none;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.it-toggle-btn.on {
+  background: rgba(0, 153, 255, 0.2);
+  color: #0099ff;
+  border: 1px solid rgba(0, 153, 255, 0.3);
+}
+
+.it-toggle-btn.off {
+  background: rgba(255, 255, 255, 0.05);
+  color: #666;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.it-toggle-btn:hover {
+  filter: brightness(1.2);
+}

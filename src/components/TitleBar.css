@@ -83,24 +83,75 @@
 
 .titlebar-controls {
   display: flex;
+  align-items: center;
   margin-left: auto;
   z-index: 1;
   -webkit-app-region: no-drag;
 }
 
+.titlebar-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  margin: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.user-sep {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 11px;
+}
+
+.user-role {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+
+.titlebar-win-controls {
+  display: flex;
+  margin-left: 8px;
+  border-left: 1px solid var(--border);
+}
+
 .titlebar-btn {
-  width: 46px;
+  width: 44px;
   height: var(--titlebar-height);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
-  transition: background var(--transition), color var(--transition);
+  transition: all var(--transition);
+  border: none;
+  background: transparent;
+  cursor: pointer;
 }
 
 .titlebar-btn:hover {
   background: var(--bg-surface);
   color: var(--text-primary);
+}
+
+.titlebar-btn.active {
+  color: var(--accent);
+  background: rgba(0, 153, 255, 0.05);
+}
+
+.logout-btn:hover {
+  color: var(--danger);
+  background: rgba(255, 61, 0, 0.05);
 }
 
 .titlebar-btn.close:hover {

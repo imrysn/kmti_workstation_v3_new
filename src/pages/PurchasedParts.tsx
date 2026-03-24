@@ -223,18 +223,19 @@ export default function PurchasedParts() {
   useEffect(() => {
     localStorage.setItem('findr_available_tabs', JSON.stringify(availableTabs))
   }, [availableTabs])
+
+  // Folder Navigation State
+  const [folderFilter, setFolderFilter] = useState<string>('')
   const [isProjectsExpanded, setIsProjectsExpanded] = useState(true)
 
   // Tree state
   const [rawTreeNodes, setRawTreeNodes] = useState<any[]>([])
   const [selectedTreePath, setSelectedTreePath] = useState<string>('')
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
-  const [folderFilter, setFolderFilter] = useState<string>('')
+
   // When a tree file is clicked outside current results, we navigate to its parent.
   // After results reload, pendingSelectPath resolves to set selectedResult.
   const [pendingSelectPath, setPendingSelectPath] = useState<string>('')
-  // Breadcrumb / Folder navigation
-  const [breadcrumbParts, setBreadcrumbParts] = useState<{name: string, path: string}[]>([])
 
   // Toast state
   const [toastVisible, setToastVisible] = useState(false)
@@ -317,6 +318,10 @@ export default function PurchasedParts() {
     setFolderFilter('')
     setSearch('')
   }, [activeSideTab])
+
+  const sortedProjects = useMemo(() => {
+    return [...projects].sort((a, b) => a.name.localeCompare(b.name))
+  }, [projects])
 
   // Poll for scanning progress
   useEffect(() => {
@@ -537,7 +542,7 @@ export default function PurchasedParts() {
   const handleTreeSelect = (path: string, isFolder: boolean) => {
     setSelectedTreePath(path)
     if (isFolder) {
-      setFolderFilter(path)
+      setFolderFilter(path) // Use pushToHistory for folder selection
       setSelectedResult(null)  // clear file info when navigating to folder
     } else {
       // Look up the file in current results to show File Info
@@ -558,22 +563,6 @@ export default function PurchasedParts() {
     setFolderFilter('')
   }
 
-  // Update breadcrumbs when folderFilter changes
-  useEffect(() => {
-    if (!folderFilter) {
-      setBreadcrumbParts([])
-      return
-    }
-    const parts = folderFilter.split('/')
-    const bcs: {name: string, path: string}[] = []
-    let currentPath = ''
-    parts.forEach(p => {
-      if (!p) return
-      currentPath = currentPath ? `${currentPath}/${p}` : p
-      bcs.push({ name: p, path: currentPath })
-    })
-    setBreadcrumbParts(bcs)
-  }, [folderFilter])
 
   // Keyboard Navigation Logic
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -743,31 +732,33 @@ export default function PurchasedParts() {
           <div className={`findr-projects-collapsible ${isProjectsExpanded ? 'expanded' : 'collapsed'}`}>
             <div className="findr-projects-list">
               <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 8, paddingLeft: 8, fontWeight: 500, opacity: 0.7 }}>
-                {projects.length} {activeSideTab === 'PROJECTS' ? 'PROJECTS' : activeSideTab === 'PURCHASED PARTS' ? 'INDEXES' : 'FOLDERS'} • {projects.reduce((sum, p) => sum + p.totalFiles, 0).toLocaleString()} FILES
+                {sortedProjects.length} {activeSideTab === 'PROJECTS' ? 'PROJECTS' : activeSideTab === 'PURCHASED PARTS' ? 'INDEXES' : 'FOLDERS'} • {sortedProjects.reduce((sum, p) => sum + p.totalFiles, 0).toLocaleString()} FILES
               </div>
 
-              {projects.map(p => (
-                <div
-                  key={p.id}
-                  className={`findr-project-card ${selectedProject?.id === p.id ? 'active' : ''}`}
-                  onClick={() => setSelectedProject(p)}
-                >
-                  <div className="findr-project-icon">
-                    <FileIcon 
-                      isFolder 
-                      size={20} 
-                      color={p.isScanning ? "var(--warning)" : "var(--accent)"} 
-                      filePath={p.rootPath}
-                    />
-                  </div>
-                  <div className="findr-project-details">
-                    <div className="findr-project-name">{p.name}</div>
-                    <div className="findr-project-sub" style={{ color: p.isScanning ? 'var(--warning)' : 'var(--text-muted)' }}>
-                      {p.isScanning ? "Indexing..." : `${p.totalFiles.toLocaleString()} files`}
+              <div className="findr-projects-scroll">
+                {sortedProjects.map(p => (
+                  <div
+                    key={p.id}
+                    className={`findr-project-card ${selectedProject?.id === p.id ? 'active' : ''}`}
+                    onClick={() => setSelectedProject(p)}
+                  >
+                    <div className="findr-project-icon">
+                      <FileIcon 
+                        isFolder 
+                        size={20} 
+                        color={p.isScanning ? "var(--warning)" : "var(--accent)"} 
+                        filePath={p.rootPath}
+                      />
+                    </div>
+                    <div className="findr-project-details">
+                      <div className="findr-project-name">{p.name}</div>
+                      <div className="findr-project-sub" style={{ color: p.isScanning ? 'var(--warning)' : 'var(--text-muted)' }}>
+                        {p.isScanning ? "Indexing..." : `${p.totalFiles.toLocaleString()} files`}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
 
@@ -827,16 +818,7 @@ export default function PurchasedParts() {
           </div>
 
           <div className="findr-results-header">
-            <div className="findr-breadcrumbs">
-              <span className="breadcrumb-item" onClick={() => setFolderFilter('')}>ROOT</span>
-              {breadcrumbParts.map((bc) => (
-                <React.Fragment key={bc.path}>
-                  <span className="breadcrumb-separator">/</span>
-                  <span className="breadcrumb-item" title={bc.path} onClick={() => setFolderFilter(bc.path)}>{bc.name}</span>
-                </React.Fragment>
-              ))}
-            </div>
-            <span>
+            <span style={{ marginLeft: 'auto' }}>
               {isSearching
                 ? "Searching..."
                 : resultCapped

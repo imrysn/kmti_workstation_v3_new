@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import parts, characters, settings
+from routers import parts, characters, settings, auth, feature_flags
 
 from db.database import engine, Base
 try:
@@ -34,6 +34,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(feature_flags.router, prefix="/api/flags", tags=["Feature Flags"])
 app.include_router(parts.router, prefix="/api/parts", tags=["Purchased Parts"])
 app.include_router(characters.router, prefix="/api/chars", tags=["Character Search"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])

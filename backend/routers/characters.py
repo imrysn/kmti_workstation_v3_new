@@ -4,10 +4,12 @@ Based on exact VB source queries from mod_login.getDbChar():
   char_search  table: eng_char, jp_char  (no id column)
   heat_trmnt   table: eng_char, jp_char, category  (no id column)
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from db.database import get_db
+from models.user import User, UserRole
+from core.auth import get_current_user, require_role
 
 router = APIRouter()
 

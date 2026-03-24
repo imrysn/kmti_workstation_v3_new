@@ -8,6 +8,8 @@ import hashlib
 from fastapi import APIRouter, Depends, Query, Response, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
+from models.user import User, UserRole
+from core.auth import get_current_user, require_role
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import or_, and_, asc, desc, func, select, distinct, delete
 from sqlalchemy.future import select as future_select # Renamed to avoid conflict with sqlalchemy.select
@@ -94,7 +96,7 @@ async def get_projects(category: str = None, db: AsyncSession = Depends(get_db))
     } for p in projs]
 
 @router.post("/projects")
-async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_db)):
+async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
     if not os.path.exists(req.root_path):
         raise HTTPException(status_code=400, detail="Invalid root path. Directory does not exist.")
 
@@ -126,7 +128,7 @@ async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_
     return {"id": p.id, "name": p.name, "rootPath": p.root_path, "totalFiles": 0, "cadFiles": 0, "isScanning": True}
 
 @router.delete("/projects/{project_id}")
-async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_project(project_id: int, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
     proj = await db.get(Project, project_id)
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -136,7 +138,7 @@ async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
     return {"success": True}
 
 @router.post("/projects/{project_id}/scan")
-async def scan_project_endpoint(project_id: int, db: AsyncSession = Depends(get_db)):
+async def scan_project_endpoint(project_id: int, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
     proj = await db.get(Project, project_id)
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -148,7 +150,7 @@ async def scan_project_endpoint(project_id: int, db: AsyncSession = Depends(get_
 
 
 @router.delete("/projects/category/{category}")
-async def delete_projects_by_category(category: str, db: AsyncSession = Depends(get_db)):
+async def delete_projects_by_category(category: str, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
     # 1. Find all projects in this category
     result = await db.execute(select(Project).where(Project.category == category))
     projs = result.scalars().all()
@@ -500,7 +502,7 @@ async def download_part(file_id: int, db: AsyncSession = Depends(get_db)):
 import shutil
 
 @router.delete("/{file_id}")
-async def delete_item(file_id: int, db: AsyncSession = Depends(get_db)):
+async def delete_item(file_id: int, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
     result = await db.execute(select(CadFileIndex).where(CadFileIndex.id == file_id))
     record = result.scalar_one_or_none()
     

@@ -1,11 +1,19 @@
 """
 Settings router — manages the equivalent of My.Settings from the legacy VB app.
 Stores/retrieves DB connection info and local file paths.
+
+Access control:
+  GET  /api/settings/       — admin, it
+  POST /api/settings/       — admin, it
+  DELETE /api/settings/cache — admin, it
 """
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 import json
 import os
 import shutil
+
+from models.user import User, UserRole
+from core.auth import require_role
 
 router = APIRouter()
 
@@ -31,19 +39,20 @@ def save_settings(data: dict):
 
 
 @router.get("/")
-def get_settings():
-    """Returns application settings (equivalent to My.Settings)."""
+def get_settings(current_user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
+    """Returns application settings. Admin and IT only."""
     s = load_settings()
-    # Never expose the raw password
     s["dbPass"] = "***" if s.get("dbPass") else ""
     return s
 
 
 @router.post("/")
-def update_settings(payload: dict):
-    """Saves application settings."""
+def update_settings(
+    payload: dict,
+    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
+):
+    """Saves application settings. Admin and IT only."""
     current = load_settings()
-    # Only update password if explicitly provided
     if payload.get("dbPass") == "***":
         payload["dbPass"] = current.get("dbPass", "")
     save_settings(payload)
@@ -51,8 +60,10 @@ def update_settings(payload: dict):
 
 
 @router.delete("/cache")
-def clear_preview_cache():
-    """Deletes all cached previews."""
+def clear_preview_cache(
+    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
+):
+    """Deletes all cached previews. Admin and IT only."""
     cache_dir = os.path.join(os.path.dirname(__file__), "..", ".preview_cache")
     if os.path.exists(cache_dir):
         try:
