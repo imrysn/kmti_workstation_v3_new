@@ -162,7 +162,6 @@
 
 .preview-close-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  transform: rotate(90deg);
 }
 
 .preview-modal-info {
@@ -182,32 +181,40 @@
 
 .file-preview-pdf {
   pointer-events: none;
-  /* Disable interaction in the small sidebar preview */
   background: white;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+.file-preview-pdf::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 .preview-modal-pdf {
-  width: 85vw;
-  height: 90vh;
+  width: 92vw;
+  max-width: 1400px; /* Expand for technical drawings */
+  height: 92vh;
   display: flex;
   flex-direction: column;
   padding: 0;
-  /* Remove padding for PDF modal */
   overflow: hidden;
+  background: #202124; /* Match Chrome/Edge PDF viewer background */
 }
 
 .preview-modal-pdf-iframe {
   flex: 1;
   width: 100% !important;
   height: 100% !important;
-  border-radius: 8px 8px 0 0 !important;
+  border: none !important;
+  background: transparent;
 }
 
 .preview-modal-pdf .preview-modal-info {
-  background: white;
-  padding: 12px 20px;
-  border-radius: 0 0 16px 16px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  padding: 10px 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+  z-index: 10;
 }
 
 @keyframes spin {

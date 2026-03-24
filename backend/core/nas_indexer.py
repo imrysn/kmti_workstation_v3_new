@@ -3,7 +3,7 @@ import asyncio
 from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import AsyncSessionLocal
-from db.models import CadFileIndex, Project
+from models.part import CadFileIndex, Project
 from core.icd_parser import SimpleICDParser
 
 def get_file_metadata(filepath: Path, project_id: int, parse_icd: bool = False):
@@ -53,7 +53,7 @@ async def enrich_icd_metadata(record_id: int, file_path: str):
     Safe to call multiple times — exits early if bounds are already populated.
     """
     from db.database import AsyncSessionLocal
-    from db.models import CadFileIndex
+    from models.part import CadFileIndex
 
     async with AsyncSessionLocal() as session:
         record = await session.get(CadFileIndex, record_id)

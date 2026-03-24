@@ -15,20 +15,19 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
   const [isZoomed, setIsZoomed] = useState(false);
   
   const previewUrl = `http://127.0.0.1:8000/api/parts/preview/${fileId}`;
-  const cadExtensions = ['.icd', '.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'];
+  const cadExtensions = ['.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'];
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
   
   const isImage = imageExtensions.includes(fileType.toLowerCase());
   const isPdf = fileType.toLowerCase() === '.pdf';
-  const isIcd = fileType.toLowerCase() === '.icd';
-  const isCad = cadExtensions.includes(fileType.toLowerCase()) && !isIcd;
+  const isCad = cadExtensions.includes(fileType.toLowerCase());
   
   useEffect(() => {
     setLoading(true);
     setError(false);
   }, [fileId]);
 
-  if (!isImage && !isCad && !isPdf && !isIcd) {
+  if (!isImage && !isCad && !isPdf) {
     return null;
   }
 
@@ -53,7 +52,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
           <div className="file-preview-loading">
             <div className="file-preview-spinner"></div>
             <div className="file-preview-error-text">
-              {(isIcd || isCad) ? 'Generating CAD Snapshot...' : 'Loading Preview...'}
+              {isCad ? 'Generating CAD Snapshot...' : 'Loading Preview...'}
             </div>
           </div>
         )}
@@ -73,14 +72,22 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
         ) : (
           <>
             {isPdf ? (
-              <iframe
-                src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                className="file-preview-image file-preview-pdf"
-                onLoad={handleLoad}
-                onError={handleError}
-                style={{ display: loading ? 'none' : 'block', border: 'none', height: 180 }}
-                title={fileName}
-              />
+              <div onClick={toggleZoom} style={{ cursor: 'zoom-in', width: '100%' }}>
+                <iframe
+                  src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                  className="file-preview-image file-preview-pdf"
+                  onLoad={handleLoad}
+                  onError={handleError}
+                  style={{ 
+                    display: loading ? 'none' : 'block', 
+                    border: 'none', 
+                    height: 180,
+                    overflow: 'hidden'
+                  }}
+                  title={fileName}
+                  scrolling="no"
+                />
+              </div>
             ) : (
               <img
                 src={previewUrl}
@@ -93,14 +100,9 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
                 title="Click to expand"
               />
             )}
-            {!loading && !isPdf && (
+            {!loading && (
               <div className="file-preview-expand-btn" onClick={toggleZoom} title="Expand Preview">
                 <SearchIcon size={16} />
-              </div>
-            )}
-            {!loading && isPdf && (
-              <div className="file-preview-expand-btn" onClick={toggleZoom} title="Fullscreen Preview">
-                <ExternalLinkIcon size={16} />
               </div>
             )}
           </>
@@ -110,7 +112,10 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
       {/* Lightbox / Fullscreen Overlay */}
       {isZoomed && (
         <div className="preview-overlay" onClick={toggleZoom}>
-          <div className={`preview-modal ${isPdf ? 'preview-modal-pdf' : ''}`} onClick={(e) => e.stopPropagation()}>
+          <div 
+            className={`preview-modal ${isPdf ? 'preview-modal-pdf' : ''}`} 
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="preview-close-btn" onClick={toggleZoom}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -119,7 +124,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
             </div>
             
             {isPdf ? (
-              <iframe src={previewUrl} className="preview-modal-image preview-modal-pdf-iframe" style={{ width: '80vw', height: '80vh', border: 'none' }} />
+              <iframe src={previewUrl} className="preview-modal-image preview-modal-pdf-iframe" title={fileName} />
             ) : (
               <img src={previewUrl} alt={fileName} className="preview-modal-image" />
             )}

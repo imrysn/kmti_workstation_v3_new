@@ -5,6 +5,8 @@ import CharacterSearch from './pages/CharacterSearch'
 import HeatTreatment from './pages/HeatTreatment'
 import MaterialCalculator from './pages/MaterialCalculator'
 import Settings from './pages/Settings'
+import FeatureClosed from './pages/FeatureClosed'
+import Maintenance from './pages/Maintenance'
 import { ModalProvider } from './components/ModalContext'
 import { ModalContainer } from './components/modals'
 import DateTimeOverlay from './components/DateTimeOverlay'
@@ -25,6 +27,8 @@ function App() {
                 <Route path="/heat-treatment" element={<HeatTreatment />} />
                 <Route path="/calculator" element={<MaterialCalculator />} />
                 <Route path="/settings" element={<Settings />} />
+                <Route path="/closed" element={<FeatureClosed />} />
+                <Route path="/maintenance" element={<Maintenance />} />
               </Routes>
             </main>
           </div>

@@ -15,10 +15,11 @@ from sqlalchemy.future import select as future_select # Renamed to avoid conflic
 from models.part import CadFileIndex, Project
 from db.database import get_db, AsyncSessionLocal
 import re
+import json
 from pathlib import Path
 import urllib.parse
 from pydantic import BaseModel
-from core.icd_parser import SimpleICDParser, PointCloudRenderer
+from core.icd_parser import SimpleICDParser
 from core.thumbnail_helper import get_shell_thumbnail
 from core.dwg_forensic import get_dwg_preview
 try:
@@ -151,7 +152,7 @@ async def scan_status_stream(project_id: int, db: AsyncSession = Depends(get_db)
     Client closes the connection when isScanning becomes false.
     """
     from fastapi.responses import StreamingResponse as SSEStreamingResponse
-    import json
+    
 
     async def event_generator():
         while True:
@@ -376,6 +377,7 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
         cache_dir = os.path.join(os.path.dirname(__file__), '..', '.preview_cache')
         os.makedirs(cache_dir, exist_ok=True)
         cache_path = os.path.join(cache_dir, f"{cache_key}.png")
+        
         if os.path.exists(cache_path):
             def _read_cache():
                 with open(cache_path, 'rb') as f:
@@ -391,14 +393,9 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
                 def _write_cache():
                     with open(cache_path, 'wb') as f:
                         f.write(content)
-                # Don't await the write, just do it inline or sync since it's small,
-                # but to be perfectly safe, we do it inline blocking for a few ms
-                with open(cache_path, 'wb') as f:
-                    f.write(content)
-            except Exception:
-                pass
+                _write_cache()
+            except Exception: pass
         return Response(content=content, media_type=media_type)
-    # -------------------
 
     # 1. Direct Media Serving: PDF (via iframe)
     if ext == '.pdf':
@@ -420,7 +417,6 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
             print(f"DWG Forensic extraction failed for {file_path}: {e}")
 
     # 3. Universal Choice: Windows Shell Thumbnail (Forced for CAD/complex files)
-    # We now use SIIGBF_THUMBNAILONLY in thumbnail_helper to ensure real drawings.
     if ext in cad_extensions or ext in {'.rvt', '.ifc', '.3dm'}:
         try:
             def _get_thumb():
@@ -435,28 +431,6 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
                 return return_and_cache(thumb_data)
         except Exception as e:
             print(f"Shell thumbnail failed for {file_path}: {e}")
-
-    # 3. Specialized ICD Point Cloud Rendering (Fallback for .icd if Shell fails)
-    if ext == '.icd':
-        # Trigger lazy geometry enrichment in the background if not yet populated.
-        # This fills in bound_x/y/z and part_geom_name for files scanned without parse_icd.
-        if enrich_icd_metadata and record.bound_x is None:
-            asyncio.create_task(enrich_icd_metadata(record.id, file_path))
-        try:
-            parser = SimpleICDParser()
-            def _parse_and_render():
-                if parser.parse_file(file_path):
-                    renderer = PointCloudRenderer(width=1024, height=768)
-                    img = renderer.render(parser)
-                    if img:
-                        buf = io.BytesIO()
-                        img.save(buf, format="PNG")
-                        return buf.getvalue()
-                return None
-            render_data = await asyncio.to_thread(_parse_and_render)
-            if render_data:
-                return return_and_cache(render_data)
-        except Exception: pass
 
     # 4. Standard Images (Direct Serving)
     preview_extensions = {
@@ -476,27 +450,6 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
                 return f.read()
         img_data = await asyncio.to_thread(_read_img)
         return Response(content=img_data, media_type=preview_extensions[ext])
-
-    # Default ICD parsing logic
-    if not ext == '.icd':
-        raise HTTPException(status_code=404, detail="Preview unavailable for this file type")
-        
-    parser = SimpleICDParser()
-    
-    def _generate_preview():
-        if parser.parse_file(file_path):
-            renderer = PointCloudRenderer(width=800, height=600)
-            img = renderer.render(parser)
-            if img:
-                img_byte_arr = io.BytesIO()
-                img.save(img_byte_arr, format='PNG')
-                return img_byte_arr.getvalue()
-        return None
-        
-    img_data = await asyncio.to_thread(_generate_preview)
-    
-    if img_data:
-        return return_and_cache(img_data)
             
     raise HTTPException(status_code=500, detail="Failed to generate preview")
 

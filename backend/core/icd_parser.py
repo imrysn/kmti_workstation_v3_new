@@ -1,15 +1,16 @@
 import struct
+import os
 import math
 import io
-from pathlib import Path
-from typing import List, Tuple, Dict, Optional
+from dataclasses import dataclass
+from typing import List, Dict, Optional
 from PIL import Image, ImageDraw, ImageFont
 
+@dataclass
 class Point3D:
-    def __init__(self, x: float, y: float, z: float):
-        self.x = x
-        self.y = y
-        self.z = z
+    x: float
+    y: float
+    z: float
 
 class SimpleICDParser:
     def __init__(self):
@@ -37,14 +38,12 @@ class SimpleICDParser:
             self._extract_part_name(binary_data)
             self._extract_32bit_floats(binary_data)
             
-            # Skip expensive regex searches for very large files
             if file_size < 10000000:
                 self._extract_64bit_doubles(binary_data)
-                self._extract_text_coordinates(binary_data)
             
             if len(self.points) > 0:
                 self._calculate_bounds()
-                self._filter_points()
+                self._filter_points(10000)
                 return True
             return False
         except Exception:
@@ -64,9 +63,7 @@ class SimpleICDParser:
     def _extract_32bit_floats(self, binary_data: bytes):
         for i in range(0, len(binary_data) - 12, 4):
             try:
-                x = struct.unpack('<f', binary_data[i:i+4])[0]
-                y = struct.unpack('<f', binary_data[i+4:i+8])[0]
-                z = struct.unpack('<f', binary_data[i+8:i+12])[0]
+                x, y, z = struct.unpack('<fff', binary_data[i:i+12])
                 if self._is_valid_point(x, y, z):
                     self.points.append(Point3D(x, y, z))
             except Exception:
@@ -75,33 +72,11 @@ class SimpleICDParser:
     def _extract_64bit_doubles(self, binary_data: bytes):
         for i in range(0, len(binary_data) - 24, 8):
             try:
-                x = struct.unpack('<d', binary_data[i:i+8])[0]
-                y = struct.unpack('<d', binary_data[i+8:i+16])[0]
-                z = struct.unpack('<d', binary_data[i+16:i+24])[0]
+                x, y, z = struct.unpack('<ddd', binary_data[i:i+24])
                 if self._is_valid_point(x, y, z):
                     self.points.append(Point3D(x, y, z))
             except Exception:
                 continue
-
-    def _extract_text_coordinates(self, binary_data: bytes):
-        try:
-            text_data = binary_data.decode('utf-8', errors='ignore')
-            import re
-            matches = re.findall(r'([-+]?\d*\.?\d*[eE][-+]?\d+)', text_data)
-            coords = []
-            for match in matches:
-                try:
-                    c = float(match)
-                    if self._is_reasonable_coordinate(c):
-                        coords.append(c)
-                except ValueError:
-                    continue
-            for i in range(0, len(coords) - 2, 3):
-                x, y, z = coords[i:i+3]
-                if self._is_valid_point(x, y, z):
-                    self.points.append(Point3D(x, y, z))
-        except Exception:
-            pass
 
     def _is_valid_point(self, x: float, y: float, z: float) -> bool:
         return all(self._is_reasonable_coordinate(c) and not math.isnan(c) and not math.isinf(c) for c in [x, y, z])
@@ -125,47 +100,7 @@ class SimpleICDParser:
             'size': Point3D(max_x - min_x, max_y - min_y, max_z - min_z)
         }
 
-    def _filter_points(self):
-        if len(self.points) > 10000:
-            step = len(self.points) // 10000
-            self.points = self.points[::step][:10000]
-
-class PointCloudRenderer:
-    def __init__(self, width: int = 1200, height: int = 900):
-        self.width = width
-        self.height = height
-        
-    def render(self, parser: SimpleICDParser) -> Optional[Image.Image]:
-        if not parser.points or not parser.bounds: return None
-        try:
-            image = Image.new('RGB', (self.width, self.height), (248, 248, 248))
-            draw = ImageDraw.Draw(image)
-            
-            b_size = parser.bounds['size']
-            iso_width = b_size.x + b_size.z * 0.866
-            iso_height = b_size.y + (b_size.x + b_size.z) * 0.5
-            scale = min((self.width - 100) / max(iso_width, 1), (self.height - 100) / max(iso_height, 1)) * 0.7
-            offset_x, offset_y = self.width // 2, self.height // 2
-            
-            for point in parser.points:
-                iso_x = (point.x - point.z) * 0.866025
-                iso_y = (point.x + point.z) * 0.5 - point.y
-                screen_x = int(iso_x * scale + offset_x)
-                screen_y = int(-iso_y * scale + offset_y)
-                
-                if 0 <= screen_x <= self.width and 0 <= screen_y <= self.height:
-                    depth_factor = (point.z - parser.bounds['min'].z) / (b_size.z or 1)
-                    # Smaller radius for sharper high-res look
-                    radius = 0.5 + (depth_factor * 1.5)
-                    c = (min(255, 40 + int(depth_factor * 40)), min(255, 140 + int(depth_factor * 20)), 40)
-                    draw.ellipse([screen_x - radius, screen_y - radius, screen_x + radius, screen_y + radius], fill=c)
-                    
-            try:
-                font = ImageFont.load_default()
-                draw.text((15, 18), f"ICD Point Cloud: {parser.part_name}", fill=(0, 0, 0), font=font)
-                draw.text((self.width - 200, self.height - 40), f"Points: {len(parser.points)}", fill=(60, 60, 60), font=font)
-                draw.text((self.width - 200, self.height - 20), f"Size: {b_size.x:.0f} x {b_size.y:.0f} x {b_size.z:.0f}", fill=(60, 60, 60), font=font)
-            except: pass
-            
-            return image
-        except: return None
+    def _filter_points(self, max_points: int = 10000):
+        if len(self.points) > max_points:
+            step = len(self.points) // max_points
+            self.points = self.points[::step][:max_points]
