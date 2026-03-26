@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react'
 import { charsApi } from '../services/api'
 import type { IHeatTreatment } from '../types'
-import Alert from '../components/Alert'
+import { useModal } from '../components/ModalContext'
 
 export default function HeatTreatment() {
+  const { notify } = useModal()
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<IHeatTreatment[]>([])
   const [loading, setLoading] = useState(false)
-  const [copiedIndex, setCopiedIndex] = useState<number | string | null>(null)
 
   useEffect(() => {
     // Load all heat treatment to extract categories
@@ -31,18 +31,17 @@ export default function HeatTreatment() {
     setLoading(false)
   }
 
-  const handleCopy = (text: string, id: number | string) => {
+  const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text)
-    setCopiedIndex(id)
-    setTimeout(() => setCopiedIndex(null), 1500)
+    notify(`Copied: ${text}`, 'success')
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      <div className="page-header" style={{ flexShrink: 0 }}>
+      <header className="char-search-header" style={{ flexShrink: 0 }}>
         <h1 className="page-title">Special Process</h1>
         <p className="page-subtitle">Browse special process categories and character mappings</p>
-      </div>
+      </header>
 
       <div className="card" style={{ display: 'flex', gap: 10, marginBottom: 16, flexShrink: 0 }}>
         <input
@@ -72,14 +71,14 @@ export default function HeatTreatment() {
                 {results.map((r, i) => (
                   <tr key={i} className="hoverable-row">
                     <td
-                      onClick={() => handleCopy(r.englishChar, `eng-${i}`)}
+                      onClick={() => handleCopy(r.englishChar)}
                       style={{ cursor: 'pointer', position: 'relative' }}
                       title="Click to copy English character"
                     >
                       {r.englishChar}
                     </td>
                     <td
-                      onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
+                      onClick={() => handleCopy(r.japaneseChar)}
                       style={{ fontFamily: 'serif', fontSize: 16, cursor: 'pointer', position: 'relative' }}
                       title="Click to copy Japanese character"
                     >
@@ -108,7 +107,6 @@ export default function HeatTreatment() {
           ))}
         </div>
       </div>
-      <Alert message="Copied!" isVisible={!!copiedIndex} />
     </div>
   )
 }

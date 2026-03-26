@@ -14,7 +14,6 @@ import {
   ExternalLinkIcon,
   PackageIcon
 } from '../components/FileIcons'
-import Alert from '../components/Alert'
 import FilePreview from '../components/FilePreview'
 import './PurchasedParts.css'
 
@@ -288,19 +287,10 @@ export default function PurchasedParts() {
   const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set())
   const [loadedNodes, setLoadedNodes] = useState<Set<string>>(new Set())
 
-  // Toast state
-  const [toastVisible, setToastVisible] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
-
   // Keyboard navigation
   const [focusedIndex, setFocusedIndex] = useState(-1)
   const resultsListRef = React.useRef<HTMLDivElement>(null)
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg)
-    setToastVisible(true)
-    setTimeout(() => setToastVisible(false), 3000)
-  }
 
   const treeContainerRef = React.useRef<HTMLDivElement>(null)
   const switcherRef = React.useRef<HTMLDivElement>(null)
@@ -392,7 +382,7 @@ export default function PurchasedParts() {
 
           if (wasScanning && !nowScanning) {
             hideProgress()
-            showToast("Scan complete!")
+            notify("Scan complete!", "success")
             // Refresh tree and results for the selected project
             if (selectedProject) {
               const treeRes = await partsApi.getTree(selectedProject.id)
@@ -720,7 +710,6 @@ export default function PurchasedParts() {
 
   return (
     <div className="findr-app" onKeyDown={handleKeyDown}>
-      <Alert message={toastMessage} isVisible={toastVisible} />
       <div className="findr-body">
         {/* LEFT SIDEBAR */}
         <div className="findr-sidebar-left">
@@ -1091,7 +1080,7 @@ export default function PurchasedParts() {
                   </button>
 
                   <div className="findr-btn-row">
-                    <button className="findr-btn-secondary" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); showToast("Copied!") }}>
+                    <button className="findr-btn-secondary" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); notify("Copied to clipboard!", "success") }}>
                       <CopyIcon size={18} /> Copy Path
                     </button>
                     <button className="findr-btn-secondary" title="Open containing folder" onClick={() => handleOpenLocation(selectedResult)}>

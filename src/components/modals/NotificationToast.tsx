@@ -1,9 +1,12 @@
 import React from 'react';
 import { useModal } from '../ModalContext';
 import { StatusIcon, StatusType } from '../FileIcons';
+import './DynamicIsland.css';
 
 export const NotificationToast: React.FC = () => {
   const { notifications, removeNotification } = useModal();
+
+  if (notifications.length === 0) return null;
 
   return (
     <div className="notifications-container">

@@ -42,9 +42,9 @@ class CharSearch(Base):
     """Maps to existing `char_search` table — English/Japanese character mapping."""
     __tablename__ = "char_search"
 
-    id = Column(String(255), primary_key=True)
-    eng_char = Column(String(255))
-    jp_char = Column(String(255))
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    eng_char = Column(String(1000), nullable=False)
+    jp_char = Column(String(1000), nullable=False)
 
 
 class HeatTreatment(Base):

@@ -85,10 +85,15 @@ export const partsApi = {
     api.get(`/parts/tree/${projectId}`, { params: { parent_path: parentPath } }),
 }
 
-// --- Character Search ---
+// --- Character Search (Drafting Notes) ---
 export const charsApi = {
   search: (q: string, limit: number = 50, offset: number = 0) =>
     api.get('/chars/', { params: { q, limit, offset } }),
+  create: (data: { englishChar: string; japaneseChar: string }) =>
+    api.post('/chars/', data),
+  update: (id: number, data: { englishChar?: string; japaneseChar?: string }) =>
+    api.patch(`/chars/${id}`, data),
+  delete: (id: number) => api.delete(`/chars/${id}`),
   getHeatTreatmentCategories: () => api.get('/chars/heat-treatment/categories'),
   getHeatTreatment: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
     api.get('/chars/heat-treatment', { params: { category, q, limit, offset } }),
