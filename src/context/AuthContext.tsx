@@ -38,8 +38,11 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null)
-  const [token, setToken] = useState<string | null>(null)
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const saved = localStorage.getItem('kmti_user')
+    return saved ? JSON.parse(saved) : null
+  })
+  const [token, setToken] = useState<string | null>(localStorage.getItem('kmti_token'))
   const [isLoading, setIsLoading] = useState(false)
   const [loginSucceeded, setLoginSucceeded] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -48,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true)
     try {
-      // OAuth2PasswordRequestForm requires application/x-www-form-urlencoded
       const body = new URLSearchParams()
       body.append('username', username)
       body.append('password', password)
@@ -65,16 +67,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const data = await res.json()
+      
+      // Save for persistence
+      localStorage.setItem('kmti_token', data.access_token)
+      localStorage.setItem('kmti_user', JSON.stringify(data.user))
+      
       setToken(data.access_token)
 
-      // Trigger exit animation then switch to workstation
       setLoginSucceeded(true)
       await new Promise(resolve => setTimeout(resolve, 380))
       
-      // Signal Electron to expand the window
       ;(window as any).electronAPI?.loginSuccess?.()
       
-      // Brief pause for Electron to resize, then switch the render tree
       await new Promise(resolve => setTimeout(resolve, 120))
       setUser(data.user)
       setLoginSucceeded(false)
@@ -84,15 +88,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = useCallback(async () => {
-    // Trigger workstation fade-out animation, then clear auth state
     setIsLoggingOut(true)
     await new Promise(resolve => setTimeout(resolve, 320))
 
-    // Signal Electron to shrink the window back to login panel
     ;(window as any).electronAPI?.logoutReset?.()
 
-    // Brief pause for Electron to resize, then clear auth state
     await new Promise(resolve => setTimeout(resolve, 120))
+    
+    // Clear persistence
+    localStorage.removeItem('kmti_token')
+    localStorage.removeItem('kmti_user')
+    
     setToken(null)
     setUser(null)
     setIsLoggingOut(false)

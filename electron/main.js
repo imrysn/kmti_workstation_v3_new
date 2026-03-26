@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog, screen, desktopCapturer } = require('electron')
 const { spawn, execSync } = require('child_process')
 const path = require('path')
+const os = require('os')
 
 const isDev = process.env.NODE_ENV !== 'production'
 let mainWindow

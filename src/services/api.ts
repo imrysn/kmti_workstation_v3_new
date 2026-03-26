@@ -126,4 +126,12 @@ export const usersApi = {
   delete: (id: number) => api.delete(`/auth/users/${id}`),
 }
 
+// --- Help Center ---
+export const helpApi = {
+  submit: (formData: FormData) => 
+    api.post('/help/submit', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getLogs: () => api.get('/help/logs'),
+  resolve: (id: number) => api.patch(`/help/${id}/resolve`),
+}
+
 export default api

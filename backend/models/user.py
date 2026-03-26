@@ -41,3 +41,13 @@ class FeatureFlag(Base):
     value = Column(Boolean, default=True, nullable=False)
     updated_by = Column(String(100), nullable=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+class Feedback(Base):
+    __tablename__ = "kmti_feedback"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, nullable=False)  # ID of shared account (e.g. 'user')
+    workstation = Column(String(100), nullable=False)  # Computer name
+    message = Column(String(1000), nullable=False)
+    screenshot_path = Column(String(255), nullable=True)
+    status = Column(String(20), default="open", nullable=False)  # open, resolved
+    created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -16,6 +16,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { ModalProvider } from './components/ModalContext'
 import { ModalContainer } from './components/modals'
 import DateTimeOverlay from './components/DateTimeOverlay'
+import FeedbackWidget from './components/FeedbackWidget'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
 import { setApiToken, onUnauthorized } from './services/api'
@@ -173,6 +174,7 @@ function WorkstationShell() {
       <ModalContainer />
       <DateTimeOverlay />
       <SessionExpiredModal />
+      <FeedbackWidget />
     </div>
   )
 }
@@ -197,18 +199,20 @@ function AppContent() {
     return <Login />
   }
 
-  return <WorkstationShell />
+  return (
+    <FlagsProvider>
+      <WorkstationShell />
+    </FlagsProvider>
+  )
 }
 
 export default function App() {
   return (
     <AuthProvider>
       <ModalProvider>
-        <FlagsProvider>
-          <BrowserRouter>
-            <AppContent />
-          </BrowserRouter>
-        </FlagsProvider>
+        <BrowserRouter>
+          <AppContent />
+        </BrowserRouter>
       </ModalProvider>
     </AuthProvider>
   )

@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import parts, characters, settings, auth, feature_flags
+from routers import parts, characters, settings, auth, feature_flags, help_center
 import asyncio
 from core.github_sync import sync_service
+from fastapi.staticfiles import StaticFiles
 
 from db.database import engine, Base
 try:
@@ -42,10 +43,14 @@ async def startup_event():
     asyncio.create_task(sync_service.poll_github())
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(help_center.router, prefix="/api/help", tags=["Help Center"])
 app.include_router(feature_flags.router, prefix="/api/flags", tags=["Feature Flags"])
 app.include_router(parts.router, prefix="/api/parts", tags=["Purchased Parts"])
 app.include_router(characters.router, prefix="/api/chars", tags=["Character Search"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
+
+# Static serving for Help Center screenshots (NAS)
+app.mount("/storage/feedback", StaticFiles(directory=r"\\KMTI-NAS\Shared\data\storage\feedback"), name="feedback")
 
 @app.get("/health")
 def health_check():

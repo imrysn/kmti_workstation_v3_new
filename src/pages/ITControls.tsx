@@ -1,6 +1,7 @@
 import { useFlags } from '../context/FlagsContext'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
+import { helpApi } from '../services/api'
 import './ITControls.css'
 
 const CRITICAL_FLAGS = [
@@ -136,15 +137,48 @@ function CriticalRow({ label, code, desc, value, onToggle }: CriticalRowProps) {
   )
 }
 
+interface FeedbackLog {
+  id: number
+  workstation: string
+  message: string
+  screenshot_path: string | null
+  status: string
+  created_at: string
+}
+
 export default function ITControls() {
   const { flags, setFlag } = useFlags()
   const { user } = useAuth()
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [logs, setLogs] = useState<FeedbackLog[]>([])
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
+    fetchLogs()
     return () => clearInterval(timer)
   }, [])
+
+  const fetchLogs = async () => {
+    setIsLoadingLogs(true)
+    try {
+      const res = await helpApi.getLogs()
+      setLogs(res.data)
+    } catch (err) {
+      console.error('Failed to fetch help logs:', err)
+    } finally {
+      setIsLoadingLogs(false)
+    }
+  }
+
+  const handleResolve = async (id: number) => {
+    try {
+      await helpApi.resolve(id)
+      fetchLogs()
+    } catch (err) {
+      console.error('Failed to resolve feedback:', err)
+    }
+  }
 
   const activeCount = Object.values(flags).filter(Boolean).length
   const totalCount = Object.keys(flags).length
@@ -217,6 +251,48 @@ export default function ITControls() {
               onToggleMaint={() => setFlag(m.maintKey, !flags[m.maintKey])}
             />
           ))}
+        </div>
+      </section>
+
+      <section className="itc-section">
+        <div className="itc-section-header">
+          <span className="itc-section-label">HELP CENTER LOGS</span>
+          <span className="itc-section-note">user feedback and system reports</span>
+          <button className="itc-refresh-btn" onClick={fetchLogs} disabled={isLoadingLogs}>
+            {isLoadingLogs ? '...' : 'REFRESH'}
+          </button>
+        </div>
+        <div className="itc-logs">
+          {logs.length === 0 ? (
+            <div className="itc-no-logs">NO ACTIVE REPORTS</div>
+          ) : (
+            logs.map(log => (
+              <div key={log.id} className={`itc-log-item ${log.status === 'resolved' ? 'itc-log-item--resolved' : ''}`}>
+                <div className="itc-log-main">
+                  <div className="itc-log-meta">
+                    <span className="itc-log-badge">{log.workstation}</span>
+                    <span className="itc-log-time"> · {new Date(log.created_at).toLocaleString()}</span>
+                  </div>
+                  <div className="itc-log-msg">{log.message}</div>
+                  {log.screenshot_path && (
+                    <a 
+                      href={`http://localhost:8000${log.screenshot_path}`} 
+                      target="_blank" 
+                      rel="noreferrer" 
+                      className="itc-log-link"
+                    >
+                      VIEW_SCREENSHOT.PNG
+                    </a>
+                  )}
+                </div>
+                {log.status === 'open' && (
+                  <button className="itc-resolve-btn" onClick={() => handleResolve(log.id)}>
+                    RESOLVE
+                  </button>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </section>
 
