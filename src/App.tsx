@@ -25,13 +25,14 @@ import './styles/App.css'
  * Handles maintenance/closed modes and module routing.
  */
 function WorkstationShell() {
-  const { hasRole } = useAuth()
+  const { hasRole, isLoggingOut } = useAuth()
   const { flags } = useFlags()
+  const shellClass = `app-shell${isLoggingOut ? ' exiting' : ''}`
 
   // IT toggle: if maintenance_mode is on, show Maintenance for everyone EXCEPT IT/Admin
   if (flags.maintenance_mode && !hasRole('it', 'admin')) {
     return (
-      <div className="app-shell">
+      <div className={shellClass}>
         <TitleBar />
         <div className="app-body">
           <main className="app-content">
@@ -45,7 +46,7 @@ function WorkstationShell() {
   // IT toggle: if feature_closed is on, show FeatureClosed for everyone EXCEPT IT/Admin
   if (flags.feature_closed && !hasRole('it', 'admin')) {
     return (
-      <div className="app-shell">
+      <div className={shellClass}>
         <TitleBar />
         <div className="app-body">
           <main className="app-content">
@@ -57,7 +58,7 @@ function WorkstationShell() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={shellClass}>
       <TitleBar />
       <div className="app-body">
         <main className="app-content">

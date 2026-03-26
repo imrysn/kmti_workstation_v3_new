@@ -5,6 +5,22 @@
   height: 100vh;
   overflow: hidden;
   background: var(--bg-primary);
+  animation: workstationFadeIn 0.35s ease-out both;
+}
+
+@keyframes workstationFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Logout exit — scales down and fades out before window shrinks */
+.app-shell.exiting {
+  animation: workstationFadeOut 0.32s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes workstationFadeOut {
+  from { opacity: 1; transform: scale(1); }
+  to   { opacity: 0; transform: scale(0.96); }
 }
 
 .app-body {

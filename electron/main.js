@@ -3,7 +3,6 @@ const { spawn, execSync } = require('child_process')
 const path = require('path')
 
 const isDev = process.env.NODE_ENV !== 'production'
-let loginWindow
 let mainWindow
 let pythonProcess
 
@@ -22,44 +21,21 @@ function startPythonServer() {
   })
 }
 
-function createLoginWindow() {
-  loginWindow = new BrowserWindow({
+function createWindow() {
+  // Start in login mode: small, frameless, transparent
+  mainWindow = new BrowserWindow({
     width: 420,
     height: 560,
     resizable: false,
     frame: false,
     center: true,
-    transparent: true,   // ← lets the OS see through to the desktop
+    transparent: true,   // lets the OS see through to the desktop
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
     },
     icon: path.join(__dirname, '..', 'public', 'icon.ico'),
-  })
-
-  if (isDev) {
-    loginWindow.loadURL('http://localhost:5174')
-  } else {
-    loginWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
-  }
-}
-
-function createMainWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 1024,
-    minHeight: 700,
-    frame: false,
-    titleBarStyle: 'hidden',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-    icon: path.join(__dirname, '..', 'public', 'icon.ico'),
-    backgroundColor: '#f1f5f9',
   })
 
   if (isDev) {
@@ -107,14 +83,26 @@ app.whenReady().then(() => {
     BrowserWindow.fromWebContents(event.sender)?.close()
   })
 
-  // Login gate: when the React app finishes authenticating, it signals us
-  // We destroy the small login window and open the full workstation window
+  // Login gate: resize the SAME window into full workstation mode.
+  // No re-load needed — React auth state is already set, AppContent
+  // switches to WorkstationShell automatically.
   ipcMain.handle('login-success', () => {
-    if (loginWindow && !loginWindow.isDestroyed()) {
-      loginWindow.destroy()
-      loginWindow = null
-    }
-    createMainWindow()
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    mainWindow.setResizable(true)
+    mainWindow.setMinimumSize(1024, 700)
+    mainWindow.setBackgroundColor('#f1f5f9')
+    mainWindow.maximize()        // fills the available screen area
+  })
+
+  // Logout: shrink back to the floating login card
+  ipcMain.handle('logout-reset', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    mainWindow.unmaximize()
+    mainWindow.setResizable(false)
+    mainWindow.setMinimumSize(0, 0)
+    mainWindow.setSize(420, 560)
+    mainWindow.center()
+    mainWindow.setBackgroundColor('#00000000')  // restore transparency
   })
 
   ipcMain.handle('select-folder', async (event) => {
@@ -138,13 +126,12 @@ app.whenReady().then(() => {
     startPythonServer()
   }
 
-  console.log(`>>> ELECTRON MAIN PROCESS STARTED - Version: 2.3 (isDev: ${isDev})`)
+  console.log(`>>> ELECTRON MAIN PROCESS STARTED - Version: 2.4 (isDev: ${isDev})`)
 
-  // Start with the login window
-  createLoginWindow()
+  createWindow()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createLoginWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 

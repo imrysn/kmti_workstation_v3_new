@@ -69,6 +69,17 @@
   animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
 
+/* Exit Animation — plays when login succeeds */
+.login-card.exiting {
+  animation: cardExit 0.38s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes cardExit {
+  0%   { opacity: 1; transform: scale(1);    filter: blur(0px);   }
+  40%  { opacity: 1; transform: scale(1.04); filter: blur(0px);   }
+  100% { opacity: 0; transform: scale(1.12); filter: blur(8px);   }
+}
+
 @keyframes shake {
 
   10%,

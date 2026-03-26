@@ -25,6 +25,8 @@ interface AuthContextValue {
   user: AuthUser | null
   token: string | null
   isLoading: boolean
+  loginSucceeded: boolean
+  isLoggingOut: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => void
   hasRole: (...roles: UserRole[]) => boolean
@@ -36,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [loginSucceeded, setLoginSucceeded] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true)
@@ -58,19 +62,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await res.json()
       setToken(data.access_token)
-      setUser(data.user)
 
-      // Signal Electron to close the login window and open the main window.
-      // No-op in browser/dev mode where electronAPI is unavailable.
+      // 1. Signal login card to play its exit animation
+      setLoginSucceeded(true)
+
+      // 2. Wait for exit animation (~400ms), then resize the window
+      await new Promise(resolve => setTimeout(resolve, 380))
       ;(window as any).electronAPI?.loginSuccess?.()
+
+      // 3. Brief pause for Electron to maximize, then switch the render tree
+      await new Promise(resolve => setTimeout(resolve, 120))
+      setUser(data.user)
+      setLoginSucceeded(false)   // reset so the card is visible on next logout→login
     } finally {
       setIsLoading(false)
     }
   }, [])
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    // 1. Trigger workstation fade-out animation
+    setIsLoggingOut(true)
+
+    // 2. Wait for the fade-out CSS animation
+    await new Promise(resolve => setTimeout(resolve, 320))
+
+    // 3. Signal Electron to shrink the window back to login panel
+    ;(window as any).electronAPI?.logoutReset?.()
+
+    // 4. Brief pause for Electron to resize, then clear auth state
+    await new Promise(resolve => setTimeout(resolve, 120))
     setToken(null)
     setUser(null)
+    setIsLoggingOut(false)
   }, [])
 
   /**
@@ -86,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, token, isLoading, loginSucceeded, isLoggingOut, login, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   )

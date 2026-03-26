@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import './Login.css'
 
 export default function Login() {
-  const { login, isLoading } = useAuth()
+  const { login, isLoading, loginSucceeded } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,16 +19,22 @@ export default function Login() {
     } catch (err: any) {
       setError(err.message ?? 'Invalid credentials. Please try again.')
       setShake(true)
-      // Reset shake after animation completes
       setTimeout(() => setShake(false), 500)
     }
   }
+
+  // Compute CSS classes for the card
+  const cardClass = [
+    'login-card',
+    shake ? 'shake' : '',
+    loginSucceeded ? 'exiting' : '',
+  ].filter(Boolean).join(' ')
 
   return (
     <div className="login-page">
       <div className="login-bg-overlay"></div>
       
-      <div className={`login-card ${shake ? 'shake' : ''}`}>
+      <div className={cardClass}>
         <div className="login-header">
           <div className="login-logo">
             <span className="logo-k">K</span>
