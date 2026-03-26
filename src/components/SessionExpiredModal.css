@@ -1,0 +1,94 @@
+/* Session Expired Modal */
+.session-expired-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: seBackdropIn 0.25s ease-out;
+}
+
+@keyframes seBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.session-expired-modal {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 40px 48px;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow:
+    0 20px 60px -10px rgba(0, 0, 0, 0.25),
+    0 4px 16px rgba(0, 0, 0, 0.08);
+  animation: seModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes seModalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);   }
+}
+
+.session-expired-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  background: #fff7ed;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+}
+
+.session-expired-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.session-expired-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 10px;
+  letter-spacing: -0.3px;
+}
+
+.session-expired-body {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.session-expired-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 11px 24px;
+  border-radius: 10px;
+  background: #0284c7;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.session-expired-btn:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+
+.session-expired-btn:active {
+  transform: translateY(0);
+}

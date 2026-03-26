@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, shell, dialog, screen } = require('electron')
 const { spawn, execSync } = require('child_process')
 const path = require('path')
 
@@ -86,22 +86,31 @@ app.whenReady().then(() => {
   // Login gate: resize the SAME window into full workstation mode.
   // No re-load needed — React auth state is already set, AppContent
   // switches to WorkstationShell automatically.
+  // Login gate: expand the same window to fill the full workable screen.
+  // NOTE: maximize() doesn't work on transparent frameless windows on Windows,
+  // so we use screen.getPrimaryDisplay().workArea + setBounds instead.
   ipcMain.handle('login-success', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return
+    const { x, y, width, height } = screen.getPrimaryDisplay().workArea
     mainWindow.setResizable(true)
     mainWindow.setMinimumSize(1024, 700)
     mainWindow.setBackgroundColor('#f1f5f9')
-    mainWindow.maximize()        // fills the available screen area
+    mainWindow.setBounds({ x, y, width, height }, false)
   })
 
   // Logout: shrink back to the floating login card
   ipcMain.handle('logout-reset', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return
-    mainWindow.unmaximize()
+    const { x, y, width, height } = screen.getPrimaryDisplay().workArea
+    const cardW = 420, cardH = 560
     mainWindow.setResizable(false)
     mainWindow.setMinimumSize(0, 0)
-    mainWindow.setSize(420, 560)
-    mainWindow.center()
+    mainWindow.setBounds({
+      x: Math.round(x + (width - cardW) / 2),
+      y: Math.round(y + (height - cardH) / 2),
+      width: cardW,
+      height: cardH,
+    }, false)
     mainWindow.setBackgroundColor('#00000000')  // restore transparency
   })
 

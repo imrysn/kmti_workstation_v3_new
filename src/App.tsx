@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import TitleBar from './components/TitleBar'
+import SessionExpiredModal from './components/SessionExpiredModal'
 import PurchasedParts from './pages/PurchasedParts'
 import CharacterSearch from './pages/CharacterSearch'
 import HeatTreatment from './pages/HeatTreatment'
@@ -153,6 +154,7 @@ function WorkstationShell() {
       </div>
       <ModalContainer />
       <DateTimeOverlay />
+      <SessionExpiredModal />
     </div>
   )
 }
@@ -161,17 +163,17 @@ function WorkstationShell() {
  * AppContent — Controls the high-level switch between Login and Workstation.
  */
 function AppContent() {
-  const { user, logout, token } = useAuth()
+  const { user, token, triggerSessionExpired } = useAuth()
 
   // Sync token into axios interceptor whenever it changes
   useEffect(() => {
     setApiToken(token)
   }, [token])
 
-  // Register global 401 handler so expired tokens force re-login
+  // Register global 401 handler — shows Session Expired modal instead of silent logout
   useEffect(() => {
-    onUnauthorized(() => logout())
-  }, [logout])
+    onUnauthorized(() => triggerSessionExpired())
+  }, [triggerSessionExpired])
 
   if (!user) {
     return <Login />
