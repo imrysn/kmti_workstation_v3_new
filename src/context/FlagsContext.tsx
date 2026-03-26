@@ -15,10 +15,20 @@ import {
 import { flagsApi } from '../services/api'
 import { useAuth } from './AuthContext'
 
-interface FeatureFlags {
+export interface FeatureFlags {
+  maintenance_mode: boolean
+  feature_closed: boolean
+
+  purchased_parts_enabled: boolean
+  character_search_enabled: boolean
   heat_treatment_enabled: boolean
   calculator_enabled: boolean
-  maintenance_mode: boolean
+
+  purchased_parts_maintenance: boolean
+  character_search_maintenance: boolean
+  heat_treatment_maintenance: boolean
+  calculator_maintenance: boolean
+
   [key: string]: boolean
 }
 
@@ -30,9 +40,18 @@ interface FlagsContextValue {
 }
 
 const DEFAULT_FLAGS: FeatureFlags = {
+  maintenance_mode: false,
+  feature_closed: false,
+
+  purchased_parts_enabled: true,
+  character_search_enabled: true,
   heat_treatment_enabled: true,
   calculator_enabled: true,
-  maintenance_mode: false,
+
+  purchased_parts_maintenance: false,
+  character_search_maintenance: false,
+  heat_treatment_maintenance: false,
+  calculator_maintenance: false,
 }
 
 const FlagsContext = createContext<FlagsContextValue | null>(null)

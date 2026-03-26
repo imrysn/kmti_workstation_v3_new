@@ -80,20 +80,35 @@
 
 /* Disabled nav link (feature flag off) */
 .sidebar-link.disabled {
-  opacity: 0.45;
-  pointer-events: none;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sidebar-link.maint {
+  color: #e3b341;
 }
 
 .sidebar-closed-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #f85149;
+  background: rgba(248, 81, 73, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
   margin-left: auto;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--text-muted);
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 1px 5px;
+  /* Original properties that were intended to be kept or moved */
+  /* letter-spacing: 0.06em; */
+  /* border: 1px solid var(--border); */
+}
+
+.sidebar-maint-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 800;
+  color: #e3b341;
+  background: rgba(227, 179, 65, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
 }
 
 /* IT Controls panel */

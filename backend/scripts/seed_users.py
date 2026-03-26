@@ -47,9 +47,21 @@ USERS = [
 ]
 
 DEFAULT_FLAGS = {
+    # Global overrides
+    "maintenance_mode": False,
+    "feature_closed": False,
+
+    # Module Visibility (Enabled/Disabled)
+    "purchased_parts_enabled": True,
+    "character_search_enabled": True,
     "heat_treatment_enabled": True,
     "calculator_enabled": True,
-    "maintenance_mode": False,
+
+    # Per-Module Maintenance (Nominal/Locked)
+    "purchased_parts_maintenance": False,
+    "character_search_maintenance": False,
+    "heat_treatment_maintenance": False,
+    "calculator_maintenance": False,
 }
 
 

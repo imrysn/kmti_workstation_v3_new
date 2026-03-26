@@ -7,6 +7,8 @@ const nav = [
   {
     label: 'Purchased Parts',
     path: '/parts',
+    visibleKey: 'purchased_parts_enabled',
+    maintKey: 'purchased_parts_maintenance',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
@@ -16,6 +18,8 @@ const nav = [
   {
     label: 'Drafting Notes',
     path: '/characters',
+    visibleKey: 'character_search_enabled',
+    maintKey: 'character_search_maintenance',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -25,7 +29,8 @@ const nav = [
   {
     label: 'Special Process',
     path: '/heat-treatment',
-    flagKey: 'heat_treatment_enabled',
+    visibleKey: 'heat_treatment_enabled',
+    maintKey: 'heat_treatment_maintenance',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/>
@@ -35,7 +40,8 @@ const nav = [
   {
     label: 'Calculator',
     path: '/calculator',
-    flagKey: 'calculator_enabled',
+    visibleKey: 'calculator_enabled',
+    maintKey: 'calculator_maintenance',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="4" y="2" width="16" height="20" rx="2"/>
@@ -57,55 +63,51 @@ export default function Sidebar() {
       <div className="sidebar-section">
         <span className="sidebar-group-label">Workspace</span>
         {nav.map((item) => {
-          const isDisabled = item.flagKey && !flags[item.flagKey]
+          const isMaint = flags[item.maintKey]
+          const isClosed = !flags[item.visibleKey]
+          const isIT = hasRole('it', 'admin')
+          
+          // Disable link for normal users if closed OR in maintenance
+          const isDisabled = !isIT && (isClosed || isMaint)
+          
           return (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `sidebar-link${isActive ? ' active' : ''}${isDisabled ? ' disabled' : ''}`
+                `sidebar-link${isActive ? ' active' : ''}${isDisabled ? ' disabled' : ''}${!isIT && isMaint ? ' maint' : ''}`
               }
             >
               <span className="sidebar-icon">{item.icon}</span>
               <span className="sidebar-label">{item.label}</span>
-              {isDisabled && <span className="sidebar-closed-badge">OFF</span>}
+              {!isIT && isMaint && <span className="sidebar-maint-badge">MAINT</span>}
+              {!isIT && !isMaint && isClosed && <span className="sidebar-closed-badge">OFF</span>}
             </NavLink>
           )
         })}
       </div>
 
-      {/* IT-only: feature flag toggles */}
       {hasRole('it') && (
         <div className="sidebar-section sidebar-it-panel">
-          <span className="sidebar-group-label">IT Controls</span>
+          <span className="sidebar-group-label">Global Guards</span>
 
           <div className="sidebar-toggle-row">
-            <span className="sidebar-label">Special Process</span>
-            <button
-              className={`sidebar-toggle-btn ${flags.heat_treatment_enabled ? 'on' : 'off'}`}
-              onClick={() => setFlag('heat_treatment_enabled', !flags.heat_treatment_enabled)}
-            >
-              {flags.heat_treatment_enabled ? 'ON' : 'OFF'}
-            </button>
-          </div>
-
-          <div className="sidebar-toggle-row">
-            <span className="sidebar-label">Calculator</span>
-            <button
-              className={`sidebar-toggle-btn ${flags.calculator_enabled ? 'on' : 'off'}`}
-              onClick={() => setFlag('calculator_enabled', !flags.calculator_enabled)}
-            >
-              {flags.calculator_enabled ? 'ON' : 'OFF'}
-            </button>
-          </div>
-
-          <div className="sidebar-toggle-row">
-            <span className="sidebar-label">Maintenance Mode</span>
+            <span className="sidebar-label">Maintenance</span>
             <button
               className={`sidebar-toggle-btn ${flags.maintenance_mode ? 'on' : 'off'}`}
               onClick={() => setFlag('maintenance_mode', !flags.maintenance_mode)}
             >
               {flags.maintenance_mode ? 'ON' : 'OFF'}
+            </button>
+          </div>
+
+          <div className="sidebar-toggle-row">
+            <span className="sidebar-label">Lockdown</span>
+            <button
+              className={`sidebar-toggle-btn ${flags.feature_closed ? 'on' : 'off'}`}
+              onClick={() => setFlag('feature_closed', !flags.feature_closed)}
+            >
+              {flags.feature_closed ? 'ON' : 'OFF'}
             </button>
           </div>
         </div>

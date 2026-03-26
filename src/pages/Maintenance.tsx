@@ -1,5 +1,7 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useFlags } from '../context/FlagsContext';
 import './Maintenance.css';
 
 const ServerHeroSVG = () => (
@@ -89,6 +91,33 @@ const SystemTape = ({ rotation, top, speed }: { rotation: number, top: string, s
 
 const Maintenance: React.FC = () => {
     const { logout } = useAuth();
+    const { flags } = useFlags();
+    const navigate = useNavigate();
+
+    const handleReturn = () => {
+        if (flags.maintenance_mode) {
+            logout();
+            return;
+        }
+
+        // Define the standard shell modules and their flags
+        const modules = [
+            { path: '/parts', v: 'purchased_parts_enabled', m: 'purchased_parts_maintenance' },
+            { path: '/characters', v: 'character_search_enabled', m: 'character_search_maintenance' },
+            { path: '/heat-treatment', v: 'heat_treatment_enabled', m: 'heat_treatment_maintenance' },
+            { path: '/calculator', v: 'calculator_enabled', m: 'calculator_maintenance' },
+        ];
+
+        // Find the first "safe" module (not hidden AND not in maintenance)
+        const safeModule = modules.find(mod => flags[mod.v] && !flags[mod.m]);
+
+        if (safeModule) {
+            navigate(safeModule.path);
+        } else {
+            // If nothing is safe, treat as global maintenance
+            logout();
+        }
+    };
 
     return (
         <div className="maint-root">
@@ -109,7 +138,7 @@ const Maintenance: React.FC = () => {
                     <p className="maint-primary-msg">We're currently performing some updates.</p>
                     <p className="maint-secondary-msg">The system will be back online shortly.</p>
 
-                    <button className="maint-btn-tech" onClick={() => logout()}>
+                    <button className="maint-btn-tech" onClick={handleReturn}>
                         <div className="btn-bg-glitch"></div>
                         <span className="btn-content">← Return to Shell</span>
                     </button>
