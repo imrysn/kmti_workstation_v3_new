@@ -9,11 +9,22 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [shake, setShake] = useState(false)
 
+  // Luxe low-density particles
+  const [particles] = useState(() =>
+    Array.from({ length: 6 }, (_, i) => ({
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 5}s`,
+      duration: `${20 + Math.random() * 20}s`,
+      size: `${1 + Math.random() * 1.5}px`,
+      id: i
+    }))
+  )
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
     setShake(false)
-    
+
     try {
       await login(username.trim(), password)
     } catch (err: any) {
@@ -30,82 +41,138 @@ export default function Login() {
     loginSucceeded ? 'exiting' : '',
   ].filter(Boolean).join(' ')
 
+  // Reactive Specular Highlight
+  const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    setMousePos({ x, y })
+  }
+
   return (
     <div className="login-page">
       <div className="login-bg-overlay"></div>
-      
-      <div className={cardClass}>
-        <div className="login-header">
-          <div className="login-logo">
-            <span className="logo-k">K</span>
-            <span className="logo-m">M</span>
-            <span className="logo-t">T</span>
-            <span className="logo-i">I</span>
-          </div>
-          <h1 className="login-title">Workstation V3</h1>
-          <p className="login-subtitle">Secure Data Management Systems</p>
+
+      <div
+        className={cardClass}
+        onMouseMove={handleMouseMove}
+        style={{ '--mouse-x': `${mousePos.x}%`, '--mouse-y': `${mousePos.y}%` } as any}
+      >
+        <div className="particles-container">
+          {particles.map(p => (
+            <div
+              key={p.id}
+              className="particle"
+              style={{
+                left: p.left,
+                animationDelay: p.delay,
+                animationDuration: p.duration,
+                width: p.size,
+                height: p.size,
+                '--d': p.duration
+              } as any}
+            />
+          ))}
         </div>
 
-        <form className="login-form" onSubmit={handleSubmit}>
-          {error && (
-            <div className="login-error-container">
-              <svg className="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
-              </svg>
-              <span>{error}</span>
-            </div>
-          )}
+        {/* Technical HUD Elements */}
+        <div className="hud-corner hud-tl"></div>
+        <div className="hud-corner hud-tr"></div>
+        <div className="hud-corner hud-bl"></div>
+        <div className="hud-corner hud-br"></div>
 
-          <div className="login-input-group">
-            <label htmlFor="username">Username</label>
-            <div className="input-wrapper">
-              <input
-                id="username"
-                type="text"
-                placeholder="Enter your username"
-                autoComplete="username"
-                autoFocus
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                disabled={isLoading}
-                required
-              />
+        <div className="login-card-content">
+          <div className="login-header">
+            <div className="login-logo">
+              <div className="logo-group">
+                <span className="logo-big">K</span>
+                {/* <span className="logo-small">usakabe</span> */}
+              </div>
+              {/* <div className="logo-group symbol">&</div> */}
+              <div className="logo-group">
+                <span className="logo-big">M</span>
+                {/* <span className="logo-small">aeno</span> */}
+              </div>
+              <div className="logo-group">
+                <span className="logo-big">T</span>
+                {/* <span className="logo-small">ech.,</span> */}
+              </div>
+              <div className="logo-group">
+                <span className="logo-big">I</span>
+                {/* <span className="logo-small">NC.</span> */}
+              </div>
             </div>
+            <h1 className="login-title">Workstation</h1>
+            <p className="login-subtitle">Secure Data Management System</p>
           </div>
 
-          <div className="login-input-group">
-            <label htmlFor="password">Password</label>
-            <div className="input-wrapper">
-              <input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
-                required
-              />
+          <form className="login-form" onSubmit={handleSubmit}>
+
+            <div className="login-input-group">
+              <label htmlFor="username">USERNAME</label>
+              <div className="input-wrapper">
+                <input
+                  id="username"
+                  type="text"
+                  placeholder="Enter username"
+                  autoComplete="username"
+                  autoFocus
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="login-input-group">
+              <label htmlFor="password">PASSWORD</label>
+              <div className="input-wrapper">
+                <input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+                <svg className="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              </div>
+              {error && <div className="login-input-error">{error}</div>}
+            </div>
+
+            <button className="login-submit-btn" type="submit" disabled={isLoading || !username || !password}>
+              {isLoading ? (
+                <div className="loader-container">
+                  <div className="spinner"></div>
+                  <span>Verifying...</span>
+                </div>
+              ) : (
+                'SIGN IN'
+              )}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <div className="footer-main">
+              <span className="version-tag">VER 3.0.0</span>
+              <span className="copyright">© 2026 KMTI</span>
+            </div>
+            <div className="system-readout">
+              <span className="readout-item">Uptime: 14h 22m</span>
+              <span className="readout-item">Database: ACTIVE</span>
             </div>
           </div>
-
-          <button className="login-submit-btn" type="submit" disabled={isLoading || !username || !password}>
-            {isLoading ? (
-              <span className="loader-container">
-                <span className="spinner"></span>
-                Authenticating...
-              </span>
-            ) : (
-              'Sign In'
-            )}
-          </button>
-        </form>
-
-        <div className="login-footer">
-          <span className="version-tag">Build 3.0.42</span>
-          <span className="copyright">© 2026 KMTI Tech</span>
         </div>
       </div>
     </div>

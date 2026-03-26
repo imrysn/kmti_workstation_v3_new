@@ -24,8 +24,8 @@ function startPythonServer() {
 function createWindow() {
   // Start in login mode: small, frameless, transparent
   mainWindow = new BrowserWindow({
-    width: 420,
-    height: 560,
+    width: 450,
+    height: 600,
     resizable: false,
     frame: false,
     center: true,
@@ -50,11 +50,11 @@ app.whenReady().then(() => {
   ipcMain.handle('get-file-icon', async (_, filePath, isFolder) => {
     try {
       let targetPath = filePath.split('/').join(path.sep).split('\\\\').join('\\')
-      
+
       if (isFolder) {
         targetPath = 'C:\\Windows'
       }
-      
+
       const icon = await app.getFileIcon(targetPath, { size: 'normal' })
       return icon.toDataURL()
     } catch (err) {
@@ -156,7 +156,7 @@ function killBackend() {
   if (pythonProcess) {
     try {
       pythonProcess.kill()
-    } catch (_) {}
+    } catch (_) { }
     pythonProcess = null
   }
 
@@ -204,7 +204,7 @@ function killBackend() {
           try {
             execSync(`kill -9 ${pid}`, { timeout: 3000 })
             console.log(`>>> Killed port 8000 process PID ${pid}`)
-          } catch (_) {}
+          } catch (_) { }
         }
       }
     } catch (_) {
