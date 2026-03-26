@@ -14,6 +14,7 @@ import shutil
 
 from models.user import User, UserRole
 from core.auth import require_role
+from core.github_sync import sync_service
 
 router = APIRouter()
 
@@ -73,3 +74,15 @@ def clear_preview_cache(
         except Exception as e:
             return {"message": f"Error clearing cache: {str(e)}"}, 500
     return {"message": "Cache was already empty"}
+
+
+@router.post("/update-app")
+async def update_app(
+    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
+):
+    """Triggers a git pull to update the application code. Admin and IT only."""
+    result = await sync_service.trigger_update()
+    if result["success"]:
+        return {"message": "Update downloaded successfully. The app will reload and apply changes shortly.", "output": result["output"]}
+    else:
+        return {"message": f"Update failed: {result['error']}"}, 500

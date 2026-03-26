@@ -31,7 +31,7 @@
 }
 .role-badge.it { background: rgba(0, 153, 255, 0.2); color: #0099ff; }
 .role-badge.admin { background: rgba(155, 89, 182, 0.2); color: #9b59b6; }
-.role-badge.viewer { background: rgba(255, 255, 255, 0.1); color: #ccc; }
+.role-badge.user { background: rgba(255, 255, 255, 0.1); color: #ccc; }
 
 .status-cell {
   display: flex;
@@ -42,4 +42,59 @@
   padding: 40px;
   text-align: center;
   color: #888;
+}
+
+.user-actions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(255,255,255,0.02);
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+
+.action-btn.delete:hover {
+  background: rgba(255, 61, 0, 0.1);
+  color: var(--danger);
+  border-color: rgba(255, 61, 0, 0.2);
+}
+
+.user-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-modal {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  animation: modalIn 0.3s cubic-bezier(0, 0, 0.2, 1);
+}
+
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }

@@ -56,6 +56,20 @@ function AppShell() {
     )
   }
 
+  // IT toggle: if feature_closed is on, show FeatureClosed for everyone EXCEPT IT/Admin
+  if (flags.feature_closed && !hasRole('it', 'admin')) {
+    return (
+      <div className="app-shell">
+        <TitleBar />
+        <div className="app-body">
+          <main className="app-content">
+            <FeatureClosed />
+          </main>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell">
       <TitleBar />
@@ -66,7 +80,14 @@ function AppShell() {
             <Route path="/login" element={<Navigate to="/parts" replace />} />
 
             {/* All authenticated users */}
-            <Route path="/parts" element={<ProtectedRoute><PurchasedParts /></ProtectedRoute>} />
+            <Route
+              path="/parts"
+              element={
+                <ProtectedRoute>
+                  {flags.purchased_parts_enabled || hasRole('it', 'admin') ? <PurchasedParts /> : <FeatureClosed />}
+                </ProtectedRoute>
+              }
+            />
             <Route path="/characters" element={<ProtectedRoute><CharacterSearch /></ProtectedRoute>} />
 
             {/* Feature-flagged pages — IT can toggle these off */}

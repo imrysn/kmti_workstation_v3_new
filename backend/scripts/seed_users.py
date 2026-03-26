@@ -30,9 +30,9 @@ from core.auth import hash_password
 # ---------------------------------------------------------------------------
 USERS = [
     {
-        "username": "viewer",
-        "password": "viewer1234",   # shared account for all 20+ employees
-        "role": UserRole.viewer,
+        "username": "user",
+        "password": "user1234",   # shared account for all 20+ employees
+        "role": UserRole.user,
     },
     {
         "username": "admin",

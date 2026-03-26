@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import parts, characters, settings, auth, feature_flags
+import asyncio
+from core.github_sync import sync_service
 
 from db.database import engine, Base
 try:
@@ -33,6 +35,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+async def startup_event():
+    # Start the background polling task
+    asyncio.create_task(sync_service.poll_github())
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(feature_flags.router, prefix="/api/flags", tags=["Feature Flags"])

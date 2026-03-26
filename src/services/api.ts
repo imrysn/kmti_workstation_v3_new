@@ -95,6 +95,7 @@ export const settingsApi = {
   get: () => api.get('/settings/'),
   save: (settings: object) => api.post('/settings/', settings),
   clearCache: () => api.delete('/settings/cache'),
+  updateApp: () => api.post('/settings/update-app'),
 }
 
 // --- Feature Flags ---
@@ -106,6 +107,9 @@ export const flagsApi = {
 // --- User Management ---
 export const usersApi = {
   getAll: () => api.get('/auth/users'),
+  create: (data: any) => api.post('/auth/users', data),
+  update: (id: number, data: any) => api.patch(`/auth/users/${id}`, data),
+  delete: (id: number) => api.delete(`/auth/users/${id}`),
 }
 
 export default api

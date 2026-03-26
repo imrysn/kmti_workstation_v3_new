@@ -13,7 +13,7 @@ import {
   ReactNode,
 } from 'react'
 
-export type UserRole = 'viewer' | 'admin' | 'it'
+export type UserRole = 'user' | 'admin' | 'it'
 
 export interface AuthUser {
   id: number

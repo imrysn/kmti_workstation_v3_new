@@ -1,5 +1,8 @@
+import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useModal } from './ModalContext'
+import { flagsApi, settingsApi } from '../services/api'
 import './TitleBar.css'
 
 const nav = [
@@ -50,10 +53,46 @@ const nav = [
 
 export default function TitleBar() {
   const { user, logout, hasRole } = useAuth()
+  const { confirm, notify, showProgress, hideProgress } = useModal()
+  const [hasUpdate, setHasUpdate] = useState(false)
   
   const handleMinimize = () => window.electronAPI?.minimizeWindow()
   const handleMaximize = () => window.electronAPI?.maximizeWindow()
   const handleClose = () => window.electronAPI?.closeWindow()
+
+  const handleUpdate = () => {
+    confirm(
+      "New update available. Download and install now?",
+      async () => {
+        showProgress("Downloading update...")
+        try {
+          const res = await settingsApi.updateApp()
+          notify("Update downloaded successfully. The app will reload shortly.", "success")
+          // The app will reload automatically because uvicorn --reload is on
+        } catch (err: any) {
+          notify(err.response?.data?.detail || "Failed to download update", "error")
+        } finally {
+          hideProgress()
+        }
+      }
+    )
+  }
+
+  useEffect(() => {
+    // Check for remote status changes (e.g. from GitHub)
+    const checkStatus = () => {
+      flagsApi.getAll().then((res: any) => {
+        if (res.data.remote_update) {
+          setHasUpdate(true)
+        } else {
+          setHasUpdate(false)
+        }
+      }).catch(() => {})
+    }
+    checkStatus()
+    const interval = setInterval(checkStatus, 120000) // 2 mins
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div className="titlebar">
@@ -90,14 +129,22 @@ export default function TitleBar() {
 
         {/* 2. User Management Icon: Admin + IT */}
         {hasRole('admin', 'it') && (
-          <NavLink to="/users" className={({ isActive }) => `titlebar-btn${isActive ? ' active' : ''}`} title="User Management">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-            </svg>
-          </NavLink>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            {hasUpdate && (
+              <button className="update-badge" onClick={handleUpdate} title="New update available">
+                <span className="pulse"></span>
+                Update Available
+              </button>
+            )}
+            <NavLink to="/users" className={({ isActive }) => `titlebar-btn${isActive ? ' active' : ''}`} title="User Management">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </NavLink>
+          </div>
         )}
 
-        {/* 3. IT Controls Icon: IT only - TECHNICAL ICON */}
+        {/* 3. IT Controls Icon: IT only */}
         {hasRole('it') && (
           <NavLink to="/it-controls" className={({ isActive }) => `titlebar-btn${isActive ? ' active' : ''}`} title="IT Controls">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

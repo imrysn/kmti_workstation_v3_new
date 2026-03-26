@@ -9,7 +9,7 @@ from db.database import Base
 
 
 class UserRole(str, enum.Enum):
-    viewer = "viewer"
+    user = "user"
     admin = "admin"
     it = "it"
 
@@ -20,7 +20,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.viewer)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.user)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

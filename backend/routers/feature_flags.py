@@ -6,10 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from pydantic import BaseModel
+import json
+import os
 
 from db.database import get_db
 from models.user import User, UserRole, FeatureFlag
 from core.auth import get_current_user, require_role
+from core.github_sync import sync_service
 
 router = APIRouter()
 
@@ -17,10 +20,25 @@ router = APIRouter()
 # Default flags seeded on first access if missing from DB
 # ---------------------------------------------------------------------------
 DEFAULT_FLAGS = {
+    "purchased_parts_enabled": True,
     "heat_treatment_enabled": True,
     "calculator_enabled": True,
     "maintenance_mode": False,
+    "feature_closed": False,
 }
+
+OVERRIDE_FILE = "status_override.json"
+
+def _get_file_overrides():
+    """Reads flags from the override JSON file if it exists."""
+    if not os.path.exists(OVERRIDE_FILE):
+        return {}
+    try:
+        with open(OVERRIDE_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error reading override file: {e}")
+        return {}
 
 
 async def _ensure_flags(db: AsyncSession):
@@ -48,7 +66,21 @@ async def get_all_flags(
     await _ensure_flags(db)
     result = await db.execute(select(FeatureFlag))
     flags = result.scalars().all()
-    return {f.key: f.value for f in flags}
+    
+    # 1. Start with DB values
+    flag_map = {f.key: f.value for f in flags}
+    
+    # 2. Apply Local File overrides
+    overrides = _get_file_overrides()
+    for key, val in overrides.items():
+        flag_map[key] = val
+    
+    # 3. Apply GitHub Polling overrides (Highest Priority)
+    github_overrides = sync_service.overrides
+    for key, val in github_overrides.items():
+        flag_map[key] = val
+        
+    return flag_map
 
 
 # ---------------------------------------------------------------------------
