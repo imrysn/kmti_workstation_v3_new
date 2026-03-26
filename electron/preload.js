@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow: () => ipcRenderer.invoke('close-window'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   getFileIcon: (filePath, isFolder) => ipcRenderer.invoke('get-file-icon', filePath, isFolder),
+  loginSuccess: () => ipcRenderer.invoke('login-success'),
 })

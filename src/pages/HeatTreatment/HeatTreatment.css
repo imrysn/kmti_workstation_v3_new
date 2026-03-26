@@ -24,6 +24,19 @@
   min-height: 0;
 }
 
+.heat-treatment-main {
+  flex: 0 0 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.findr-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
 /* Sidebar Column (20%) */
 .heat-treatment-sidebar {
   flex: 0 0 20%;

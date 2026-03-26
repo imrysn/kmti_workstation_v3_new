@@ -49,7 +49,7 @@ body,
   height: 100%;
   overflow: hidden;
   font-family: var(--font);
-  background: var(--bg-primary);
+  background: transparent;
   color: var(--text-primary);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;

@@ -3,6 +3,7 @@ const { spawn, execSync } = require('child_process')
 const path = require('path')
 
 const isDev = process.env.NODE_ENV !== 'production'
+let loginWindow
 let mainWindow
 let pythonProcess
 
@@ -21,7 +22,30 @@ function startPythonServer() {
   })
 }
 
-function createWindow() {
+function createLoginWindow() {
+  loginWindow = new BrowserWindow({
+    width: 420,
+    height: 560,
+    resizable: false,
+    frame: false,
+    center: true,
+    transparent: true,   // ← lets the OS see through to the desktop
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    icon: path.join(__dirname, '..', 'public', 'icon.ico'),
+  })
+
+  if (isDev) {
+    loginWindow.loadURL('http://localhost:5174')
+  } else {
+    loginWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
+  }
+}
+
+function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -35,7 +59,7 @@ function createWindow() {
       nodeIntegration: false,
     },
     icon: path.join(__dirname, '..', 'public', 'icon.ico'),
-    backgroundColor: '#0f1117',
+    backgroundColor: '#f1f5f9',
   })
 
   if (isDev) {
@@ -71,11 +95,27 @@ app.whenReady().then(() => {
     shell.openPath(filePath)
   })
 
-  ipcMain.handle('minimize-window', () => mainWindow.minimize())
-  ipcMain.handle('maximize-window', () => {
-    mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize()
+  // Window controls — resolve to whichever window sent the request
+  ipcMain.handle('minimize-window', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
   })
-  ipcMain.handle('close-window', () => mainWindow.close())
+  ipcMain.handle('maximize-window', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    win?.isMaximized() ? win.unmaximize() : win?.maximize()
+  })
+  ipcMain.handle('close-window', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+
+  // Login gate: when the React app finishes authenticating, it signals us
+  // We destroy the small login window and open the full workstation window
+  ipcMain.handle('login-success', () => {
+    if (loginWindow && !loginWindow.isDestroyed()) {
+      loginWindow.destroy()
+      loginWindow = null
+    }
+    createMainWindow()
+  })
 
   ipcMain.handle('select-folder', async (event) => {
     const window = BrowserWindow.fromWebContents(event.sender)
@@ -98,11 +138,13 @@ app.whenReady().then(() => {
     startPythonServer()
   }
 
-  console.log(`>>> ELECTRON MAIN PROCESS STARTED - Version: 2.2 (isDev: ${isDev})`)
+  console.log(`>>> ELECTRON MAIN PROCESS STARTED - Version: 2.3 (isDev: ${isDev})`)
 
-  createWindow()
+  // Start with the login window
+  createLoginWindow()
+
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createLoginWindow()
   })
 })
 

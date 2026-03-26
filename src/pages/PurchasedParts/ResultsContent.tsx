@@ -16,23 +16,23 @@ interface ResultsContentProps {
   setIncludeFolders: (val: boolean) => void
   recursiveSearch: boolean
   setRecursiveSearch: (val: boolean) => void
-  
+
   selectedProject: IProject | null
   folderFilter: string
   setFolderFilter: (val: string) => void
   setSelectedTreePath: (val: string) => void
   setExpandedFolders: (updater: (prev: Set<string>) => Set<string>) => void
-  
+
   isSearching: boolean
   resultCapped: boolean
   resultTotal: number
   searchResults: IPurchasedPart[]
   searchTime: number
-  
+
   focusedIndex: number
   setFocusedIndex: (val: number) => void
   resultsListRef: React.RefObject<HTMLDivElement>
-  
+
   handleOpen: (part: IPurchasedPart) => void
   selectedResult: IPurchasedPart | null
   setSelectedResult: (part: IPurchasedPart | null) => void
@@ -169,7 +169,7 @@ export function ResultsContent({
                 <div style={{ marginBottom: 24, opacity: 0.5 }}>
                   <PackageIcon size={80} strokeWidth={1.5} color="var(--accent)" />
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>READY TO EXPLORE</div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>READY TO EXPLORE?</div>
                 <div style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 320, margin: '0 auto', lineHeight: 1.6 }}>
                   Select a project and search across all indexed data.
                 </div>

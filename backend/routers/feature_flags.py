@@ -68,18 +68,24 @@ async def get_all_flags(
     result = await db.execute(select(FeatureFlag))
     flags = result.scalars().all()
     
-    # 1. Start with DB values
-    flag_map = {f.key: f.value for f in flags}
+    # 1. Start with Defaults
+    flag_map = DEFAULT_FLAGS.copy()
     
-    # 2. Apply Local File overrides
+    # 2. Apply Local File overrides (lowest priority sync)
     overrides = _get_file_overrides()
     for key, val in overrides.items():
         flag_map[key] = val
     
-    # 3. Apply GitHub Polling overrides (Highest Priority)
+    # 3. Apply GitHub Polling overrides (medium priority sync)
     github_overrides = sync_service.overrides
     for key, val in github_overrides.items():
         flag_map[key] = val
+        
+    # 4. Apply DB values (ONLY IF they were explicitly updated by an IT user)
+    result = await db.execute(select(FeatureFlag).where(FeatureFlag.updated_by != None))
+    db_overrides = result.scalars().all()
+    for f in db_overrides:
+        flag_map[f.key] = f.value
         
     return flag_map
 

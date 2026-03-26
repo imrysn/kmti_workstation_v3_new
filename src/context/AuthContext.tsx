@@ -59,6 +59,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await res.json()
       setToken(data.access_token)
       setUser(data.user)
+
+      // Signal Electron to close the login window and open the main window.
+      // No-op in browser/dev mode where electronAPI is unavailable.
+      ;(window as any).electronAPI?.loginSuccess?.()
     } finally {
       setIsLoading(false)
     }

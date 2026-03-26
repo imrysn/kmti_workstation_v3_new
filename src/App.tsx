@@ -21,26 +21,12 @@ import { setApiToken, onUnauthorized } from './services/api'
 import './styles/App.css'
 
 /**
- * AppShell — rendered only when the user is authenticated.
- * Reads feature flags to conditionally route maintenance/closed pages.
+ * WorkstationShell — the main layout for authenticated users.
+ * Handles maintenance/closed modes and module routing.
  */
-function AppShell() {
-  const { user, logout, token, hasRole } = useAuth()
+function WorkstationShell() {
+  const { hasRole } = useAuth()
   const { flags } = useFlags()
-
-  // Sync token into axios interceptor whenever it changes
-  useEffect(() => {
-    setApiToken(token)
-  }, [token])
-
-  // Register global 401 handler so expired tokens force re-login
-  useEffect(() => {
-    onUnauthorized(() => logout())
-  }, [logout])
-
-  if (!user) {
-    return <Login />
-  }
 
   // IT toggle: if maintenance_mode is on, show Maintenance for everyone EXCEPT IT/Admin
   if (flags.maintenance_mode && !hasRole('it', 'admin')) {
@@ -84,7 +70,11 @@ function AppShell() {
               path="/parts"
               element={
                 <ProtectedRoute>
-                  {flags.purchased_parts_enabled || hasRole('it', 'admin') ? <PurchasedParts /> : <FeatureClosed />}
+                  {flags.purchased_parts_enabled || hasRole('it', 'admin') ? (
+                    <PurchasedParts />
+                  ) : (
+                    <FeatureClosed />
+                  )}
                 </ProtectedRoute>
               }
             />
@@ -92,7 +82,11 @@ function AppShell() {
               path="/characters"
               element={
                 <ProtectedRoute>
-                  {flags.character_search_enabled || hasRole('it', 'admin') ? <CharacterSearch /> : <FeatureClosed />}
+                  {flags.character_search_enabled || hasRole('it', 'admin') ? (
+                    <CharacterSearch />
+                  ) : (
+                    <FeatureClosed />
+                  )}
                 </ProtectedRoute>
               }
             />
@@ -102,7 +96,11 @@ function AppShell() {
               path="/heat-treatment"
               element={
                 <ProtectedRoute>
-                  {flags.heat_treatment_enabled || hasRole('it', 'admin') ? <HeatTreatment /> : <FeatureClosed />}
+                  {flags.heat_treatment_enabled || hasRole('it', 'admin') ? (
+                    <HeatTreatment />
+                  ) : (
+                    <FeatureClosed />
+                  )}
                 </ProtectedRoute>
               }
             />
@@ -110,7 +108,11 @@ function AppShell() {
               path="/calculator"
               element={
                 <ProtectedRoute>
-                  {flags.calculator_enabled || hasRole('it', 'admin') ? <MaterialCalculator /> : <FeatureClosed />}
+                  {flags.calculator_enabled || hasRole('it', 'admin') ? (
+                    <MaterialCalculator />
+                  ) : (
+                    <FeatureClosed />
+                  )}
                 </ProtectedRoute>
               }
             />
@@ -154,13 +156,36 @@ function AppShell() {
   )
 }
 
+/**
+ * AppContent — Controls the high-level switch between Login and Workstation.
+ */
+function AppContent() {
+  const { user, logout, token } = useAuth()
+
+  // Sync token into axios interceptor whenever it changes
+  useEffect(() => {
+    setApiToken(token)
+  }, [token])
+
+  // Register global 401 handler so expired tokens force re-login
+  useEffect(() => {
+    onUnauthorized(() => logout())
+  }, [logout])
+
+  if (!user) {
+    return <Login />
+  }
+
+  return <WorkstationShell />
+}
+
 export default function App() {
   return (
     <AuthProvider>
       <ModalProvider>
         <FlagsProvider>
           <BrowserRouter>
-            <AppShell />
+            <AppContent />
           </BrowserRouter>
         </FlagsProvider>
       </ModalProvider>
