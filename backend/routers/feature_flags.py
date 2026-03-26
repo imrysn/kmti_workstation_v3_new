@@ -21,6 +21,7 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 DEFAULT_FLAGS = {
     "purchased_parts_enabled": True,
+    "character_search_enabled": True,
     "heat_treatment_enabled": True,
     "calculator_enabled": True,
     "maintenance_mode": False,

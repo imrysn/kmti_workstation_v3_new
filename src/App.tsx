@@ -88,7 +88,14 @@ function AppShell() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/characters" element={<ProtectedRoute><CharacterSearch /></ProtectedRoute>} />
+            <Route
+              path="/characters"
+              element={
+                <ProtectedRoute>
+                  {flags.character_search_enabled || hasRole('it', 'admin') ? <CharacterSearch /> : <FeatureClosed />}
+                </ProtectedRoute>
+              }
+            />
 
             {/* Feature-flagged pages — IT can toggle these off */}
             <Route

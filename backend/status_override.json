@@ -2,5 +2,8 @@
   "maintenance_mode": false,
   "feature_closed": false,
   "purchased_parts_enabled": true,
+  "character_search_enabled": true,
+  "heat_treatment_enabled": true,
+  "calculator_enabled": true,
   "remote_update": false
 }
