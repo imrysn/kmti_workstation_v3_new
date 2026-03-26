@@ -12,14 +12,17 @@ interface AlertState {
   isOpen: boolean;
   title: string;
   message: string;
+  type: 'default' | 'restricted' | 'warning';
 }
 
 type ConfirmationType = 'primary' | 'danger';
 
 interface ConfirmationState {
   isOpen: boolean;
+  title?: string;
   message: string;
   type: ConfirmationType;
+  confirmLabel?: string;
   onConfirm: () => void;
   onCancel?: () => void;
 }
@@ -42,8 +45,8 @@ interface PromptState {
 
 interface ModalContextType {
   notify: (message: string, type?: NotificationType) => void;
-  alert: (message: string, title?: string) => void;
-  confirm: (message: string, onConfirm: () => void, onCancel?: () => void, type?: ConfirmationType) => void;
+  alert: (message: string, title?: string, type?: 'default' | 'restricted' | 'warning') => void;
+  confirm: (message: string, onConfirm: () => void, onCancel?: () => void, type?: ConfirmationType, title?: string, confirmLabel?: string) => void;
   prompt: (opts: Omit<PromptState, 'isOpen'>) => void;
   showProgress: (message: string, projectId?: number) => void;
   hideProgress: () => void;
@@ -66,6 +69,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     isOpen: false,
     title: 'Alert',
     message: '',
+    type: 'default',
   });
   const [confirmationState, setConfirmationState] = useState<ConfirmationState>({
     isOpen: false,
@@ -95,19 +99,21 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  const alert = useCallback((message: string, title: string = 'Alert') => {
-    setAlertState({ isOpen: true, title, message });
+  const alert = useCallback((message: string, title: string = 'Alert', type: 'default' | 'restricted' | 'warning' = 'default') => {
+    setAlertState({ isOpen: true, title, message, type });
   }, []);
 
   const closeAlert = useCallback(() => {
     setAlertState((prev) => ({ ...prev, isOpen: false }));
   }, []);
 
-  const confirm = useCallback((message: string, onConfirm: () => void, onCancel?: () => void, type: ConfirmationType = 'primary') => {
+  const confirm = useCallback((message: string, onConfirm: () => void, onCancel?: () => void, type: ConfirmationType = 'primary', title?: string, confirmLabel?: string) => {
     setConfirmationState({
       isOpen: true,
+      title,
       message,
       type,
+      confirmLabel,
       onConfirm: () => {
         onConfirm();
         setConfirmationState((prev) => ({ ...prev, isOpen: false }));

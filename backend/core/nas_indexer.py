@@ -6,7 +6,7 @@ from db.database import AsyncSessionLocal
 from models.part import CadFileIndex, Project
 from core.icd_parser import SimpleICDParser
 
-def get_file_metadata(filepath: Path, project_id: int, parse_icd: bool = False):
+def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse_icd: bool = False):
     """
     Extract file metadata for indexing.
 
@@ -24,8 +24,8 @@ def get_file_metadata(filepath: Path, project_id: int, parse_icd: bool = False):
         "file_name": filepath.name,
         "file_type": filepath.suffix.lower() if not filepath.is_dir() else "folder",
         "file_path": str(filepath.resolve()).replace("\\", "/"),
-        "category": filepath.parent.parent.name if len(filepath.parts) > 2 else "Unknown",
-        "part_type": filepath.parent.name,
+        "category": "Unknown",
+        "part_type": "Unknown",
         "size": stat.st_size if not filepath.is_dir() else 0,
         "last_modified": stat.st_mtime,
         "part_geom_name": None,
@@ -33,6 +33,16 @@ def get_file_metadata(filepath: Path, project_id: int, parse_icd: bool = False):
         "bound_y": None,
         "bound_z": None
     }
+
+    try:
+        rel = filepath.relative_to(project_root)
+        parts = rel.parts
+        if len(parts) > 0:
+            meta["category"] = parts[0]
+            if len(parts) > 1:
+                meta["part_type"] = parts[1]
+    except Exception:
+        pass
 
     if parse_icd and not filepath.is_dir() and meta["file_type"] == ".icd":
         parser = SimpleICDParser()
@@ -44,6 +54,34 @@ def get_file_metadata(filepath: Path, project_id: int, parse_icd: bool = False):
                 meta["bound_z"] = parser.bounds['size'].z
 
     return meta
+
+
+async def setup_fts(session: AsyncSession):
+    """
+    Creates a MySQL FULLTEXT index for high-performance searching.
+    Replaces the previous SQLite FTS5 implementation.
+    """
+    # 1. Clean up old SQLite/MariaDB artifacts if they somehow exist (Safety)
+    try:
+        await session.execute("DROP TRIGGER IF EXISTS cad_file_index_ai")
+        await session.execute("DROP TRIGGER IF EXISTS cad_file_index_ad")
+        await session.execute("DROP TRIGGER IF EXISTS cad_file_index_au")
+        await session.execute("DROP TABLE IF EXISTS cad_file_index_fts")
+    except Exception:
+        pass
+
+    # 2. Add MySQL FULLTEXT index
+    # We use a try-except because 'ADD FULLTEXT' might fail if it already exists or on certain MariaDB versions
+    try:
+        # Check if index already exists
+        res = await session.execute("SHOW INDEX FROM cad_file_index WHERE Key_name = 'ft_search'")
+        if not res.fetchone():
+            print("Creating MySQL FULLTEXT index 'ft_search'...")
+            await session.execute("ALTER TABLE cad_file_index ADD FULLTEXT INDEX ft_search (file_name, file_path)")
+    except Exception as e:
+        print(f"Warning: Could not create FULLTEXT index: {e}")
+    
+    await session.commit()
 
 
 async def enrich_icd_metadata(record_id: int, file_path: str):
@@ -131,6 +169,9 @@ class MultiProjectIndexer:
         async with AsyncSessionLocal() as session:
             from sqlalchemy import delete, select
             
+            # Setup FTS infrastructure first
+            await setup_fts(session)
+            
             # Fetch existing paths to avoid duplicates during incremental scan
             # We map {normalized_path: original_db_path} to handle cleanup correctly
             existing_result = await session.execute(
@@ -169,13 +210,13 @@ class MultiProjectIndexer:
                             pass
                         else:
                             try:
-                                meta = get_file_metadata(Path(root), project_id)
+                                meta = get_file_metadata(Path(root), project_id, target_dir)
                                 scan_queue.put(("folder", meta))
                             except Exception: pass
                         
                         for f in files:
                             try:
-                                meta = get_file_metadata(Path(root) / f, project_id)
+                                meta = get_file_metadata(Path(root) / f, project_id, target_dir)
                                 scan_queue.put(("file", meta))
                             except Exception: pass
                 except Exception as e:

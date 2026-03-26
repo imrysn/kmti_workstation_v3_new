@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from models.user import User, UserRole
 from core.auth import get_current_user, require_role
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import or_, and_, asc, desc, func, select, distinct, delete
+from sqlalchemy import or_, and_, asc, desc, func, select, distinct, delete, text
 from sqlalchemy.future import select as future_select # Renamed to avoid conflict with sqlalchemy.select
 
 from models.part import CadFileIndex, Project
@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from core.icd_parser import SimpleICDParser
 from core.thumbnail_helper import get_shell_thumbnail
 from core.dwg_forensic import get_dwg_preview
+from core.sw_forensic import get_sw_preview
 try:
     from core.nas_indexer import indexer, enrich_icd_metadata
 except ImportError:
@@ -216,52 +217,60 @@ async def scan_status_stream(project_id: int, db: AsyncSession = Depends(get_db)
     )
 
 @router.get("/tree/{project_id}")
-async def get_project_tree(project_id: int, db: AsyncSession = Depends(get_db)):
+async def get_project_tree(project_id: int, parent_path: str = Query(None), db: AsyncSession = Depends(get_db)):
     proj = await db.get(Project, project_id)
     if not proj:
-        return []
+        raise HTTPException(status_code=404, detail="Project not found")
 
+    root_path = proj.root_path.replace("\\", "/").rstrip("/")
+    
+    # 1. Base Case: No parent_path provided -> Return the Root Node only
+    if not parent_path:
+        return [{
+            "name": proj.name,
+            "path": root_path,
+            "depth": 0,
+            "isFolder": True,
+            "fileType": "",
+            "hasChildren": True # Assume projects have content
+        }]
+
+    # 2. Fetch direct children of parent_path
+    norm_parent = parent_path.replace("\\", "/").rstrip("/")
+    prefix = norm_parent + "/"
+    
+    # Fetch all items starting with prefix
     result = await db.execute(
         select(CadFileIndex.file_path, CadFileIndex.file_name, CadFileIndex.is_folder, CadFileIndex.file_type)
-        .where(CadFileIndex.project_id == project_id)
-        .order_by(CadFileIndex.file_path)
+        .where(
+            (CadFileIndex.project_id == project_id) &
+            (CadFileIndex.file_path.ilike(f"{prefix}%"))
+        )
+        .order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
     )
     items = result.all()
-    if not items: return []
-    
-    # Normalize root path — use forward slashes, strip trailing slash
-    root_path = proj.root_path.replace("\\", "/").rstrip("/")
-    # Count non-empty parts so we can compute relative depth
-    root_parts = [p for p in root_path.split("/") if p]
-    root_parts_count = len(root_parts)
     
     nodes = []
-    # Root node is always depth 0
-    nodes.append({
-        "name": proj.name,
-        "path": root_path,
-        "depth": 0,
-        "isFolder": True,
-        "fileType": ""
-    })
+    seen_paths = set()
     
     for fp, fn, is_folder, ftype in items:
         fp_norm = fp.replace("\\", "/").rstrip("/")
         
-        # Skip if this IS the root
-        if fp_norm == root_path:
+        # Ensure it's inside the parent and is a DIRECT child
+        if not fp_norm.startswith(prefix):
             continue
-        
-        # Calculate depth by counting path parts relative to root
-        fp_parts = [p for p in fp_norm.split("/") if p]
-        depth = len(fp_parts) - root_parts_count
-        if depth < 1:
-            depth = 1
             
+        remainder = fp_norm[len(prefix):]
+        if not remainder or "/" in remainder:
+            continue
+            
+        if fp_norm in seen_paths:
+            continue
+        seen_paths.add(fp_norm)
+        
         nodes.append({
             "name": fn,
             "path": fp_norm,
-            "depth": depth,
             "isFolder": is_folder,
             "fileType": ftype or ""
         })
@@ -278,84 +287,64 @@ async def list_parts(
     cad_only: bool = False,
     include_folders: bool = False,
     folder_path: str = None,
+    recursive: bool = True,
     db: AsyncSession = Depends(get_db)
 ):
     query = select(CadFileIndex)
+    
+    # 1. Project Filter
     if project_id is not None:
         query = query.where(CadFileIndex.project_id == project_id)
+    
+    # 2. Folder Navigation / Scope Logic
+    if folder_path:
+        norm_fp = folder_path.replace("\\", "/").rstrip("/")
+        prefix = norm_fp + "/"
+        
+        # If searching, respect the recursive toggle. 
+        # If just browsing (no search), ALWAYS be non-recursive for the file list.
+        is_searching = bool(search and search.strip())
+        effective_recursive = recursive if is_searching else False
+        
+        if effective_recursive:
+            # Recursive search (default or project-wide)
+            query = query.where(CadFileIndex.file_path.ilike(f"{prefix}%"))
+        else:
+            # Non-recursive: strictly children of this folder
+            # Prefix match AND excludes items deeper than 1 level
+            query = query.where(
+                (CadFileIndex.file_path.ilike(f"{prefix}%")) & 
+                (CadFileIndex.file_path.not_like(f"{prefix}%/%"))
+            )
+            
+    # 3. CAD Only Filter
+    cad_exts = {'.icd', '.dwg', '.dxf', '.sldprt', '.slddrw', '.sldasm', '.step', '.stp', '.iges', '.igs'}
+    if cad_only:
+        query = query.where(CadFileIndex.file_type.in_(cad_exts))
+    
+    # 4. Folder Type Filter
     if not include_folders:
         query = query.where(CadFileIndex.is_folder == False)
-    if folder_path:
-        norm_folder = folder_path.replace("\\", "/").rstrip("/")
-    # Fetch all parts for the project first
-    # We do filtering in Python to handle path normalization (UNC vs drive letters) robustly
+        
+    # 5. Search Logic (MySQL FULLTEXT)
+    if search and search.strip():
+        # Prepare search term for Boolean Mode (add * for prefix match on words)
+        words = search.strip().replace("'", "''").split()
+        boolean_search = " ".join([f"+{w}*" for w in words])
+        
+        query = query.where(text("MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE)"))
+        query = query.params(val=boolean_search)
+    else:
+        # Default Sorting
+        query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
+
     result = await db.execute(query)
     rows = result.scalars().all()
     
-    # 1. If folder_path is provided -> show matches INSIDE that folder
-    # 2. If NO search term -> show DIRECT CHILDREN only
-    # 3. If search term is present -> show RECURSIVE matches inside that folder
-    # 4. Always exclude the folder itself from its own results
-    if folder_path:
-        filtered = []
-        # Normalize filter path: handle Windows separators and UNC vs Drive letter discrepancies
-        norm_fp_filter = folder_path.replace("\\", "/").lower().rstrip("/")
-        prefix = norm_fp_filter + "/"
-        
-        for r in rows:
-            fp_norm = (r.file_path or "").replace("\\", "/").lower().rstrip("/")
-            
-            # Exclude the exact folder itself
-            if fp_norm == norm_fp_filter:
-                continue
-                
-            # Check if it's inside the folder
-            if fp_norm.startswith(prefix):
-                if search:
-                    # Recursive search
-                    filtered.append(r)
-                else:
-                    # Direct children only: no more slashes after the prefix
-                    remainder = fp_norm[len(prefix):]
-                    if remainder and "/" not in remainder:
-                        filtered.append(r)
-        rows = filtered
-    
-    cad_exts = {'.icd', '.dwg', '.dxf', '.sldprt', '.slddrw', '.sldasm', '.step', '.stp', '.iges', '.igs'}
-    
-    if cad_only:
-        rows = [r for r in rows if r.file_type in cad_exts]
-        
-    if search:
-        search_query = search if case_sensitive else search.lower()
-        matched_rows = []
-        for r in rows:
-            text = r.file_name if case_sensitive else r.file_name.lower()
-            if search_query in text or _word_match(text, search_query) or _fuzzy_match(text, search_query):
-                matched_rows.append(r)
-                
-        def relevance_score(r):
-            text = r.file_name if case_sensitive else r.file_name.lower()
-            scores = []
-            # 1. Folders always first
-            scores.append(0 if r.is_folder else 1)
-            # 2. Exact matches
-            scores.append(0 if text == search_query else 1)
-            # 3. Starts-with matches
-            scores.append(0 if text.startswith(search_query) else 1)
-            # 4. Position in string
-            try:
-                scores.append(text.index(search_query))
-            except ValueError:
-                scores.append(len(text))
-            # 5. Fallback to name
-            scores.append(text)
-            return tuple(scores)
-            
-        rows = sorted(matched_rows, key=relevance_score)
-    else:
-        # Default browse view: 1. Folders first, 2. Alphabetical
-        rows = sorted(rows, key=lambda x: (0 if x.is_folder else 1, x.file_name.lower()))
+    # 6. Post-process cleanup (Ensure root isn't returned if browsing children)
+    if folder_path and not recursive:
+        norm_fp = folder_path.replace("\\", "/").rstrip("/")
+        rows = [r for r in rows if r.file_path.replace("\\", "/").rstrip("/") != norm_fp]
         
     total_count = len(rows)
     rows = rows[:500]
@@ -440,7 +429,16 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
         except Exception as e:
             print(f"DWG Forensic extraction failed for {file_path}: {e}")
 
-    # 3. Universal Choice: Windows Shell Thumbnail (Forced for CAD/complex files)
+    # 3. SolidWorks Forensic Extraction (Fallback to Shell)
+    if ext in {'.sldprt', '.sldasm', '.slddrw'}:
+        try:
+            sw_data = await asyncio.to_thread(get_sw_preview, file_path)
+            if sw_data:
+                return return_and_cache(sw_data)
+        except Exception as e:
+            print(f"SolidWorks Forensic extraction failed: {e}")
+
+    # 4. Universal Choice: Windows Shell Thumbnail (Forced for CAD/complex files)
     if ext in cad_extensions or ext in {'.rvt', '.ifc', '.3dm'}:
         try:
             def _get_thumb():

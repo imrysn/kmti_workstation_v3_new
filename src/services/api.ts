@@ -64,7 +64,8 @@ export const partsApi = {
     caseSensitive?: boolean,
     cadOnly?: boolean,
     includeFolders?: boolean,
-    folderPath?: string
+    folderPath?: string,
+    recursive: boolean = true
   ) =>
     api.get('/parts/', {
       params: {
@@ -74,12 +75,14 @@ export const partsApi = {
         cad_only: cadOnly,
         include_folders: includeFolders,
         folder_path: folderPath,
+        recursive,
       },
     }),
   downloadPart: (fileId: number) =>
     api.get('/parts/download', { params: { file_id: fileId }, responseType: 'blob' }),
   deleteItem: (fileId: number) => api.delete(`/parts/${fileId}`),
-  getTree: (projectId: number) => api.get(`/parts/tree/${projectId}`),
+  getTree: (projectId: number, parentPath?: string) => 
+    api.get(`/parts/tree/${projectId}`, { params: { parent_path: parentPath } }),
 }
 
 // --- Character Search ---

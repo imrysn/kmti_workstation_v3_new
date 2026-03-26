@@ -32,11 +32,15 @@
 }
 
 .file-preview-loading {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 12px;
-  padding: 40px 20px;
+  background: var(--bg-surface);
+  z-index: 2;
 }
 
 .file-preview-spinner {
@@ -49,18 +53,21 @@
 }
 
 .file-preview-error {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 30px 20px;
+  justify-content: center;
+  gap: 12px;
+  background: var(--bg-surface);
   color: var(--text-muted);
   text-align: center;
+  z-index: 2;
 }
 
 .file-preview-error-icon {
   opacity: 0.5;
-  margin-bottom: 4px;
 }
 
 .file-preview-error-text {

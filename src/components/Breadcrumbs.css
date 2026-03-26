@@ -1,0 +1,43 @@
+.findr-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+}
+
+.findr-breadcrumbs::-webkit-scrollbar {
+  display: none;
+}
+
+.findr-breadcrumb-item {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.findr-breadcrumb-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.findr-breadcrumb-item.active {
+  color: var(--accent);
+}
+
+.findr-breadcrumb-separator {
+  opacity: 0.3;
+  margin: 0 1px;
+  font-weight: 400;
+}

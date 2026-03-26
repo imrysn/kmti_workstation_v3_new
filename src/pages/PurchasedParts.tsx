@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { partsApi } from '../services/api'
+import Breadcrumbs from '../components/Breadcrumbs'
 import { fileService } from '../services/fileService'
 import type { IPurchasedPart, IProject } from '../types'
 import { useModal } from '../components/ModalContext'
-import { 
-  FileIcon, 
-  PlusIcon, 
-  RefreshIcon, 
-  TrashIcon, 
-  SearchIcon, 
-  CopyIcon, 
-  ExternalLinkIcon 
+import {
+  FileIcon,
+  PlusIcon,
+  RefreshIcon,
+  TrashIcon,
+  SearchIcon,
+  CopyIcon,
+  ExternalLinkIcon,
+  PackageIcon
 } from '../components/FileIcons'
 import Alert from '../components/Alert'
 import FilePreview from '../components/FilePreview'
@@ -27,15 +29,15 @@ function getRelativeTimeString(timestamp: number): string {
   const now = new Date();
   const date = new Date(timestamp * 1000);
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  
+
   if (diffInSeconds < 60) return 'Just now';
   if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
   if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-  
+
   const diffInDays = Math.floor(diffInSeconds / 86400);
   if (diffInDays === 1) return 'Yesterday';
   if (diffInDays < 7) return `${diffInDays} days ago`;
-  
+
   return date.toLocaleDateString();
 }
 
@@ -61,7 +63,7 @@ interface TreeNode {
 function buildTree(rawNodes: any[]): TreeNode | null {
   if (!rawNodes || rawNodes.length === 0) return null
 
-  // Normalise paths
+  // 1. Normalize and prepare nodes
   const nodes: TreeNode[] = rawNodes.map(n => ({
     name: n.name,
     path: (n.path || '').replace(/\\/g, '/'),
@@ -72,27 +74,53 @@ function buildTree(rawNodes: any[]): TreeNode | null {
     children: [],
   }))
 
-  // Find root (depth 0)
-  const root = nodes.find(n => n.depth === 0)
+  // 2. Build map and identify root
+  const map = new Map<string, TreeNode>()
+  let root: TreeNode | null = null
+
+  nodes.forEach(node => {
+    map.set(node.path, node)
+    if (node.depth === 0) root = node
+  })
+
   if (!root) return null
 
-  // Stack of ancestors indexed by depth
-  const stack: TreeNode[] = [root]   // stack[0] = root at depth 0
+  // 3. Attach nodes to parents using path mapping
+  nodes.forEach(node => {
+    if (node.depth === 0) return // Skip root
 
-  for (const node of nodes) {
-    if (node.depth === 0) continue   // skip root
+    // Determine parent path from string manipulation to handle missing parent records
+    const lastSlash = node.path.lastIndexOf('/')
+    if (lastSlash === -1) {
+      root?.children.push(node)
+      return
+    }
 
-    // Pop stack until parent depth == node.depth - 1
-    while (stack.length > node.depth) stack.pop()
+    const parentPath = node.path.substring(0, lastSlash)
+    const parent = map.get(parentPath)
 
-    const parent = stack[stack.length - 1]
-    if (parent) parent.children.push(node)
+    if (parent) {
+      parent.children.push(node)
+    } else {
+      // Robust fallback: Look for closest indexed ancestor
+      let ancestorPath = parentPath
+      let ancestorFound = false
+      while (ancestorPath.includes('/')) {
+        ancestorPath = ancestorPath.substring(0, ancestorPath.lastIndexOf('/'))
+        const ancestor = map.get(ancestorPath)
+        if (ancestor) {
+          ancestor.children.push(node)
+          ancestorFound = true
+          break
+        }
+      }
+      if (!ancestorFound) {
+        root?.children.push(node)
+      }
+    }
+  })
 
-    // Push this node in case it has children
-    stack.push(node)
-  }
-
-  // Sort children: folders first, then alphabetically
+  // 4. Sort children: folders first, then alphabetically
   const sort = (n: TreeNode) => {
     n.children.sort((a, b) => {
       if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1
@@ -101,6 +129,7 @@ function buildTree(rawNodes: any[]): TreeNode | null {
     n.children.forEach(sort)
   }
   sort(root)
+
   return root
 }
 
@@ -113,12 +142,14 @@ interface TreeItemProps {
   node: TreeNode
   selectedPath: string
   expandedFolders: Set<string>
-  onToggle: (path: string) => void
+  onToggle: (path: string, isExpanding: boolean) => void
   onSelect: (path: string, isFolder: boolean) => void
   searchFilter: string
+  isLoading?: boolean
+  loadingNodes: Set<string>
 }
 
-function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, searchFilter }: TreeItemProps) {
+function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, searchFilter, isLoading, loadingNodes }: TreeItemProps) {
   const isExpanded = expandedFolders.has(node.path)
   const isSelected = selectedPath === node.path
   // Show file count badge
@@ -128,10 +159,10 @@ function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, sea
     <div>
       <div
         className={`tree-node-item ${isSelected ? 'active' : ''} ${node.isFolder ? 'is-folder' : 'is-file'}`}
-        style={{ paddingLeft: `${node.depth * 16 + 4}px` }}
+        style={{ paddingLeft: `${(node.depth || 0) * 16 + 4}px` }}
         onClick={() => {
           if (node.isFolder) {
-            onToggle(node.path)
+            onToggle(node.path, !isExpanded)
             onSelect(node.path, true)
           } else {
             onSelect(node.path, false)
@@ -140,21 +171,25 @@ function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, sea
       >
         {/* Expand/Collapse Arrow */}
         {node.isFolder && (
-          <span className={`tree-arrow ${isExpanded ? 'open' : ''}`}>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-              <path d="M3 2l4 3-4 3z"/>
-            </svg>
+          <span className={`tree-arrow ${isExpanded ? 'open' : ''} ${isLoading ? 'loading' : ''}`}>
+            {isLoading ? (
+              <RefreshIcon size={10} className="spinning" />
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+                <path d="M3 2l4 3-4 3z" />
+              </svg>
+            )}
           </span>
         )}
         {!node.isFolder && <span className="tree-arrow-spacer" />}
 
         {/* Icon */}
-        <FileIcon 
-          isFolder={node.isFolder} 
+        <FileIcon
+          isFolder={node.isFolder}
           isOpen={node.isFolder && isExpanded}
           fileType={node.fileType}
-          size={15} 
-          color={isSelected ? "var(--accent)" : (node.isFolder ? "var(--warning)" : "var(--text-muted)")} 
+          size={15}
+          color={isSelected ? "var(--accent)" : (node.isFolder ? "var(--warning)" : "var(--text-muted)")}
           filePath={node.path}
         />
 
@@ -179,6 +214,8 @@ function TreeItem({ node, selectedPath, expandedFolders, onToggle, onSelect, sea
               onToggle={onToggle}
               onSelect={onSelect}
               searchFilter={searchFilter}
+              isLoading={loadingNodes.has(child.path)}
+              loadingNodes={loadingNodes}
             />
           ))}
         </div>
@@ -201,6 +238,16 @@ export default function PurchasedParts() {
   const [caseSensitive, setCaseSensitive] = useState(false)
   const [cadOnly, setCadOnly] = useState(false)
   const [includeFolders, setIncludeFolders] = useState(true)
+  const [recursiveSearch, setRecursiveSearch] = useState(true)
+
+  // Debounce search input
+  const [debouncedSearch, setDebouncedSearch] = useState(search)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [search])
 
   const [searchResults, setSearchResults] = useState<IPurchasedPart[]>([])
   const [resultTotal, setResultTotal] = useState(0)
@@ -236,6 +283,10 @@ export default function PurchasedParts() {
   // When a tree file is clicked outside current results, we navigate to its parent.
   // After results reload, pendingSelectPath resolves to set selectedResult.
   const [pendingSelectPath, setPendingSelectPath] = useState<string>('')
+
+  // Lazy Loading state
+  const [loadingNodes, setLoadingNodes] = useState<Set<string>>(new Set())
+  const [loadedNodes, setLoadedNodes] = useState<Set<string>>(new Set())
 
   // Toast state
   const [toastVisible, setToastVisible] = useState(false)
@@ -326,7 +377,7 @@ export default function PurchasedParts() {
   // Poll for scanning progress
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>
-    
+
     // If any project is scanning, start polling
     if (projects.some(p => p.isScanning)) {
       interval = setInterval(async () => {
@@ -334,11 +385,11 @@ export default function PurchasedParts() {
           const res = await partsApi.getProjects()
           const updatedProjects = res.data
           setProjects(updatedProjects)
-          
+
           // If the selected project was scanning and now it's not, close progress and refresh
           const wasScanning = selectedProject?.isScanning
           const nowScanning = updatedProjects.find(p => p.id === selectedProject?.id)?.isScanning
-          
+
           if (wasScanning && !nowScanning) {
             hideProgress()
             showToast("Scan complete!")
@@ -356,7 +407,7 @@ export default function PurchasedParts() {
     } else {
       hideProgress() // Safety: if no projects are scanning, ensure progress is hidden
     }
-    
+
     return () => clearInterval(interval)
   }, [projects, selectedProject, hideProgress, notify])
 
@@ -368,14 +419,18 @@ export default function PurchasedParts() {
     if (selectedProject) {
       partsApi.getTree(selectedProject.id).then(res => {
         setRawTreeNodes(res.data)
+        setLoadedNodes(new Set()) // Clear loaded cache on project change
         // Auto-expand root and default filter to root folder
         if (res.data.length > 0 && res.data[0]) {
-          const rootPath = res.data[0].path.replace(/\\/g, '/')
+          const rootNode = res.data[0]
+          const rootPath = rootNode.path.replace(/\\/g, '/')
           setExpandedFolders(new Set([rootPath]))
           setFolderFilter(rootPath)
           setSelectedTreePath(rootPath)
+          // Trigger initial fetch for children
+          toggleFolder(rootPath, true)
         }
-      }).catch(() => {})
+      }).catch(() => { })
     }
   }, [selectedProject])
 
@@ -386,7 +441,7 @@ export default function PurchasedParts() {
     }
     const path = await window.electronAPI?.selectFolder()
     if (!path) return
-    
+
     const segments = path.split(/[\\/]/)
     const name = (segments[segments.length - 1] || 'NEW PROJECT').toUpperCase()
 
@@ -401,7 +456,11 @@ export default function PurchasedParts() {
       }
     } catch (err: any) {
       const msg = err.response?.data?.detail || "Failed to add project"
-      alert(msg, "Error")
+      if (err.response?.status === 403) {
+        alert("You do not have permission to add new projects to this workstation. Please contact an Administrator.", "Access Restricted", "restricted")
+      } else {
+        alert(msg, "Error")
+      }
     }
   }
 
@@ -423,8 +482,12 @@ export default function PurchasedParts() {
           notify(`Project ${id} deleted`, 'success')
           setSelectedProject(null)
           loadProjects(activeSideTab)
-        } catch {
-          alert("Failed to delete project. Please wait for any active scans to finish.", "Delete Error")
+        } catch (err: any) {
+          if (err.response?.status === 403) {
+            alert("You do not have the necessary permissions to delete indexed projects. This action is restricted to Administrators.", "Access Restricted", "restricted")
+          } else {
+            alert("Failed to delete project. Please wait for any active scans to finish.", "Delete Error")
+          }
         }
       },
       undefined,
@@ -456,8 +519,12 @@ export default function PurchasedParts() {
             setActiveSideTab(remaining[0] || 'PROJECTS')
           }
           notify(`Deleted tab ${category}`, 'success')
-        } catch (err) {
-          alert('Failed to delete category data', 'Error')
+        } catch (err: any) {
+          if (err.response?.status === 403) {
+            alert(`You do not have permission to delete categories like "${category}". This action requires an Administrator role.`, "Access Restricted", "restricted")
+          } else {
+            alert('Failed to delete category data', 'Error')
+          }
         }
       },
       undefined,
@@ -467,17 +534,23 @@ export default function PurchasedParts() {
 
   // Consolidate search logic into a reusable function
   const handleSearch = useCallback(async () => {
-    if (!selectedProject && projects.length === 0) return
+    // If no project is selected and no search term, leave it empty
+    if (!selectedProject && !debouncedSearch) {
+      setSearchResults([])
+      setResultTotal(0)
+      return
+    }
     const start = performance.now()
     setIsSearching(true)
     try {
       const res = await partsApi.listParts(
         selectedProject?.id,
-        search || undefined,
+        debouncedSearch || undefined,
         caseSensitive,
         cadOnly,
         includeFolders,
-        folderFilter || undefined
+        folderFilter || undefined,
+        recursiveSearch
       )
       const payload = res.data
       setSearchResults(Array.isArray(payload) ? payload : (payload.items ?? []))
@@ -489,7 +562,7 @@ export default function PurchasedParts() {
     } finally {
       setIsSearching(false)
     }
-  }, [selectedProject, projects.length, search, caseSensitive, cadOnly, includeFolders, folderFilter])
+  }, [selectedProject, projects.length, debouncedSearch, caseSensitive, cadOnly, includeFolders, folderFilter, recursiveSearch])
 
   // Search results effect
   useEffect(() => {
@@ -530,7 +603,28 @@ export default function PurchasedParts() {
     }, 120)
   }, [selectedResult])
 
-  const toggleFolder = (path: string) => {
+  const toggleFolder = async (path: string, isExpanding: boolean) => {
+    if (isExpanding && !loadedNodes.has(path) && selectedProject) {
+      setLoadingNodes(prev => new Set(prev).add(path))
+      try {
+        const res = await partsApi.getTree(selectedProject.id, path)
+        const newNodes = res.data.map((n: any) => ({
+          ...n,
+          depth: (expandedFolders.size > 0 ? (path.split('/').length - selectedProject.rootPath.replace(/\\/g, '/').split('/').length + 1) : 1)
+        }))
+        setRawTreeNodes(prev => [...prev, ...newNodes])
+        setLoadedNodes(prev => new Set(prev).add(path))
+      } catch (err) {
+        console.error('Failed to load tree children:', err)
+      } finally {
+        setLoadingNodes(prev => {
+          const next = new Set(prev)
+          next.delete(path)
+          return next
+        })
+      }
+    }
+
     setExpandedFolders(prev => {
       const next = new Set(prev)
       if (next.has(path)) next.delete(path)
@@ -608,7 +702,7 @@ export default function PurchasedParts() {
 
   const handleOpenLocation = (item: IPurchasedPart) => {
     confirm(
-      `Do you want to open the location of this ${item.isFolder ? 'folder' : 'file'}?\n\n${item.fileName}`, 
+      `Do you want to open the location of this ${item.isFolder ? 'folder' : 'file'}?\n\n${item.fileName}`,
       () => fileService.openLocation(item),
       undefined,
       'primary'
@@ -617,7 +711,7 @@ export default function PurchasedParts() {
 
   const handleOpen = async (part: IPurchasedPart) => {
     confirm(
-      `Do you want to proceed opening this ${part.isFolder ? 'folder' : 'file'}?\n\n${part.fileName}`, 
+      `Do you want to proceed opening this ${part.isFolder ? 'folder' : 'file'}?\n\n${part.fileName}`,
       () => fileService.openItem(part, notify),
       undefined,
       'primary'
@@ -632,7 +726,7 @@ export default function PurchasedParts() {
         <div className="findr-sidebar-left">
           {/* Section Switcher Dropdown */}
           <div className="findr-switcher-container" ref={switcherRef}>
-            <button 
+            <button
               className={`findr-switcher-header ${isSwitcherOpen ? 'open' : ''}`}
               onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
             >
@@ -647,7 +741,7 @@ export default function PurchasedParts() {
             {isSwitcherOpen && (
               <div className="findr-switcher-menu">
                 {availableTabs.map(tab => (
-                  <div 
+                  <div
                     key={tab}
                     className={`findr-switcher-item ${activeSideTab === tab ? 'active' : ''}`}
                     onClick={() => {
@@ -656,8 +750,8 @@ export default function PurchasedParts() {
                     }}
                   >
                     <span>{tab}</span>
-                    <button 
-                      className="tab-delete-btn" 
+                    <button
+                      className="tab-delete-btn"
                       onClick={(e) => handleDeleteCategory(tab, e)}
                       title="Delete category"
                     >
@@ -665,12 +759,12 @@ export default function PurchasedParts() {
                     </button>
                   </div>
                 ))}
-                
+
                 <div className="findr-switcher-separator" />
-                
+
                 {isAddingTab ? (
                   <div className="findr-switcher-input-container" onClick={e => e.stopPropagation()}>
-                    <input 
+                    <input
                       autoFocus
                       className="findr-switcher-input"
                       placeholder="ENTER TITLE..."
@@ -686,7 +780,7 @@ export default function PurchasedParts() {
                     />
                   </div>
                 ) : (
-                  <div 
+                  <div
                     className="findr-switcher-item add-more"
                     onClick={(e) => {
                       e.stopPropagation()
@@ -704,18 +798,18 @@ export default function PurchasedParts() {
           {/* Common Sidebar Content for all tabs */}
           <div className="findr-section-title">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span 
+              <span
                 className={`section-toggle-arrow ${isProjectsExpanded ? 'open' : ''}`}
                 onClick={() => setIsProjectsExpanded(!isProjectsExpanded)}
                 style={{ cursor: 'pointer' }}
               >
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
-                  <path d="M3 2l4 3-4 3z"/>
+                  <path d="M3 2l4 3-4 3z" />
                 </svg>
               </span>
               <span>
-                {activeSideTab === 'PROJECTS' ? 'INDEXED PROJECTS' : 
-                 activeSideTab === 'PURCHASED PARTS' ? 'INDEXED PARTS' : 'OTHER DATA'}
+                {activeSideTab === 'PROJECTS' ? 'INDEXED PROJECTS' :
+                  activeSideTab === 'PURCHASED PARTS' ? 'INDEXED PARTS' : 'OTHER DATA'}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -743,10 +837,10 @@ export default function PurchasedParts() {
                     onClick={() => setSelectedProject(p)}
                   >
                     <div className="findr-project-icon">
-                      <FileIcon 
-                        isFolder 
-                        size={20} 
-                        color={p.isScanning ? "var(--warning)" : "var(--accent)"} 
+                      <FileIcon
+                        isFolder
+                        size={20}
+                        color={p.isScanning ? "var(--warning)" : "var(--accent)"}
                         filePath={p.rootPath}
                       />
                     </div>
@@ -784,6 +878,8 @@ export default function PurchasedParts() {
                 onToggle={toggleFolder}
                 onSelect={handleTreeSelect}
                 searchFilter={search}
+                isLoading={loadingNodes.has(treeRoot.path)}
+                loadingNodes={loadingNodes}
               />
             )}
           </div>
@@ -814,10 +910,26 @@ export default function PurchasedParts() {
               <label className="findr-filter">
                 <input type="checkbox" checked={includeFolders} onChange={e => setIncludeFolders(e.target.checked)} /> Include folders
               </label>
+              <label className="findr-filter">
+                <input type="checkbox" checked={recursiveSearch} onChange={e => setRecursiveSearch(e.target.checked)} /> Recursive
+              </label>
             </div>
           </div>
 
           <div className="findr-results-header">
+            {selectedProject && folderFilter && (
+              <Breadcrumbs
+                path={folderFilter}
+                rootPath={selectedProject.rootPath}
+                rootName={selectedProject.name}
+                onNavigate={(path) => {
+                  setFolderFilter(path)
+                  setSelectedTreePath(path)
+                  // Optional: ensure it's expanded in the tree
+                  setExpandedFolders(prev => new Set(prev).add(path))
+                }}
+              />
+            )}
             <span style={{ marginLeft: 'auto' }}>
               {isSearching
                 ? "Searching..."
@@ -855,12 +967,12 @@ export default function PurchasedParts() {
                 onDoubleClick={() => !res.isFolder && handleOpen(res)}
               >
                 <div className="findr-result-icon">
-                  <FileIcon 
-                    isFolder={res.isFolder} 
-                    fileType={res.fileType} 
+                  <FileIcon
+                    isFolder={res.isFolder}
+                    fileType={res.fileType}
                     fileName={res.fileName}
                     filePath={res.filePath}
-                    size={18} 
+                    size={18}
                   />
                 </div>
                 <div className="findr-result-details">
@@ -873,15 +985,31 @@ export default function PurchasedParts() {
             ))}
 
             {searchResults.length === 0 && !isSearching && (
-              <div style={{ padding: 100, textAlign: 'center' }}>
-                <div style={{ fontSize: 40, marginBottom: 20 }}>🔍</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>No results found</div>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 300, margin: '0 auto' }}>
-                  Try adjusting your search terms or clearing filters like "CAD only" or folder restrictions.
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px', textAlign: 'center' }}>
+                {!selectedProject && !search ? (
+                  <>
+                    <div style={{ marginBottom: 24, opacity: 0.5 }}>
+                      <PackageIcon size={80} strokeWidth={1.5} color="var(--accent)" />
+                    </div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>READY TO EXPLORE</div>
+                    <div style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 320, margin: '0 auto', lineHeight: 1.6 }}>
+                      Select a project from and search across all indexed data.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ marginBottom: 20, opacity: 0.5 }}>
+                      <SearchIcon size={64} strokeWidth={1.5} color="var(--text-muted)" />
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>No results found</div>
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 300, margin: '0 auto' }}>
+                      Try adjusting your search terms or clearing filters like "CAD only" or folder restrictions.
+                    </div>
+                  </>
+                )}
                 {folderFilter && (
-                  <button className="findr-btn-secondary" style={{ marginTop: 24, marginInline: 'auto', padding: '10px 20px' }} onClick={() => setFolderFilter('')}>
-                    Clear folder filter
+                  <button className="findr-btn-secondary" style={{ marginTop: 24, marginInline: 'auto', padding: '10px 20px', flex: 'none' }} onClick={() => setFolderFilter('')}>
+                    Clear Filters
                   </button>
                 )}
               </div>
@@ -890,12 +1018,11 @@ export default function PurchasedParts() {
         </div>
 
         {/* RIGHT SIDEBAR */}
-        <div className={`findr-sidebar-right ${
-          selectedResult?.fileType?.includes('.pdf') ? 'accent-pdf' : 
+        <div className={`findr-sidebar-right ${selectedResult?.fileType?.includes('.pdf') ? 'accent-pdf' :
           ['.xls', '.xlsx', '.csv'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-excel' :
-          ['.icd', '.dwg', '.sldprt'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-cad' :
-          selectedResult?.fileType?.includes('.zip') ? 'accent-zip' : ''
-        }`}>
+            ['.icd', '.dwg', '.sldprt'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-cad' :
+              selectedResult?.fileType?.includes('.zip') ? 'accent-zip' : ''
+          }`}>
           <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 800, borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             File Information
           </div>
@@ -904,12 +1031,12 @@ export default function PurchasedParts() {
             <>
               <div className="findr-info-card">
                 <div className="findr-info-icon findr-detail-icon">
-                  <FileIcon 
-                    isFolder={selectedResult.isFolder} 
-                    fileType={selectedResult.fileType} 
+                  <FileIcon
+                    isFolder={selectedResult.isFolder}
+                    fileType={selectedResult.fileType}
                     fileName={selectedResult.fileName}
                     filePath={selectedResult.filePath}
-                    size={48} 
+                    size={48}
                   />
                 </div>
                 <div className="findr-info-title">{selectedResult.fileName}</div>
@@ -921,9 +1048,9 @@ export default function PurchasedParts() {
                 </div>
 
                 {selectedResult.fileType && (
-                  <FilePreview 
-                    fileId={selectedResult.id} 
-                    fileName={selectedResult.fileName} 
+                  <FilePreview
+                    fileId={selectedResult.id}
+                    fileName={selectedResult.fileName}
                     fileType={selectedResult.fileType}
                     onOpen={() => handleOpen(selectedResult)}
                   />
@@ -955,7 +1082,7 @@ export default function PurchasedParts() {
                 <div className="findr-location-header">
                   <div className="findr-location-label">Location Information</div>
                 </div>
-                
+
                 <div className="findr-location-content">
                   <input className="findr-location-input" readOnly value={selectedResult.filePath} />
 
@@ -964,7 +1091,7 @@ export default function PurchasedParts() {
                   </button>
 
                   <div className="findr-btn-row">
-                    <button className="findr-btn-secondary" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); showToast("Copied path to clipboard!") }}>
+                    <button className="findr-btn-secondary" title="Copy Path" onClick={() => { navigator.clipboard.writeText(selectedResult.filePath); showToast("Copied!") }}>
                       <CopyIcon size={18} /> Copy Path
                     </button>
                     <button className="findr-btn-secondary" title="Open containing folder" onClick={() => handleOpenLocation(selectedResult)}>

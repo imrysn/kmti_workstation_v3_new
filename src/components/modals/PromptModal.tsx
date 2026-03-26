@@ -30,15 +30,13 @@ export const PromptModal: React.FC = () => {
 
   return (
     <div className="modal-overlay" onClick={closePrompt}>
-      <div className="modal-container" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-container info" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>{promptState.title ?? 'Input Required'}</h3>
         </div>
         <div className="modal-body">
           {promptState.message && (
-            <p style={{ marginBottom: 12, color: 'var(--text-secondary)', fontSize: 13 }}>
-              {promptState.message}
-            </p>
+            <p>{promptState.message}</p>
           )}
           <input
             ref={inputRef}
@@ -47,17 +45,6 @@ export const PromptModal: React.FC = () => {
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={promptState.placeholder ?? ''}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-md)',
-              color: 'var(--text-primary)',
-              fontSize: 14,
-              outline: 'none',
-              boxSizing: 'border-box',
-            }}
           />
         </div>
         <div className="modal-footer">

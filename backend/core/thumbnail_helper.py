@@ -25,7 +25,7 @@ class SIZE(ctypes.Structure):
     _fields_ = [("cx", wintypes.LONG), ("cy", wintypes.LONG)]
 
 GUID_IShellItem = GUID.from_str("43826d1e-e718-42ee-bc55-a1e261c37bfe")
-GUID_IShellItemImageFactory = GUID.from_str("bcc18210-4834-4531-9a95-96a199bbc512")
+GUID_IShellItemImageFactory = GUID.from_str("bcc18b79-ba16-442f-80c4-8059c18159ef")
 
 shell32 = ctypes.windll.shell32
 
@@ -78,8 +78,11 @@ def get_shell_thumbnail(file_path: str, size: int = 1024) -> Optional[Image.Imag
         )
 
         if ret != 0 or not p_shell_item:
+            print(f"  [DEBUG] SHCreateItemFromParsingName failed with {ret}")
             return None
 
+        Release_Proto = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)
+        
         # 2. Get IShellItemImageFactory interface
         p_factory = ctypes.c_void_p()
         p_vt = ctypes.cast(p_shell_item, ctypes.POINTER(ctypes.c_void_p))
@@ -108,11 +111,14 @@ def get_shell_thumbnail(file_path: str, size: int = 1024) -> Optional[Image.Imag
             if ret_img == 0 and hbitmap:
                 img = _hbitmap_to_pil(hbitmap)
                 win32gui.DeleteObject(hbitmap)
+            else:
+                print(f"  [DEBUG] GetImage failed with {ret_img}")
             
             # Release Factory
-            Release_Proto = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)
             Release_f = Release_Proto(vtable_f[2])
             Release_f(p_factory)
+        else:
+            print(f"  [DEBUG] QueryInterface(IShellItemImageFactory) failed with {ret_qi}")
 
         # Release Shell Item
         Release_Item = Release_Proto(vtable[2])
