@@ -11,7 +11,7 @@ const nav = [
     path: '/parts',
   },
   { 
-    label: 'Character Search', 
+    label: 'Drafting Notes', 
     path: '/characters',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -66,7 +66,7 @@ export default function TitleBar() {
       async () => {
         showProgress("Downloading update...")
         try {
-          const res = await settingsApi.updateApp()
+          await settingsApi.updateApp()
           notify("Update downloaded successfully. The app will reload shortly.", "success")
           // The app will reload automatically because uvicorn --reload is on
         } catch (err: any) {

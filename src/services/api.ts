@@ -87,10 +87,11 @@ export const partsApi = {
 
 // --- Character Search ---
 export const charsApi = {
-  search: (q: string) => api.get('/chars/', { params: { q } }),
+  search: (q: string, limit: number = 50, offset: number = 0) =>
+    api.get('/chars/', { params: { q, limit, offset } }),
   getHeatTreatmentCategories: () => api.get('/chars/heat-treatment/categories'),
-  getHeatTreatment: (category?: string, q?: string) =>
-    api.get('/chars/heat-treatment', { params: { category, q } }),
+  getHeatTreatment: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
+    api.get('/chars/heat-treatment', { params: { category, q, limit, offset } }),
 }
 
 // --- Settings ---

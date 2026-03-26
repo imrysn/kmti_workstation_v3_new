@@ -15,7 +15,12 @@ router = APIRouter()
 
 
 @router.get("/")
-async def search_characters(q: str = "", db: AsyncSession = Depends(get_db)):
+async def search_characters(
+    q: str = "", 
+    limit: int = 50, 
+    offset: int = 0, 
+    db: AsyncSession = Depends(get_db)
+):
     """
     Search char_search table by English or Japanese character.
     Equivalent to: SELECT eng_char, jp_char FROM char_search
@@ -24,12 +29,13 @@ async def search_characters(q: str = "", db: AsyncSession = Depends(get_db)):
     if q:
         sql = text(
             "SELECT eng_char, jp_char FROM char_search "
-            "WHERE eng_char LIKE :q OR jp_char LIKE :q"
+            "WHERE eng_char LIKE :q OR jp_char LIKE :q "
+            "LIMIT :limit OFFSET :offset"
         )
-        result = await db.execute(sql, {"q": f"%{q}%"})
+        result = await db.execute(sql, {"q": f"%{q}%", "limit": limit, "offset": offset})
     else:
-        sql = text("SELECT eng_char, jp_char FROM char_search")
-        result = await db.execute(sql)
+        sql = text("SELECT eng_char, jp_char FROM char_search LIMIT :limit OFFSET :offset")
+        result = await db.execute(sql, {"limit": limit, "offset": offset})
 
     rows = result.fetchall()
     return [{"englishChar": r[0], "japaneseChar": r[1]} for r in rows]
@@ -44,7 +50,13 @@ async def get_heat_treatment_categories(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/heat-treatment")
-async def get_heat_treatment(category: str = None, q: str = "", db: AsyncSession = Depends(get_db)):
+async def get_heat_treatment(
+    category: str = None, 
+    q: str = "", 
+    limit: int = 50, 
+    offset: int = 0, 
+    db: AsyncSession = Depends(get_db)
+):
     """
     Fetches heat treatment data, optionally filtered by category and search term.
     Uses SQLAlchemy ORM conditions instead of f-string SQL to eliminate any
@@ -63,6 +75,8 @@ async def get_heat_treatment(category: str = None, q: str = "", db: AsyncSession
             (HeatTreatment.eng_char.like(like_q)) |
             (HeatTreatment.jp_char.like(like_q))
         )
+
+    query = query.limit(limit).offset(offset)
 
     result = await db.execute(query)
     rows = result.scalars().all()

@@ -8,7 +8,7 @@ export default function ITControls() {
     { key: 'maintenance_mode', label: 'Global Maintenance Mode', desc: 'Shows "Under Maintenance" screen to all non-IT users.' },
     { key: 'feature_closed', label: 'Global Feature Closed', desc: 'Shows "Feature Closed" screen to all non-IT users.' },
     { key: 'purchased_parts_enabled', label: 'Purchased Parts (findr)', desc: 'Toggle visibility of the main Purchased Parts module.' },
-    { key: 'character_search_enabled', label: 'Character Search', desc: 'Toggle visibility of the Character Search module.' },
+    { key: 'character_search_enabled', label: 'Drafting Notes', desc: 'Toggle visibility of the Drafting Notes module.' },
     { key: 'heat_treatment_enabled', label: 'Special Process (Heat Treatment)', desc: 'Toggle visibility of the Heat Treatment module.' },
     { key: 'calculator_enabled', label: 'Material Calculator', desc: 'Toggle visibility of the Calculator module.' },
   ]
