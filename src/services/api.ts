@@ -97,6 +97,11 @@ export const charsApi = {
   getHeatTreatmentCategories: () => api.get('/chars/heat-treatment/categories'),
   getHeatTreatment: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
     api.get('/chars/heat-treatment', { params: { category, q, limit, offset } }),
+  createHeatTreatment: (data: { category: string; englishChar: string; japaneseChar: string }) =>
+    api.post('/chars/heat-treatment', data),
+  updateHeatTreatment: (id: number, data: { category?: string; englishChar?: string; japaneseChar?: string }) =>
+    api.patch(`/chars/heat-treatment/${id}`, data),
+  deleteHeatTreatment: (id: number) => api.delete(`/chars/heat-treatment/${id}`),
 }
 
 // --- Settings ---

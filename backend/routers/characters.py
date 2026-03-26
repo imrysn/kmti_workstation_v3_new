@@ -59,6 +59,18 @@ class CharUpdate(BaseModel):
     japaneseChar: str = None
 
 
+class HeatTreatmentCreate(BaseModel):
+    category: str
+    englishChar: str
+    japaneseChar: str
+
+
+class HeatTreatmentUpdate(BaseModel):
+    category: str = None
+    englishChar: str = None
+    japaneseChar: str = None
+
+
 @router.post("/", dependencies=[Depends(require_role(["admin", "it"]))])
 async def create_character(data: CharCreate, db: AsyncSession = Depends(get_db)):
     """Create a new character mapping (Admin/IT only)."""
@@ -130,7 +142,8 @@ async def get_heat_treatment(
     from sqlalchemy import select as sa_select
     from models import HeatTreatment
 
-    query = sa_select(HeatTreatment)
+    # Select columns including ID and category for management
+    query = sa_select(HeatTreatment.id, HeatTreatment.category, HeatTreatment.eng_char, HeatTreatment.jp_char).distinct()
 
     if category:
         query = query.where(HeatTreatment.category == category)
@@ -141,11 +154,80 @@ async def get_heat_treatment(
             (HeatTreatment.jp_char.like(like_q))
         )
 
+    query = query.order_by(HeatTreatment.eng_char.asc())
     query = query.limit(limit).offset(offset)
 
     result = await db.execute(query)
-    rows = result.scalars().all()
+    rows = result.all()
     return [
-        {"id": row.id, "englishChar": row.eng_char, "japaneseChar": row.jp_char} 
+        {
+            "id": row.id,
+            "category": row.category,
+            "englishChar": row.eng_char, 
+            "japaneseChar": row.jp_char
+        } 
         for row in rows
     ]
+
+
+@router.post("/heat-treatment", dependencies=[Depends(require_role(["admin", "it"]))])
+async def create_heat_treatment(data: HeatTreatmentCreate, db: AsyncSession = Depends(get_db)):
+    """Create a new heat treatment mapping (Admin/IT only)."""
+    from models import HeatTreatment
+    new_item = HeatTreatment(
+        category=data.category,
+        eng_char=data.englishChar,
+        jp_char=data.japaneseChar
+    )
+    db.add(new_item)
+    await db.commit()
+    await db.refresh(new_item)
+    return {
+        "id": new_item.id,
+        "category": new_item.category,
+        "englishChar": new_item.eng_char,
+        "japaneseChar": new_item.jp_char
+    }
+
+
+@router.patch("/heat-treatment/{item_id}", dependencies=[Depends(require_role(["admin", "it"]))])
+async def update_heat_treatment(item_id: int, data: HeatTreatmentUpdate, db: AsyncSession = Depends(get_db)):
+    """Update an existing heat treatment mapping (Admin/IT only)."""
+    from models import HeatTreatment
+    from sqlalchemy import select as sa_select
+    result = await db.execute(sa_select(HeatTreatment).where(HeatTreatment.id == item_id))
+    item = result.scalar_one_or_none()
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Mapping not found")
+    
+    if data.category is not None:
+        item.category = data.category
+    if data.englishChar is not None:
+        item.eng_char = data.englishChar
+    if data.japaneseChar is not None:
+        item.jp_char = data.japaneseChar
+        
+    await db.commit()
+    return {
+        "id": item.id,
+        "category": item.category,
+        "englishChar": item.eng_char,
+        "japaneseChar": item.jp_char
+    }
+
+
+@router.delete("/heat-treatment/{item_id}", dependencies=[Depends(require_role(["admin", "it"]))])
+async def delete_heat_treatment(item_id: int, db: AsyncSession = Depends(get_db)):
+    """Delete a heat treatment mapping (Admin/IT only)."""
+    from models import HeatTreatment
+    from sqlalchemy import select as sa_select
+    result = await db.execute(sa_select(HeatTreatment).where(HeatTreatment.id == item_id))
+    item = result.scalar_one_or_none()
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Mapping not found")
+        
+    await db.delete(item)
+    await db.commit()
+    return {"message": "Deleted successfully"}

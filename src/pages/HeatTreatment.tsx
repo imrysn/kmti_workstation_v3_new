@@ -1,112 +1,203 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { charsApi } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import type { IHeatTreatment } from '../types'
 import { useModal } from '../components/ModalContext'
+import HeatTreatmentSidebar from './HeatTreatment/HeatTreatmentSidebar'
+import HeatTreatmentTable from './HeatTreatment/HeatTreatmentTable'
+import HeatTreatmentModal from './HeatTreatment/HeatTreatmentModal'
+import './HeatTreatment/HeatTreatment.css'
 
 export default function HeatTreatment() {
-  const { notify } = useModal()
+  const { notify, confirm } = useModal()
+  const { hasRole } = useAuth()
+  const canManage = hasRole('admin', 'it')
+  
+  // State
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<IHeatTreatment[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [copiedId, setCopiedId] = useState<number | string | null>(null)
+  const [focusedIndex, setFocusedIndex] = useState(-1)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [editingItem, setEditingItem] = useState<IHeatTreatment | null>(null)
+  const [showModal, setShowModal] = useState(false)
 
+  // Refs for infinite scroll & keyboard nav
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  const loadMoreRef = useRef<HTMLDivElement>(null)
+
+  // Load categories once
   useEffect(() => {
-    // Load all heat treatment to extract categories
-    charsApi.getHeatTreatment().then(res => {
-      const cats = [...new Set((res.data as IHeatTreatment[]).map(r => r.category))]
-      setCategories(cats)
+    charsApi.getHeatTreatmentCategories().then(res => {
+      const sorted = (res.data as string[]).sort((a, b) => a.localeCompare(b))
+      setCategories(sorted)
     })
-    loadData()
   }, [])
 
-  useEffect(() => { loadData() }, [selectedCategory, query])
+  // Debounced search trigger (only for query)
+  useEffect(() => {
+    if (!query) {
+      loadData(false)
+      return
+    }
+    const timer = setTimeout(() => {
+      loadData(false)
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [query])
 
-  const loadData = async () => {
-    setLoading(true)
+  // Immediate category trigger
+  useEffect(() => {
+    loadData(false)
+  }, [selectedCategory])
+
+  const loadData = React.useCallback(async (isAppend: boolean = false) => {
+    if (isAppend) setLoadingMore(true)
+    else {
+      setLoading(true)
+      setPage(0)
+    }
+
     try {
-      const res = await charsApi.getHeatTreatment(selectedCategory || undefined, query || undefined)
-      setResults(res.data)
-    } catch { setResults([]) }
-    setLoading(false)
+      const limit = 50
+      const offset = isAppend ? (page + 1) * limit : 0
+      const res = await charsApi.getHeatTreatment(selectedCategory || undefined, query || undefined, limit, offset)
+      
+      if (isAppend) {
+        setResults(prev => [...prev, ...res.data])
+        setPage(p => p + 1)
+      } else {
+        setResults(res.data)
+        setPage(0)
+      }
+      setHasMore(res.data.length === limit)
+    } catch { 
+      if (!isAppend) setResults([])
+      setHasMore(false)
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [selectedCategory, query, page])
+
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    notify(`Copied: ${text}`, 'success')
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text)
-    notify(`Copied: ${text}`, 'success')
+  const handleAdd = () => {
+    setEditingItem(null)
+    setShowModal(true)
   }
+
+  const handleEdit = (item: IHeatTreatment) => {
+    setEditingItem(item)
+    setShowModal(true)
+  }
+
+  const handleDelete = (item: IHeatTreatment) => {
+    if (!item.id) return
+    confirm(
+      `Are you sure you want to delete the mapping for "${item.englishChar}"?`,
+      async () => {
+        try {
+          await charsApi.deleteHeatTreatment(item.id as number)
+          notify("Mapping deleted successfully", "success")
+          loadData(false)
+        } catch (err: any) {
+          notify(err.response?.data?.detail || "Failed to delete mapping", "error")
+        }
+      }
+    )
+  }
+
+  const handleSaved = () => {
+    setShowModal(false)
+    loadData(false)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (results.length === 0) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setFocusedIndex(prev => (prev < results.length - 1 ? prev + 1 : prev))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setFocusedIndex(prev => (prev > 0 ? prev - 1 : 0))
+    } else if (e.key === 'Enter' && focusedIndex >= 0) {
+      e.preventDefault()
+      const row = results[focusedIndex]
+      handleCopy(row.japaneseChar, `jp-${focusedIndex}`)
+    }
+  }
+
+  // Infinite Scroll logic
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore && !loading && !loadingMore) {
+        loadData(true)
+      }
+    }, { threshold: 1.0 })
+
+    if (loadMoreRef.current) observer.observe(loadMoreRef.current)
+    return () => observer.disconnect()
+  }, [hasMore, loading, loadingMore, selectedCategory, query, page])
+
+  // Scroll focus into view
+  useEffect(() => {
+    if (focusedIndex >= 0 && tableContainerRef.current) {
+      const activeRow = tableContainerRef.current.querySelector('.focused-row') as HTMLElement
+      if (activeRow) activeRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [focusedIndex])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-      <header className="char-search-header" style={{ flexShrink: 0 }}>
+    <div className="heat-treatment-container">
+      <header className="char-search-header" style={{ flexShrink: 0, padding: '24px 0' }}>
         <h1 className="page-title">Special Process</h1>
         <p className="page-subtitle">Browse special process categories and character mappings</p>
       </header>
 
-      <div className="card" style={{ display: 'flex', gap: 10, marginBottom: 16, flexShrink: 0 }}>
-        <input
-          className="input"
-          placeholder="Search characters..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          autoFocus
+      <div className="heat-treatment-content">
+        <HeatTreatmentTable 
+          query={query}
+          setQuery={setQuery}
+          results={results}
+          loading={loading}
+          loadingMore={loadingMore}
+          copiedId={copiedId}
+          focusedIndex={focusedIndex}
+          handleCopy={handleCopy}
+          handleKeyDown={handleKeyDown}
+          tableContainerRef={tableContainerRef}
+          loadMoreRef={loadMoreRef}
+          canManage={canManage}
+          onAdd={handleAdd}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+
+        <HeatTreatmentSidebar 
+          categories={categories}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
         />
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
-        ) : results.length === 0 ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No results found.</div>
-        ) : (
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>English</th>
-                  <th style={{ position: 'sticky', top: 0, backgroundColor: 'var(--bg-card)', zIndex: 10 }}>Japanese</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r, i) => (
-                  <tr key={i} className="hoverable-row">
-                    <td
-                      onClick={() => handleCopy(r.englishChar)}
-                      style={{ cursor: 'pointer', position: 'relative' }}
-                      title="Click to copy English character"
-                    >
-                      {r.englishChar}
-                    </td>
-                    <td
-                      onClick={() => handleCopy(r.japaneseChar)}
-                      style={{ fontFamily: 'serif', fontSize: 16, cursor: 'pointer', position: 'relative' }}
-                      title="Click to copy Japanese character"
-                    >
-                      {r.japaneseChar}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Category Filter Buttons - Permanently Footed */}
-      <div className="card" style={{ marginTop: 16, padding: '16px 20px', flexShrink: 0 }}>
-        <h3 style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 12, fontWeight: 700 }}>Filter by Category</h3>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {categories.map(c => (
-            <button
-              key={c}
-              onClick={() => setSelectedCategory(selectedCategory === c ? '' : c)}
-              className={`glass-btn ${selectedCategory === c ? 'active' : ''}`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </div>
+      <HeatTreatmentModal 
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onSaved={handleSaved}
+        editingItem={editingItem}
+        categories={categories}
+      />
     </div>
   )
 }

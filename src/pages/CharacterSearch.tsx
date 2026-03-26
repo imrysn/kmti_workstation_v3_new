@@ -19,9 +19,9 @@ const Highlight = memo(({ text, query }: { text: string; query: string }) => {
 
   return (
     <>
-      {parts.map((part, i) => 
-        part.toLowerCase() === query.toLowerCase() 
-          ? <mark key={i} className="search-highlight">{part}</mark> 
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.toLowerCase()
+          ? <mark key={i} className="search-highlight">{part}</mark>
           : part
       )}
     </>
@@ -31,7 +31,7 @@ const Highlight = memo(({ text, query }: { text: string; query: string }) => {
 export default function CharacterSearch() {
   const { confirm, notify } = useModal()
   const { hasRole } = useAuth()
-  
+
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ICharacterMapping[]>([])
   const [loading, setLoading] = useState(false)
@@ -72,7 +72,7 @@ export default function CharacterSearch() {
       const limit = 50
       const offset = isAppend ? (page + 1) * limit : 0
       const res = await charsApi.search(q, limit, offset)
-      
+
       if (isAppend) {
         setResults(prev => [...prev, ...res.data])
         setPage(p => p + 1)
@@ -80,7 +80,7 @@ export default function CharacterSearch() {
         setResults(res.data)
         setPage(0)
       }
-      
+
       setHasMore(res.data.length === limit)
     } catch {
       if (!isAppend) setResults([])
@@ -181,7 +181,7 @@ export default function CharacterSearch() {
     <div className="char-search-container" onKeyDown={handleKeyDown}>
       <header className="char-search-header">
         <h1 className="page-title">Drafting Notes</h1>
-        <p className="page-subtitle">Drafting Templates & Multi-language Mapping</p>
+        <p className="page-subtitle">English to Japanese Translation and Drafting Templates</p>
       </header>
 
       <div className="char-search-body">
@@ -200,9 +200,9 @@ export default function CharacterSearch() {
               />
             </div>
             {canManage && (
-              <button 
-                className="btn-primary" 
-                style={{ padding: '0 24px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, height: 48, fontWeight: 700 }} 
+              <button
+                className="btn-primary"
+                style={{ padding: '0 24px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 8, height: 48, fontWeight: 700 }}
                 onClick={() => openNoteModal()}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
@@ -241,9 +241,9 @@ export default function CharacterSearch() {
                         <td onClick={() => handleCopy(r.englishChar, `eng-${i}`)} title="Click to copy">
                           <Highlight text={r.englishChar} query={query} />
                         </td>
-                        <td 
-                          className={`char-japanese font-${fontMode}`} 
-                          onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)} 
+                        <td
+                          className={`char-japanese font-${fontMode}`}
+                          onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
                           title="Click to copy"
                         >
                           <Highlight text={r.japaneseChar} query={query} />
@@ -265,7 +265,7 @@ export default function CharacterSearch() {
                   </tbody>
                 </table>
               )}
-              
+
               {hasMore && results.length > 0 && (
                 <div ref={loadMoreRef} style={{ padding: '20px', textAlign: 'center' }}>
                   {loadingMore ? (
@@ -314,14 +314,14 @@ export default function CharacterSearch() {
           <div className="char-font-card">
             <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.1em' }}>JAPANESE FONT</span>
             <div className="font-toggle-pill">
-              <button 
-                className={fontMode === 'mincho' ? 'active' : ''} 
+              <button
+                className={fontMode === 'mincho' ? 'active' : ''}
                 onClick={() => setFontMode('mincho')}
               >
                 Mincho
               </button>
-              <button 
-                className={fontMode === 'gothic' ? 'active' : ''} 
+              <button
+                className={fontMode === 'gothic' ? 'active' : ''}
                 onClick={() => setFontMode('gothic')}
               >
                 Gothic
@@ -331,7 +331,7 @@ export default function CharacterSearch() {
         </div>
       </div>
 
-      <DraftingNoteModal 
+      <DraftingNoteModal
         isOpen={showMgmtModal}
         onClose={() => setShowMgmtModal(false)}
         onSaved={handleSaved}

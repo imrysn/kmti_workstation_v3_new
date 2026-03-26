@@ -51,7 +51,7 @@ class HeatTreatment(Base):
     """Maps to existing `heat_trmnt` table — Heat treatment categories."""
     __tablename__ = "heat_trmnt"
 
-    id = Column(String(255), primary_key=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     category = Column(String(255))
     eng_char = Column(String(255))
     jp_char = Column(String(255))

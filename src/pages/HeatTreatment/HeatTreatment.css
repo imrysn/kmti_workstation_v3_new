@@ -1,0 +1,344 @@
+/* Special Process (Heat Treatment) Scoped Styles */
+
+.heat-treatment-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.heat-treatment-content {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px 24px;
+}
+
+/* Main Column (80%) */
+.heat-treatment-main {
+  flex: 0 0 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+/* Sidebar Column (20%) */
+.heat-treatment-sidebar {
+  flex: 0 0 20%;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.sidebar-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+}
+
+.sidebar-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  font-weight: 800;
+}
+
+/* Table & Results */
+.char-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.char-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+  z-index: 10;
+  text-align: left;
+  padding: 12px 20px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--border);
+}
+
+.char-table td {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.char-table tr:hover td {
+  background: var(--bg-hover);
+}
+
+.char-table tr.focused-row td {
+  background: var(--accent-subtle);
+  border-bottom-color: var(--accent);
+}
+
+.char-japanese {
+  font-size: 18px !important;
+  color: var(--text-primary);
+}
+
+.char-japanese.font-mincho {
+  font-family: 'Sawarabi Mincho', 'Hiragino Mincho ProN', 'MS Mincho', serif;
+}
+
+.char-japanese.font-gothic {
+  font-family: 'Inter', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+  font-weight: 600;
+}
+
+.copied-glow td {
+  animation: emeraldPulse 0.8s ease-out forwards;
+}
+
+@keyframes emeraldPulse {
+  0% {
+    background-color: rgba(16, 185, 129, 0.15);
+    box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.05);
+  }
+
+  100% {
+    background-color: transparent;
+    box-shadow: inset 0 0 0px transparent;
+  }
+}
+
+.findr-results-scroll {
+  flex: 1;
+  overflow-y: auto;
+  outline: none;
+}
+
+/* Category Pills */
+.category-pills-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+  align-content: flex-start;
+}
+
+.category-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  white-space: nowrap;
+  width: auto;
+  min-width: 70px;
+  flex: 0 1 auto;
+}
+
+.category-pill.all-pill {
+  flex: 1 0 calc(50% - 8px);
+  max-width: calc(100% - 4px);
+}
+
+.category-pill:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.category-pill.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+}
+
+.search-highlight {
+  background: #fde68a;
+  /* Amber-200 */
+  color: #92400e;
+  /* Amber-800 */
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 700;
+}
+
+/* Character Actions (CRUD) - Ported from CharacterSearch.css */
+.actions-cell {
+  display: flex !important;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-btn.edit:hover {
+  color: #3b82f6;
+  border-color: #3b82f644;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.icon-btn.delete:hover {
+  color: #ef4444;
+  border-color: #ef444444;
+  background: rgba(239, 68, 68, 0.05);
+}
+
+/* Modal System */
+.ht-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: htFadeIn 0.3s ease-out;
+}
+
+.ht-modal {
+  background: var(--bg-main);
+  background-color: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  width: 500px;
+  max-width: 90vw;
+  padding: 40px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: htSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme='dark'] .ht-modal {
+  background-color: var(--bg-main);
+}
+
+.ht-modal-title {
+  margin: 0 0 32px 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.03em;
+}
+
+.ht-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ht-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ht-form-group label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.ht-japanese-input {
+  font-family: 'Sawarabi Mincho', 'MS Mincho', serif;
+  font-size: 28px !important;
+  text-align: center;
+  height: 80px !important;
+  color: var(--accent) !important;
+}
+
+.ht-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.ht-modal-actions .btn-ghost {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.ht-modal-actions .btn-primary {
+  height: 48px;
+  padding: 0 32px;
+  border-radius: 12px;
+  font-weight: 800;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+@keyframes htFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes htSlideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

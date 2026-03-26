@@ -43,8 +43,8 @@ export interface ICharacterMapping {
 }
 
 export interface IHeatTreatment {
-  id: number
-  category: string
+  id?: number
+  category?: string
   englishChar: string
   japaneseChar: string
 }
