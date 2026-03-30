@@ -1,6 +1,6 @@
 {
   "name": "kmti-workstation-v3",
-  "version": "3.1.2",
+  "version": "3.1.3",
   "description": "KMTI Data Management Workstation - Modernized",
   "author": "Kusakabe & Maeno Tech Inc",
   "main": "electron/main.js",
