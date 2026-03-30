@@ -20,6 +20,9 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     if indexer:
         indexer.start()
+    
+    # Start the background polling task
+    asyncio.create_task(sync_service.poll_github())
 
     yield  # Application runs here
 
@@ -32,15 +35,11 @@ app = FastAPI(title="KMTI Workstation API", version="3.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "file://"],
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    # Start the background polling task
-    asyncio.create_task(sync_service.poll_github())
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(help_center.router, prefix="/api/help", tags=["Help Center"])
@@ -58,4 +57,10 @@ def health_check():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
+    import sys
+    # Disable reload and pass app object directly in bundled/production mode (sys.frozen)
+    is_frozen = getattr(sys, 'frozen', False)
+    if is_frozen:
+        uvicorn.run(app, host="0.0.0.0", port=8000)
+    else:
+        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

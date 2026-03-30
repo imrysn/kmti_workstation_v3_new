@@ -49,7 +49,7 @@ body,
   height: 100%;
   overflow: hidden;
   font-family: var(--font);
-  background: transparent;
+  background: var(--bg-primary);
   color: var(--text-primary);
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
@@ -61,7 +61,7 @@ body,
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {

@@ -152,6 +152,7 @@ export default function ITControls() {
   const [currentTime, setCurrentTime] = useState(new Date())
   const [logs, setLogs] = useState<FeedbackLog[]>([])
   const [isLoadingLogs, setIsLoadingLogs] = useState(false)
+  const [activeTab, setActiveTab] = useState<'GUARDS' | 'HELP'>('GUARDS')
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -193,14 +194,14 @@ export default function ITControls() {
             <span className="itc-dot itc-dot--red" />
             <span className="itc-dot itc-dot--yellow" />
             <span className="itc-dot itc-dot--green" />
-            <span className="itc-terminal-title">kmti_workstation // integrated_security_panel</span>
+            <span className="itc-terminal-title">kmti_workstation // integrated_security_panel_v3</span>
           </div>
           <div className="itc-prompt">
             <span className="itc-prompt-user">{user?.username ?? 'admin'}@kmti</span>
             <span className="itc-prompt-sep">:</span>
-            <span className="itc-prompt-dir">~/sys/guards</span>
+            <span className="itc-prompt-dir">~/sys/{activeTab === 'GUARDS' ? 'guards' : 'help-center'}</span>
             <span className="itc-prompt-sym">$</span>
-            <span className="itc-prompt-cmd">status --all --verbose</span>
+            <span className="itc-prompt-cmd">view --mode={activeTab.toLowerCase()}</span>
             <span className="itc-cursor" />
           </div>
         </div>
@@ -214,87 +215,119 @@ export default function ITControls() {
         </div>
       </header>
 
-      <section className="itc-section">
-        <div className="itc-section-header">
-          <span className="itc-section-label itc-section-label--danger">GLOBAL OVERRIDES</span>
-          <span className="itc-section-note">highest priority system state</span>
-        </div>
-        <div className="itc-rows">
-          {CRITICAL_FLAGS.map(f => (
-            <CriticalRow
-              key={f.key}
-              label={f.label}
-              code={f.code}
-              desc={f.desc}
-              value={!!flags[f.key]}
-              onToggle={() => setFlag(f.key, !flags[f.key])}
-            />
-          ))}
-        </div>
-      </section>
+      <nav className="itc-nav-tabs">
+        <button 
+          className={`itc-nav-btn ${activeTab === 'GUARDS' ? 'itc-nav-btn--active' : ''}`}
+          onClick={() => setActiveTab('GUARDS')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          SYSTEM GUARDS
+        </button>
+        <button 
+          className={`itc-nav-btn ${activeTab === 'HELP' ? 'itc-nav-btn--active' : ''}`}
+          onClick={() => setActiveTab('HELP')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          HELP CENTER {logs.filter(l => l.status === 'open').length > 0 && (
+            <span className="itc-nav-badge">{logs.filter(l => l.status === 'open').length}</span>
+          )}
+        </button>
+      </nav>
 
-      <section className="itc-section">
-        <div className="itc-section-header">
-          <span className="itc-section-label">GRANULAR MODULE CONTROL</span>
-          <span className="itc-section-note">per-page visibility and maintenance</span>
-        </div>
-        <div className="itc-rows">
-          {MODULES.map(m => (
-            <ComponentRow
-              key={m.id}
-              label={m.label}
-              code={m.code}
-              desc={m.desc}
-              visible={!!flags[m.visibleKey]}
-              maintenance={!!flags[m.maintKey]}
-              onToggleVisible={() => setFlag(m.visibleKey, !flags[m.visibleKey])}
-              onToggleMaint={() => setFlag(m.maintKey, !flags[m.maintKey])}
-            />
-          ))}
-        </div>
-      </section>
+      {activeTab === 'GUARDS' && (
+        <>
+          <section className="itc-section">
+            <div className="itc-section-header">
+              <span className="itc-section-label itc-section-label--danger">GLOBAL OVERRIDES</span>
+              <span className="itc-section-note">highest priority system state</span>
+            </div>
+            <div className="itc-rows">
+              {CRITICAL_FLAGS.map(f => (
+                <CriticalRow
+                  key={f.key}
+                  label={f.label}
+                  code={f.code}
+                  desc={f.desc}
+                  value={!!flags[f.key]}
+                  onToggle={() => setFlag(f.key, !flags[f.key])}
+                />
+              ))}
+            </div>
+          </section>
 
-      <section className="itc-section">
-        <div className="itc-section-header">
-          <span className="itc-section-label">HELP CENTER LOGS</span>
-          <span className="itc-section-note">user feedback and system reports</span>
-          <button className="itc-refresh-btn" onClick={fetchLogs} disabled={isLoadingLogs}>
-            {isLoadingLogs ? '...' : 'REFRESH'}
-          </button>
-        </div>
-        <div className="itc-logs">
-          {logs.length === 0 ? (
-            <div className="itc-no-logs">NO ACTIVE REPORTS</div>
-          ) : (
-            logs.map(log => (
-              <div key={log.id} className={`itc-log-item ${log.status === 'resolved' ? 'itc-log-item--resolved' : ''}`}>
-                <div className="itc-log-main">
-                  <div className="itc-log-meta">
-                    <span className="itc-log-badge">{log.workstation}</span>
-                    <span className="itc-log-time"> · {new Date(log.created_at).toLocaleString()}</span>
+          <section className="itc-section">
+            <div className="itc-section-header">
+              <span className="itc-section-label">GRANULAR MODULE CONTROL</span>
+              <span className="itc-section-note">per-page visibility and maintenance</span>
+            </div>
+            <div className="itc-rows">
+              {MODULES.map(m => (
+                <ComponentRow
+                  key={m.id}
+                  label={m.label}
+                  code={m.code}
+                  desc={m.desc}
+                  visible={!!flags[m.visibleKey]}
+                  maintenance={!!flags[m.maintKey]}
+                  onToggleVisible={() => setFlag(m.visibleKey, !flags[m.visibleKey])}
+                  onToggleMaint={() => setFlag(m.maintKey, !flags[m.maintKey])}
+                />
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      {activeTab === 'HELP' && (
+        <section className="itc-section">
+          <div className="itc-section-header">
+            <span className="itc-section-label">HELP CENTER LOGS</span>
+            <span className="itc-section-note">user feedback and system reports</span>
+            <button className="itc-refresh-btn" onClick={fetchLogs} disabled={isLoadingLogs}>
+              {isLoadingLogs ? '...' : 'REFRESH'}
+            </button>
+          </div>
+          <div className="itc-logs">
+            {logs.length === 0 ? (
+              <div className="itc-no-logs">NO ACTIVE REPORTS</div>
+            ) : (
+              logs.map(log => (
+                <div key={log.id} className={`itc-log-item ${log.status === 'resolved' ? 'itc-log-item--resolved' : ''}`}>
+                  <div className="itc-log-main">
+                    <div className="itc-log-meta">
+                      <span className="itc-log-badge">{log.workstation}</span>
+                      <span className="itc-log-time"> · {new Date(log.created_at).toLocaleString()}</span>
+                    </div>
+                    <div className="itc-log-msg">{log.message}</div>
+                    {log.screenshot_path && (
+                      <a 
+                        href={`http://192.168.200.105:8000${log.screenshot_path}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="itc-log-link"
+                      >
+                        VIEW_ATTACHMENT.PNG
+                      </a>
+                    )}
                   </div>
-                  <div className="itc-log-msg">{log.message}</div>
-                  {log.screenshot_path && (
-                    <a 
-                      href={`http://localhost:8000${log.screenshot_path}`} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="itc-log-link"
-                    >
-                      VIEW_SCREENSHOT.PNG
-                    </a>
+                  {log.status === 'open' && (
+                    <button className="itc-resolve-btn" onClick={() => handleResolve(log.id)}>
+                      RESOLVE
+                    </button>
                   )}
                 </div>
-                {log.status === 'open' && (
-                  <button className="itc-resolve-btn" onClick={() => handleResolve(log.id)}>
-                    RESOLVE
-                  </button>
-                )}
-              </div>
-            ))
-          )}
-        </div>
-      </section>
+              ))
+            )}
+          </div>
+        </section>
+      )}
 
       <footer className="itc-footer">
         <span className="itc-footer-text">

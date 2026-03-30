@@ -25,8 +25,22 @@ export default function Login() {
     setError(null)
     setShake(false)
 
+    async function attemptLogin(retries = 3): Promise<void> {
+      try {
+        await login(username.trim(), password)
+      } catch (err: any) {
+        // If it's a fetch error, we might want to retry
+        if (err.message === 'Failed to fetch' && retries > 0) {
+          console.log(`>>> [LOGIN] Fetch failed, retrying... (${retries} left)`)
+          await new Promise(resolve => setTimeout(resolve, 1500))
+          return attemptLogin(retries - 1)
+        }
+        throw err
+      }
+    }
+
     try {
-      await login(username.trim(), password)
+      await attemptLogin()
     } catch (err: any) {
       setError(err.message ?? 'Invalid credentials. Please try again.')
       setShake(true)

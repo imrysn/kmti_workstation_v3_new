@@ -8,3 +8,4 @@ Pillow
 python-dotenv
 python-jose[cryptography]
 bcrypt
+pyinstaller

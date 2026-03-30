@@ -20,7 +20,7 @@
   justify-content: center;
   height: 100vh;
   width: 100vw;
-  background-color: transparent !important;
+  background-color: var(--tp-bg);
   overflow: hidden;
   font-family: 'Inter', system-ui, sans-serif;
 }

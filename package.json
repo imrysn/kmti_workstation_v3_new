@@ -1,18 +1,58 @@
 {
   "name": "kmti-workstation-v3",
-  "version": "3.0.0",
+  "version": "3.1.2",
   "description": "KMTI Data Management Workstation - Modernized",
-  "author": "Kusakabe && Maeno Tech Inc",
+  "author": "Kusakabe & Maeno Tech Inc",
   "main": "electron/main.js",
   "scripts": {
-    "dev": "concurrently -n \"Vite,Desktop\" -c \"cyan,magenta\" \"vite --port 5174\" \"wait-on http://localhost:5174 && electron .\"",
+    "dev": "concurrently -n \"Vite,Desktop\" -c \"cyan,magenta\" \"vite --port 5174\" \"wait-on tcp:5174 && electron .\"",
+    "clean": "if exist dist rmdir /s /q dist & if exist release rmdir /s /q release & if exist node_modules\\.vite rmdir /s /q node_modules\\.vite",
     "build": "vite build",
     "preview": "vite preview",
     "backend": "cd backend && python main.py",
-    "electron": "electron ."
+    "backend:build": "cd backend && python build_server.py",
+    "electron": "electron .",
+    "pack": "npm run clean && npm run build && electron-builder --dir",
+    "dist": "npm run clean && npm run build && electron-builder"
+  },
+  "build": {
+    "appId": "com.kmti.workstation",
+    "productName": "KMTI Workstation",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "src/assets/kmti.ico",
+      "artifactName": "${productName}_Setup_${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "src/assets/kmti.ico",
+      "uninstallerIcon": "src/assets/kmti.ico",
+      "installerHeaderIcon": "src/assets/kmti.ico",
+      "runAfterFinish": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "imrysn",
+      "repo": "kmti_workstation_v3_new"
+    }
   },
   "dependencies": {
     "axios": "^1.7.2",
+    "electron-updater": "^6.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.1",

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from './ModalContext'
-import { flagsApi, settingsApi } from '../services/api'
+import logo from '../assets/kmti_logo.png'
 import './TitleBar.css'
 
 const nav = [
@@ -53,53 +53,69 @@ const nav = [
 
 export default function TitleBar() {
   const { user, logout, hasRole } = useAuth()
-  const { confirm, notify, showProgress, hideProgress } = useModal()
-  const [hasUpdate, setHasUpdate] = useState(false)
-  
+  const { confirm, notify } = useModal()
+  const [updateState, setUpdateState] = useState<
+    null | 'available' | 'downloading' | 'downloaded'
+  >(null)
+  const [downloadPercent, setDownloadPercent] = useState(0)
+  const [updateVersion, setUpdateVersion] = useState('')
+
   const handleMinimize = () => window.electronAPI?.minimizeWindow()
   const handleMaximize = () => window.electronAPI?.maximizeWindow()
   const handleClose = () => window.electronAPI?.closeWindow()
 
-  const handleUpdate = () => {
-    confirm(
-      "New update available. Download and install now?",
-      async () => {
-        showProgress("Downloading update...")
-        try {
-          await settingsApi.updateApp()
-          notify("Update downloaded successfully. The app will reload shortly.", "success")
-          // The app will reload automatically because uvicorn --reload is on
-        } catch (err: any) {
-          notify(err.response?.data?.detail || "Failed to download update", "error")
-        } finally {
-          hideProgress()
-        }
-      }
-    )
-  }
-
   useEffect(() => {
-    // Check for remote status changes (e.g. from GitHub)
-    const checkStatus = () => {
-      flagsApi.getAll().then((res: any) => {
-        if (res.data.remote_update) {
-          setHasUpdate(true)
-        } else {
-          setHasUpdate(false)
+    const api = (window as any).electronAPI
+    if (!api?.onUpdateAvailable) return
+
+    api.onUpdateAvailable((info: any) => {
+      setUpdateVersion(info.version)
+      setUpdateState('available')
+    })
+
+    api.onUpdateProgress((progress: any) => {
+      setDownloadPercent(Math.round(progress.percent))
+      setUpdateState('downloading')
+    })
+
+    api.onUpdateDownloaded((info: any) => {
+      setUpdateVersion(info.version)
+      setUpdateState('downloaded')
+    })
+
+    api.onUpdateError((msg: string) => {
+      notify(`Update error: ${msg}`, 'error')
+      setUpdateState(null)
+    })
+
+    return () => api.removeUpdateListeners?.()
+  }, [notify])
+
+  const handleUpdateClick = () => {
+    if (updateState === 'available') {
+      confirm(
+        `Version ${updateVersion} is available. Download and install now?`,
+        () => {
+          ;(window as any).electronAPI?.downloadUpdate()
+          setUpdateState('downloading')
         }
-      }).catch(() => {})
+      )
+    } else if (updateState === 'downloaded') {
+      confirm(
+        `Version ${updateVersion} is ready. Restart the app now to apply?`,
+        () => {
+          ;(window as any).electronAPI?.installAndRestart()
+        }
+      )
     }
-    checkStatus()
-    const interval = setInterval(checkStatus, 120000) // 2 mins
-    return () => clearInterval(interval)
-  }, [])
+  }
 
   return (
     <div className="titlebar">
       <div className="titlebar-drag-region" />
       <div className="titlebar-app-info">
-        <span className="titlebar-logo">⬡</span>
-        <span className="titlebar-title">KMTI Workstation</span>
+        <img src={logo} alt="K" className="titlebar-logo-img" style={{ height: '20px', width: 'auto', objectFit: 'contain' }} />
+        <span className="titlebar-title">KMTI Workstation <small style={{ opacity: 0.5, fontSize: '0.7em', marginLeft: '4px' }}>v3.1.1</small></span>
       </div>
 
       <nav className="titlebar-nav">
@@ -118,7 +134,6 @@ export default function TitleBar() {
       </nav>
 
       <div className="titlebar-controls">
-        {/* 1. User Info Display */}
         {user && (
           <div className="titlebar-user-info">
             <span className="user-name">{user.username}</span>
@@ -127,13 +142,19 @@ export default function TitleBar() {
           </div>
         )}
 
-        {/* 2. User Management Icon: Admin + IT */}
         {hasRole('admin', 'it') && (
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            {hasUpdate && (
-              <button className="update-badge" onClick={handleUpdate} title="New update available">
+            {updateState && updateState !== 'downloading' && (
+              <button className="update-badge" onClick={handleUpdateClick} title={
+                updateState === 'downloaded' ? `v${updateVersion} ready — click to restart` : `v${updateVersion} available`
+              }>
                 <span className="pulse"></span>
-                Update Available
+                {updateState === 'downloaded' ? 'Restart to Update' : 'Update Available'}
+              </button>
+            )}
+            {updateState === 'downloading' && (
+              <button className="update-badge downloading" title={`Downloading... ${downloadPercent}%`} disabled>
+                ↓ {downloadPercent}%
               </button>
             )}
             <NavLink to="/users" className={({ isActive }) => `titlebar-btn${isActive ? ' active' : ''}`} title="User Management">
@@ -144,7 +165,6 @@ export default function TitleBar() {
           </div>
         )}
 
-        {/* 3. IT Controls Icon: IT only */}
         {hasRole('it') && (
           <NavLink to="/it-controls" className={({ isActive }) => `titlebar-btn${isActive ? ' active' : ''}`} title="IT Controls">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -159,7 +179,6 @@ export default function TitleBar() {
           </NavLink>
         )}
 
-        {/* 4. Global Logout Button */}
         {user && (
           <button className="titlebar-btn logout-btn" onClick={logout} title="Sign Out">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -168,7 +187,6 @@ export default function TitleBar() {
           </button>
         )}
 
-        {/* 5. Settings Icon: Admin + IT */}
         {hasRole('admin', 'it') && (
           <NavLink to="/settings" className={({ isActive }) => `titlebar-btn settings-btn${isActive ? ' active' : ''}`} title="Settings">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

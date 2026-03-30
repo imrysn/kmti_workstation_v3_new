@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { SearchIcon, PackageIcon } from '../../components/FileIcons'
 import { FileIcon } from '../../components/FileIcons'
 import Breadcrumbs from '../../components/Breadcrumbs'
@@ -38,7 +38,7 @@ interface ResultsContentProps {
   setSelectedResult: (part: IPurchasedPart | null) => void
 }
 
-export function ResultsContent({
+export const ResultsContent = React.memo(function ResultsContent({
   search,
   setSearch,
   caseSensitive,
@@ -66,6 +66,32 @@ export function ResultsContent({
   selectedResult,
   setSelectedResult
 }: ResultsContentProps) {
+  
+  // -- Infinite Scroll Logic --
+  const [visibleCount, setVisibleCount] = useState(50);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Reset visible count when a new search or filter is applied
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [searchResults, search, folderFilter]);
+
+  // Observer to load more items when scrolling near the bottom
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting) {
+          setVisibleCount(prev => Math.min(prev + 50, searchResults.length));
+        }
+      },
+      { root: resultsListRef.current, rootMargin: '400px', threshold: 0.1 }
+    );
+
+    if (observerTarget.current) observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [searchResults.length, resultsListRef]);
+
+  const visibleResults = searchResults.slice(0, visibleCount);
   return (
     <div className="findr-center">
       <div className="findr-search-container">
@@ -121,11 +147,11 @@ export function ResultsContent({
       </div>
 
       <div className="findr-results-list" ref={resultsListRef} tabIndex={0}>
-        {searchResults.map((res, index) => (
+        {visibleResults.map((res, index) => (
           <div
             key={res.id}
             className={`findr-result-item ${selectedResult?.id === res.id ? 'selected' : ''} ${focusedIndex === index ? 'focused' : ''}`}
-            style={{ animationDelay: `${Math.min(index * 20, 200)}ms` }}
+            style={{ animationDelay: index < 20 ? `${index * 20}ms` : '0ms' }}
             onClick={() => {
               setFocusedIndex(index)
               if (res.isFolder) {
@@ -161,6 +187,11 @@ export function ResultsContent({
             </div>
           </div>
         ))}
+        
+        {/* Invisible target to trigger the load-more intersection */}
+        {visibleCount < searchResults.length && (
+          <div ref={observerTarget} style={{ height: '20px', opacity: 0 }} />
+        )}
 
         {searchResults.length === 0 && !isSearching && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px', textAlign: 'center' }}>
@@ -195,4 +226,4 @@ export function ResultsContent({
       </div>
     </div>
   )
-}
+})

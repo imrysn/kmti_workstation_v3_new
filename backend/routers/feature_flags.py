@@ -91,7 +91,7 @@ async def get_all_flags(
         flag_map[key] = val
         
     # 4. Apply DB values (ONLY IF they were explicitly updated by an IT user)
-    result = await db.execute(select(FeatureFlag).where(FeatureFlag.updated_by != None))
+    result = await db.execute(select(FeatureFlag).where(FeatureFlag.updated_by.is_not(None)))
     db_overrides = result.scalars().all()
     for f in db_overrides:
         flag_map[f.key] = f.value

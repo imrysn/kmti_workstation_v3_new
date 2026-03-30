@@ -149,6 +149,21 @@ async def scan_project_endpoint(project_id: int, db: AsyncSession = Depends(get_
         asyncio.create_task(indexer.scan_project_async(proj.id, proj.root_path))
     return {"success": True, "message": "Scan started"}
 
+@router.post("/projects/{project_id}/scan/stop")
+async def stop_scan_endpoint(project_id: int, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
+    proj = await db.get(Project, project_id)
+    if not proj:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    if indexer:
+        cancelled = indexer.cancel_project_scan(project_id)
+        if cancelled or proj.is_scanning:
+            proj.is_scanning = False
+            await db.commit()
+            return {"success": True, "message": "Scan cancelled"}
+            
+    return {"success": False, "message": "No active scan found"}
+
 
 @router.delete("/projects/category/{category}")
 async def delete_projects_by_category(category: str, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
@@ -195,10 +210,14 @@ async def scan_status_stream(project_id: int, db: AsyncSession = Depends(get_db)
                 )
                 files_indexed = count_result.scalar_one() or 0
 
+                from core.nas_indexer import indexer as _indexer
+                files_seen = _indexer.progress.get(project_id, 0) if _indexer else 0
+
                 payload = json.dumps({
                     "isScanning": bool(proj.is_scanning),
                     "filesIndexed": files_indexed,
-                    "message": f"Indexed {files_indexed:,} files..."
+                    "filesSeen": files_seen,
+                    "message": f"Checking {files_seen:,} files..." if files_seen <= files_indexed else f"Indexing new: {files_seen:,}..."
                 })
                 yield f"data: {payload}\n\n"
 
@@ -328,12 +347,22 @@ async def list_parts(
         
     # 5. Search Logic (MySQL FULLTEXT)
     if search and search.strip():
-        # Prepare search term for Boolean Mode (add * for prefix match on words)
-        words = search.strip().replace("'", "''").split()
-        boolean_search = " ".join([f"+{w}*" for w in words])
+        # Sanitize: Remove characters with special meaning in MySQL Boolean Mode 
+        # that could cause syntax errors if unbalanced or misplaced.
+        # Operators: + - > < ( ) ~ * " @
+        # We keep spaces and alphanumeric chars. 
+        import re
+        clean = re.sub(r'[+\-><()~*\"@]', ' ', search.strip())
+        words = clean.split()
         
-        query = query.where(text("MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE)"))
-        query = query.params(val=boolean_search)
+        if words:
+            # Add * for prefix match on each word
+            boolean_search = " ".join([f"+{w}*" for w in words])
+            query = query.where(text("MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE)"))
+            query = query.params(val=boolean_search)
+        else:
+            # If no words left (e.g. search was just symbols), fallback to default sorting
+            query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
     else:
         # Default Sorting
         query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
@@ -490,9 +519,16 @@ async def download_part(file_id: int, db: AsyncSession = Depends(get_db)):
     if record.is_folder:
         raise HTTPException(status_code=400, detail="Cannot download a folder directly")
 
-    file_obj = open(filepath, "rb")
+    async def file_gen():
+        with open(filepath, "rb") as f:
+            while True:
+                chunk = f.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+
     return StreamingResponse(
-        file_obj,
+        file_gen(),
         media_type="application/octet-stream",
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{urllib.parse.quote(record.file_name)}"}
     )

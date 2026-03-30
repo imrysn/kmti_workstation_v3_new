@@ -7,7 +7,8 @@ Access control:
   POST /api/settings/       — admin, it
   DELETE /api/settings/cache — admin, it
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+import asyncio
 import json
 import os
 import shutil
@@ -40,39 +41,39 @@ def save_settings(data: dict):
 
 
 @router.get("/")
-def get_settings(current_user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
+async def get_settings(current_user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
     """Returns application settings. Admin and IT only."""
-    s = load_settings()
+    s = await asyncio.to_thread(load_settings)
     s["dbPass"] = "***" if s.get("dbPass") else ""
     return s
 
 
 @router.post("/")
-def update_settings(
+async def update_settings(
     payload: dict,
     current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
     """Saves application settings. Admin and IT only."""
-    current = load_settings()
+    current = await asyncio.to_thread(load_settings)
     if payload.get("dbPass") == "***":
         payload["dbPass"] = current.get("dbPass", "")
-    save_settings(payload)
+    await asyncio.to_thread(save_settings, payload)
     return {"message": "Settings saved successfully"}
 
 
 @router.delete("/cache")
-def clear_preview_cache(
+async def clear_preview_cache(
     current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
     """Deletes all cached previews. Admin and IT only."""
     cache_dir = os.path.join(os.path.dirname(__file__), "..", ".preview_cache")
     if os.path.exists(cache_dir):
         try:
-            shutil.rmtree(cache_dir)
+            await asyncio.to_thread(shutil.rmtree, cache_dir)
             os.makedirs(cache_dir, exist_ok=True)
             return {"message": "Cache cleared successfully"}
         except Exception as e:
-            return {"message": f"Error clearing cache: {str(e)}"}, 500
+            raise HTTPException(status_code=500, detail=f"Error clearing cache: {str(e)}")
     return {"message": "Cache was already empty"}
 
 

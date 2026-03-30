@@ -6,28 +6,24 @@ from db.database import AsyncSessionLocal
 from models.part import CadFileIndex, Project
 from core.icd_parser import SimpleICDParser
 
-def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse_icd: bool = False):
+def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse_icd: bool = False, file_size: int = None, last_modified: float = None, is_dir: bool = None):
     """
-    Extract file metadata for indexing.
-
-    parse_icd=False (default, used during scans): skips heavy ICD geometry
-    parsing so scans stay fast. Geometry fields are populated lazily on the
-    first preview request via enrich_icd_metadata().
-
-    parse_icd=True: forces ICD parsing immediately (used by preview endpoint
-    when a file has never been enriched yet).
+    Extract file metadata for indexing. (Optimized to accept pre-cached OS stats)
     """
-    stat = filepath.stat()
+    _is_dir = is_dir if is_dir is not None else filepath.is_dir()
+    _size = file_size if file_size is not None else (filepath.stat().st_size if not _is_dir else 0)
+    _mtime = last_modified if last_modified is not None else filepath.stat().st_mtime
+
     meta = {
         "project_id": project_id,
-        "is_folder": filepath.is_dir(),
+        "is_folder": _is_dir,
         "file_name": filepath.name,
-        "file_type": filepath.suffix.lower() if not filepath.is_dir() else "folder",
+        "file_type": filepath.suffix.lower() if not _is_dir else "folder",
         "file_path": str(filepath.resolve()).replace("\\", "/"),
         "category": "Unknown",
         "part_type": "Unknown",
-        "size": stat.st_size if not filepath.is_dir() else 0,
-        "last_modified": stat.st_mtime,
+        "size": _size,
+        "last_modified": _mtime,
         "part_geom_name": None,
         "bound_x": None,
         "bound_y": None,
@@ -44,7 +40,7 @@ def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse
     except Exception:
         pass
 
-    if parse_icd and not filepath.is_dir() and meta["file_type"] == ".icd":
+    if parse_icd and not _is_dir and meta["file_type"] == ".icd":
         parser = SimpleICDParser()
         if parser.parse_file(str(filepath)):
             meta["part_geom_name"] = parser.part_name
@@ -63,10 +59,11 @@ async def setup_fts(session: AsyncSession):
     """
     # 1. Clean up old SQLite/MariaDB artifacts if they somehow exist (Safety)
     try:
-        await session.execute("DROP TRIGGER IF EXISTS cad_file_index_ai")
-        await session.execute("DROP TRIGGER IF EXISTS cad_file_index_ad")
-        await session.execute("DROP TRIGGER IF EXISTS cad_file_index_au")
-        await session.execute("DROP TABLE IF EXISTS cad_file_index_fts")
+        from sqlalchemy import text
+        await session.execute(text("DROP TRIGGER IF EXISTS cad_file_index_ai"))
+        await session.execute(text("DROP TRIGGER IF EXISTS cad_file_index_ad"))
+        await session.execute(text("DROP TRIGGER IF EXISTS cad_file_index_au"))
+        await session.execute(text("DROP TABLE IF EXISTS cad_file_index_fts"))
     except Exception:
         pass
 
@@ -74,10 +71,10 @@ async def setup_fts(session: AsyncSession):
     # We use a try-except because 'ADD FULLTEXT' might fail if it already exists or on certain MariaDB versions
     try:
         # Check if index already exists
-        res = await session.execute("SHOW INDEX FROM cad_file_index WHERE Key_name = 'ft_search'")
+        res = await session.execute(text("SHOW INDEX FROM cad_file_index WHERE Key_name = 'ft_search'"))
         if not res.fetchone():
             print("Creating MySQL FULLTEXT index 'ft_search'...")
-            await session.execute("ALTER TABLE cad_file_index ADD FULLTEXT INDEX ft_search (file_name, file_path)")
+            await session.execute(text("ALTER TABLE cad_file_index ADD FULLTEXT INDEX ft_search (file_name, file_path)"))
     except Exception as e:
         print(f"Warning: Could not create FULLTEXT index: {e}")
     
@@ -116,6 +113,7 @@ async def enrich_icd_metadata(record_id: int, file_path: str):
 class MultiProjectIndexer:
     def __init__(self):
         self.scanning_tasks = {}
+        self.progress = {} # {project_id: files_seen}
 
     def start(self):
         # Scan on boot is disabled as requested by user. 
@@ -126,6 +124,13 @@ class MultiProjectIndexer:
     def stop(self):
         for t in self.scanning_tasks.values():
             t.cancel()
+
+    def cancel_project_scan(self, project_id: int):
+        task_id = f"proj_{project_id}"
+        if task_id in self.scanning_tasks:
+            self.scanning_tasks[task_id].cancel()
+            return True
+        return False
 
     async def _scan_all_projects_on_boot(self):
         async with AsyncSessionLocal() as session:
@@ -148,6 +153,8 @@ class MultiProjectIndexer:
         finally:
             if task_id in self.scanning_tasks:
                 del self.scanning_tasks[task_id]
+            if project_id in self.progress:
+                del self.progress[project_id]
             try:
                 # Ensure is_scanning is ALWAYS disabled even on crash
                 async with AsyncSessionLocal() as session:
@@ -167,7 +174,7 @@ class MultiProjectIndexer:
         print(f"Starting incremental CAD scan for Project {project_id} at {root_path}...")
         
         async with AsyncSessionLocal() as session:
-            from sqlalchemy import delete, select
+            from sqlalchemy import delete, select, insert
             
             # Setup FTS infrastructure first
             await setup_fts(session)
@@ -196,29 +203,41 @@ class MultiProjectIndexer:
             scan_queue = queue.Queue(maxsize=50000)
             
             def _walk_thread():
+                norm_root_path = str(Path(root_path)).replace("\\", "/").lower().rstrip("/")
+                
+                def scan_recursive(current_path):
+                    try:
+                        with os.scandir(current_path) as it:
+                            for entry in it:
+                                try:
+                                    is_dir = entry.is_dir(follow_symlinks=False)
+                                    stat = entry.stat(follow_symlinks=False)
+                                    filepath = Path(entry.path)
+                                    
+                                    meta = get_file_metadata(
+                                        filepath, 
+                                        project_id, 
+                                        target_dir, 
+                                        file_size=stat.st_size if not is_dir else 0,
+                                        last_modified=stat.st_mtime,
+                                        is_dir=is_dir
+                                    )
+                                    
+                                    if is_dir:
+                                        # Skip sending the root directory itself to the queue
+                                        if str(filepath).replace("\\", "/").lower().rstrip("/") != norm_root_path:
+                                            scan_queue.put(("folder", meta))
+                                        scan_recursive(entry.path)
+                                    else:
+                                        scan_queue.put(("file", meta))
+                                        
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass # Ignore permission and OS errors on network files
+
                 try:
-                    def walk_onerror(err):
-                        pass # Ignore permission errors
-                        
-                    norm_root_path = str(Path(root_path)).replace("\\", "/").lower().rstrip("/")
-                    
-                    for root, dirs, files in os.walk(root_path, onerror=walk_onerror):
-                        curr_root = str(Path(root)).replace("\\", "/").lower().rstrip("/")
-                        
-                        # Skip the root path itself to avoid duplication in the tree
-                        if curr_root == norm_root_path:
-                            pass
-                        else:
-                            try:
-                                meta = get_file_metadata(Path(root), project_id, target_dir)
-                                scan_queue.put(("folder", meta))
-                            except Exception: pass
-                        
-                        for f in files:
-                            try:
-                                meta = get_file_metadata(Path(root) / f, project_id, target_dir)
-                                scan_queue.put(("file", meta))
-                            except Exception: pass
+                    scan_recursive(root_path)
                 except Exception as e:
                     print(f"CRITICAL: Walk thread crashed: {e}")
                 finally:
@@ -231,7 +250,7 @@ class MultiProjectIndexer:
                 try:
                     is_done = False
                     # Fetch batch of items from the thread-safe queue
-                    for _ in range(200):
+                    for _ in range(5000):
                         try:
                             item_type, meta = scan_queue.get_nowait()
                         except queue.Empty:
@@ -247,9 +266,12 @@ class MultiProjectIndexer:
                         
                         # Only add if completely new to the index (Incremental)
                         if norm_path not in existing_paths_norm:
-                            batch.append(CadFileIndex(**meta))
+                            batch.append(meta)
                         
                         total_files += 1
+                        # Update live progress for SSE stream
+                        self.progress[project_id] = total_files
+
                         if item_type == "file" and meta['file_type'] in cad_exts:
                             cad_files += 1
                             
@@ -257,19 +279,25 @@ class MultiProjectIndexer:
                 except Exception as e:
                     print(f"Error in scan consumption loop: {e}")
                     break
-                    
+
+                if len(batch) >= 5000:
+                    await session.execute(insert(CadFileIndex).values(batch))
+                    await session.commit()
+                    batch.clear()
+
+                # Update project counts periodically so the sidebar stays accurate
+                if total_files % 1000 == 0:
+                    proj = await session.get(Project, project_id)
+                    if proj:
+                        proj.total_files = total_files
+                        proj.cad_files = cad_files
+                        await session.commit()
+
                 if not batch and scan_queue.empty():
                     await asyncio.sleep(0.1)
                     continue
-
-                if len(batch) >= 100:
-                    session.add_all(batch)
-                    await session.commit()
-                    batch.clear()
-                    await asyncio.sleep(0.01)
-                    
             if batch:
-                session.add_all(batch)
+                await session.execute(insert(CadFileIndex).values(batch))
                 await session.commit()
 
             # Cleanup: Remove files that no longer exist on NAS
@@ -293,6 +321,7 @@ class MultiProjectIndexer:
             if proj:
                 proj.total_files = total_files
                 proj.cad_files = cad_files
+                proj.is_scanning = False
                 await session.commit()
                 
         print(f"Scan complete for Project {project_id}: {total_files} files, {cad_files} CAD.")

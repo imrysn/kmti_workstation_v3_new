@@ -12,7 +12,7 @@ import { FileDetails } from './PurchasedParts/FileDetails'
 import { buildTree } from './PurchasedParts/utils'
 
 export default function PurchasedParts() {
-  const { notify, alert, confirm, showProgress } = useModal()
+  const { notify, alert, confirm, showProgress, progressState } = useModal()
   
   // -- Projects & Category State --
   const [projects, setProjects] = useState<IProject[]>([])
@@ -74,7 +74,7 @@ export default function PurchasedParts() {
       const res = await partsApi.getProjects(category)
       setProjects(res.data)
       const alreadyScanning = res.data.find((p: IProject) => p.isScanning)
-      if (alreadyScanning) {
+      if (alreadyScanning && !progressState.isOpen) {
         showProgress(`Resuming index of '${alreadyScanning.name}'...`, alreadyScanning.id)
       }
     } catch (err) {
@@ -276,14 +276,14 @@ export default function PurchasedParts() {
     setIsAddingTab(false); setNewTabValue(''); setIsSwitcherOpen(false)
   }
 
-  const handleOpen = (part: IPurchasedPart) => {
+  const handleOpen = useCallback((part: IPurchasedPart) => {
     confirm(`Open ${part.isFolder ? 'folder' : 'file'}?\n\n${part.fileName}`, 
       () => fileService.openItem(part, notify), undefined, 'primary')
-  }
+  }, [confirm, notify])
 
-  const handleOpenLocation = (item: IPurchasedPart) => {
+  const handleOpenLocation = useCallback((item: IPurchasedPart) => {
     confirm(`Open location of ${item.fileName}?`, () => fileService.openLocation(item), undefined, 'primary')
-  }
+  }, [confirm])
 
   // Initialization: load tree when project changes
   useEffect(() => {

@@ -62,3 +62,6 @@ backend/data/
 *.wmf
 *.dwg_preview.png
 *.icd_preview.png
+
+*.exe
+*.zip

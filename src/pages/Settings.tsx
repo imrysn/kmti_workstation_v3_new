@@ -34,7 +34,7 @@ export default function Settings() {
     setTesting(true)
     setTestResult(null)
     try {
-      await fetch(`http://127.0.0.1:8000/health`)
+      await fetch(`http://192.168.200.105:8000/health`)
       setTestResult('ok')
     } catch {
       setTestResult('error')

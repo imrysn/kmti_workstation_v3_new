@@ -14,7 +14,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
   const [error, setError] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   
-  const previewUrl = `http://127.0.0.1:8000/api/parts/preview/${fileId}`;
+  const previewUrl = `http://192.168.200.105:8000/api/parts/preview/${fileId}`;
   const cadExtensions = ['.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'];
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
   

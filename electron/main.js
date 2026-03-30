@@ -2,108 +2,194 @@ const { app, BrowserWindow, ipcMain, shell, dialog, screen, desktopCapturer } = 
 const { spawn, execSync } = require('child_process')
 const path = require('path')
 const os = require('os')
+const fs = require('fs')
 
-const isDev = process.env.NODE_ENV !== 'production'
-let mainWindow
-let pythonProcess
-
-function startPythonServer() {
-  const pythonPath = isDev
-    ? path.join(__dirname, '..', 'backend', 'main.py')
-    : path.join(process.resourcesPath, 'backend', 'main.py')
-
-  const cmd = isDev ? 'python' : path.join(process.resourcesPath, 'backend', 'server.exe')
-  const args = isDev ? [pythonPath] : []
-
-  // Pipe stdio to inherit so we can see python logs in the terminal
-  pythonProcess = spawn(cmd, args, { stdio: 'inherit' })
-  pythonProcess.on('error', (err) => {
-    console.error('Failed to start Python server:', err)
-  })
+// electron-updater — handles downloads from GitHub Releases
+let autoUpdater
+try {
+  autoUpdater = require('electron-updater').autoUpdater
+  autoUpdater.autoDownload = false
+  autoUpdater.autoInstallOnAppQuit = true
+} catch (e) {
+  console.warn('>>> electron-updater not available:', e.message)
+  autoUpdater = null
 }
 
+// app.isPackaged is the correct way to detect production in Electron.
+// process.env.NODE_ENV is NOT set by electron-builder — never use it for this.
+const isDev = !app.isPackaged
+let mainWindow
+let pythonProcess
+let logStream
+
+// --- Window State Management ---
+const stateFile = path.join(app.getPath('userData'), 'window-state.json')
+let windowState = { width: 450, height: 600, x: undefined, y: undefined, isMaximized: false }
+
+function loadState() {
+  try {
+    if (fs.existsSync(stateFile)) {
+      const raw = JSON.parse(fs.readFileSync(stateFile, 'utf8'))
+      if (!raw.width || raw.width < 400 || raw.height < 400) {
+        fs.unlinkSync(stateFile)
+      }
+    }
+  } catch (_) {}
+  try {
+    if (fs.existsSync(stateFile)) {
+      const data = JSON.parse(fs.readFileSync(stateFile, 'utf8'))
+      if (typeof data.x === 'number' && typeof data.y === 'number') {
+        const displays = screen.getAllDisplays()
+        const isVisible = displays.some(display => {
+          const { x, y, width, height } = display.bounds
+          return (
+            data.x >= x &&
+            data.x < x + width &&
+            data.y >= y &&
+            data.y < y + height
+          )
+        })
+        if (isVisible) {
+          windowState = data
+        }
+      }
+    }
+  } catch (e) { console.error('Failed to load window state:', e) }
+}
+
+function saveState() {
+  try {
+    const bounds = mainWindow.getBounds()
+    windowState = { ...bounds, isMaximized: mainWindow.isMaximized() }
+    fs.writeFileSync(stateFile, JSON.stringify(windowState))
+  } catch (e) { console.error('Failed to save window state:', e) }
+}
+
+function initLogStream() {
+  const logFile = path.join(app.getPath('userData'), 'backend.log')
+  logStream = fs.createWriteStream(logFile, { flags: 'a' })
+  logStream.write(`\n=== App Started: ${new Date().toISOString()} ===\n`)
+  logStream.write(`isDev: ${isDev}\n`)
+  logStream.write(`app.isPackaged: ${app.isPackaged}\n`)
+  logStream.write(`__dirname: ${__dirname}\n`)
+  logStream.write(`app.getAppPath(): ${app.getAppPath()}\n`)
+  logStream.write(`process.resourcesPath: ${process.resourcesPath}\n`)
+}
+
+
 function createWindow() {
-  // Start in login mode: small, frameless, transparent
+  loadState()
+
   mainWindow = new BrowserWindow({
-    width: 450,
-    height: 600,
-    resizable: false,
+    width: 440,
+    height: 580,
+    resizable: true,
     frame: false,
     center: true,
-    transparent: true,   // lets the OS see through to the desktop
+    transparent: false,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false,
     },
-    icon: path.join(__dirname, '..', 'public', 'icon.ico'),
+    icon: path.join(__dirname, '..', 'src', 'assets', 'kmti_logo.png'),
+    backgroundColor: '#f1f5f9',
+  })
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show()
   })
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5174')
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
+    // Candidate 1 is correct for asar builds: __dirname = app.asar/electron
+    // so '../dist/index.html' = app.asar/dist/index.html — valid asar virtual path
+    const candidates = [
+      path.join(__dirname, '..', 'dist', 'index.html'),
+      path.join(app.getAppPath(), 'dist', 'index.html'),
+      path.join(process.resourcesPath, 'app', 'dist', 'index.html'),
+    ]
+
+    let indexPath = null
+    for (const candidate of candidates) {
+      const exists = fs.existsSync(candidate)
+      logStream.write(`Checking: ${candidate} → ${exists}\n`)
+      if (exists && !indexPath) indexPath = candidate
+    }
+
+    if (indexPath) {
+      logStream.write(`Loading: ${indexPath}\n`)
+      mainWindow.loadFile(indexPath)
+    } else {
+      const fallback = `file:///${path.join(app.getAppPath(), 'dist', 'index.html').replace(/\\/g, '/')}`
+      logStream.write(`No candidate found. Fallback URL: ${fallback}\n`)
+      mainWindow.loadURL(fallback)
+    }
   }
+
+  mainWindow.on('resize', saveState)
+  mainWindow.on('move', saveState)
 }
 
 app.whenReady().then(() => {
-  // --- IPC Handlers ---
+  initLogStream()
+
+  function setupAutoUpdater() {
+    if (!autoUpdater || isDev) return
+    autoUpdater.on('checking-for-update', () => { console.log('>>> Checking for update...') })
+    autoUpdater.on('update-available', (info) => { mainWindow?.webContents.send('update-available', info) })
+    autoUpdater.on('update-not-available', (info) => { mainWindow?.webContents.send('update-not-available', info) })
+    autoUpdater.on('download-progress', (progress) => { mainWindow?.webContents.send('update-download-progress', progress) })
+    autoUpdater.on('update-downloaded', (info) => { mainWindow?.webContents.send('update-downloaded', info) })
+    autoUpdater.on('error', (err) => { mainWindow?.webContents.send('update-error', err.message) })
+    setTimeout(() => autoUpdater.checkForUpdates(), 30000)
+  }
+
+  ipcMain.handle('check-for-update', () => { if (autoUpdater && !isDev) autoUpdater.checkForUpdates() })
+  ipcMain.handle('download-update', () => { if (autoUpdater && !isDev) autoUpdater.downloadUpdate() })
+  ipcMain.handle('install-and-restart', () => { if (autoUpdater && !isDev) autoUpdater.quitAndInstall(false, true) })
+
   ipcMain.handle('get-file-icon', async (_, filePath, isFolder) => {
     try {
       let targetPath = filePath.split('/').join(path.sep).split('\\\\').join('\\')
-
-      if (isFolder) {
-        targetPath = 'C:\\Windows'
-      }
-
+      if (isFolder) targetPath = 'C:\\Windows'
       const icon = await app.getFileIcon(targetPath, { size: 'normal' })
       return icon.toDataURL()
-    } catch (err) {
-      console.error(`>>> [IPC] ERROR:`, err)
-      return null
-    }
+    } catch (err) { return null }
   })
 
-  ipcMain.handle('open-folder', async (_, folderPath) => {
-    shell.openPath(folderPath)
-  })
-
-  ipcMain.handle('open-file', async (_, filePath) => {
-    shell.openPath(filePath)
-  })
-
-  // Window controls — resolve to whichever window sent the request
-  ipcMain.handle('minimize-window', (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.minimize()
-  })
+  ipcMain.handle('open-folder', async (_, folderPath) => { shell.openPath(folderPath) })
+  ipcMain.handle('open-file', async (_, filePath) => { shell.openPath(filePath) })
+  ipcMain.handle('minimize-window', (event) => { BrowserWindow.fromWebContents(event.sender)?.minimize() })
   ipcMain.handle('maximize-window', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     win?.isMaximized() ? win.unmaximize() : win?.maximize()
   })
-  ipcMain.handle('close-window', (event) => {
-    BrowserWindow.fromWebContents(event.sender)?.close()
-  })
+  ipcMain.handle('close-window', (event) => { BrowserWindow.fromWebContents(event.sender)?.close() })
 
-  // Login gate: resize the SAME window into full workstation mode.
-  // No re-load needed — React auth state is already set, AppContent
-  // switches to WorkstationShell automatically.
-  // Login gate: expand the same window to fill the full workable screen.
-  // NOTE: maximize() doesn't work on transparent frameless windows on Windows,
-  // so we use screen.getPrimaryDisplay().workArea + setBounds instead.
   ipcMain.handle('login-success', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return
-    const { x, y, width, height } = screen.getPrimaryDisplay().workArea
+    const currentMonitor = screen.getDisplayMatching(mainWindow.getBounds())
+    const { x, y, width, height } = currentMonitor.workArea
     mainWindow.setResizable(true)
     mainWindow.setMinimumSize(1024, 700)
     mainWindow.setBackgroundColor('#f1f5f9')
-    mainWindow.setBounds({ x, y, width, height }, false)
+    if (windowState.width > 500) {
+      mainWindow.setBounds({ x: windowState.x ?? x, y: windowState.y ?? y, width: windowState.width, height: windowState.height }, false)
+    } else {
+      mainWindow.setBounds({ x, y, width, height }, false)
+    }
   })
 
-  // Logout: shrink back to the floating login card
   ipcMain.handle('logout-reset', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return
-    const { x, y, width, height } = screen.getPrimaryDisplay().workArea
-    const cardW = 420, cardH = 560
+    const currentMonitor = screen.getDisplayMatching(mainWindow.getBounds())
+    const { x, y, width, height } = currentMonitor.workArea
+    const cardW = 440, cardH = 580
     mainWindow.setResizable(false)
     mainWindow.setMinimumSize(0, 0)
     mainWindow.setBounds({
@@ -112,7 +198,7 @@ app.whenReady().then(() => {
       width: cardW,
       height: cardH,
     }, false)
-    mainWindow.setBackgroundColor('#00000000')  // restore transparency
+    mainWindow.setBackgroundColor('#f1f5f9')
   })
 
   ipcMain.handle('select-folder', async (event) => {
@@ -124,102 +210,40 @@ app.whenReady().then(() => {
       })
       if (result.canceled) return null
       return result.filePaths[0] || null
-    } catch (err) {
-      console.error('Error in select-folder IPC:', err)
-      return null
-    }
+    } catch (err) { return null }
   })
 
-  // Start the embedded Python backend in production builds.
-  // In dev, the backend is started manually via `npm run backend`.
-  if (!isDev) {
-    startPythonServer()
-  }
+  ipcMain.handle('get-workstation-info', async () => ({
+    computerName: os.hostname(),
+    platform: os.platform(),
+    release: os.release(),
+    arch: os.arch(),
+    username: os.userInfo().username,
+  }))
 
-  console.log(`>>> ELECTRON MAIN PROCESS STARTED - Version: 2.4 (isDev: ${isDev})`)
+  ipcMain.handle('capture-screenshot', async () => {
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen', 'window'],
+        thumbnailSize: { width: 1920, height: 1080 }
+      })
+      const entireScreen = sources.find(s => s.name === 'Entire Screen' || s.name === 'Screen 1') || sources[0]
+      return entireScreen ? entireScreen.thumbnail.toDataURL() : null
+    } catch (err) { return null }
+  })
+
+
 
   createWindow()
+  setupAutoUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 
-/**
- * Kills the tracked pythonProcess child AND any orphaned process
- * holding port 8000. The port kill covers:
- *   - Dev mode (backend started manually, not tracked by pythonProcess)
- *   - Production mode where uvicorn spawned worker sub-processes
- *   - Any crash-restart scenario that left a stale process on the port
- */
-function killBackend() {
-  // 1. Kill the tracked child process if we have one
-  if (pythonProcess) {
-    try {
-      pythonProcess.kill()
-    } catch (_) { }
-    pythonProcess = null
-  }
-
-  // 2. On Windows: find and kill whatever is on port 8000 via netstat + taskkill.
-  //    This is synchronous and intentionally brief — we're in shutdown.
-  if (process.platform === 'win32') {
-    try {
-      // netstat -ano lists all connections with PIDs.
-      // Find any line with :8000 in LISTENING or ESTABLISHED state.
-      const output = execSync('netstat -ano', { timeout: 3000 }).toString()
-      const lines = output.split('\n')
-      const pids = new Set()
-
-      for (const line of lines) {
-        // Match lines like:  TCP  0.0.0.0:8000  ...  LISTENING  1234
-        if (line.includes(':8000')) {
-          const parts = line.trim().split(/\s+/)
-          const pid = parts[parts.length - 1]
-          if (pid && /^\d+$/.test(pid) && pid !== '0') {
-            pids.add(pid)
-          }
-        }
-      }
-
-      for (const pid of pids) {
-        try {
-          // /F = force, /T = kill entire process tree
-          execSync(`taskkill /PID ${pid} /F /T`, { timeout: 3000 })
-          console.log(`>>> Killed port 8000 process PID ${pid}`)
-        } catch (_) {
-          // PID may have already exited — ignore
-        }
-      }
-    } catch (err) {
-      // netstat failed (permissions, timeout) — non-fatal, log and move on
-      console.warn('>>> Port 8000 cleanup failed:', err.message)
-    }
-  } else {
-    // macOS / Linux: lsof is available
-    try {
-      const output = execSync('lsof -ti tcp:8000', { timeout: 3000 }).toString().trim()
-      if (output) {
-        const pids = output.split('\n').filter(Boolean)
-        for (const pid of pids) {
-          try {
-            execSync(`kill -9 ${pid}`, { timeout: 3000 })
-            console.log(`>>> Killed port 8000 process PID ${pid}`)
-          } catch (_) { }
-        }
-      }
-    } catch (_) {
-      // No process on port 8000, or lsof unavailable — fine
-    }
-  }
-}
-
 app.on('window-all-closed', () => {
-  killBackend()
   if (process.platform !== 'darwin') app.quit()
 })
 
-// before-quit fires on Cmd+Q, app.quit(), and system shutdown
-app.on('before-quit', () => {
-  killBackend()
-})
+app.on('before-quit', () => { })

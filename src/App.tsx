@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import TitleBar from './components/TitleBar'
 import SessionExpiredModal from './components/SessionExpiredModal'
 import PurchasedParts from './pages/PurchasedParts'
@@ -208,12 +209,14 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ModalProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </ModalProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ModalProvider>
+          <HashRouter>
+            <AppContent />
+          </HashRouter>
+        </ModalProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }

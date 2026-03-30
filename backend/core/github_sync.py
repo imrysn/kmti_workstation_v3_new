@@ -32,24 +32,9 @@ class GitHubSyncService:
 
     async def poll_github(self):
         """Background task to fetch status_override.json from GitHub."""
-        async with httpx.AsyncClient() as client:
-            while True:
-                try:
-                    # Replace with your actual GitHub Raw URL if different
-                    # Note: If private, you'll need an 'Authorization: token YOUR_TOKEN' header
-                    response = await client.get(GITHUB_RAW_URL, timeout=10.0)
-                    if response.status_code == 200:
-                        new_data = response.json()
-                        if new_data != self._overrides:
-                            self._overrides = new_data
-                            logger.info(f"GitHub Sync: Status updated at {datetime.now()}")
-                        self._last_sync = datetime.now()
-                    else:
-                        logger.warning(f"GitHub Sync failed: {response.status_code}")
-                except Exception as e:
-                    logger.error(f"GitHub Sync error: {e}")
-                
-                await asyncio.sleep(POLL_INTERVAL_SECONDS)
+        # Centralized Server is intentionally offline — disabled GitHub polling.
+        logger.info("GitHub Sync disabled: Server is running in offline mode.")
+        pass
 
     async def trigger_update(self):
         """Executes git pull to update the local repository."""
