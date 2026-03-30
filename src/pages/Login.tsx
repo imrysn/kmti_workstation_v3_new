@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
 import './Login.css'
 
@@ -19,6 +19,36 @@ export default function Login() {
       id: i
     }))
   )
+
+  const [serverHealth, setServerHealth] = useState({
+    uptime: 'CONNECTING...',
+    db: 'CHECKING'
+  })
+
+  useEffect(() => {
+    async function checkHealth() {
+      try {
+        const res = await fetch('http://192.168.200.105:8000/health')
+        if (res.ok) {
+          const data = await res.json()
+          if (data.uptime_seconds) {
+            const h = Math.floor(data.uptime_seconds / 3600)
+            const m = Math.floor((data.uptime_seconds % 3600) / 60)
+            setServerHealth({ uptime: `${h}h ${m}m`, db: 'ONLINE' })
+          } else {
+            setServerHealth({ uptime: 'ACTIVE', db: 'ONLINE' })
+          }
+        } else {
+          setServerHealth({ uptime: 'OFFLINE', db: 'DISCONNECTED' })
+        }
+      } catch (e) {
+        setServerHealth({ uptime: 'OFFLINE', db: 'DISCONNECTED' })
+      }
+    }
+    checkHealth()
+    const intId = setInterval(checkHealth, 60000)
+    return () => clearInterval(intId)
+  }, [])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -183,8 +213,8 @@ export default function Login() {
               <span className="copyright">© 2026 KMTI</span>
             </div>
             <div className="system-readout">
-              <span className="readout-item">Uptime: 14h 22m</span>
-              <span className="readout-item">Database: ACTIVE</span>
+              <span className="readout-item">Uptime: {serverHealth.uptime}</span>
+              <span className="readout-item">Database: {serverHealth.db}</span>
             </div>
           </div>
         </div>

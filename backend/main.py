@@ -3,8 +3,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import parts, characters, settings, auth, feature_flags, help_center
 import asyncio
+import time
 from core.github_sync import sync_service
 from fastapi.staticfiles import StaticFiles
+
+START_TIME = time.time()
 
 from db.database import engine, Base
 try:
@@ -53,7 +56,11 @@ app.mount("/storage/feedback", StaticFiles(directory=r"\\KMTI-NAS\Shared\data\st
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "version": "3.0.0"}
+    return {
+        "status": "ok", 
+        "version": "3.1.2", 
+        "uptime_seconds": time.time() - START_TIME
+    }
 
 if __name__ == "__main__":
     import uvicorn
