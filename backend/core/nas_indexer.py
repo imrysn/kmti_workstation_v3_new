@@ -293,9 +293,11 @@ class MultiProjectIndexer:
                         proj.cad_files = cad_files
                         await session.commit()
 
-                if not batch and scan_queue.empty():
+                # Yield control to event loop; sleep longer if no items
+                if scan_queue.empty():
                     await asyncio.sleep(0.1)
-                    continue
+                else:
+                    await asyncio.sleep(0)
             if batch:
                 await session.execute(insert(CadFileIndex).values(batch))
                 await session.commit()

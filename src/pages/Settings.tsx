@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { settingsApi } from '../services/api'
+import { settingsApi, SERVER_BASE } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import type { IAppSettings } from '../types'
 import { StatusIcon } from '../components/FileIcons'
@@ -34,7 +34,7 @@ export default function Settings() {
     setTesting(true)
     setTestResult(null)
     try {
-      await fetch(`http://192.168.200.105:8000/health`)
+      await fetch(`${SERVER_BASE}/health`)
       setTestResult('ok')
     } catch {
       setTestResult('error')

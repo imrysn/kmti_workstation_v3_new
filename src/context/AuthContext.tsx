@@ -14,6 +14,7 @@ import {
   useCallback,
   ReactNode,
 } from 'react'
+import { API_BASE } from '../services/api'
 
 export type UserRole = 'user' | 'admin' | 'it'
 
@@ -69,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body.append('username', username)
       body.append('password', password)
 
-      const res = await fetch('http://192.168.200.105:8000/api/auth/login', {
+      const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString(),

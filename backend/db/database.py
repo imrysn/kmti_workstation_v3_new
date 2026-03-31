@@ -27,7 +27,18 @@ DB_PASS = os.environ["DB_PASS"]
 
 DATABASE_URL = f"mysql+aiomysql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}?charset=utf8"
 
-engine = create_async_engine(DATABASE_URL, pool_size=5, max_overflow=10)
+# Optimized for Production (20+ Users on Server PET130)
+# pool_size: 20 active connections
+# max_overflow: 10 extra temporary connections
+# pool_recycle: 1800 (Recycles connections every 30m to prevent MySQL 'Gone Away')
+# pool_timeout: 30 (User waits max 30s for a connection from the pool)
+engine = create_async_engine(
+    DATABASE_URL, 
+    pool_size=20, 
+    max_overflow=10,
+    pool_recycle=1800,
+    pool_timeout=30
+)
 
 AsyncSessionLocal = sessionmaker(
     bind=engine,

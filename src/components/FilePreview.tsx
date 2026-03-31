@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ExternalLinkIcon, SearchIcon } from './FileIcons';
+import { API_BASE } from '../services/api';
 import './FilePreview.css';
 
 interface FilePreviewProps {
@@ -14,7 +15,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
   const [error, setError] = useState(false);
   const [isZoomed, setIsZoomed] = useState(false);
   
-  const previewUrl = `http://192.168.200.105:8000/api/parts/preview/${fileId}`;
+  const previewUrl = `${API_BASE}/parts/preview/${fileId}`;
   const cadExtensions = ['.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'];
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
   

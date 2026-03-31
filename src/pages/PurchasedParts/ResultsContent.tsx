@@ -36,6 +36,7 @@ interface ResultsContentProps {
   handleOpen: (part: IPurchasedPart) => void
   selectedResult: IPurchasedPart | null
   setSelectedResult: (part: IPurchasedPart | null) => void
+  onLoadMore?: () => void
 }
 
 export const ResultsContent = React.memo(function ResultsContent({
@@ -64,7 +65,8 @@ export const ResultsContent = React.memo(function ResultsContent({
   resultsListRef,
   handleOpen,
   selectedResult,
-  setSelectedResult
+  setSelectedResult,
+  onLoadMore
 }: ResultsContentProps) {
   
   // -- Infinite Scroll Logic --
@@ -81,7 +83,11 @@ export const ResultsContent = React.memo(function ResultsContent({
     const observer = new IntersectionObserver(
       entries => {
         if (entries[0].isIntersecting) {
-          setVisibleCount(prev => Math.min(prev + 50, searchResults.length));
+          if (visibleCount < searchResults.length) {
+            setVisibleCount(prev => Math.min(prev + 50, searchResults.length));
+          } else if (resultCapped && onLoadMore) {
+            onLoadMore();
+          }
         }
       },
       { root: resultsListRef.current, rootMargin: '400px', threshold: 0.1 }
@@ -89,7 +95,7 @@ export const ResultsContent = React.memo(function ResultsContent({
 
     if (observerTarget.current) observer.observe(observerTarget.current);
     return () => observer.disconnect();
-  }, [searchResults.length, resultsListRef]);
+  }, [searchResults.length, visibleCount, resultCapped, onLoadMore, resultsListRef]);
 
   const visibleResults = searchResults.slice(0, visibleCount);
   return (
@@ -140,7 +146,7 @@ export const ResultsContent = React.memo(function ResultsContent({
           {isSearching
             ? "Searching..."
             : resultCapped
-              ? `Showing 500 of ${resultTotal.toLocaleString()} — refine your search`
+              ? `Showing ${searchResults.length} of ${resultTotal.toLocaleString()} — scroll for more`
               : `${searchResults.length} found (${searchTime.toFixed(2)}s)`
           }
         </span>
@@ -189,7 +195,7 @@ export const ResultsContent = React.memo(function ResultsContent({
         ))}
         
         {/* Invisible target to trigger the load-more intersection */}
-        {visibleCount < searchResults.length && (
+        {(visibleCount < searchResults.length || resultCapped) && (
           <div ref={observerTarget} style={{ height: '20px', opacity: 0 }} />
         )}
 

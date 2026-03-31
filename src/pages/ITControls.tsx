@@ -1,7 +1,7 @@
 import { useFlags } from '../context/FlagsContext'
 import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
-import { helpApi } from '../services/api'
+import { helpApi, SERVER_BASE } from '../services/api'
 import './ITControls.css'
 
 const CRITICAL_FLAGS = [
@@ -308,7 +308,7 @@ export default function ITControls() {
                     <div className="itc-log-msg">{log.message}</div>
                     {log.screenshot_path && (
                       <a 
-                        href={`http://192.168.200.105:8000${log.screenshot_path}`} 
+                        href={`${SERVER_BASE}${log.screenshot_path}`} 
                         target="_blank" 
                         rel="noreferrer" 
                         className="itc-log-link"

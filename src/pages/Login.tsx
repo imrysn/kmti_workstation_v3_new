@@ -1,5 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
+import { SERVER_BASE } from '../services/api'
 import './Login.css'
 
 export default function Login() {
@@ -28,7 +29,7 @@ export default function Login() {
   useEffect(() => {
     async function checkHealth() {
       try {
-        const res = await fetch('http://192.168.200.105:8000/health')
+        const res = await fetch(`${SERVER_BASE}/health`)
         if (res.ok) {
           const data = await res.json()
           if (data.uptime_seconds) {

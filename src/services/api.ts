@@ -1,7 +1,9 @@
+/// <reference types="vite/client" />
 import axios from 'axios'
 import type { IProject } from '../types'
 
-const API_BASE = 'http://192.168.200.105:8000/api'
+export const SERVER_BASE = import.meta.env.DEV ? 'http://localhost:8000' : 'http://192.168.200.105:8000'
+export const API_BASE = `${SERVER_BASE}/api`
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -65,7 +67,9 @@ export const partsApi = {
     cadOnly?: boolean,
     includeFolders?: boolean,
     folderPath?: string,
-    recursive: boolean = true
+    recursive: boolean = true,
+    limit: number = 1000,
+    offset: number = 0
   ) =>
     api.get('/parts/', {
       params: {
@@ -76,6 +80,8 @@ export const partsApi = {
         include_folders: includeFolders,
         folder_path: folderPath,
         recursive,
+        limit,
+        offset
       },
     }),
   downloadPart: (fileId: number) =>
@@ -133,5 +139,28 @@ export const helpApi = {
   getLogs: () => api.get('/help/logs'),
   resolve: (id: number) => api.patch(`/help/${id}/resolve`),
 }
+// --- Production Resiliency Interceptor ---
+// Automatically retry transient errors (503, 504) once before giving up.
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const { config, response } = error;
+    
+    // Only retry if it's a transient server error and hasn't been retried yet
+    const isTransientError = response && [503, 504].includes(response.status);
+    const hasAlreadyRetried = config && config._retry;
+
+    if (isTransientError && !hasAlreadyRetried) {
+      config._retry = true;
+      console.warn(`[API] Transient error ${response.status}. Retrying request...`, config.url);
+      
+      // Wait 1s before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return api(config);
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default api

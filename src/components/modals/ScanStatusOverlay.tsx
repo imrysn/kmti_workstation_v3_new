@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useModal } from '../ModalContext';
 import { useAuth } from '../../context/AuthContext';
-import api from '../../services/api';
+import api, { API_BASE } from '../../services/api';
 import { RefreshIcon } from '../FileIcons';
 import './ScanStatusOverlay.css';
 
@@ -40,7 +40,7 @@ const ScanStatusOverlay: React.FC = () => {
     const projectId = (progressState as any).projectId as number | undefined;
     if (!projectId) return;
 
-    const es = new EventSource(`http://192.168.200.105:8000/api/parts/projects/${projectId}/scan-status`);
+    const es = new EventSource(`${API_BASE}/parts/projects/${projectId}/scan-status`);
     esRef.current = es;
 
     es.onmessage = (event) => {

@@ -1,13 +1,26 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi import Request, HTTPException
 from routers import parts, characters, settings, auth, feature_flags, help_center
 import asyncio
 import time
+import logging
+import os
+import sys
 from core.github_sync import sync_service
 from fastapi.staticfiles import StaticFiles
 
 START_TIME = time.time()
+IS_FROZEN = getattr(sys, 'frozen', False)
+
+# --- Production Paths Logic ---
+# Ensure logs and local files are relative to the EXE in production
+if IS_FROZEN:
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from db.database import engine, Base
 try:
@@ -15,10 +28,29 @@ try:
 except ImportError:
     indexer = None
 
+# --- Production Logging Setup ---
+LOG_DIR = os.path.join(BASE_DIR, "logs")
+try:
+    os.makedirs(LOG_DIR, exist_ok=True)
+except Exception:
+    # If we can't create /logs (e.g. read-only NAS folder), 
+    # fall back to the current directory
+    LOG_DIR = BASE_DIR
+
+LOG_FILE = os.path.join(LOG_DIR, "production.log")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # --- Startup ---
+    logger.info(">>> KMTI Workstation Backend Starting Up...")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     if indexer:
@@ -43,6 +75,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Global Production Error Handlers ---
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    logger.error(f"HTTP {exc.status_code} Error: {exc.detail} at {request.url}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"success": False, "error": exc.detail},
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.critical(f"FATAL UNCAUGHT ERROR: {str(exc)} at {request.url}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"success": False, "error": "Internal Server Error. Please contact IT."},
+    )
+
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(help_center.router, prefix="/api/help", tags=["Help Center"])
@@ -52,22 +101,26 @@ app.include_router(characters.router, prefix="/api/chars", tags=["Character Sear
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
 
 # Static serving for Help Center screenshots (NAS)
-app.mount("/storage/feedback", StaticFiles(directory=r"\\KMTI-NAS\Shared\data\storage\feedback"), name="feedback")
+FEEDBACK_DIR = r"\\KMTI-NAS\Shared\data\storage\feedback"
+if os.path.exists(FEEDBACK_DIR):
+    app.mount("/storage/feedback", StaticFiles(directory=FEEDBACK_DIR), name="feedback")
+else:
+    logger.warning(f"Feedback storage directory not found: {FEEDBACK_DIR}. Screenshot serving disabled.")
 
 @app.get("/health")
 def health_check():
     return {
         "status": "ok", 
-        "version": "3.1.2", 
+        "version": "3.1.4", 
         "uptime_seconds": time.time() - START_TIME
     }
 
 if __name__ == "__main__":
     import uvicorn
-    import sys
-    # Disable reload and pass app object directly in bundled/production mode (sys.frozen)
-    is_frozen = getattr(sys, 'frozen', False)
-    if is_frozen:
+    # Disable reload and pass app object directly in bundled/production mode (IS_FROZEN)
+    if IS_FROZEN:
+        logger.info(f"Running in production mode (frozen). Binding to 0.0.0.0:8000")
         uvicorn.run(app, host="0.0.0.0", port=8000)
     else:
+        logger.info("Running in development mode (source).")
         uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

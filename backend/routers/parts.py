@@ -21,10 +21,8 @@ import json
 from pathlib import Path
 import urllib.parse
 from pydantic import BaseModel
-from core.icd_parser import SimpleICDParser
-from core.thumbnail_helper import get_shell_thumbnail
-from core.dwg_forensic import get_dwg_preview
-from core.sw_forensic import get_sw_preview
+from core.path_utils import normalize_path, globalize_path
+from core.preview_service import get_cached_preview
 try:
     from core.nas_indexer import indexer, enrich_icd_metadata
 except ImportError:
@@ -98,20 +96,25 @@ async def get_projects(category: str = None, db: AsyncSession = Depends(get_db))
 
 @router.post("/projects")
 async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
-    if not os.path.exists(req.root_path):
-        raise HTTPException(status_code=400, detail="Invalid root path. Directory does not exist.")
+    # Globalize the path (convert Z: to //NAS) before checking/saving
+    root = globalize_path(req.root_path)
+    
+    # In a distributed setup, the server might not have the drive mapped.
+    # We rely on the indexer to report failure if the UNC path is also unreachable.
+    if not root.startswith("//") and not os.path.exists(root):
+        raise HTTPException(status_code=400, detail="Invalid path. Must be UNC or accessible drive letter.")
 
     # Normalize the incoming path for a case-insensitive, separator-agnostic comparison.
-    norm_new = req.root_path.replace("\\", "/").rstrip("/").lower()
+    norm_new = normalize_path(req.root_path).lower()
     existing = await db.execute(select(Project))
     for proj in existing.scalars().all():
-        if proj.root_path.replace("\\", "/").rstrip("/").lower() == norm_new:
+        if normalize_path(proj.root_path).lower() == norm_new:
             raise HTTPException(
                 status_code=409,
                 detail=f"A project already points to this folder: '{proj.name}'. Remove it first or choose a different folder."
             )
 
-    p = Project(name=req.name, root_path=req.root_path, category=req.category)
+    p = Project(name=req.name, root_path=root, category=req.category)
     db.add(p)
     try:
         await db.commit()
@@ -255,7 +258,7 @@ async def get_project_tree(project_id: int, parent_path: str = Query(None), db: 
         }]
 
     # 2. Fetch direct children of parent_path
-    norm_parent = parent_path.replace("\\", "/").rstrip("/")
+    norm_parent = normalize_path(parent_path)
     prefix = norm_parent + "/"
     
     # Fetch all items starting with prefix
@@ -307,6 +310,8 @@ async def list_parts(
     include_folders: bool = False,
     folder_path: str = None,
     recursive: bool = True,
+    limit: int = 1000,
+    offset: int = 0,
     db: AsyncSession = Depends(get_db)
 ):
     query = select(CadFileIndex)
@@ -317,7 +322,7 @@ async def list_parts(
     
     # 2. Folder Navigation / Scope Logic
     if folder_path:
-        norm_fp = folder_path.replace("\\", "/").rstrip("/")
+        norm_fp = normalize_path(folder_path)
         prefix = norm_fp + "/"
         
         # If searching, respect the recursive toggle. 
@@ -347,41 +352,46 @@ async def list_parts(
         
     # 5. Search Logic (MySQL FULLTEXT)
     if search and search.strip():
-        # Sanitize: Remove characters with special meaning in MySQL Boolean Mode 
-        # that could cause syntax errors if unbalanced or misplaced.
-        # Operators: + - > < ( ) ~ * " @
-        # We keep spaces and alphanumeric chars. 
+        # Sanitize: Keep alphanumeric, quotes, spaces, and basic dash
         import re
-        clean = re.sub(r'[+\-><()~*\"@]', ' ', search.strip())
-        words = clean.split()
+        clean = re.sub(r'[<()~*@]', ' ', search.strip())
         
-        if words:
-            # Add * for prefix match on each word
-            boolean_search = " ".join([f"+{w}*" for w in words])
+        # If user explicitly used quotes for boolean matching, treat specially
+        if '"' in clean:
+            boolean_search = clean
+        else:
+            words = clean.split()
+            if words:
+                # Add * for prefix match on each word
+                boolean_search = " ".join([f"+{w}*" for w in words])
+            else:
+                boolean_search = ""
+
+        if boolean_search:
             query = query.where(text("MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE)"))
             query = query.params(val=boolean_search)
         else:
-            # If no words left (e.g. search was just symbols), fallback to default sorting
             query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
     else:
         # Default Sorting
         query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
 
+    # 6. Apply limit/offset to SQL query for performance
+    # Count total matching results first
+    count_query = select(func.count()).select_from(query.subquery())
+    total_count_res = await db.execute(count_query)
+    total_count = total_count_res.scalar_one()
+
+    # Apply pagination and execute
+    query = query.limit(limit).offset(offset)
     result = await db.execute(query)
     rows = result.scalars().all()
     
-    # 6. Post-process cleanup (Ensure root isn't returned if browsing children)
-    if folder_path and not recursive:
-        norm_fp = folder_path.replace("\\", "/").rstrip("/")
-        rows = [r for r in rows if r.file_path.replace("\\", "/").rstrip("/") != norm_fp]
-        
-    total_count = len(rows)
-    rows = rows[:500]
-
+    # 7. Final Response
     return {
         "total": total_count,
         "showing": len(rows),
-        "capped": total_count > 500,
+        "capped": total_count > (offset + limit),
         "items": [
             {
                 "id": r.id,
@@ -412,97 +422,7 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
     file_path = record.file_path
     ext = record.file_type.lower() if record.file_type else ""
     
-    # --- CACHE LOGIC ---
-    try:
-        file_stat = os.stat(file_path)
-        cache_key = hashlib.md5(f"{file_path}_{file_stat.st_mtime}".encode('utf-8')).hexdigest()
-        cache_dir = os.path.join(os.path.dirname(__file__), '..', '.preview_cache')
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, f"{cache_key}.png")
-        
-        if os.path.exists(cache_path):
-            def _read_cache():
-                with open(cache_path, 'rb') as f:
-                    return f.read()
-            cache_data = await asyncio.to_thread(_read_cache)
-            return Response(content=cache_data, media_type="image/png")
-    except Exception:
-        cache_path = None
-        
-    def return_and_cache(content, media_type="image/png"):
-        if cache_path and content and media_type == "image/png":
-            try:
-                def _write_cache():
-                    with open(cache_path, 'wb') as f:
-                        f.write(content)
-                _write_cache()
-            except Exception: pass
-        return Response(content=content, media_type=media_type)
-
-    # 1. Direct Media Serving: PDF (via iframe)
-    if ext == '.pdf':
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="File missing")
-        def _read_file():
-            with open(file_path, 'rb') as f:
-                return f.read()
-        file_data = await asyncio.to_thread(_read_file)
-        return Response(content=file_data, media_type="application/pdf")
-
-    # 2. Forensic Binary Extraction (Priority for CAD formats)
-    if ext == '.dwg':
-        try:
-            dwg_data = await asyncio.to_thread(get_dwg_preview, file_path)
-            if dwg_data:
-                return return_and_cache(dwg_data)
-        except Exception as e:
-            print(f"DWG Forensic extraction failed for {file_path}: {e}")
-
-    # 3. SolidWorks Forensic Extraction (Fallback to Shell)
-    if ext in {'.sldprt', '.sldasm', '.slddrw'}:
-        try:
-            sw_data = await asyncio.to_thread(get_sw_preview, file_path)
-            if sw_data:
-                return return_and_cache(sw_data)
-        except Exception as e:
-            print(f"SolidWorks Forensic extraction failed: {e}")
-
-    # 4. Universal Choice: Windows Shell Thumbnail (Forced for CAD/complex files)
-    if ext in cad_extensions or ext in {'.rvt', '.ifc', '.3dm'}:
-        try:
-            def _get_thumb():
-                img = get_shell_thumbnail(file_path, size=1024)
-                if img:
-                    buf = io.BytesIO()
-                    img.save(buf, format="PNG")
-                    return buf.getvalue()
-                return None
-            thumb_data = await asyncio.to_thread(_get_thumb)
-            if thumb_data:
-                return return_and_cache(thumb_data)
-        except Exception as e:
-            print(f"Shell thumbnail failed for {file_path}: {e}")
-
-    # 4. Standard Images (Direct Serving)
-    preview_extensions = {
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.gif': 'image/gif',
-        '.bmp': 'image/bmp',
-        '.webp': 'image/webp',
-        '.svg': 'image/svg+xml'
-    }
-    if ext in preview_extensions:
-        if not os.path.exists(file_path):
-            raise HTTPException(status_code=404, detail="Image file missing")
-        def _read_img():
-            with open(file_path, 'rb') as f:
-                return f.read()
-        img_data = await asyncio.to_thread(_read_img)
-        return Response(content=img_data, media_type=preview_extensions[ext])
-            
-    raise HTTPException(status_code=500, detail="Failed to generate preview")
+    return await get_cached_preview(file_path, ext)
 
 @router.get("/download")
 async def download_part(file_id: int, db: AsyncSession = Depends(get_db)):
