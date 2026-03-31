@@ -1,3 +1,6 @@
+import { shapeLookup } from '../data/shape_lookup';
+import { materialLookupData } from '../data/material_lookup';
+
 export type Material = {
   name: string;
   density: number; // g/cm³
@@ -7,10 +10,10 @@ export type Material = {
 export const STANDARD_MATERIALS: Material[] = [
   { name: 'SS400 / STKM / STKR (Carbon Steel)', density: 7.85 },
   { name: 'S35C / S45C / S55C (Carbon Steel)', density: 7.84 },
-  { name: 'SUS304 (Stainless Steel)', density: 7.93 },
+  { name: 'SUS304 (Stainless Steel)', density: 8.00 },
   { name: 'AL / A5052 (Aluminum)', density: 2.70 },
-  { name: 'C1100 (Copper)', density: 8.90 },
-  { name: 'C3604 (Brass)', density: 8.50 },
+  { name: 'C1100 (Copper)', density: 8.89 },
+  { name: 'C3604 (Brass)', density: 8.43 },
   { name: 'Titanium', density: 4.50 },
   { name: 'Custom Density', density: 0 }
 ];
@@ -33,12 +36,30 @@ export const SHAPE_LABELS: Record<ShapeType, string> = {
 };
 
 /**
+ * Shared normalizer — single source of truth used by both calculateWeight helpers.
+ * Must stay in sync with build_dictionaries.py's normalize().
+ */
+export function normalize(text: string): string {
+  let t = text.trim()
+    .replace(/●/g, '')
+    .replace(/[φΦ]/g, 'phi')
+    .replace(/□/g, 'sq')
+    .replace(/×/g, 'x')
+    .replace(/\*/g, 'x')
+    .replace(/\s+/g, '')
+    .replace(/^l-/i, '')
+    .toLowerCase();
+
+  // Strip redundant trailing .0  e.g. "10.0" → "10"
+  t = t.replace(/(\d+\.\d+)/g, (match) => {
+    const val = parseFloat(match);
+    return val === Math.floor(val) ? val.toString() : match;
+  });
+  return t;
+}
+
+/**
  * Calculates weight in kg based on dimensions (mm) and density (g/cm³).
- * Volume inside is calculated in mm³.
- * 1 mm³ = 0.001 cm³. 
- * Weight (g) = Vol(mm³) * 0.001 * Density(g/cm³)
- * Weight (kg) = Weight (g) / 1000
- * Final multiplier: density * 1e-6
  */
 export function calculateWeight(shape: ShapeType, dims: Record<string, number>, density: number): number {
   if (!density || density <= 0) return 0;
@@ -59,7 +80,6 @@ export function calculateWeight(shape: ShapeType, dims: Record<string, number>, 
     }
     case 'HexBar': {
       const { widthAcrossFlats = 0, length = 0 } = dims;
-      // Area of hexagon given width across flats W = (sqrt(3)/2) * W^2
       volume = (Math.sqrt(3) / 2) * Math.pow(widthAcrossFlats, 2) * length;
       break;
     }
@@ -81,7 +101,6 @@ export function calculateWeight(shape: ShapeType, dims: Record<string, number>, 
     case 'AngleBar': {
       const { legW = 0, legH = 0, thickness = 0, length = 0 } = dims;
       if (legW <= thickness || legH <= thickness) return 0;
-      // Area = Vertical leg area + Horizontal leg area (minus overlap)
       const area = (legW * thickness) + ((legH - thickness) * thickness);
       volume = area * length;
       break;
@@ -91,4 +110,106 @@ export function calculateWeight(shape: ShapeType, dims: Record<string, number>, 
   }
 
   return volume * d;
+}
+
+/**
+ * Performs weight calculation using the KMTI Excel lookup table.
+ *
+ * Lookup key format (matches build_dictionaries.py output):
+ *   Primary:  "<norm_material>_<norm_spec>"  e.g. "ss400_50x50x6"
+ *   Fallback: "<norm_spec>"                  e.g. "50x50x6"
+ *
+ * All wpm values in shapeLookup are for their source material (typically carbon steel 7.85).
+ * For other materials we scale by (actual_density / base_density).
+ *
+ * Returns 0 if no match found — caller falls through to geometric calculation.
+ */
+export function calculateExcelBatchWeight(
+  materialOrShape: string,
+  specWithLen: string,
+  qty: number
+): number {
+  const mRaw    = materialOrShape.trim();
+  const specRaw = specWithLen.trim();
+  if (!specRaw) return 0;
+
+  // ── 1. Parse length from spec ──────────────────────────────────────────
+  // Priority: dash "50x50x6-1200"  >  space "50x50x6 1200"  >  last-x "50x500"
+  let dimensionStr = specRaw;
+  let lengthMm     = 0;
+
+  if (specRaw.includes('-')) {
+    const parts    = specRaw.split('-');
+    const lastPart = parts[parts.length - 1].trim();
+    const val      = parseFloat(lastPart);
+    if (!isNaN(val) && val > 0) {
+      lengthMm     = val;
+      dimensionStr = parts.slice(0, -1).join('-');
+    }
+  } else if (specRaw.includes(' ')) {
+    const parts    = specRaw.trim().split(/\s+/);
+    const lastPart = parts[parts.length - 1].replace(/[□φ●]/g, '');
+    const val      = parseFloat(lastPart);
+    if (!isNaN(val) && val > 0) {
+      lengthMm     = val;
+      dimensionStr = parts.slice(0, -1).join(' ');
+    }
+  }
+
+  // Last-x fallback — only if still no length
+  if (lengthMm <= 0) {
+    const xParts = specRaw.split(/[x×*]/i);
+    if (xParts.length >= 2) {
+      const lastPart = xParts[xParts.length - 1].trim();
+      const val      = parseFloat(lastPart);
+      if (!isNaN(val) && val > 0) {
+        lengthMm     = val;
+        dimensionStr = xParts.slice(0, -1).join('x');
+      }
+    }
+  }
+
+  if (lengthMm <= 0) return 0;
+
+  // ── 2. Normalize ────────────────────────────────────────────────────────
+  const normMat = normalize(mRaw);
+  const normDim = normalize(dimensionStr);
+
+  // ── 3. Lookup — primary, then spec-only, then stripped prefix ──────────
+  let wpmBase: number | undefined;
+  let matchesBaseMaterial = true;
+
+  wpmBase = shapeLookup[`${normMat}_${normDim}`];
+
+  if (wpmBase === undefined) {
+    const strippedDim = normDim.replace(/^phi/, '').replace(/^sq/, '');
+    wpmBase = shapeLookup[`${normMat}_${strippedDim}`];
+  }
+
+  // Fallback to generic un-prefixed spec (defaults to Carbon Steel values)
+  if (wpmBase === undefined) {
+    matchesBaseMaterial = false;
+    wpmBase = shapeLookup[normDim];
+    if (wpmBase === undefined) {
+      const strippedDim = normDim.replace(/^phi/, '').replace(/^sq/, '');
+      wpmBase = shapeLookup[strippedDim];
+    }
+  }
+
+  if (wpmBase === undefined) return 0;
+
+  // ── 4. Density scaling ──────────────────────────────────────────────────
+  // Lookup table values sourced from carbon steel rows (7.85 g/cm³ base).
+  // Scale proportionally only if we dropped back to the generic dimension fallback.
+  let densityScale = 1.0;
+  if (!matchesBaseMaterial) {
+    const matDensity   = (materialLookupData as Record<string, number>)[mRaw];
+    const BASE_DENSITY = 7.85;
+    if (matDensity !== undefined) {
+      densityScale = matDensity / BASE_DENSITY;
+    }
+  }
+
+  // ── 5. Final weight ─────────────────────────────────────────────────────
+  return wpmBase * (lengthMm / 1000) * densityScale * qty;
 }
