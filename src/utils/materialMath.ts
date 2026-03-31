@@ -182,8 +182,11 @@ export function calculateExcelBatchWeight(
   wpmBase = shapeLookup[`${normMat}_${normDim}`];
 
   if (wpmBase === undefined) {
-    const strippedDim = normDim.replace(/^phi/, '').replace(/^sq/, '');
-    wpmBase = shapeLookup[`${normMat}_${strippedDim}`];
+    // Only strip phi. DO NOT strip sq! Stripping sq assumes round-bar default weight.
+    if (normDim.startsWith('phi')) {
+        const strippedDim = normDim.replace(/^phi/, '');
+        wpmBase = shapeLookup[`${normMat}_${strippedDim}`];
+    }
   }
 
   // Fallback to generic un-prefixed spec (defaults to Carbon Steel values)
@@ -191,8 +194,10 @@ export function calculateExcelBatchWeight(
     matchesBaseMaterial = false;
     wpmBase = shapeLookup[normDim];
     if (wpmBase === undefined) {
-      const strippedDim = normDim.replace(/^phi/, '').replace(/^sq/, '');
-      wpmBase = shapeLookup[strippedDim];
+      if (normDim.startsWith('phi')) {
+         const strippedDim = normDim.replace(/^phi/, '');
+         wpmBase = shapeLookup[strippedDim];
+      }
     }
   }
 

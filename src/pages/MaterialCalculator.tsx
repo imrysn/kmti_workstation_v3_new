@@ -33,7 +33,7 @@ export default function MaterialCalculator() {
       // We check this BEFORE anything else, for both Tab and Space pastes.
       const normalizedLine = cleanLine.replace(/\t/g, ' ').replace(/\s+/g, ' ').replace(/[×*]/g, 'x');
       const parts = normalizedLine.split(' ');
-      
+
       let specStrRaw = '';
       let detectedQty = 1;
 
@@ -45,8 +45,8 @@ export default function MaterialCalculator() {
         } else if (p.endsWith('pcs') || p.endsWith('qty')) {
           detectedQty = parseFloat(p) || 1;
         } else if (parts.indexOf(p) === parts.length - 1 && !isNaN(parseFloat(p))) {
-           // If the last part is a naked number, it's likely Qty
-           detectedQty = parseFloat(p);
+          // If the last part is a naked number, it's likely Qty
+          detectedQty = parseFloat(p);
         }
       });
       qty = detectedQty;
@@ -98,8 +98,8 @@ export default function MaterialCalculator() {
         const xSpl = specStrRaw.split('x');
         const last = parseFloat(xSpl[xSpl.length - 1]);
         if (!isNaN(last) && last > 200) {
-            length = last;
-            lookupSpec = xSpl.slice(0, -1).join('x');
+          length = last;
+          lookupSpec = xSpl.slice(0, -1).join('x');
         }
       }
 
@@ -126,18 +126,18 @@ export default function MaterialCalculator() {
           // [W x H x T] - This is a TUBE if the 3rd part is small relative to the first
           const [v1, v2, v3] = xParts.map(p => parseFloat(cleanForMath(p)));
           if (!isNaN(v1) && !isNaN(v2) && !isNaN(v3)) {
-             if (v3 < (v1 * 0.4)) {
-                // TUBE GEOMETRY: (Width * Height) - (InnerWidth * InnerHeight)
-                const area = (v1 * v2) - (v1 - 2 * v3) * (v2 - 2 * v3);
-                rowWeight = (area * effectiveLen * density) / 1000000;
-             } else {
-                // SOLID BOX GEOMETRY: Width * Height * Length (v3 is length)
-                rowWeight = (v1 * v2 * v3 * density) / 1000000;
-             }
+            if (v3 < (v1 * 0.4)) {
+              // TUBE GEOMETRY: (Width * Height) - (InnerWidth * InnerHeight)
+              const area = (v1 * v2) - (v1 - 2 * v3) * (v2 - 2 * v3);
+              rowWeight = (area * effectiveLen * density) / 1000000;
+            } else {
+              // SOLID BOX GEOMETRY: Width * Height * Length (v3 is length)
+              rowWeight = (v1 * v2 * v3 * density) / 1000000;
+            }
           }
         } else if (xParts.length === 2) {
-          const val1 = parseFloat(cleanForMath(xParts[0])); 
-          const val2 = parseFloat(cleanForMath(xParts[1])); 
+          const val1 = parseFloat(cleanForMath(xParts[0]));
+          const val2 = parseFloat(cleanForMath(xParts[1]));
           if (!isNaN(val1) && !isNaN(val2)) {
             if (specStrRaw.includes('Φ') || specStrRaw.includes('●') || specStrRaw.includes('φ')) {
               // Pipe / Round Tube: Area = PI/4 * (OD^2 - ID^2)
@@ -195,7 +195,7 @@ export default function MaterialCalculator() {
           <div className="scratchpad-box">
             <div className="box-label">
               <span>INPUT DATA</span>
-              <span className="label-hint">Paste Material Spec L Qty</span>
+              {/* <span className="label-hint">Paste Material Spec L Qty</span> */}
             </div>
             <textarea
               className="scratchpad-textarea"
@@ -209,14 +209,14 @@ export default function MaterialCalculator() {
           <div className="scratchpad-box">
             <div className="box-label">
               <span>CALCULATED WEIGHT (KG)</span>
-              <span className="label-hint">Total column for Excel paste</span>
+              {/* <span className="label-hint">Total column for Excel paste</span> */}
             </div>
             <textarea
               className="scratchpad-textarea readonly"
               value={output}
               readOnly
               ref={outputRef}
-              placeholder="Results will appear here..."
+              placeholder="Results..."
               spellCheck={false}
             />
           </div>
@@ -226,9 +226,8 @@ export default function MaterialCalculator() {
           <div className="footer-info">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
-              <path d="M12 16v-4" /><path d="M12 8h.01" />
             </svg>
-            <span>Direct Excel Paste supported. Uses technical densities.</span>
+            <span>Direct Excel Paste support.</span>
           </div>
           <div className="action-group">
             <button
