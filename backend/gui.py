@@ -206,7 +206,20 @@ class KMTIServerGUI(ctk.CTk):
 
     def start_server(self):
         """Starts Uvicorn in a background thread."""
-        config = uvicorn.Config(self.app, host="0.0.0.0", port=8000, log_level="info", lifespan="on")
+        # Safety for No-Console (PyInstaller)
+        if sys.stdout is None: sys.stdout = open(os.devnull, "w")
+        if sys.stderr is None: sys.stderr = open(os.devnull, "w")
+
+        # Use log_config=None to prevent uvicorn from trying to configure formatters 
+        # that look for a TTY/Terminal (fixing the 'isatty' crash in packaged apps)
+        config = uvicorn.Config(
+            self.app, 
+            host="0.0.0.0", 
+            port=8000, 
+            log_level="info", 
+            lifespan="on",
+            log_config=None
+        )
         server = uvicorn.Server(config)
         
         self.server_thread = threading.Thread(target=server.run, daemon=True)

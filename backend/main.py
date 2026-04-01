@@ -84,7 +84,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="KMTI Workstation API", version="3.4.2", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation API", version="3.4.3", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
