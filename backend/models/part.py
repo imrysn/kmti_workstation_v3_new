@@ -28,7 +28,7 @@ class CadFileIndex(Base):
     is_folder = Column(Boolean, default=False, index=True)
     file_name = Column(String(255), index=True)
     file_type = Column(String(50), index=True)
-    file_path = Column(Text, index=True)
+    file_path = Column(String(1024), index=True)
     category = Column(String(255), index=True)
     part_type = Column(String(255), index=True)
     size = Column(Integer)

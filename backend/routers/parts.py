@@ -198,36 +198,45 @@ async def scan_status_stream(project_id: int, db: AsyncSession = Depends(get_db)
     
 
     async def event_generator():
-        while True:
-            async with AsyncSessionLocal() as session:
-                proj = await session.get(Project, project_id)
-                if not proj:
-                    payload = json.dumps({"isScanning": False, "filesIndexed": 0, "message": "Project not found"})
-                    yield f"data: {payload}\n\n"
+        try:
+            while True:
+                is_scanning = False
+                payload_data = {}
+
+                async with AsyncSessionLocal() as session:
+                    proj = await session.get(Project, project_id)
+                    if not proj:
+                        payload_data = {"isScanning": False, "filesIndexed": 0, "message": "Project not found"}
+                        is_scanning = False
+                    else:
+                        # Count indexed files live from the DB
+                        from sqlalchemy import func as sqlfunc
+                        count_result = await session.execute(
+                            select(sqlfunc.count(CadFileIndex.id)).where(CadFileIndex.project_id == project_id)
+                        )
+                        files_indexed = count_result.scalar_one() or 0
+
+                        from core.nas_indexer import indexer as _indexer
+                        files_seen = _indexer.progress.get(project_id, 0) if _indexer else 0
+
+                        is_scanning = bool(proj.is_scanning)
+                        payload_data = {
+                            "isScanning": is_scanning,
+                            "filesIndexed": files_indexed,
+                            "filesSeen": files_seen,
+                            "message": f"Checking {files_seen:,} files..." if files_seen <= files_indexed else f"Indexing new: {files_seen:,}..."
+                        }
+                
+                # --- Session is now closed & returned to pool ---
+                yield f"data: {json.dumps(payload_data)}\n\n"
+
+                if not is_scanning:
                     break
-
-                # Count indexed files live from the DB
-                from sqlalchemy import func as sqlfunc
-                count_result = await session.execute(
-                    select(sqlfunc.count(CadFileIndex.id)).where(CadFileIndex.project_id == project_id)
-                )
-                files_indexed = count_result.scalar_one() or 0
-
-                from core.nas_indexer import indexer as _indexer
-                files_seen = _indexer.progress.get(project_id, 0) if _indexer else 0
-
-                payload = json.dumps({
-                    "isScanning": bool(proj.is_scanning),
-                    "filesIndexed": files_indexed,
-                    "filesSeen": files_seen,
-                    "message": f"Checking {files_seen:,} files..." if files_seen <= files_indexed else f"Indexing new: {files_seen:,}..."
-                })
-                yield f"data: {payload}\n\n"
-
-                if not proj.is_scanning:
-                    break
-
-            await asyncio.sleep(1)
+                
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            # Handle client disconnect gracefully
+            pass
 
     return SSEStreamingResponse(
         event_generator(),
@@ -257,39 +266,26 @@ async def get_project_tree(project_id: int, parent_path: str = Query(None), db: 
             "hasChildren": True # Assume projects have content
         }]
 
-    # 2. Fetch direct children of parent_path
+    # 2. Fetch direct children of parent_path at the SQL level (NON-RECURSIVE)
     norm_parent = normalize_path(parent_path)
     prefix = norm_parent + "/"
     
-    # Fetch all items starting with prefix
+    # Query only DIRECT children (items starting with prefix but having no more slashes)
     result = await db.execute(
         select(CadFileIndex.file_path, CadFileIndex.file_name, CadFileIndex.is_folder, CadFileIndex.file_type)
         .where(
             (CadFileIndex.project_id == project_id) &
-            (CadFileIndex.file_path.ilike(f"{prefix}%"))
+            (CadFileIndex.file_path.like(f"{prefix}%")) &
+            (CadFileIndex.file_path.not_like(f"{prefix}%/%"))
         )
         .order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
     )
     items = result.all()
     
+    # Python code is now just a simple mapping (no more 180k loop!)
     nodes = []
-    seen_paths = set()
-    
     for fp, fn, is_folder, ftype in items:
         fp_norm = fp.replace("\\", "/").rstrip("/")
-        
-        # Ensure it's inside the parent and is a DIRECT child
-        if not fp_norm.startswith(prefix):
-            continue
-            
-        remainder = fp_norm[len(prefix):]
-        if not remainder or "/" in remainder:
-            continue
-            
-        if fp_norm in seen_paths:
-            continue
-        seen_paths.add(fp_norm)
-        
         nodes.append({
             "name": fn,
             "path": fp_norm,

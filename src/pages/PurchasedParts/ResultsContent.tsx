@@ -1,9 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useMemo } from 'react'
+// Use namespace imports to resolve Vite/ESM optimization issues with these libraries
+import * as ReactWindow from 'react-window'
+import * as AutoSizerModule from 'react-virtualized-auto-sizer'
 import { SearchIcon, PackageIcon } from '../../components/FileIcons'
 import { FileIcon } from '../../components/FileIcons'
 import Breadcrumbs from '../../components/Breadcrumbs'
 import { IPurchasedPart, IProject } from '../../types'
 import { formatFileSize } from './utils'
+
+// Extract components from namespace imports safely
+const { FixedSizeList } = ReactWindow as any;
+const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer;
 
 interface ResultsContentProps {
   search: string
@@ -39,6 +46,77 @@ interface ResultsContentProps {
   onLoadMore?: () => void
 }
 
+// --- Standard Result Row for Non-Virtualized Fallback ---
+const StandardResultRow = React.memo(({ 
+  res, 
+  isSelected, 
+  isFocused, 
+  onSelect, 
+  onOpen, 
+  onSetFocused,
+  index
+}: { 
+  res: IPurchasedPart, 
+  isSelected: boolean, 
+  isFocused: boolean, 
+  onSelect: (r: IPurchasedPart, i: number) => void, 
+  onOpen: (r: IPurchasedPart) => void, 
+  onSetFocused: (i: number) => void,
+  index: number
+}) => (
+  <div
+    className={`findr-result-item ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''}`}
+    onClick={() => onSelect(res, index)}
+    onDoubleClick={() => !res.isFolder && onOpen(res)}
+    onMouseEnter={() => onSetFocused(index)}
+  >
+    <div className="findr-result-icon">
+      <FileIcon
+        isFolder={res.isFolder}
+        fileType={res.fileType}
+        fileName={res.fileName}
+        filePath={res.filePath}
+        size={18}
+      />
+    </div>
+    <div className="findr-result-details">
+      <div className="findr-result-name">{res.fileName}</div>
+    </div>
+    <div className="findr-result-meta">
+      <div className="findr-result-size">{res.isFolder ? '--' : formatFileSize(res.size)}</div>
+    </div>
+  </div>
+));
+
+// --- Virtualized Row for Large Results ---
+const VirtualResultRow = React.memo(({ 
+  index, 
+  style, 
+  data 
+}: { 
+  index: number, 
+  style: React.CSSProperties, 
+  data: any 
+}) => {
+  const { results, selectedId, focusedIndex, onSelect, onOpen, onSetFocused } = data;
+  const res = results[index];
+  if (!res) return null;
+
+  return (
+    <div style={style}>
+      <StandardResultRow
+        res={res}
+        isSelected={selectedId === res.id}
+        isFocused={focusedIndex === index}
+        onSelect={onSelect}
+        onOpen={onOpen}
+        onSetFocused={onSetFocused}
+        index={index}
+      />
+    </div>
+  );
+});
+
 export const ResultsContent = React.memo(function ResultsContent({
   search,
   setSearch,
@@ -69,35 +147,41 @@ export const ResultsContent = React.memo(function ResultsContent({
   onLoadMore
 }: ResultsContentProps) {
   
-  // -- Infinite Scroll Logic --
-  const [visibleCount, setVisibleCount] = useState(50);
-  const observerTarget = useRef<HTMLDivElement>(null);
+  // Handle Selection Logic
+  const handleSelect = React.useCallback((res: IPurchasedPart, index: number) => {
+    setFocusedIndex(index);
+    if (res.isFolder) {
+      const normPath = res.filePath.split('\\').join('/');
+      setFolderFilter(normPath);
+      setSelectedTreePath(normPath);
+      setExpandedFolders(prev => new Set(prev).add(normPath));
+      setSelectedResult(null);
+    } else {
+      setSelectedResult(res);
+    }
+  }, [setFocusedIndex, setFolderFilter, setSelectedTreePath, setExpandedFolders, setSelectedResult]);
 
-  // Reset visible count when a new search or filter is applied
-  useEffect(() => {
-    setVisibleCount(50);
-  }, [searchResults, search, folderFilter]);
+  // Virtualization Context Data
+  const itemData = useMemo(() => ({
+    results: searchResults,
+    selectedId: selectedResult?.id,
+    focusedIndex,
+    onSelect: handleSelect,
+    onOpen: handleOpen,
+    onSetFocused: setFocusedIndex
+  }), [searchResults, selectedResult?.id, focusedIndex, handleSelect, handleOpen, setFocusedIndex]);
 
-  // Observer to load more items when scrolling near the bottom
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries[0].isIntersecting) {
-          if (visibleCount < searchResults.length) {
-            setVisibleCount(prev => Math.min(prev + 50, searchResults.length));
-          } else if (resultCapped && onLoadMore) {
-            onLoadMore();
-          }
-        }
-      },
-      { root: resultsListRef.current, rootMargin: '400px', threshold: 0.1 }
-    );
+  const onItemsRendered = ({ visibleStopIndex }: { visibleStopIndex: number }) => {
+    if (resultCapped && onLoadMore && visibleStopIndex >= searchResults.length - 10) {
+      onLoadMore();
+    }
+  };
 
-    if (observerTarget.current) observer.observe(observerTarget.current);
-    return () => observer.disconnect();
-  }, [searchResults.length, visibleCount, resultCapped, onLoadMore, resultsListRef]);
+  // --- Hybrid Rendering Decision ---
+  // If fewer than 500 items, render normally for maximum reliability.
+  // If 500+, use the Virtualized "Turbo" Mode for performance.
+  const isVirtualized = searchResults.length >= 500;
 
-  const visibleResults = searchResults.slice(0, visibleCount);
   return (
     <div className="findr-center">
       <div className="findr-search-container">
@@ -152,54 +236,46 @@ export const ResultsContent = React.memo(function ResultsContent({
         </span>
       </div>
 
-      <div className="findr-results-list" ref={resultsListRef} tabIndex={0}>
-        {visibleResults.map((res, index) => (
-          <div
-            key={res.id}
-            className={`findr-result-item ${selectedResult?.id === res.id ? 'selected' : ''} ${focusedIndex === index ? 'focused' : ''}`}
-            style={{ animationDelay: index < 20 ? `${index * 20}ms` : '0ms' }}
-            onClick={() => {
-              setFocusedIndex(index)
-              if (res.isFolder) {
-                const normPath = res.filePath.split('\\').join('/')
-                setFolderFilter(normPath)
-                setSelectedTreePath(normPath)
-                setExpandedFolders(prev => {
-                  const next = new Set(prev)
-                  next.add(normPath)
-                  return next
-                })
-                setSelectedResult(null)
-              } else {
-                setSelectedResult(res)
-              }
-            }}
-            onDoubleClick={() => !res.isFolder && handleOpen(res)}
-          >
-            <div className="findr-result-icon">
-              <FileIcon
-                isFolder={res.isFolder}
-                fileType={res.fileType}
-                fileName={res.fileName}
-                filePath={res.filePath}
-                size={18}
-              />
+      <div className="findr-results-list" ref={resultsListRef} tabIndex={0} style={{ 
+        overflow: isVirtualized ? 'hidden' : 'auto', 
+        height: '100%', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        flex: 1 
+      }}>
+        {searchResults.length > 0 ? (
+          isVirtualized ? (
+            <AutoSizer>
+              {({ height, width }: { height: number; width: number }) => (
+                <FixedSizeList
+                  height={height || 600} // Fallback height if measuring fails
+                  width={width || 800}
+                  itemCount={searchResults.length}
+                  itemSize={60} // Exact match for CSS
+                  itemData={itemData}
+                  onItemsRendered={onItemsRendered}
+                >
+                  {VirtualResultRow}
+                </FixedSizeList>
+              )}
+            </AutoSizer>
+          ) : (
+            <div style={{ padding: '0' }}>
+              {searchResults.map((res, idx) => (
+                <StandardResultRow 
+                  key={res.id}
+                  res={res}
+                  index={idx}
+                  isSelected={selectedResult?.id === res.id}
+                  isFocused={focusedIndex === idx}
+                  onSelect={handleSelect}
+                  onOpen={handleOpen}
+                  onSetFocused={setFocusedIndex}
+                />
+              ))}
             </div>
-            <div className="findr-result-details">
-              <div className="findr-result-name">{res.fileName}</div>
-            </div>
-            <div className="findr-result-meta">
-              <div className="findr-result-size">{res.isFolder ? '--' : formatFileSize(res.size)}</div>
-            </div>
-          </div>
-        ))}
-        
-        {/* Invisible target to trigger the load-more intersection */}
-        {(visibleCount < searchResults.length || resultCapped) && (
-          <div ref={observerTarget} style={{ height: '20px', opacity: 0 }} />
-        )}
-
-        {searchResults.length === 0 && !isSearching && (
+          )
+        ) : !isSearching && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px', textAlign: 'center' }}>
             {!selectedProject && !search ? (
               <>
@@ -221,11 +297,6 @@ export const ResultsContent = React.memo(function ResultsContent({
                   Try adjusting your search terms or clearing filters like "CAD only" or folder restrictions.
                 </div>
               </>
-            )}
-            {folderFilter && (
-              <button className="findr-btn-secondary" style={{ marginTop: 24, marginInline: 'auto', padding: '10px 20px', flex: 'none' }} onClick={() => setFolderFilter('')}>
-                Clear Filters
-              </button>
             )}
           </div>
         )}

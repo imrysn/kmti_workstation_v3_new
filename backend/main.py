@@ -66,7 +66,7 @@ async def lifespan(app: FastAPI):
         indexer.stop()
 
 
-app = FastAPI(title="KMTI Workstation API", version="3.0.0", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation API", version="3.1.7", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -111,16 +111,18 @@ else:
 def health_check():
     return {
         "status": "ok", 
-        "version": "3.1.4", 
+        "version": "3.1.7", 
         "uptime_seconds": time.time() - START_TIME
     }
 
 if __name__ == "__main__":
     import uvicorn
-    # Disable reload and pass app object directly in bundled/production mode (IS_FROZEN)
-    if IS_FROZEN:
-        logger.info(f"Running in production mode (frozen). Binding to 0.0.0.0:8000")
-        uvicorn.run(app, host="0.0.0.0", port=8000)
-    else:
-        logger.info("Running in development mode (source).")
+    # Use the GUI by default if running from source main.py
+    try:
+        from gui import KMTIServerGUI
+        logger.info("Launching KMTI Server Control Panel...")
+        gui = KMTIServerGUI(app)
+        gui.mainloop()
+    except Exception as e:
+        logger.error(f"Failed to launch GUI: {e}. Falling back to console.")
         uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,6 +1,6 @@
 {
   "name": "kmti-workstation-v3",
-  "version": "3.1.4",
+  "version": "3.1.7",
   "description": "KMTI Data Management Workstation - Modernized",
   "author": "Kusakabe & Maeno Tech Inc",
   "main": "electron/main.js",
@@ -51,11 +51,15 @@
     }
   },
   "dependencies": {
+    "@types/react-virtualized-auto-sizer": "^1.0.4",
+    "@types/react-window": "^1.8.8",
     "axios": "^1.7.2",
     "electron-updater": "^6.8.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.23.1",
+    "react-virtualized-auto-sizer": "^2.0.3",
+    "react-window": "^2.2.7",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
