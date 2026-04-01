@@ -1,13 +1,13 @@
 {
   "name": "kmti-workstation-v3",
-  "version": "3.4.5",
+  "version": "3.4.6",
   "description": "KMTI Data Management Workstation - Modernized",
   "author": "Kusakabe & Maeno Tech Inc",
   "main": "electron/main.js",
   "scripts": {
     "dev": "concurrently -n \"Vite,Desktop\" -c \"cyan,magenta\" \"vite --port 5174\" \"wait-on tcp:5174 && electron .\"",
     "clean": "if exist dist rmdir /s /q dist & if exist release rmdir /s /q release & if exist node_modules\\.vite rmdir /s /q node_modules\\.vite",
-    "build": "vite build",
+    "build": "npm run backend:build && vite build",
     "preview": "vite preview",
     "backend": "cd backend && python main.py",
     "backend:build": "cd backend && python build_server.py",
@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.kmti.workstation",
-    "productName": "KMTI Workstation v3.4.5",
+    "productName": "KMTI Workstation v3.4.6",
     "directories": {
       "output": "release"
     },

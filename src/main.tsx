@@ -1,4 +1,4 @@
-// v3.1.1-build-fix
+// v3.4.5-stable
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
