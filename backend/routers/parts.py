@@ -267,19 +267,17 @@ async def get_project_tree(project_id: int, parent_path: str = Query(None), db: 
         }]
 
     # 2. Fetch direct children of parent_path at the SQL level (NON-RECURSIVE)
-    norm_parent = normalize_path(parent_path)
-    prefix = norm_parent + "/"
+    query = select(CadFileIndex.file_path, CadFileIndex.file_name, CadFileIndex.is_folder, CadFileIndex.file_type).where(CadFileIndex.project_id == project_id)
     
-    # Query only DIRECT children (items starting with prefix but having no more slashes)
-    result = await db.execute(
-        select(CadFileIndex.file_path, CadFileIndex.file_name, CadFileIndex.is_folder, CadFileIndex.file_type)
-        .where(
-            (CadFileIndex.project_id == project_id) &
-            (CadFileIndex.file_path.like(f"{prefix}%")) &
-            (CadFileIndex.file_path.not_like(f"{prefix}%/%"))
-        )
-        .order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
-    )
+    if parent_path:
+        norm_fp = normalize_path(parent_path)
+        # INSTANT BROWSING: select only children with this parent_path
+        query = query.where(CadFileIndex.parent_path == norm_fp)
+    else:
+        # Root level for project: parent_path is empty or project root
+        query = query.where((CadFileIndex.parent_path == "") | (CadFileIndex.parent_path == root_path))
+    
+    result = await db.execute(query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc()))
     items = result.all()
     
     # Python code is now just a simple mapping (no more 180k loop!)
@@ -327,15 +325,12 @@ async def list_parts(
         effective_recursive = recursive if is_searching else False
         
         if effective_recursive:
-            # Recursive search (default or project-wide)
+            # Recursive search: find all items starting with this prefix
             query = query.where(CadFileIndex.file_path.ilike(f"{prefix}%"))
         else:
-            # Non-recursive: strictly children of this folder
-            # Prefix match AND excludes items deeper than 1 level
-            query = query.where(
-                (CadFileIndex.file_path.ilike(f"{prefix}%")) & 
-                (CadFileIndex.file_path.not_like(f"{prefix}%/%"))
-            )
+            # INSTANT BROWSING: find only immediate children using index
+            # This is O(1) with the new parent_path column
+            query = query.where(CadFileIndex.parent_path == norm_fp)
             
     # 3. CAD Only Filter
     cad_exts = {'.icd', '.dwg', '.dxf', '.sldprt', '.slddrw', '.sldasm', '.step', '.stp', '.iges', '.igs'}

@@ -27,7 +27,8 @@ def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse
         "part_geom_name": None,
         "bound_x": None,
         "bound_y": None,
-        "bound_z": None
+        "bound_z": None,
+        "parent_path": str(filepath.parent.resolve()).replace("\\", "/")
     }
 
     try:

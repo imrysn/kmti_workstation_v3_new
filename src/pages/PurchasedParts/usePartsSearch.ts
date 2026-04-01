@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { partsApi } from '../../services/api';
 import type { IPurchasedPart } from '../../types';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -8,39 +8,66 @@ export function usePartsSearch(selectedProjectId?: number) {
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [cadOnly, setCadOnly] = useState(false);
   const [includeFolders, setIncludeFolders] = useState(true);
-  const [recursiveSearch, setRecursiveSearch] = useState(true);
+  
+  // Optimization: Default to Non-Recursive for "Instant Browsing"
+  const [recursiveSearch, setRecursiveSearch] = useState(false);
   const [folderFilter, setFolderFilter] = useState('');
   
-  const debouncedSearch = useDebounce(search, 400);
+  const debouncedSearch = useDebounce(search, 300);
 
   const [searchResults, setSearchResults] = useState<IPurchasedPart[]>([]);
   const [resultTotal, setResultTotal] = useState(0);
   const [resultCapped, setResultCapped] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
 
-  // Pagination
+  // Pagination - 100 per batch for professional responsiveness
   const [offset, setOffset] = useState(0);
   const [limit, setLimit] = useState(100);
 
+  // Sync: If the user starts typing, automatically switch to Recursive mode for better tool-finding
+  useEffect(() => {
+    if (search.trim().length > 1 && !recursiveSearch) {
+      setRecursiveSearch(true);
+    } else if (search.trim().length === 0 && recursiveSearch) {
+      // If cleared, go back to browsing mode
+      setRecursiveSearch(false);
+    }
+  }, [search]);
+
+  // Reset when project changes to avoid "Ghost results" from previous project
+  useEffect(() => {
+    setSearchResults([]);
+    setResultTotal(0);
+    setSearch('');
+    setFolderFilter('');
+    setOffset(0);
+  }, [selectedProjectId]);
+
   const handleSearch = useCallback(async (isLoadMore = false) => {
-    if (!selectedProjectId && !debouncedSearch) {
+    if (!selectedProjectId && !search) {
       setSearchResults([]);
       setResultTotal(0);
       return;
     }
 
+    // Safety: Don't load more if already loading or no more results
+    if (isLoadMore && (isLoadingMore || !resultCapped)) return;
+
     const start = performance.now();
     if (!isLoadMore) {
       setIsSearching(true);
       setOffset(0);
+    } else {
+      setIsLoadingMore(true);
     }
     
     try {
       const currentOffset = isLoadMore ? offset + limit : 0;
       const res = await partsApi.listParts(
         selectedProjectId,
-        debouncedSearch || undefined,
+        search || undefined, 
         caseSensitive,
         cadOnly,
         includeFolders,
@@ -60,7 +87,7 @@ export function usePartsSearch(selectedProjectId?: number) {
         setOffset(currentOffset);
       } else {
         setSearchResults(items);
-        setOffset(currentOffset); // 0
+        setOffset(0);
       }
       
       setResultTotal(total);
@@ -70,12 +97,14 @@ export function usePartsSearch(selectedProjectId?: number) {
       console.error(err);
     } finally {
       setIsSearching(false);
+      setIsLoadingMore(false);
     }
   }, [
-    selectedProjectId, debouncedSearch, caseSensitive, cadOnly, 
-    includeFolders, folderFilter, recursiveSearch, limit, offset
+    selectedProjectId, search, caseSensitive, cadOnly, 
+    includeFolders, folderFilter, recursiveSearch, limit, offset, resultCapped, isLoadingMore
   ]);
 
+  // Execute search when any filter changes
   useEffect(() => {
     handleSearch(false);
   }, [debouncedSearch, selectedProjectId, cadOnly, includeFolders, recursiveSearch, folderFilter, caseSensitive]);
@@ -89,7 +118,7 @@ export function usePartsSearch(selectedProjectId?: number) {
     folderFilter, setFolderFilter,
     searchResults, setSearchResults,
     resultTotal, resultCapped,
-    isSearching, searchTime,
+    isSearching, isLoadingMore, searchTime,
     handleSearch, offset, limit, setLimit
   };
 }

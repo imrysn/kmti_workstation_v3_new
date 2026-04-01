@@ -4,33 +4,20 @@ from ctypes import wintypes
 from PIL import Image
 import io
 import pythoncom
+from win32com.shell import shell, shellcon
 from win32 import win32gui
 from typing import Optional
 
-# GUID definitions
-class GUID(ctypes.Structure):
-    _fields_ = [
-        ("Data1", wintypes.DWORD),
-        ("Data2", wintypes.WORD),
-        ("Data3", wintypes.WORD),
-        ("Data4", wintypes.BYTE * 8)
-    ]
-    @classmethod
-    def from_str(cls, guid_str):
-        import uuid
-        u = uuid.UUID(guid_str)
-        return cls(u.time_low, u.time_mid, u.time_hi_version, (ctypes.c_ubyte * 8)(*u.bytes[8:]))
-
-class SIZE(ctypes.Structure):
-    _fields_ = [("cx", wintypes.LONG), ("cy", wintypes.LONG)]
-
-GUID_IShellItem = GUID.from_str("43826d1e-e718-42ee-bc55-a1e261c37bfe")
-GUID_IShellItemImageFactory = GUID.from_str("bcc18b79-ba16-442f-80c4-8059c18159ef")
-
-shell32 = ctypes.windll.shell32
+# ---------------------------------------------------------
+# Professional COM Interface Definitions
+# ---------------------------------------------------------
+# IExtractImage: {BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}
+IID_IExtractImage = pythoncom.MakeIID("{BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}")
+# IShellItemImageFactory: {bcc18b79-ba16-442f-80c4-8059c18159ef}
+IID_IShellItemImageFactory = pythoncom.MakeIID("{bcc18b79-ba16-442f-80c4-8059c18159ef}")
 
 def _hbitmap_to_pil(hbitmap):
-    """Converts a Windows HBITMAP to a PIL Image."""
+    """Converts a Windows HBITMAP to a PIL Image using win32ui for bit-safety."""
     import win32ui
     hdc = win32gui.GetDC(0)
     dc = win32ui.CreateDCFromHandle(hdc)
@@ -41,8 +28,6 @@ def _hbitmap_to_pil(hbitmap):
     w, h = info['bmWidth'], info['bmHeight']
     
     memdc.SelectObject(bmp)
-    
-    # Get bitmap bits
     bits = bmp.GetBitmapBits(True)
     img = Image.frombuffer('RGBA', (w, h), bits, 'raw', 'BGRA', 0, 1)
     
@@ -55,84 +40,70 @@ def _hbitmap_to_pil(hbitmap):
 
 def get_shell_thumbnail(file_path: str, size: int = 1024) -> Optional[Image.Image]:
     """
-    Extracts a high-quality thumbnail from the Windows Shell.
-    Uses IShellItemImageFactory with SIIGBF_THUMBNAILONLY to force a real preview.
+    Professional Multi-Tier Thumbnail Extraction Engine.
+    Tier 1: IShellItemImageFactory (Modern, High-Res)
+    Tier 2: IExtractImage (Legacy, CAD-Standard for iCAD SX)
     """
     if not os.path.exists(file_path):
         return None
 
+    pythoncom.CoInitializeEx(pythoncom.COINIT_APARTMENTTHREADED)
     try:
-        # Initialize COM
-        pythoncom.CoInitialize()
-
-        # 1. Create IShellItem from path
-        p_shell_item = ctypes.c_void_p()
-        # Ensure path is absolute and uses backslashes
         abs_path = os.path.abspath(file_path).replace('/', '\\')
         
-        ret = shell32.SHCreateItemFromParsingName(
-            ctypes.c_wchar_p(abs_path),
-            None,
-            GUID_IShellItem,
-            ctypes.byref(p_shell_item)
-        )
+        # --- Tier 1: Modern IShellItemImageFactory ---
+        try:
+            # We use SHCreateItemFromParsingName to get the IShellItem
+            si = shell.SHCreateItemFromParsingName(abs_path, None, shell.IID_IShellItem)
+            
+            # Note: pywin32's shell module has limited support for IID_IShellItemImageFactory
+            # but we can try to QueryInterface if it's available. 
+            # If not, we fall back to Tier 2 immediately.
+            factory = si.QueryInterface(IID_IShellItemImageFactory)
+            if factory:
+                # flags: SIIGBF_THUMBNAILONLY (0x2) | SIIGBF_BIGGERSIZEOK (0x1)
+                hbitmap = factory.GetImage((size, size), 0x2 | 0x1)
+                if hbitmap:
+                    img = _hbitmap_to_pil(hbitmap)
+                    win32gui.DeleteObject(hbitmap)
+                    return img
+        except Exception as e:
+            # -2147467262 = E_NOINTERFACE (Common for CAD files on IShellItemImageFactory)
+            pass
 
-        if ret != 0 or not p_shell_item:
-            print(f"  [DEBUG] SHCreateItemFromParsingName failed with {ret}")
-            return None
-
-        Release_Proto = ctypes.WINFUNCTYPE(ctypes.c_ulong, ctypes.c_void_p)
-        
-        # 2. Get IShellItemImageFactory interface
-        p_factory = ctypes.c_void_p()
-        p_vt = ctypes.cast(p_shell_item, ctypes.POINTER(ctypes.c_void_p))
-        vtable = ctypes.cast(p_vt.contents, ctypes.POINTER(ctypes.c_void_p))
-        
-        # QueryInterface = index 0, AddRef = 1, Release = 2
-        QI_Proto = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.POINTER(GUID), ctypes.POINTER(ctypes.c_void_p))
-        QI = QI_Proto(vtable[0])
-        
-        ret_qi = QI(p_shell_item, ctypes.byref(GUID_IShellItemImageFactory), ctypes.byref(p_factory))
-        
-        img = None
-        if ret_qi == 0 and p_factory:
-            # 3. Call GetImage(SIZE size, SIIGBF flags, HBITMAP *phbm)
-            p_factory_vt = ctypes.cast(p_factory, ctypes.POINTER(ctypes.c_void_p))
-            vtable_f = ctypes.cast(p_factory_vt.contents, ctypes.POINTER(ctypes.c_void_p))
+        # --- Tier 2: Legacy IExtractImage (The iCAD SX / CAD Specialist) ---
+        try:
+            desktop = shell.SHGetDesktopFolder()
+            # 1. Get PIDL
+            pidl, _ = desktop.ParseDisplayName(0, None, abs_path)
             
-            # GetImage = index 3
-            GetImage_Proto = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, SIZE, ctypes.c_int, ctypes.POINTER(wintypes.HBITMAP))
-            GetImage = GetImage_Proto(vtable_f[3])
+            # 2. Bind to parent folder
+            parent_shell_folder, relative_pidl = shell.SHBindToParent(pidl, shell.IID_IShellFolder)
             
-            hbitmap = wintypes.HBITMAP()
-            # SIIGBF_THUMBNAILONLY = 0x2, SIIGBF_BIGGERSIZEOK = 0x1
-            ret_img = GetImage(p_factory, SIZE(size, size), 0x2 | 0x1, ctypes.byref(hbitmap))
+            # 3. Get IExtractImage UI Object
+            # This is the industry-standard way for Fujitsu iCAD SX and SolidWorks legacy handlers
+            extractor = parent_shell_folder.GetUIObjectOf(0, [relative_pidl], IID_IExtractImage, 0)
             
-            if ret_img == 0 and hbitmap:
+            # GetLocation flags: IEIFLAG_SCREEN (0x20)
+            # This asks the CAD handler to provide a screen-ready preview
+            location, priority, flags = extractor.GetLocation((size, size), 32, shellcon.IEIFLAG_SCREEN)
+            
+            # Extract the actual HBITMAP
+            hbitmap = extractor.Extract()
+            if hbitmap:
                 img = _hbitmap_to_pil(hbitmap)
                 win32gui.DeleteObject(hbitmap)
-            else:
-                print(f"  [DEBUG] GetImage failed with {ret_img}")
-            
-            # Release Factory
-            Release_f = Release_Proto(vtable_f[2])
-            Release_f(p_factory)
-        else:
-            print(f"  [DEBUG] QueryInterface(IShellItemImageFactory) failed with {ret_qi}")
-
-        # Release Shell Item
-        Release_Item = Release_Proto(vtable[2])
-        Release_Item(p_shell_item)
-
-        return img
+                return img
+        except Exception:
+            pass
 
     except Exception as e:
-        print(f"Shell thumbnail extraction failed: {e}")
+        print(f"Professional Preview Extraction Failed for {file_path}: {e}")
         return None
     finally:
-        try:
-            pythoncom.CoUninitialize()
-        except: pass
+        pythoncom.CoUninitialize()
+    
+    return None
 
 if __name__ == "__main__":
     pass

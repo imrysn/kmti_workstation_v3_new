@@ -37,6 +37,7 @@ class CadFileIndex(Base):
     bound_x = Column(Float, nullable=True)
     bound_y = Column(Float, nullable=True)
     bound_z = Column(Float, nullable=True)
+    parent_path = Column(String(1024), index=True)
 
 class CharSearch(Base):
     """Maps to existing `char_search` table — English/Japanese character mapping."""

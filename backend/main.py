@@ -50,9 +50,16 @@ logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(">>> KMTI Workstation Backend Starting Up...")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    logger.info(">>> KMTI Workstation Backend v3.3.0 Starting Up...")
+    try:
+        # Robust DB Initialization (Handle busy connections during restarts)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("  [SUCCESS] Database connection established.")
+    except Exception as e:
+        logger.error(f"  [ERROR] Database initialization failed: {e}")
+        # We continue anyway so the GUI can at least show the error state
+        
     if indexer:
         indexer.start()
     
@@ -62,11 +69,15 @@ async def lifespan(app: FastAPI):
     yield  # Application runs here
 
     # --- Shutdown ---
+    logger.info(">>> KMTI Workstation Backend Shutting Down...")
     if indexer:
-        indexer.stop()
+        try:
+            indexer.stop()
+        except:
+            pass
 
 
-app = FastAPI(title="KMTI Workstation API", version="3.1.7", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation API", version="3.3.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

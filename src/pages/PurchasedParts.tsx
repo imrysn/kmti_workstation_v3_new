@@ -166,6 +166,7 @@ export default function PurchasedParts() {
           setSelectedTreePath={treeConfig.setSelectedTreePath}
           setExpandedFolders={treeConfig.setExpandedFolders}
           isSearching={searchConfig.isSearching}
+          isLoadingMore={searchConfig.isLoadingMore}
           resultCapped={searchConfig.resultCapped}
           resultTotal={searchConfig.resultTotal}
           searchResults={searchConfig.searchResults}

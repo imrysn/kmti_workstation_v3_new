@@ -1,14 +1,12 @@
-import React, { useMemo } from 'react'
-// Use namespace imports to resolve Vite/ESM optimization issues with these libraries
+import React, { useMemo, useState, useEffect } from 'react'
 import * as ReactWindow from 'react-window'
 import * as AutoSizerModule from 'react-virtualized-auto-sizer'
-import { SearchIcon, PackageIcon } from '../../components/FileIcons'
-import { FileIcon } from '../../components/FileIcons'
+import { SearchIcon, FileIcon } from '../../components/FileIcons'
 import Breadcrumbs from '../../components/Breadcrumbs'
 import { IPurchasedPart, IProject } from '../../types'
 import { formatFileSize } from './utils'
+import { Skeleton, ResultSkeleton } from '../../components/Skeleton'
 
-// Extract components from namespace imports safely
 const { FixedSizeList } = ReactWindow as any;
 const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer;
 
@@ -23,30 +21,27 @@ interface ResultsContentProps {
   setIncludeFolders: (val: boolean) => void
   recursiveSearch: boolean
   setRecursiveSearch: (val: boolean) => void
-
   selectedProject: IProject | null
   folderFilter: string
   setFolderFilter: (val: string) => void
   setSelectedTreePath: (val: string) => void
   setExpandedFolders: (updater: (prev: Set<string>) => Set<string>) => void
-
   isSearching: boolean
+  isLoadingMore: boolean
   resultCapped: boolean
   resultTotal: number
   searchResults: IPurchasedPart[]
   searchTime: number
-
   focusedIndex: number
   setFocusedIndex: (val: number) => void
   resultsListRef: React.RefObject<HTMLDivElement>
-
   handleOpen: (part: IPurchasedPart) => void
   selectedResult: IPurchasedPart | null
   setSelectedResult: (part: IPurchasedPart | null) => void
   onLoadMore?: () => void
 }
 
-// --- Standard Result Row for Non-Virtualized Fallback ---
+// --- Lazy Thumbnail Result Row ---
 const StandardResultRow = React.memo(({ 
   res, 
   isSelected, 
@@ -54,7 +49,8 @@ const StandardResultRow = React.memo(({
   onSelect, 
   onOpen, 
   onSetFocused,
-  index
+  index,
+  isScrolling = false
 }: { 
   res: IPurchasedPart, 
   isSelected: boolean, 
@@ -62,13 +58,15 @@ const StandardResultRow = React.memo(({
   onSelect: (r: IPurchasedPart, i: number) => void, 
   onOpen: (r: IPurchasedPart) => void, 
   onSetFocused: (i: number) => void,
-  index: number
+  index: number,
+  isScrolling?: boolean
 }) => (
   <div
     className={`findr-result-item ${isSelected ? 'selected' : ''} ${isFocused ? 'focused' : ''}`}
     onClick={() => onSelect(res, index)}
     onDoubleClick={() => !res.isFolder && onOpen(res)}
     onMouseEnter={() => onSetFocused(index)}
+    style={{ animationDelay: `${(index % 10) * 0.05}s` }}
   >
     <div className="findr-result-icon">
       <FileIcon
@@ -77,6 +75,7 @@ const StandardResultRow = React.memo(({
         fileName={res.fileName}
         filePath={res.filePath}
         size={18}
+        showPreview={!isScrolling} 
       />
     </div>
     <div className="findr-result-details">
@@ -88,20 +87,10 @@ const StandardResultRow = React.memo(({
   </div>
 ));
 
-// --- Virtualized Row for Large Results ---
-const VirtualResultRow = React.memo(({ 
-  index, 
-  style, 
-  data 
-}: { 
-  index: number, 
-  style: React.CSSProperties, 
-  data: any 
-}) => {
-  const { results, selectedId, focusedIndex, onSelect, onOpen, onSetFocused } = data;
+const VirtualResultRow = React.memo(({ index, style, data }: any) => {
+  const { results, selectedId, focusedIndex, onSelect, onOpen, onSetFocused, isScrolling } = data;
   const res = results[index];
   if (!res) return null;
-
   return (
     <div style={style}>
       <StandardResultRow
@@ -112,42 +101,24 @@ const VirtualResultRow = React.memo(({
         onOpen={onOpen}
         onSetFocused={onSetFocused}
         index={index}
+        isScrolling={isScrolling}
       />
     </div>
   );
 });
 
 export const ResultsContent = React.memo(function ResultsContent({
-  search,
-  setSearch,
-  caseSensitive,
-  setCaseSensitive,
-  cadOnly,
-  setCadOnly,
-  includeFolders,
-  setIncludeFolders,
-  recursiveSearch,
-  setRecursiveSearch,
-  selectedProject,
-  folderFilter,
-  setFolderFilter,
-  setSelectedTreePath,
-  setExpandedFolders,
-  isSearching,
-  resultCapped,
-  resultTotal,
-  searchResults,
-  searchTime,
-  focusedIndex,
-  setFocusedIndex,
-  resultsListRef,
-  handleOpen,
-  selectedResult,
-  setSelectedResult,
-  onLoadMore
+  search, setSearch, caseSensitive, setCaseSensitive, cadOnly, setCadOnly,
+  includeFolders, setIncludeFolders, recursiveSearch, setRecursiveSearch,
+  selectedProject, folderFilter, setFolderFilter, setSelectedTreePath, setExpandedFolders,
+  isSearching, isLoadingMore, resultCapped, resultTotal, searchResults, searchTime,
+  focusedIndex, setFocusedIndex, resultsListRef, handleOpen,
+  selectedResult, setSelectedResult, onLoadMore
 }: ResultsContentProps) {
   
-  // Handle Selection Logic
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = React.useRef<any>(null);
+
   const handleSelect = React.useCallback((res: IPurchasedPart, index: number) => {
     setFocusedIndex(index);
     if (res.isFolder) {
@@ -161,36 +132,56 @@ export const ResultsContent = React.memo(function ResultsContent({
     }
   }, [setFocusedIndex, setFolderFilter, setSelectedTreePath, setExpandedFolders, setSelectedResult]);
 
-  // Virtualization Context Data
   const itemData = useMemo(() => ({
     results: searchResults,
     selectedId: selectedResult?.id,
     focusedIndex,
     onSelect: handleSelect,
     onOpen: handleOpen,
-    onSetFocused: setFocusedIndex
-  }), [searchResults, selectedResult?.id, focusedIndex, handleSelect, handleOpen, setFocusedIndex]);
+    onSetFocused: setFocusedIndex,
+    isScrolling 
+  }), [searchResults, selectedResult?.id, focusedIndex, handleSelect, handleOpen, setFocusedIndex, isScrolling]);
+
+  // Standard Scroll Listener for Infinite Scroll
+  const handleContainerScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (resultCapped && !isLoadingMore && (scrollHeight - scrollTop - clientHeight < 200)) {
+      onLoadMore?.();
+    }
+
+    // Lazy Preview Logic
+    if (!isScrolling) setIsScrolling(true);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 200);
+  };
+
+  // Virtualized Scroll Logic
+  const onVirtualScroll = React.useCallback(() => {
+    if (!isScrolling) setIsScrolling(true);
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 200);
+  }, [isScrolling]);
 
   const onItemsRendered = ({ visibleStopIndex }: { visibleStopIndex: number }) => {
-    if (resultCapped && onLoadMore && visibleStopIndex >= searchResults.length - 10) {
+    if (resultCapped && onLoadMore && visibleStopIndex >= searchResults.length - 15) {
       onLoadMore();
     }
   };
 
-  // --- Hybrid Rendering Decision ---
-  // If fewer than 500 items, render normally for maximum reliability.
-  // If 500+, use the Virtualized "Turbo" Mode for performance.
   const isVirtualized = searchResults.length >= 500;
 
   return (
     <div className="findr-center">
       <div className="findr-search-container">
         <div className="findr-search-input-wrapper">
-          <div className="findr-search-icon">
-            <SearchIcon size={18} />
-          </div>
+          <div className="findr-search-icon"><SearchIcon size={18} /></div>
           <input
             className="findr-search-input"
+            autoFocus
             placeholder={`Search in ${selectedProject?.name || 'all projects'}...`}
             value={search}
             onChange={e => setSearch(e.target.value)}
@@ -198,18 +189,10 @@ export const ResultsContent = React.memo(function ResultsContent({
         </div>
 
         <div className="findr-search-filters">
-          <label className="findr-filter">
-            <input type="checkbox" checked={caseSensitive} onChange={e => setCaseSensitive(e.target.checked)} /> Case sensitive
-          </label>
-          <label className="findr-filter">
-            <input type="checkbox" checked={cadOnly} onChange={e => setCadOnly(e.target.checked)} /> CAD only
-          </label>
-          <label className="findr-filter">
-            <input type="checkbox" checked={includeFolders} onChange={e => setIncludeFolders(e.target.checked)} /> Include folders
-          </label>
-          <label className="findr-filter">
-            <input type="checkbox" checked={recursiveSearch} onChange={e => setRecursiveSearch(e.target.checked)} /> Recursive
-          </label>
+          <label className="findr-filter"><input type="checkbox" checked={caseSensitive} onChange={e => setCaseSensitive(e.target.checked)} /> Case sensitive</label>
+          <label className="findr-filter"><input type="checkbox" checked={cadOnly} onChange={e => setCadOnly(e.target.checked)} /> CAD only</label>
+          <label className="findr-filter"><input type="checkbox" checked={includeFolders} onChange={e => setIncludeFolders(e.target.checked)} /> Folders</label>
+          <label className="findr-filter"><input type="checkbox" checked={recursiveSearch} onChange={e => setRecursiveSearch(e.target.checked)} /> Recursive</label>
         </div>
       </div>
 
@@ -226,33 +209,36 @@ export const ResultsContent = React.memo(function ResultsContent({
             }}
           />
         )}
-        <span style={{ marginLeft: 'auto' }}>
+        <span style={{ marginLeft: 'auto', opacity: 0.8 }}>
           {isSearching
-            ? "Searching..."
-            : resultCapped
-              ? `Showing ${searchResults.length} of ${resultTotal.toLocaleString()} — scroll for more`
-              : `${searchResults.length} found (${searchTime.toFixed(2)}s)`
+            ? "Searching..." 
+            : resultTotal > 0 
+              ? `${searchResults.length} of ${resultTotal.toLocaleString()} found (${searchTime.toFixed(2)}s)`
+              : "0 FOUND"
           }
         </span>
       </div>
 
       <div className="findr-results-list" ref={resultsListRef} tabIndex={0} style={{ 
-        overflow: isVirtualized ? 'hidden' : 'auto', 
-        height: '100%', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        flex: 1 
+        overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 
       }}>
-        {searchResults.length > 0 ? (
+        {isSearching ? (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <ResultSkeleton key={i} />
+            ))}
+          </div>
+        ) : searchResults.length > 0 ? (
           isVirtualized ? (
             <AutoSizer>
-              {({ height, width }: { height: number; width: number }) => (
+              {({ height, width }: any) => (
                 <FixedSizeList
-                  height={height || 600} // Fallback height if measuring fails
+                  height={height || 600}
                   width={width || 800}
                   itemCount={searchResults.length}
-                  itemSize={60} // Exact match for CSS
+                  itemSize={60}
                   itemData={itemData}
+                  onScroll={onVirtualScroll}
                   onItemsRendered={onItemsRendered}
                 >
                   {VirtualResultRow}
@@ -260,7 +246,7 @@ export const ResultsContent = React.memo(function ResultsContent({
               )}
             </AutoSizer>
           ) : (
-            <div style={{ padding: '0' }}>
+            <div style={{ overflowY: 'auto', flex: 1 }} onScroll={handleContainerScroll}>
               {searchResults.map((res, idx) => (
                 <StandardResultRow 
                   key={res.id}
@@ -273,31 +259,18 @@ export const ResultsContent = React.memo(function ResultsContent({
                   onSetFocused={setFocusedIndex}
                 />
               ))}
+              {resultCapped && (
+                <div style={{ padding: '8px 0' }}>
+                  <ResultSkeleton />
+                </div>
+              )}
             </div>
           )
         ) : !isSearching && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px', textAlign: 'center' }}>
-            {!selectedProject && !search ? (
-              <>
-                <div style={{ marginBottom: 24, opacity: 0.5 }}>
-                  <PackageIcon size={80} strokeWidth={1.5} color="var(--accent)" />
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8, letterSpacing: '-0.02em' }}>READY TO EXPLORE?</div>
-                <div style={{ fontSize: 14, color: 'var(--text-muted)', maxWidth: 320, margin: '0 auto', lineHeight: 1.6 }}>
-                  Select a project and search across all indexed data.
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ marginBottom: 20, opacity: 0.5 }}>
-                  <SearchIcon size={64} strokeWidth={1.5} color="var(--text-muted)" />
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>No results found</div>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', maxWidth: 300, margin: '0 auto' }}>
-                  Try adjusting your search terms or clearing filters like "CAD only" or folder restrictions.
-                </div>
-              </>
-            )}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: '400px' }}>
+            <div style={{ opacity: 0.3, marginBottom: 20 }}><SearchIcon size={64} /></div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>{search ? "No results found" : "Select a project to browse"}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Try adjusting your search terms or clearing filters.</div>
           </div>
         )}
       </div>

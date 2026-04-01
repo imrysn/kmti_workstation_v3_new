@@ -16,6 +16,7 @@ interface FileIconProps extends IconProps {
   isFolder?: boolean;
   isOpen?: boolean;
   filePath?: string;
+  showPreview?: boolean;
 }
 
 // Global cache for icons to avoid redundant IPC calls
@@ -31,16 +32,16 @@ export const FileIcon: React.FC<FileIconProps> = ({
   strokeWidth = 2.2,
   style,
   isOpen = false,
-  filePath
+  filePath,
+  showPreview = true
 }) => {
   const [nativeIcon, setNativeIcon] = useState<string | null>(null);
   const extension = fileType || (fileName ? `.${fileName.split('.').pop()?.toLowerCase()}` : '');
 
   useEffect(() => {
-    // Only fetch for files. Folders will use our premium custom SVG for better consistency
-    // across local and network drives.
+    // Optimization: Only fetch icons if we aren't scrolling and it's a file
     // @ts-ignore
-    if (window.electronAPI && filePath && !isFolder) {
+    if (showPreview && window.electronAPI && filePath && !isFolder) {
       // Check cache first
       if (iconCache[extension]) {
         setNativeIcon(iconCache[extension]);
@@ -57,7 +58,7 @@ export const FileIcon: React.FC<FileIconProps> = ({
         console.warn("[FileIcon] Could not fetch native icon for:", filePath, err);
       });
     }
-  }, [filePath, extension, isFolder]);
+  }, [filePath, extension, isFolder, showPreview]);
 
   // If we have a native icon, use it!
   if (nativeIcon) {
