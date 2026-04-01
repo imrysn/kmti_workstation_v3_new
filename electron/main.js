@@ -19,7 +19,7 @@ try {
 // process.env.NODE_ENV is NOT set by electron-builder — never use it for this.
 const isDev = !app.isPackaged
 let mainWindow
-let pythonProcess
+let pythonProcess = null
 let logStream
 
 // --- Window State Management ---
@@ -135,6 +135,56 @@ function createWindow() {
   mainWindow.on('move', saveState)
 }
 
+function startBackend() {
+  const backendPath = isDev
+    ? path.join(__dirname, '..', 'backend', 'main.py')
+    : path.join(process.resourcesPath, 'backend', 'dist', 'server.exe')
+
+  console.log(`>>> Starting backend at: ${backendPath}`)
+  logStream.write(`Starting backend at: ${backendPath}\n`)
+
+  if (isDev) {
+    pythonProcess = spawn('python', [backendPath], {
+      stdio: 'pipe',
+      detached: false
+    })
+  } else {
+    pythonProcess = spawn(backendPath, [], {
+      stdio: 'pipe',
+      detached: false
+    })
+  }
+
+  pythonProcess.stdout.on('data', (data) => {
+    const msg = data.toString()
+    console.log(`[BACKEND] ${msg}`)
+    logStream.write(`[BACKEND] ${msg}`)
+  })
+
+  pythonProcess.stderr.on('data', (data) => {
+    const msg = data.toString()
+    console.error(`[BACKEND-ERR] ${msg}`)
+    logStream.write(`[BACKEND-ERR] ${msg}`)
+  })
+
+  pythonProcess.on('error', (err) => {
+    console.error('>>> Failed to start backend:', err)
+    logStream.write(`Failed to start backend: ${err}\n`)
+  })
+}
+
+function killBackend() {
+  if (pythonProcess) {
+    console.log('>>> Killing backend process...')
+    if (process.platform === 'win32') {
+      execSync(`taskkill /F /T /PID ${pythonProcess.pid}`, { stdio: 'ignore' })
+    } else {
+      pythonProcess.kill()
+    }
+    pythonProcess = null
+  }
+}
+
 app.whenReady().then(() => {
   initLogStream()
 
@@ -236,10 +286,15 @@ app.whenReady().then(() => {
 
   createWindow()
   setupAutoUpdater()
+  startBackend()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('will-quit', () => {
+  killBackend()
 })
 
 app.on('window-all-closed', () => {

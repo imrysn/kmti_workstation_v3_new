@@ -1,6 +1,6 @@
 {
   "name": "kmti-workstation-v3",
-  "version": "3.5.2",
+  "version": "3.5.3",
   "description": "KMTI Data Management Workstation - Modernized",
   "author": "Kusakabe & Maeno Tech Inc",
   "main": "electron/main.js",
@@ -18,7 +18,7 @@
   },
   "build": {
     "appId": "com.kmti.workstation",
-    "productName": "KMTI Workstation v3.5.2",
+    "productName": "KMTI Workstation v3.5.3",
     "directories": {
       "output": "release"
     },
@@ -50,7 +50,17 @@
       "owner": "imrysn",
       "repo": "kmti_workstation_v3_new",
       "releaseType": "release"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "backend/dist",
+        "to": "backend/dist",
+        "filter": [
+          "server.exe",
+          "*.json"
+        ]
+      }
+    ]
   },
   "dependencies": {
     "@types/react-virtualized-auto-sizer": "^1.0.4",
