@@ -1,6 +1,6 @@
 {
   "name": "kmti-workstation-v3",
-  "version": "3.4.6",
+  "version": "3.5.0",
   "description": "KMTI Data Management Workstation - Modernized",
   "author": "Kusakabe & Maeno Tech Inc",
   "main": "electron/main.js",
@@ -13,11 +13,12 @@
     "backend:build": "cd backend && python build_server.py",
     "electron": "electron .",
     "pack": "npm run clean && npm run build && electron-builder --dir",
+    "dist:publish": "npm run clean && npm run build && electron-builder --publish always",
     "dist": "npm run clean && npm run build && electron-builder"
   },
   "build": {
     "appId": "com.kmti.workstation",
-    "productName": "KMTI Workstation v3.4.6",
+    "productName": "KMTI Workstation v3.5.0",
     "directories": {
       "output": "release"
     },
