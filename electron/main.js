@@ -94,7 +94,7 @@ function createWindow() {
       nodeIntegration: false,
       webSecurity: false,
     },
-    icon: path.join(__dirname, '..', 'src', 'assets', 'kmti_logo.png'),
+    icon: path.join(__dirname, 'assets', 'icon.png'),
     backgroundColor: '#f1f5f9',
   })
 
