@@ -7,6 +7,9 @@ import customtkinter
 base_dir = os.path.dirname(os.path.abspath(__file__))
 ctk_dir = os.path.dirname(customtkinter.__file__)
 
+# Log paths for debugging
+print(f">>> CustomTkinter Path: {ctk_dir}")
+
 PyInstaller.__main__.run([
     'gui.py',                        # Main Entry Point (Windowed)
     '--name=server',                 # Output name: server.exe
@@ -32,8 +35,9 @@ PyInstaller.__main__.run([
     f'--add-data=routers{os.pathsep}routers',
     f'--add-data=data{os.pathsep}data',
     f'--add-data=.env{os.pathsep}.',
-    # Include CustomTkinter assets
-    f'--add-data={ctk_dir}{os.pathsep}customtkinter',
+    # Include CustomTkinter assets with a more explicit mapping
+    # This maps the library's contents directly to the 'customtkinter' folder in the .exe
+    f'--add-data={ctk_dir}{os.pathsep}customtkinter/',
     # Include kmti_logo.png for GUI/Tray
     f'--add-data=../src/assets/kmti_logo.png{os.pathsep}src/assets',
     '--workpath=build',
