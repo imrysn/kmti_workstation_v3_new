@@ -35,29 +35,33 @@ try:
 except ImportError:
     indexer = None
 
-# --- Production Logging Setup ---
-LOG_DIR = os.path.join(BASE_DIR, "logs")
-try:
+# --- Production-Proof Logging Setup ---
+if IS_FROZEN:
+    # In production (C:\Program Files), we cannot write to the EXE folder.
+    # We log to stdout ONLY, and Electron captures it in a safe USER folder.
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        handlers=[logging.StreamHandler(sys.stdout)]
+    )
+else:
+    # In development, we keep the convenient file log
+    LOG_DIR = os.path.join(BASE_DIR, "logs")
     os.makedirs(LOG_DIR, exist_ok=True)
-except Exception:
-    # If we can't create /logs (e.g. read-only NAS folder), 
-    # fall back to the current directory
-    LOG_DIR = BASE_DIR
-
-LOG_FILE = os.path.join(LOG_DIR, "production.log")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_FILE, encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+    LOG_FILE = os.path.join(LOG_DIR, "production.log")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        handlers=[
+            logging.FileHandler(LOG_FILE, encoding='utf-8'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
 logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(">>> KMTI Workstation Backend v3.4.0 Starting Up...")
+    logger.info(">>> KMTI Workstation Backend v3.5.4-readonly-stability Starting Up...")
     try:
         # Robust DB Initialization (Handle busy connections during restarts)
         async with engine.begin() as conn:
@@ -84,7 +88,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="KMTI Workstation API", version="3.4.5", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation v3.5.4", version="3.5.4", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -129,7 +133,7 @@ else:
 def health_check():
     return {
         "status": "ok", 
-        "version": "3.1.7", 
+        "version": "3.5.4", 
         "uptime_seconds": time.time() - START_TIME
     }
 
