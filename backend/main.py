@@ -1,3 +1,10 @@
+import asyncio
+import sys
+
+# Windows Stability Fix: Force SelectorEventLoop for reliable MySQL networking
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,7 +57,7 @@ logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(">>> KMTI Workstation Backend v3.3.0 Starting Up...")
+    logger.info(">>> KMTI Workstation Backend v3.4.0 Starting Up...")
     try:
         # Robust DB Initialization (Handle busy connections during restarts)
         async with engine.begin() as conn:
@@ -77,7 +84,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="KMTI Workstation API", version="3.3.0", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation API", version="3.4.2", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
