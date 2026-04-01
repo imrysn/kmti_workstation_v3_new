@@ -85,7 +85,7 @@ class KMTIServerGUI(ctk.CTk):
         self.should_exit = False
         
         # Window Configuration
-        self.title("KMTI Workstation v3.4.2 — Control Center")
+        self.title("KMTI Workstation v3.4.4 — Control Center")
         self.geometry("900x600")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -99,7 +99,7 @@ class KMTIServerGUI(ctk.CTk):
         self.logo_label = ctk.CTkLabel(self.sidebar, text="KMTI WORKSTATION", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         
-        self.subtitle_label = ctk.CTkLabel(self.sidebar, text="Backend Control Center v3.4.2", font=ctk.CTkFont(size=11), text_color="gray")
+        self.subtitle_label = ctk.CTkLabel(self.sidebar, text="Backend Control Center v3.4.4", font=ctk.CTkFont(size=11), text_color="gray")
         self.subtitle_label.grid(row=1, column=0, padx=20, pady=(0, 20))
 
         # 🍱 Heartbeat Indicators
@@ -227,12 +227,30 @@ class KMTIServerGUI(ctk.CTk):
         logging.info("[SYSTEM] API Server started on 0.0.0.0:8000")
 
     def restart_server(self):
-        """Professional Restart."""
-        logging.warning("[SYSTEM] Restarting server logic...")
-        # Since uvicorn.run is already in a daemon thread, a true restart 
-        # usually requires process replacement, but here we just notify.
-        # In a production environment, we'd use os.execv, but for GUI it's cleaner to ask user to restart.
-        tk.messagebox.showinfo("Restart Service", "Stability Patch v3.4.0 active. Please restart the application to apply deep cache refreshes.")
+        """Truly restarts the current process (Hard Reboot)."""
+        logging.warning("[SYSTEM] Initiating Process-Level Reboot...")
+        self.should_exit = True
+        
+        try:
+            # Re-spawn the process
+            import subprocess
+            if getattr(sys, 'frozen', False):
+                # Running as packaged .exe
+                executable = sys.executable
+                args = [executable]
+            else:
+                # Running as python script
+                executable = sys.executable
+                args = [executable] + sys.argv
+            
+            subprocess.Popen(args, creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == 'win32' else 0)
+            
+            # Clean exit for the current process
+            self.destroy()
+            os._exit(0) 
+        except Exception as e:
+            logging.error(f"[ERROR] Failed to reboot process: {e}")
+            tk.messagebox.showerror("Reboot Error", f"Failed to restart: {e}")
 
     def open_logs_folder(self):
         log_path = os.path.join(os.getcwd(), "logs")

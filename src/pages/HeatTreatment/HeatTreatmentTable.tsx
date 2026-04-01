@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react'
 import type { IHeatTreatment } from '../../types'
 import { SearchIcon, PlusIcon, EditIcon, TrashIcon } from '../../components/FileIcons'
+import { ResultSkeleton } from '../../components/Skeleton'
 import './HeatTreatment.css'
 
 // Memoized Highlighter Component for Performance
@@ -88,7 +89,9 @@ const HeatTreatmentTable: React.FC<HeatTreatmentTableProps> = memo(({
 
       <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Loading...</div>
+          <div style={{ padding: 20 }}>
+            <ResultSkeleton count={8} />
+          </div>
         ) : results.length === 0 ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No results found.</div>
         ) : (

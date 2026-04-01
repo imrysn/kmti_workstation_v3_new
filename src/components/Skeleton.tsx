@@ -32,13 +32,17 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   );
 };
 
-export const ResultSkeleton = () => (
-  <div style={{ display: 'flex', alignItems: 'center', height: '60px', padding: '0 16px', gap: '12px', borderBottom: '1px solid #f1f5f9' }}>
-    <Skeleton width={32} height={32} variant="circle" />
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-      <Skeleton width="60%" height={14} />
-      <Skeleton width="40%" height={10} />
-    </div>
-    <Skeleton width={40} height={12} />
-  </div>
+export const ResultSkeleton = ({ count = 5 }: { count?: number }) => (
+  <>
+    {Array.from({ length: count }).map((_, i) => (
+      <div key={i} style={{ display: 'flex', alignItems: 'center', height: '60px', padding: '0 16px', gap: '12px', borderBottom: '1px solid var(--border)' }}>
+        <Skeleton width={32} height={32} variant="circle" />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <Skeleton width="60%" height={14} />
+          <Skeleton width="40%" height={10} />
+        </div>
+        <Skeleton width={40} height={12} />
+      </div>
+    ))}
+  </>
 );

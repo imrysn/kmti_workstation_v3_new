@@ -5,6 +5,7 @@ import { useModal } from '../components/ModalContext'
 import { useAuth } from '../context/AuthContext'
 import { SearchIcon } from '../components/FileIcons'
 import DraftingNoteModal from '../components/DraftingNoteModal'
+import { ResultSkeleton } from '../components/Skeleton'
 import './CharacterSearch.css'
 
 // Memoized Highlighter Component for Performance
@@ -216,9 +217,8 @@ export default function CharacterSearch() {
           <div className="char-results-card">
             <div className="char-table-container" ref={tableContainerRef}>
               {loading && results.length === 0 ? (
-                <div style={{ padding: 60, textAlign: 'center' }}>
-                  <div className="file-preview-spinner" style={{ margin: '0 auto 16px' }}></div>
-                  <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Searching Database...</div>
+                <div style={{ padding: 20 }}>
+                  <ResultSkeleton count={10} />
                 </div>
               ) : results.length === 0 ? (
                 <div style={{ padding: 80, textAlign: 'center' }}>
