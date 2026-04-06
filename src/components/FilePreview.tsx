@@ -73,22 +73,16 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
         ) : (
           <>
             {isPdf ? (
-              <div onClick={toggleZoom} style={{ cursor: 'zoom-in', width: '100%' }}>
-                <iframe
-                  src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                  className="file-preview-image file-preview-pdf"
-                  onLoad={handleLoad}
-                  onError={handleError}
-                  style={{ 
-                    display: loading ? 'none' : 'block', 
-                    border: 'none', 
-                    height: 180,
-                    overflow: 'hidden'
-                  }}
-                  title={fileName}
-                  scrolling="no"
-                />
-              </div>
+              <img
+                src={previewUrl}
+                alt={fileName}
+                className="file-preview-image file-preview-pdf-thumb"
+                onLoad={handleLoad}
+                onError={handleError}
+                style={{ display: loading ? 'none' : 'block' }}
+                onClick={toggleZoom}
+                title="Click to expand full PDF"
+              />
             ) : (
               <img
                 src={previewUrl}
