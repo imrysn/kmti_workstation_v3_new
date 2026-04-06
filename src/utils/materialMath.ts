@@ -39,182 +39,212 @@ export const SHAPE_LABELS: Record<ShapeType, string> = {
  * Shared normalizer — single source of truth used by both calculateWeight helpers.
  * Must stay in sync with build_dictionaries.py's normalize().
  */
+/**
+ * Shared normalizer — keeps logic in sync with drafting data variations.
+ * Handles Zenkaku (full-width), diverse separators, and removes noise.
+ */
 export function normalize(text: string): string {
+  if (!text) return '';
+  
   let t = text.trim()
+    .normalize('NFKC') // Convert Zenkaku (１２３) to Hankaku (123)
     .replace(/●/g, '')
     .replace(/[φΦ]/g, 'phi')
     .replace(/□/g, 'sq')
-    .replace(/×/g, 'x')
-    .replace(/\*/g, 'x')
+    .replace(/[×*＊ｘＸ]/g, 'x') // Unified separator to 'x'
     .replace(/\s+/g, '')
     .replace(/^l-/i, '')
     .toLowerCase();
 
   // Strip redundant trailing .0  e.g. "10.0" → "10"
-  t = t.replace(/(\d+\.\d+)/g, (match) => {
+  t = t.replace(/(\d+\.\d+)(?!\d)/g, (match) => {
     const val = parseFloat(match);
     return val === Math.floor(val) ? val.toString() : match;
   });
+  
   return t;
 }
 
 /**
- * Calculates weight in kg based on dimensions (mm) and density (g/cm³).
+ * Advanced Shape Lookup with character-width awareness and partial matching.
+ * Bridges the gap between TS Normalization and Python-generated Zenkaku dict keys.
  */
-export function calculateWeight(shape: ShapeType, dims: Record<string, number>, density: number): number {
-  if (!density || density <= 0) return 0;
+function findBestShapeFactor(material: string, spec: string): number | null {
+  const normMat = normalize(material);
+  const normSpec = normalize(spec);
   
-  const d = density * 1e-6; 
-  let volume = 0; // mm³
+  // 1. Try Absolute Match
+  const directKey = `${normMat}_${normSpec}`;
+  if (shapeLookup[directKey]) return shapeLookup[directKey];
 
-  switch (shape) {
-    case 'RoundBar': {
-      const { diameter = 0, length = 0 } = dims;
-      volume = (Math.PI / 4) * Math.pow(diameter, 2) * length;
-      break;
-    }
-    case 'SquareBar': {
-      const { width = 0, height = 0, length = 0 } = dims;
-      volume = width * height * length;
-      break;
-    }
-    case 'HexBar': {
-      const { widthAcrossFlats = 0, length = 0 } = dims;
-      volume = (Math.sqrt(3) / 2) * Math.pow(widthAcrossFlats, 2) * length;
-      break;
-    }
-    case 'RoundPipe': {
-      const { outerDiameter = 0, thickness = 0, length = 0 } = dims;
-      const innerDiameter = outerDiameter - (2 * thickness);
-      if (innerDiameter <= 0) return 0;
-      volume = (Math.PI / 4) * (Math.pow(outerDiameter, 2) - Math.pow(innerDiameter, 2)) * length;
-      break;
-    }
-    case 'SquarePipe': {
-      const { width = 0, height = 0, thickness = 0, length = 0 } = dims;
-      const innerWidth = width - (2 * thickness);
-      const innerHeight = height - (2 * thickness);
-      if (innerWidth <= 0 || innerHeight <= 0) return 0;
-      volume = ((width * height) - (innerWidth * innerHeight)) * length;
-      break;
-    }
-    case 'AngleBar': {
-      const { legW = 0, legH = 0, thickness = 0, length = 0 } = dims;
-      if (legW <= thickness || legH <= thickness) return 0;
-      const area = (legW * thickness) + ((legH - thickness) * thickness);
-      volume = area * length;
-      break;
-    }
-    default:
-      volume = 0;
+  // 2. Zenkaku Bridge Match (Python lower() on Zenkaku vs TS NFKC)
+  // Python's lower('Ｈ') -> 'ｈ' (U+FF48)
+  // TS NFKC lower('Ｈ') -> 'h' (U+0068)
+  if (normMat.startsWith('h') || normMat.startsWith('i')) {
+    const zenPrefix = normMat.startsWith('h') ? 'ｈ' : 'ｉ';
+    const zenMat = zenPrefix + normMat.substring(1);
+    
+    const zenDirectKey = `${zenMat}_${normSpec}`;
+    if (shapeLookup[zenDirectKey]) return shapeLookup[zenDirectKey];
+
+    // 3. Partial Spec Suffix Match (e.g. "250x250x9" -> "250x250x9/14")
+    const keys = Object.keys(shapeLookup);
+    const prefix = `${zenMat}_${normSpec}`;
+    const bestKey = keys.find(k => k.startsWith(prefix));
+    if (bestKey) return shapeLookup[bestKey];
   }
 
-  return volume * d;
+  // 4. General Prefix matching for other profile types (Angle, Channel, STKR)
+  const keys = Object.keys(shapeLookup);
+  const genPrefix = `${normMat}_${normSpec}`;
+  const bestKey = keys.find(k => k.startsWith(genPrefix));
+  if (bestKey) return shapeLookup[bestKey];
+
+  return null;
 }
 
 /**
- * Performs weight calculation using the KMTI Excel lookup table.
- *
- * Lookup key format (matches build_dictionaries.py output):
- *   Primary:  "<norm_material>_<norm_spec>"  e.g. "ss400_50x50x6"
- *   Fallback: "<norm_spec>"                  e.g. "50x50x6"
- *
- * All wpm values in shapeLookup are for their source material (typically carbon steel 7.85).
- * For other materials we scale by (actual_density / base_density).
- *
- * Returns 0 if no match found — caller falls through to geometric calculation.
+ * Performs weight calculation using the KMTI Excel logic branches with STRICT rules.
+ * 
+ * Returns 0 if input is "wrong" or unparseable.
  */
 export function calculateExcelBatchWeight(
-  materialOrShape: string,
-  specWithLen: string,
+  materialRaw: string,
+  specRaw: string,
   qty: number
 ): number {
-  const mRaw    = materialOrShape.trim();
-  const specRaw = specWithLen.trim();
-  if (!specRaw) return 0;
+  try {
+    if (!materialRaw || !specRaw) return 0;
 
-  // ── 1. Parse length from spec ──────────────────────────────────────────
-  // Priority: dash "50x50x6-1200"  >  space "50x50x6 1200"  >  last-x "50x500"
-  let dimensionStr = specRaw;
-  let lengthMm     = 0;
+    // Use normalized versions for logic branching
+    const normMat = normalize(materialRaw).toUpperCase();
+    
+    // --- Branch A: Square Symbol (□) ---
+    if (specRaw.includes('□')) {
+      const cleanSpecRaw = specRaw.replace('□', '');
+      const hasDash = cleanSpecRaw.includes('-');
 
-  if (specRaw.includes('-')) {
-    const parts    = specRaw.split('-');
-    const lastPart = parts[parts.length - 1].trim();
-    const val      = parseFloat(lastPart);
-    if (!isNaN(val) && val > 0) {
-      lengthMm     = val;
-      dimensionStr = parts.slice(0, -1).join('-');
+      if (hasDash) {
+        // STRICT LOOKUP ONLY (Like Square Bar catalog)
+        const dashIdx = cleanSpecRaw.lastIndexOf('-');
+        const specPartRaw = cleanSpecRaw.substring(0, dashIdx);
+        const length = parseFloat(cleanSpecRaw.substring(dashIdx + 1));
+        const normSpecPart = 'sq' + specPartRaw; 
+        
+        const wpm = findBestShapeFactor(materialRaw, normSpecPart);
+        if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
+        return 0; // Strict: No fallback for □ with dash
+      } else {
+        // MATH: (Side^2 * Length * Density) * 1e-6
+        const mathSpec = normalize(cleanSpecRaw);
+        const parts = mathSpec.split('x');
+        const side = parseFloat(parts[0]);
+        const length = parseFloat(parts[1]);
+        const density = materialLookupData[normMat] || 7.85;
+
+        if (!isNaN(side) && !isNaN(length)) {
+          return (Math.pow(side, 2) * length * density * 0.000001) * qty;
+        }
+      }
+      return 0;
     }
-  } else if (specRaw.includes(' ')) {
-    const parts    = specRaw.trim().split(/\s+/);
-    const lastPart = parts[parts.length - 1].replace(/[□φ●]/g, '');
-    const val      = parseFloat(lastPart);
-    if (!isNaN(val) && val > 0) {
-      lengthMm     = val;
-      dimensionStr = parts.slice(0, -1).join(' ');
-    }
-  }
 
-  // Last-x fallback — only if still no length
-  if (lengthMm <= 0) {
-    const xParts = specRaw.split(/[x×*]/i);
-    if (xParts.length >= 2) {
-      const lastPart = xParts[xParts.length - 1].trim();
-      const val      = parseFloat(lastPart);
-      if (!isNaN(val) && val > 0) {
-        lengthMm     = val;
-        dimensionStr = xParts.slice(0, -1).join('x');
+    // --- Branch B: Round Symbol (φ / Φ) ---
+    if (specRaw.includes('φ') || specRaw.includes('Φ')) {
+      const cleanSpecRaw = specRaw.replace(/[φΦ]/g, '');
+      const density = materialLookupData[normMat] || 7.85;
+
+      const dashIdx = cleanSpecRaw.lastIndexOf('-');
+      if (dashIdx !== -1) {
+        // 1. Try Lookup (E.g. STKM catalog)
+        const specPart = normalize(cleanSpecRaw.substring(0, dashIdx));
+        const length = parseFloat(cleanSpecRaw.substring(dashIdx + 1));
+        const wpm = findBestShapeFactor(materialRaw, specPart);
+        
+        if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
+
+        // 2. Fallback to Pipe Math: PI/4 * (OD^2 - ID^2) * L * Density * 1e-6
+        const parts = normalize(cleanSpecRaw.substring(0, dashIdx)).split('x');
+        if (parts.length >= 2 && !isNaN(length)) {
+          const od = parseFloat(parts[0]);
+          const wt = parseFloat(parts[1]);
+          const id = od - (2 * wt);
+          const area = (Math.PI / 4) * (Math.pow(od, 2) - Math.pow(id, 2));
+          return (area * length * density * 0.000001) * qty;
+        }
+      } else {
+        // SOLID MATH: PI/4 * D^2 * L * Density * 1e-6
+        const parts = normalize(cleanSpecRaw).split('x');
+        const d = parseFloat(parts[0]);
+        const length = parseFloat(parts[1]);
+
+        if (!isNaN(d) && !isNaN(length)) {
+          const area = (Math.PI / 4) * Math.pow(d, 2);
+          return (area * length * density * 0.000001) * qty;
+        }
+      }
+      return 0;
+    }
+
+    // --- Branch C: Technical Catalog Profiles (H, I, Angle, etc.) ---
+    const isProfileMat = [
+      'SUS304TP', 'Ｈ形鋼', 'Ｈ型鋼', 'H形鋼', 'H型鋼', 
+      'Ｉ形鋼', 'Ｉ型鋼', 'I形鋼', 'I型鋼', 
+      '溝形鋼', '溝型鋼', '山形鋼', '山型鋼', 
+      'STKR400'
+    ].some(p => materialRaw.includes(p));
+
+    if (isProfileMat) {
+      const dashIdx = specRaw.lastIndexOf('-');
+      if (dashIdx === -1) return 0;
+      
+      const specPart = normalize(specRaw.substring(0, dashIdx));
+      const length = parseFloat(specRaw.substring(dashIdx + 1));
+
+      if (isNaN(length)) return 0;
+
+      // STRICT LOOKUP ONLY for Profiles
+      const wpm = findBestShapeFactor(materialRaw, specPart);
+      if (wpm) return (wpm * length * 0.001) * qty;
+      return 0;
+    }
+
+    // --- Branch D: Numeric Start (Block/Plate) ---
+    if (!isNaN(parseInt(specRaw.trim().charAt(0)))) {
+      const density = materialLookupData[normMat] || 7.85;
+      
+      const dashIdx = specRaw.lastIndexOf('-');
+      if (dashIdx !== -1) {
+        const specPart = specRaw.substring(0, dashIdx);
+        const length = parseFloat(specRaw.substring(dashIdx + 1));
+        
+        // 1. Try Lookup
+        const wpm = findBestShapeFactor(materialRaw, specPart);
+        if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
+
+        // 2. Fallback to Plate Math: (W * T * L * Density) * 1e-6
+        const parts = normalize(specPart).split('x');
+        if (parts.length >= 2 && !isNaN(length)) {
+          const w = parseFloat(parts[0]);
+          const t = parseFloat(parts[1]);
+          return (w * t * length * density * 0.000001) * qty;
+        }
+      } else {
+        // MATH: (W * H * L * Density) * 1e-6
+        const normSpec = normalize(specRaw);
+        const parts = normSpec.split('x');
+        const v1 = parseFloat(parts[0]);
+        const v2 = parseFloat(parts[1]);
+        const v3 = parseFloat(parts[2]);
+
+        if (!isNaN(v1) && !isNaN(v2) && !isNaN(v3)) {
+          return (v1 * v2 * v3 * density * 0.000001) * qty;
+        }
       }
     }
+
+    return 0; 
+  } catch (err) {
+    return 0;
   }
-
-  if (lengthMm <= 0) return 0;
-
-  // ── 2. Normalize ────────────────────────────────────────────────────────
-  const normMat = normalize(mRaw);
-  const normDim = normalize(dimensionStr);
-
-  // ── 3. Lookup — primary, then spec-only, then stripped prefix ──────────
-  let wpmBase: number | undefined;
-  let matchesBaseMaterial = true;
-
-  wpmBase = shapeLookup[`${normMat}_${normDim}`];
-
-  if (wpmBase === undefined) {
-    // Only strip phi. DO NOT strip sq! Stripping sq assumes round-bar default weight.
-    if (normDim.startsWith('phi')) {
-        const strippedDim = normDim.replace(/^phi/, '');
-        wpmBase = shapeLookup[`${normMat}_${strippedDim}`];
-    }
-  }
-
-  // Fallback to generic un-prefixed spec (defaults to Carbon Steel values)
-  if (wpmBase === undefined) {
-    matchesBaseMaterial = false;
-    wpmBase = shapeLookup[normDim];
-    if (wpmBase === undefined) {
-      if (normDim.startsWith('phi')) {
-         const strippedDim = normDim.replace(/^phi/, '');
-         wpmBase = shapeLookup[strippedDim];
-      }
-    }
-  }
-
-  if (wpmBase === undefined) return 0;
-
-  // ── 4. Density scaling ──────────────────────────────────────────────────
-  // Lookup table values sourced from carbon steel rows (7.85 g/cm³ base).
-  // Scale proportionally only if we dropped back to the generic dimension fallback.
-  let densityScale = 1.0;
-  if (!matchesBaseMaterial) {
-    const matDensity   = (materialLookupData as Record<string, number>)[mRaw];
-    const BASE_DENSITY = 7.85;
-    if (matDensity !== undefined) {
-      densityScale = matDensity / BASE_DENSITY;
-    }
-  }
-
-  // ── 5. Final weight ─────────────────────────────────────────────────────
-  return wpmBase * (lengthMm / 1000) * densityScale * qty;
 }

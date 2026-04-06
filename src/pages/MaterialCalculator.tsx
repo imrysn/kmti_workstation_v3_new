@@ -1,221 +1,183 @@
 import { useState, useRef } from 'react'
-import { STANDARD_MATERIALS, calculateWeight, calculateExcelBatchWeight, normalize } from '../utils/materialMath'
-import { materialLookupData } from '../data/material_lookup'
-import standardShapesData from '../data/standard_shapes.json'
+import { calculateExcelBatchWeight } from '../utils/materialMath'
 import { useModal } from '../components/ModalContext'
 import './MaterialCalculator.css'
-
-const materialLookup = materialLookupData as Record<string, number>;
 
 export default function MaterialCalculator() {
   const { notify } = useModal()
   const [input, setInput] = useState('')
-  const [output, setOutput] = useState('')
+  const [results, setResults] = useState<{ value: string, isError: boolean }[]>([])
+  const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const outputRef = useRef<HTMLTextAreaElement>(null)
+  const inputBackdropRef = useRef<HTMLDivElement>(null)
+  const outputBackdropRef = useRef<HTMLDivElement>(null)
+
+  const syncScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
+    const { scrollTop } = e.currentTarget;
+    if (inputRef.current) inputRef.current.scrollTop = scrollTop;
+    if (outputRef.current) outputRef.current.scrollTop = scrollTop;
+    if (inputBackdropRef.current) inputBackdropRef.current.scrollTop = scrollTop;
+    if (outputBackdropRef.current) outputBackdropRef.current.scrollTop = scrollTop;
+  }
+
+  const updateActiveLine = () => {
+    if (inputRef.current) {
+      const textBefore = inputRef.current.value.substring(0, inputRef.current.selectionStart);
+      const lines = textBefore.split('\n');
+      setActiveLineIndex(lines.length - 1);
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = e.clipboardData.getData('text');
+    if (!pastedText) return;
+
+    const lines = pastedText.split('\n');
+    const formatted = lines.map(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return '';
+      const parts = trimmed.split(/\s+/);
+      if (parts.length >= 3) {
+        return `${parts[0]}\t${parts[1]}\t${parts[2]}`;
+      } else if (parts.length === 2) {
+        return `${parts[0]}\t${parts[1]}`;
+      }
+      return trimmed;
+    }).join('\n');
+
+    e.preventDefault();
+    const start = inputRef.current?.selectionStart || 0;
+    const end = inputRef.current?.selectionEnd || 0;
+    const currentVal = input;
+    const newVal = currentVal.substring(0, start) + formatted + currentVal.substring(end);
+    setInput(newVal);
+  };
 
   const handleProcess = () => {
     const lines = input.split('\n');
-    let results = '';
+    const processed: { value: string, isError: boolean }[] = [];
 
     for (const line of lines) {
       const cleanLine = line.trim();
       if (!cleanLine) {
-        results += '\n';
+        processed.push({ value: '', isError: false });
         continue;
       }
 
-      let rowWeight = 0;
+      let lineWeight = 0;
       let qty = 1;
 
-      // normalize() imported from materialMath — single source of truth
+      // Basic cleanup for splitting
+      const parts = cleanLine.replace(/\t/g, ' ').replace(/\s+/g, ' ').split(' ');
 
-      // --- NEW: Priority 1: Technical Catalog Lookup (No Skips) ---
-      // We check this BEFORE anything else, for both Tab and Space pastes.
-      const normalizedLine = cleanLine.replace(/\t/g, ' ').replace(/\s+/g, ' ').replace(/[×*]/g, 'x');
-      const parts = normalizedLine.split(' ');
-
-      let specStrRaw = '';
-      let detectedQty = 1;
-
-      // Heuristic to find the spec and qty in a messy line
-      parts.forEach(p => {
-        const up = p.toUpperCase();
-        if (up.includes('X') || /[□φ●Φ]/.test(up) || up.includes('-')) {
-          specStrRaw = p;
-        } else if (p.endsWith('pcs') || p.endsWith('qty')) {
-          detectedQty = parseFloat(p) || 1;
-        } else if (parts.indexOf(p) === parts.length - 1 && !isNaN(parseFloat(p))) {
-          // If the last part is a naked number, it's likely Qty
-          detectedQty = parseFloat(p);
-        }
-      });
-      qty = detectedQty;
-
-      if (parts[0] && specStrRaw) {
-        const techWeight = calculateExcelBatchWeight(parts[0], specStrRaw, qty);
-        if (techWeight > 0) {
-          results += `${techWeight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
-          continue;
+      // Heuristic for Qty (last part if numeric)
+      let actualSpec = cleanLine;
+      if (parts.length > 1) {
+        const last = parts[parts.length - 1];
+        const lastNum = parseFloat(last);
+        if (!isNaN(lastNum) && parts.indexOf(last) === parts.length - 1) {
+          qty = lastNum;
+          actualSpec = parts.slice(0, -1).join(' ');
         }
       }
 
-      // 2. Fallback: Heuristic Parsing for Densities and Length
-      let density = 7.85;
-      let length = 0;
+      const materialPart = parts[0];
+      const specPart = actualSpec.replace(materialPart, '').trim();
 
-      parts.forEach(p => {
-        const mKey = p.trim();
-        if (materialLookup[mKey]) {
-          density = materialLookup[mKey];
-          return;
-        }
-        const up = p.toUpperCase();
-        const foundMat = STANDARD_MATERIALS.find(m =>
-          up === m.name.split(' ')[0].toUpperCase() ||
-          (m.name.includes('/') && m.name.split('/').some(sm => up === sm.trim().split(' ')[0].toUpperCase()))
-        );
-        if (foundMat) {
-          density = foundMat.density;
-          return;
-        }
-        if (up.startsWith('L=') || up.startsWith('LEN=') || up.startsWith('LEN:')) {
-          const val = parseFloat(up.replace(/[L|LEN|=:]/g, ''));
-          if (!isNaN(val)) length = val;
-          return;
-        }
-      });
+      lineWeight = calculateExcelBatchWeight(materialPart, specPart, qty);
 
-      // Split length from spec if needed
-      let lookupSpec = specStrRaw;
-      if (specStrRaw.includes('-')) {
-        const spl = specStrRaw.split('-');
-        const parsedL = parseFloat(spl[spl.length - 1]);
-        if (!isNaN(parsedL)) {
-          length = parsedL;
-          lookupSpec = spl.slice(0, -1).join('-');
-        }
-      } else if (specStrRaw.includes('x') && length === 0) {
-        const xSpl = specStrRaw.split('x');
-        const last = parseFloat(xSpl[xSpl.length - 1]);
-        if (!isNaN(last) && last > 200) {
-          length = last;
-          lookupSpec = xSpl.slice(0, -1).join('x');
-        }
-      }
+      const valStr = lineWeight > 0
+        ? lineWeight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '0.00';
 
-      const finalNormSpec = normalize(lookupSpec);
-      const effectiveLen = length || 1000;
-
-      // Part 3: Search standard JSON shapes
-      let foundInStandard = false;
-      for (const cat of standardShapesData) {
-        const found = cat.sizes.find(s => normalize(s.size) === finalNormSpec);
-        if (found) {
-          rowWeight = found.weightPerMeter * (effectiveLen / 1000);
-          foundInStandard = true;
-          break;
-        }
-      }
-
-      if (!foundInStandard) {
-        // Part 4: Geometric Fallback Math (Universal Geometry)
-        const cleanForMath = (s: string) => s.replace(/[□φ●Φ|FB|L|H|C|T|U]/g, '').replace(/phi/g, '').replace(/sq/g, '');
-        const xParts = finalNormSpec.split('x');
-
-        if (xParts.length === 3) {
-          // [W x H x T] - This is a TUBE if the 3rd part is small relative to the first
-          const [v1, v2, v3] = xParts.map(p => parseFloat(cleanForMath(p)));
-          if (!isNaN(v1) && !isNaN(v2) && !isNaN(v3)) {
-            if (v3 < (v1 * 0.4)) {
-              // TUBE GEOMETRY: (Width * Height) - (InnerWidth * InnerHeight)
-              const area = (v1 * v2) - (v1 - 2 * v3) * (v2 - 2 * v3);
-              rowWeight = (area * effectiveLen * density) / 1000000;
-            } else {
-              // SOLID BOX GEOMETRY: Width * Height * Length (v3 is length)
-              rowWeight = (v1 * v2 * v3 * density) / 1000000;
-            }
-          }
-        } else if (xParts.length === 2) {
-          const val1 = parseFloat(cleanForMath(xParts[0]));
-          const val2 = parseFloat(cleanForMath(xParts[1]));
-          if (!isNaN(val1) && !isNaN(val2)) {
-            if (specStrRaw.includes('Φ') || specStrRaw.includes('●') || specStrRaw.includes('φ')) {
-              // Pipe / Round Tube: Area = PI/4 * (OD^2 - ID^2)
-              const od = val1;
-              const wt = val2;
-              const id = od - 2 * wt;
-              const area = (Math.PI / 4) * (Math.pow(od, 2) - Math.pow(id, 2));
-              rowWeight = (area * effectiveLen * density) / 1000000;
-            } else {
-              // Square Tube or Rect: Width * Height * L
-              rowWeight = (val1 * val2 * effectiveLen * density) / 1000000;
-            }
-          }
-        } else {
-          const val = parseFloat(cleanForMath(finalNormSpec));
-          if (!isNaN(val)) {
-            if (specStrRaw.includes('Φ') || specStrRaw.includes('●') || specStrRaw.includes('φ')) {
-              rowWeight = calculateWeight('RoundBar', { diameter: val, length: effectiveLen }, density);
-            } else {
-              rowWeight = calculateWeight('SquareBar', { width: val, height: val, length: effectiveLen }, density);
-            }
-          }
-        }
-      }
-
-      const totalLineWeight = rowWeight * qty;
-      results += `${totalLineWeight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\n`;
+      processed.push({ value: valStr, isError: lineWeight <= 0 });
     }
 
+    setResults(processed);
 
-
-    const finalResults = results.trim();
-    setOutput(finalResults);
-
-    if (finalResults) {
-      navigator.clipboard.writeText(finalResults);
+    if (processed.length > 0) {
+      const clipboardText = processed.map(p => p.value).join('\n');
+      navigator.clipboard.writeText(clipboardText);
       notify('Calculated & Copied to clipboard!', 'success');
     }
   }
 
   const copyToClipboard = () => {
-    if (!output) return;
-    navigator.clipboard.writeText(output);
+    if (results.length === 0) return;
+    const text = results.map(r => r.value).join('\n');
+    navigator.clipboard.writeText(text);
     notify('Calculated weights copied to clipboard!', 'success');
   }
+
+  const errorCount = results.filter(r => r.isError && r.value !== '').length;
+
+  // Backdrop rendering logic to handle varying line counts
+  const renderHighlightLines = () => {
+    const lines = input.split('\n');
+    return lines.map((_, i) => {
+      const result = results[i];
+      const isError = result?.isError && result?.value !== '';
+      const isActive = activeLineIndex === i;
+      return (
+        <div
+          key={i}
+          className={`highlight-line ${isError ? 'error' : ''} ${isActive ? 'active' : ''}`}
+        />
+      );
+    });
+  };
 
   return (
     <div className="page-container calc-page">
       <div className="page-header">
-        {/* <h1 className="page-title">Material Calculator</h1> */}
+        <div className="header-content">
+          <div className="header-text">
+            <h1>Material Calculator</h1>
+            {/* <p>Smart weight estimation for engineering specs</p> */}
+          </div>
+        </div>
       </div>
 
       <div className="scratchpad-container glass-panel">
         <div className="scratchpad-grid">
-          <div className="scratchpad-box">
-            <div className="box-label">
-              <span>INPUT DATA</span>
-              {/* <span className="label-hint">Paste Material Spec L Qty</span> */}
+          <div className="box-label input-label">
+            <span>INPUT DATA</span>
+          </div>
+          <div className="box-label output-label">
+            <span>WEIGHT (KG)</span>
+          </div>
+
+          <div className="textarea-wrapper input-area">
+            <div className="highlight-backdrop" ref={inputBackdropRef}>
+              {renderHighlightLines()}
             </div>
             <textarea
+              ref={inputRef}
               className="scratchpad-textarea"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Example:&#10;SS400  L-50x50x6  1200  4&#10;S45C  φ50  250  10&#10;SUS304  3x1219x2438  1"
+              onPaste={handlePaste}
+              onScroll={syncScroll}
+              onKeyUp={updateActiveLine}
+              onMouseUp={updateActiveLine}
+              onClick={updateActiveLine}
+              onBlur={() => setActiveLineIndex(null)}
+              placeholder="Example:&#10;SS400  □12×500  1"
               spellCheck={false}
             />
           </div>
 
-          <div className="scratchpad-box">
-            <div className="box-label">
-              <span>CALCULATED WEIGHT (KG)</span>
-              {/* <span className="label-hint">Total column for Excel paste</span> */}
+          <div className="textarea-wrapper output-area">
+            <div className="highlight-backdrop" ref={outputBackdropRef}>
+              {renderHighlightLines()}
             </div>
             <textarea
-              className="scratchpad-textarea readonly"
-              value={output}
-              readOnly
               ref={outputRef}
+              className="scratchpad-textarea readonly"
+              value={results.map((r: { value: string }) => r.value).join('\n')}
+              readOnly
+              onScroll={syncScroll}
               placeholder="Results..."
               spellCheck={false}
             />
@@ -224,10 +186,16 @@ export default function MaterialCalculator() {
 
         <div className="scratchpad-actions">
           <div className="footer-info">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-            </svg>
-            <span>Direct Excel Paste support.</span>
+            <div className="info-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="8" />
+              </svg>
+            </div>
+            {errorCount > 0 ? (
+              <span className="error-text">{errorCount} line(s) have invalid input or unknown profiles.</span>
+            ) : (
+              <span>Please paste input from Excel.</span>
+            )}
           </div>
           <div className="action-group">
             <button
@@ -235,19 +203,28 @@ export default function MaterialCalculator() {
               onClick={handleProcess}
               disabled={!input.trim()}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
               Calculate
             </button>
             <button
               className="btn btn-ghost btn-large"
-              onClick={() => { setInput(''); setOutput(''); }}
+              onClick={() => { setInput(''); setResults([]); }}
             >
-              Clear All
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Clear
             </button>
             <button
               className="btn btn-ghost btn-large"
               onClick={copyToClipboard}
-              disabled={!output}
+              disabled={results.length === 0}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+              </svg>
               Copy Results
             </button>
           </div>
