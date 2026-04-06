@@ -3,46 +3,208 @@
   z-index: 9999;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  padding: 10px 24px;
-  border-radius: 100px;
+  padding: 12px 24px;
+  border-radius: 40px;
   border: 1px solid transparent;
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
   cursor: grab;
   user-select: none;
-  transition: box-shadow 0.2s ease, transform 0.2s ease, background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
-  font-family: 'Inter', sans-serif;
+  transition: 
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 0.4s ease,
+    color 0.4s ease,
+    border-color 0.4s ease,
+    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+    left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+  min-width: 180px;
+}
+
+.findr-global-datetime.dragging {
+  transition: 
+    box-shadow 0.3s ease,
+    transform 0.3s ease,
+    background-color 0.4s ease,
+    color 0.4s ease,
+    border-color 0.4s ease;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+  transform: scale(1.02);
 }
 
 .findr-global-datetime:active {
   cursor: grabbing;
 }
 
-.findr-global-datetime.dragging {
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
-  transform: scale(1.02);
-  background: rgba(255, 255, 255, 0.6);
+/* --- Modes --- */
+.findr-datetime-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s ease;
 }
 
+/* --- Clock --- */
 .findr-datetime-time {
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 800;
+  font-size: 16px;
   letter-spacing: 0.5px;
-  transition: color 0.4s ease;
+  font-variant-numeric: tabular-nums;
 }
 
 .findr-datetime-separator {
-  width: 1px;
-  height: 14px;
-  background: rgba(0, 0, 0, 0.1);
+  width: 2px;
+  height: 18px;
+  border-radius: 2px;
 }
 
 .findr-datetime-date {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 1px;
-  transition: color 0.4s ease;
+}
+
+/* --- Stopwatch (Pill Mode) --- */
+.findr-stopwatch-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+}
+
+.findr-sw-display {
+    font-size: 16px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    min-width: 70px;
+}
+
+.findr-sw-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.findr-sw-icon-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+    opacity: 0.8;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.findr-sw-icon-btn:hover {
+    transform: scale(1.2);
+    opacity: 1;
+}
+
+.findr-sw-icon-btn:active {
+    transform: scale(0.9);
+}
+
+/* --- Expanded (Control Center) --- */
+.findr-global-datetime.expanded {
+    border-radius: 24px;
+    padding: 20px 24px;
+    min-width: 220px;
+}
+
+.findr-control-center {
+    border-top: 1px solid rgba(128, 128, 128, 0.1);
+    padding-top: 16px;
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: findrCCFadeIn 0.3s ease-out;
+}
+
+@keyframes findrCCFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.findr-cc-header {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    opacity: 0.6;
+    text-transform: uppercase;
+}
+
+.findr-cc-themes {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.findr-theme-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background-origin: border-box;
+}
+
+.findr-theme-swatch:hover {
+    transform: scale(1.15) rotate(5deg);
+}
+
+.findr-theme-swatch.active {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px currentColor;
+}
+
+.findr-cc-footer {
+    font-size: 9px;
+    font-weight: 600;
+    opacity: 0.4;
+    text-align: center;
+    margin-top: 4px;
+}
+
+/* --- Theme Specific Enhancements --- */
+
+/* Retro Theme Scanlines */
+.theme-retro::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(18, 16, 16, 0) 50%,
+        rgba(0, 0, 0, 0.1) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.theme-cyber {
+    text-shadow: 0 0 8px currentColor;
+}
+
+.theme-industrial {
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+}
+
+.theme-stealth {
+    backdrop-filter: blur(40px);
 }
