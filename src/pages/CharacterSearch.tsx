@@ -12,7 +12,9 @@ import './CharacterSearch.css'
 const Highlight = memo(({ text, query }: { text: string; query: string }) => {
   const parts = useMemo(() => {
     if (!query.trim()) return [text]
-    const regex = new RegExp(`(${query})`, 'gi')
+    // Escape special regex characters to prevent crashes (e.g. searching for "(")
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`(${escapedQuery})`, 'gi')
     return text.split(regex)
   }, [text, query])
 

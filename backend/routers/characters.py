@@ -32,11 +32,16 @@ async def search_characters(
         sql = text(
             "SELECT id, eng_char, jp_char FROM char_search "
             "WHERE eng_char LIKE :q OR jp_char LIKE :q "
+            "ORDER BY (eng_char REGEXP '^[A-Za-z]') ASC, eng_char ASC "
             "LIMIT :limit OFFSET :offset"
         )
         result = await db.execute(sql, {"q": f"%{q}%", "limit": limit, "offset": offset})
     else:
-        sql = text("SELECT id, eng_char, jp_char FROM char_search LIMIT :limit OFFSET :offset")
+        sql = text(
+            "SELECT id, eng_char, jp_char FROM char_search "
+            "ORDER BY (eng_char REGEXP '^[A-Za-z]') ASC, eng_char ASC "
+            "LIMIT :limit OFFSET :offset"
+        )
         result = await db.execute(sql, {"limit": limit, "offset": offset})
 
     rows = result.fetchall()
@@ -154,7 +159,14 @@ async def get_heat_treatment(
             (HeatTreatment.jp_char.like(like_q))
         )
 
-    query = query.order_by(HeatTreatment.eng_char.asc())
+    from sqlalchemy import case as sa_case
+
+    # Priority Bucket: 0 for symbols/numbers, 1 for A-Z (MySQL REGEXP)
+    priority = sa_case(
+        (HeatTreatment.eng_char.op('REGEXP')('^[A-Za-z]'), 1),
+        else_=0
+    )
+    query = query.order_by(priority.asc(), HeatTreatment.eng_char.asc())
     query = query.limit(limit).offset(offset)
 
     result = await db.execute(query)

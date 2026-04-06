@@ -3,6 +3,7 @@ import { FileIcon, PlusIcon, RefreshIcon, TrashIcon } from '../../components/Fil
 import { TreeItem } from './TreeItem'
 import { TreeNode } from './types'
 import { IProject } from '../../types'
+import { useAuth } from '../../context/AuthContext'
 
 interface ProjectSidebarProps {
   activeSideTab: string
@@ -69,6 +70,8 @@ export function ProjectSidebar({
   treeContainerRef,
   searchQuery
 }: ProjectSidebarProps) {
+  const { hasRole } = useAuth()
+  const isAdmin = hasRole('admin', 'it')
   return (
     <div className="findr-sidebar-left">
       {/* Section Switcher Dropdown */}
@@ -97,46 +100,50 @@ export function ProjectSidebar({
                 }}
               >
                 <span>{tab}</span>
-                <button
-                  className="tab-delete-btn"
-                  onClick={(e) => onDeleteCategory(tab, e)}
-                  title="Delete category"
-                >
-                  <TrashIcon size={12} />
-                </button>
+                {isAdmin && (
+                  <button
+                    className="tab-delete-btn"
+                    onClick={(e) => onDeleteCategory(tab, e)}
+                    title="Delete category"
+                  >
+                    <TrashIcon size={12} />
+                  </button>
+                )}
               </div>
             ))}
 
             <div className="findr-switcher-separator" />
 
-            {isAddingTab ? (
-              <div className="findr-switcher-input-container" onClick={e => e.stopPropagation()}>
-                <input
-                  autoFocus
-                  className="findr-switcher-input"
-                  placeholder="ENTER TITLE..."
-                  value={newTabValue}
-                  onChange={e => setNewTabValue(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') handleCreateTab()
-                    if (e.key === 'Escape') setIsAddingTab(false)
+            {isAdmin && (
+              isAddingTab ? (
+                <div className="findr-switcher-input-container" onClick={e => e.stopPropagation()}>
+                  <input
+                    autoFocus
+                    className="findr-switcher-input"
+                    placeholder="ENTER TITLE..."
+                    value={newTabValue}
+                    onChange={e => setNewTabValue(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleCreateTab()
+                      if (e.key === 'Escape') setIsAddingTab(false)
+                    }}
+                    onBlur={() => {
+                      if (!newTabValue.trim()) setIsAddingTab(false)
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="findr-switcher-item add-more"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setIsAddingTab(true)
                   }}
-                  onBlur={() => {
-                    if (!newTabValue.trim()) setIsAddingTab(false)
-                  }}
-                />
-              </div>
-            ) : (
-              <div
-                className="findr-switcher-item add-more"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setIsAddingTab(true)
-                }}
-              >
-                <span>ADD MORE</span>
-                <PlusIcon size={14} />
-              </div>
+                >
+                  <span>ADD MORE</span>
+                  <PlusIcon size={14} />
+                </div>
+              )
             )}
           </div>
         )}
@@ -158,15 +165,17 @@ export function ProjectSidebar({
               activeSideTab === 'PURCHASED PARTS' ? 'INDEXED PARTS' : 'OTHER DATA'}
           </span>
         </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button className="findr-action-btn" onClick={onAddProject} title="Add Project"><PlusIcon /></button>
-          {selectedProject && (
-            <>
-              <button className="findr-action-btn" onClick={() => onScanProject(selectedProject.id)} title={`Scan ${selectedProject.name}`}><RefreshIcon /></button>
-              <button className="findr-action-btn delete" onClick={() => onDeleteProject(selectedProject.id)} title={`Delete ${selectedProject.name}`}><TrashIcon /></button>
-            </>
-          )}
-        </div>
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button className="findr-action-btn" onClick={onAddProject} title="Add Project"><PlusIcon /></button>
+            {selectedProject && (
+              <>
+                <button className="findr-action-btn" onClick={() => onScanProject(selectedProject.id)} title={`Scan ${selectedProject.name}`}><RefreshIcon /></button>
+                <button className="findr-action-btn delete" onClick={() => onDeleteProject(selectedProject.id)} title={`Delete ${selectedProject.name}`}><TrashIcon /></button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={`findr-projects-collapsible ${isProjectsExpanded ? 'expanded' : 'collapsed'}`}>
