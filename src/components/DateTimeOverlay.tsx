@@ -3,31 +3,58 @@ import './DateTimeOverlay.css';
 
 /**
  * Premium, Draggable, Persistent DateTime & Stopwatch HUD.
+ * Version 5.0: Upward Expansion, Stylized Theme Previews, Nested Grid for Colors.
  */
-interface Theme {
+
+interface ThemeConfig {
   name: string;
   bg: string;
   text: string;
-  accent: string;
   sub: string;
   border: string;
-  glow?: string;
+  glowOpacity: number;
   font?: string;
+  className: string;
 }
 
-const THEMES: Theme[] = [
-  { name: 'Crystal', bg: 'rgba(255, 255, 255, 0.45)', text: '#0f172a', accent: '#0284c7', sub: '#64748b', border: 'rgba(255, 255, 255, 0.5)' },
-  { name: 'Cyber', bg: 'rgba(10, 10, 15, 0.85)', text: '#00f2ff', accent: '#ff00ff', sub: 'rgba(0, 242, 255, 0.6)', border: '#00f2ff33', glow: '0 0 15px rgba(0, 242, 255, 0.3)' },
-  { name: 'Retro', bg: 'rgba(20, 25, 20, 0.9)', text: '#ffb000', accent: '#ffb000', sub: '#ffb00099', border: '#ffb00033', font: '"Courier New", monospace' },
-  { name: 'Industrial', bg: 'rgba(40, 45, 50, 0.85)', text: '#e2e8f0', accent: '#f59e0b', sub: '#94a3b8', border: 'rgba(255, 255, 255, 0.1)' },
-  { name: 'Stealth', bg: 'rgba(0, 0, 0, 0.95)', text: '#ffffff', accent: '#ffffff', sub: '#ffffff66', border: 'rgba(255, 255, 255, 0.05)' }
+const THEMES: ThemeConfig[] = [
+  { name: 'Crystal', bg: 'rgba(255, 255, 255, 0.45)', text: '#0f172a', sub: '#64748b', border: 'rgba(255, 255, 255, 0.5)', glowOpacity: 0.1, className: 'theme-crystal' },
+  { name: 'Cyber', bg: 'rgba(10, 10, 15, 0.85)', text: '#ffffff', sub: 'rgba(255, 255, 255, 0.6)', border: 'rgba(255, 255, 255, 0.1)', glowOpacity: 0.5, className: 'theme-cyber' },
+  { name: 'Retro', bg: 'rgba(20, 25, 20, 0.9)', text: '#ffb000', sub: '#ffb00099', border: '#ffb00033', glowOpacity: 0.3, font: '"Courier New", monospace', className: 'theme-retro' },
+  { name: 'Industrial', bg: 'rgba(40, 45, 50, 0.85)', text: '#e2e8f0', sub: '#94a3b8', border: 'rgba(255, 255, 255, 0.1)', glowOpacity: 0.2, className: 'theme-industrial' },
+  { name: 'Stealth', bg: 'rgba(0, 0, 0, 0.95)', text: '#ffffff', sub: '#ffffff66', border: 'rgba(255, 255, 255, 0.05)', glowOpacity: 0.0, className: 'theme-stealth' },
+  { name: 'Blueprint', bg: 'rgba(2, 22, 60, 0.9)', text: '#94a3b8', sub: '#475569', border: 'rgba(56, 189, 248, 0.2)', glowOpacity: 0.4, className: 'theme-blueprint' }
 ];
 
-const STORAGE_KEY = 'kmti_clock_settings';
+interface PaletteColor {
+  name: string;
+  hex: string;
+}
 
-interface Settings {
-  position: { x: number; y: number };
+const COLOR_PALETTES: PaletteColor[] = [
+  { name: 'Cyan', hex: '#00f2ff' },
+  { name: 'Magenta', hex: '#ff00ff' },
+  { name: 'Lime', hex: '#adff2f' },
+  { name: 'Volt', hex: '#fff000' },
+  { name: 'Ruby', hex: '#ef4444' },
+  { name: 'Sapphire', hex: '#3b82f6' },
+  { name: 'Emerald', hex: '#10b981' },
+  { name: 'Gold', hex: '#f5d142' },
+  { name: 'Amethyst', hex: '#8b5cf6' },
+  { name: 'Slate', hex: '#94a3b8' },
+  { name: 'Oxide', hex: '#f97316' },
+  { name: 'Carbon', hex: '#334155' },
+  { name: 'White', hex: '#ffffff' },
+  { name: 'Ghost', hex: '#cbd5e1' },
+  { name: 'Obsidian', hex: '#0f172a' }
+];
+
+const STORAGE_KEY = 'kmti_clock_settings_v5';
+
+interface SettingsV5 {
+  position: { x: number; y: number }; // y is now bottom-offset
   themeIndex: number;
+  paletteIndex: number;
   mode: 'clock' | 'stopwatch';
   swRunning: boolean;
   swAccumulated: number;
@@ -36,7 +63,7 @@ interface Settings {
 }
 
 const DateTimeOverlay: React.FC = () => {
-  const initialSettings: Settings = useMemo(() => {
+  const initialSettings: SettingsV5 = useMemo(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
@@ -46,8 +73,9 @@ const DateTimeOverlay: React.FC = () => {
       }
     }
     return {
-      position: { x: window.innerWidth / 2 - 100, y: window.innerHeight - 100 },
+      position: { x: window.innerWidth / 2 - 100, y: 100 },
       themeIndex: 0,
+      paletteIndex: 0,
       mode: 'clock',
       swRunning: false,
       swAccumulated: 0,
@@ -59,6 +87,7 @@ const DateTimeOverlay: React.FC = () => {
   const [time, setTime] = useState(new Date());
   const [position, setPosition] = useState(initialSettings.position);
   const [themeIndex, setThemeIndex] = useState(initialSettings.themeIndex);
+  const [paletteIndex, setPaletteIndex] = useState(initialSettings.paletteIndex);
   const [mode, setMode] = useState<'clock' | 'stopwatch'>(initialSettings.mode);
   const [isExpanded, setIsExpanded] = useState(initialSettings.expanded);
   
@@ -70,11 +99,10 @@ const DateTimeOverlay: React.FC = () => {
 
   // Dragging state
   const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
+  const dragStartRef = useRef({ x: 0, y: 0 }); // relative to viewport
   const dragStartCoordsRef = useRef({ x: 0, y: 0 });
   const overlayRef = useRef<HTMLDivElement>(null);
   
-  // Re-sync with state for rendering (or just for triggering re-renders)
   const [dragging, setDragging] = useState(false);
 
   // Tick for Clock & Stopwatch
@@ -92,13 +120,13 @@ const DateTimeOverlay: React.FC = () => {
     return () => clearInterval(timer);
   }, [swRunning, swStartTime, swAccumulated]);
 
-  // Global mouse handlers to prevent "sticking"
+  // Global mouse handlers
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current) return;
       
       const newX = e.clientX - dragStartRef.current.x;
-      const newY = e.clientY - dragStartRef.current.y;
+      const newY = (window.innerHeight - e.clientY) - dragStartRef.current.y;
       
       const bounds = {
         minX: 10,
@@ -114,7 +142,7 @@ const DateTimeOverlay: React.FC = () => {
     };
 
     const handleMouseUpGlobal = (e: MouseEvent) => {
-      if (e.button !== 0 || !isDraggingRef.current) return;
+      if (!isDraggingRef.current) return;
       
       isDraggingRef.current = false;
       setDragging(false);
@@ -127,7 +155,6 @@ const DateTimeOverlay: React.FC = () => {
       if (dist < 5) {
         setIsExpanded(prev => !prev);
       } else {
-        // Snap to nearest edge
         snapToEdge();
       }
     };
@@ -139,7 +166,7 @@ const DateTimeOverlay: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUpGlobal);
     };
-  }, []); // Once on mount
+  }, []);
 
   const snapToEdge = () => {
     if (!overlayRef.current) return;
@@ -151,8 +178,8 @@ const DateTimeOverlay: React.FC = () => {
     setPosition(prev => {
         const distToLeft = prev.x;
         const distToRight = window.innerWidth - (prev.x + width);
-        const distToTop = prev.y;
-        const distToBottom = window.innerHeight - (prev.y + height);
+        const distToBottom = prev.y;
+        const distToTop = window.innerHeight - (prev.y + height);
         
         let targetX = prev.x;
         let targetY = prev.y;
@@ -160,8 +187,8 @@ const DateTimeOverlay: React.FC = () => {
         if (distToLeft < snapThreshold) targetX = padding;
         else if (distToRight < snapThreshold) targetX = window.innerWidth - width - padding;
         
-        if (distToTop < snapThreshold) targetY = padding;
-        else if (distToBottom < snapThreshold) targetY = window.innerHeight - height - padding;
+        if (distToBottom < snapThreshold) targetY = padding;
+        else if (distToTop < snapThreshold) targetY = window.innerHeight - height - padding;
 
         return { x: targetX, y: targetY };
     });
@@ -171,17 +198,14 @@ const DateTimeOverlay: React.FC = () => {
     if ((e.target as HTMLElement).closest('.findr-control-center')) return;
     if ((e.target as HTMLElement).closest('.findr-sw-controls')) return;
     
-    // Only process left mouse button for drag/expand
     if (e.button !== 0) return;
-    
-    // Prevent browser drag and drop interference
     e.preventDefault();
     
     isDraggingRef.current = true;
     setDragging(true);
     dragStartRef.current = {
       x: e.clientX - position.x,
-      y: e.clientY - position.y
+      y: (window.innerHeight - e.clientY) - position.y
     };
     dragStartCoordsRef.current = { x: e.clientX, y: e.clientY };
   };
@@ -191,7 +215,6 @@ const DateTimeOverlay: React.FC = () => {
     setMode(prev => prev === 'clock' ? 'stopwatch' : 'clock');
   };
 
-  // Stopwatch controls
   const toggleStopwatch = () => {
     if (swRunning) {
       setSwAccumulated(swCurrent);
@@ -217,11 +240,11 @@ const DateTimeOverlay: React.FC = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}.${centis.toString().padStart(2, '0')}`;
   };
 
-  // Persist settings
   useEffect(() => {
-    const settings: Settings = {
+    const settings: SettingsV5 = {
       position,
       themeIndex,
+      paletteIndex,
       mode,
       swRunning,
       swAccumulated,
@@ -229,23 +252,25 @@ const DateTimeOverlay: React.FC = () => {
       expanded: isExpanded
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [position, themeIndex, mode, swRunning, swAccumulated, swStartTime, isExpanded]);
+  }, [position, themeIndex, paletteIndex, mode, swRunning, swAccumulated, swStartTime, isExpanded]);
 
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
   const dateStr = time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+  
   const theme = THEMES[themeIndex];
+  const accentColor = COLOR_PALETTES[paletteIndex].hex;
 
   return (
     <div 
       ref={overlayRef}
-      className={`findr-global-datetime theme-${theme.name.toLowerCase()} ${dragging ? 'dragging' : ''} ${isExpanded ? 'expanded' : ''} mode-${mode}`}
+      className={`findr-global-datetime ${theme.className} ${dragging ? 'dragging' : ''} ${isExpanded ? 'expanded' : ''} mode-${mode}`}
       style={{ 
         left: `${position.x}px`, 
-        top: `${position.y}px`,
+        bottom: `${position.y}px`, // Anchored to bottom
         backgroundColor: theme.bg,
         color: theme.text,
         borderColor: theme.border,
-        boxShadow: theme.glow ? `${theme.glow}, 0 20px 40px rgba(0,0,0,0.2)` : '0 20px 40px rgba(0,0,0,0.2)',
+        boxShadow: theme.glowOpacity > 0 ? `0 0 20px ${accentColor}${Math.floor(theme.glowOpacity * 255).toString(16).padStart(2, '0')}, 0 20px 40px rgba(0,0,0,0.2)` : '0 20px 40px rgba(0,0,0,0.2)',
         fontFamily: theme.font || 'inherit'
       }}
       onMouseDown={handleMouseDown}
@@ -254,27 +279,26 @@ const DateTimeOverlay: React.FC = () => {
       <div className="findr-datetime-content">
         {mode === 'clock' ? (
           <>
-            <span className="findr-datetime-time" style={{ color: theme.accent }}>{timeStr}</span>
-            <div className="findr-datetime-separator" style={{ backgroundColor: theme.accent, opacity: 0.3 }} />
+            <span className="findr-datetime-time" style={{ color: accentColor }}>{timeStr}</span>
+            <div className="findr-datetime-separator" style={{ backgroundColor: accentColor, opacity: 0.3 }} />
             <span className="findr-datetime-date" style={{ color: theme.sub }}>{dateStr}</span>
           </>
         ) : (
           <div className="findr-stopwatch-container">
-             <div className="findr-sw-display" style={{ color: theme.accent }}>{formatStopwatch(swCurrent)}</div>
-             <div className="findr-datetime-separator" style={{ backgroundColor: theme.accent, opacity: 0.3 }} />
+             <div className="findr-sw-display" style={{ color: accentColor }}>{formatStopwatch(swCurrent)}</div>
+             <div className="findr-datetime-separator" style={{ backgroundColor: accentColor, opacity: 0.3 }} />
              <div className="findr-sw-controls">
                 <button 
                   className="findr-sw-icon-btn"
                   onClick={(e) => { e.stopPropagation(); toggleStopwatch(); }}
-                  style={{ color: theme.accent }}
-                  title={swRunning ? 'Pause' : 'Start'}
+                  style={{ color: accentColor }}
                 >
                   {swRunning ? (
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                       <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                     </svg>
                   ) : (
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   )}
@@ -282,10 +306,9 @@ const DateTimeOverlay: React.FC = () => {
                 <button 
                   className="findr-sw-icon-btn"
                   onClick={(e) => { e.stopPropagation(); resetStopwatch(); }}
-                  style={{ color: theme.accent }}
-                  title="Reset"
+                  style={{ color: accentColor }}
                 >
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                     <path d="M3 3v5h5" />
                   </svg>
@@ -297,18 +320,38 @@ const DateTimeOverlay: React.FC = () => {
 
       {isExpanded && (
         <div className="findr-control-center">
-            <div className="findr-cc-header">THEMES</div>
-            <div className="findr-cc-themes">
-                {THEMES.map((t, idx) => (
-                    <div 
-                        key={t.name}
-                        className={`findr-theme-swatch ${themeIndex === idx ? 'active' : ''}`}
-                        title={t.name}
-                        onClick={(e) => { e.stopPropagation(); setThemeIndex(idx); }}
-                        style={{ backgroundColor: t.accent, borderColor: t.text }}
-                    />
-                ))}
+            <div className="findr-cc-group">
+                <div className="findr-cc-label">THEMES</div>
+                <div className="findr-cc-grid themes">
+                    {THEMES.map((t, idx) => (
+                        <div 
+                            key={t.name}
+                            className={`findr-theme-opt-v2 ${themeIndex === idx ? 'active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); setThemeIndex(idx); }}
+                            style={{ backgroundColor: t.bg, borderColor: t.border }}
+                            title={t.name}
+                        >
+                            <div className="findr-theme-preview" style={{ backgroundColor: t.text }} />
+                        </div>
+                    ))}
+                </div>
             </div>
+
+            <div className="findr-cc-group">
+                <div className="findr-cc-label">COLORS</div>
+                <div className="findr-cc-grid colors">
+                    {COLOR_PALETTES.map((p, idx) => (
+                        <div 
+                            key={p.name}
+                            className={`findr-palette-opt ${paletteIndex === idx ? 'active' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); setPaletteIndex(idx); }}
+                            style={{ backgroundColor: p.hex }}
+                            title={p.name}
+                        />
+                    ))}
+                </div>
+            </div>
+            
             <div className="findr-cc-footer">
                 RIGHT CLICK TO TOGGLE MODE
             </div>
