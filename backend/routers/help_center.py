@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy import func
 from pydantic import BaseModel
 import os
 import uuid
@@ -44,28 +45,45 @@ async def create_ticket(
     message: str = Form(...),
     workstation: str = Form(...),
     reporter_name: str = Form(None),
+    category: str = Form("General"),
+    urgency: str = Form("low"),
+    sys_ram: str = Form(None),
+    sys_res: str = Form(None),
+    sys_app: str = Form(None),
     screenshots: List[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Submit a new help request ticket."""
     paths_str = await _save_screenshots(screenshots)
+    now = datetime.now()
 
     new_ticket = Ticket(
         workstation=workstation,
         reporter_name=reporter_name,
         subject=subject,
-        status="open"
+        category=category,
+        urgency=urgency,
+        sys_ram=sys_ram,
+        sys_res=sys_res,
+        sys_app=sys_app,
+        has_unread_admin=True, # Notify IT immediately
+        has_unread_user=False,
+        status="open",
+        created_at=now,
+        updated_at=now
     )
     db.add(new_ticket)
-    await db.flush()  # needed to get new_ticket.id
+    await db.flush()
     
     first_msg = TicketMessage(
         ticket_id=new_ticket.id,
         sender_type=current_user.role,
         sender_name=reporter_name or "Workstation User",
         message=message,
-        screenshot_paths=paths_str
+        screenshot_paths=paths_str,
+        is_internal=False,
+        created_at=now
     )
     db.add(first_msg)
     await db.commit()
@@ -97,6 +115,27 @@ async def get_tickets(
     return tickets
 
 
+@router.get("/tickets/unread_count")
+async def get_unread_count(
+    workstation: str = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the number of tickets with unread messages for a given context."""
+    if current_user.role == UserRole.user:
+        if not workstation:
+            raise HTTPException(status_code=400, detail="Workstation name required for users.")
+        # Count tickets for this workstation where user hasn't read it
+        stmt = select(func.count(Ticket.id)).where(Ticket.workstation == workstation, Ticket.has_unread_user == True, Ticket.status != 'resolved')
+    else:
+        # Admins want the total unread messages explicitly waiting for IT
+        stmt = select(func.count(Ticket.id)).where(Ticket.has_unread_admin == True, Ticket.status != 'resolved')
+
+    result = await db.execute(stmt)
+    count = result.scalar() or 0
+    return {"unread_count": count}
+
+
 @router.get("/tickets/{ticket_id}")
 async def get_ticket_details(
     ticket_id: int,
@@ -111,6 +150,20 @@ async def get_ticket_details(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
         
+    # Mark as read
+    if current_user.role == UserRole.user:
+        if ticket.has_unread_user:
+            ticket.has_unread_user = False
+            await db.commit()
+    else:
+        if ticket.has_unread_admin:
+            ticket.has_unread_admin = False
+            await db.commit()
+            
+    # Filter internal notes if user
+    if current_user.role == UserRole.user:
+        ticket.messages = [m for m in ticket.messages if not m.is_internal]
+
     return ticket
 
 
@@ -119,6 +172,7 @@ async def reply_to_ticket(
     ticket_id: int,
     message: str = Form(...),
     sender_name: str = Form(None),
+    is_internal: str = Form("false"),
     screenshots: List[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -132,24 +186,36 @@ async def reply_to_ticket(
 
     paths_str = await _save_screenshots(screenshots)
     
-    # Auto-resolve sender name
     final_sender_name = sender_name
     if not final_sender_name:
         final_sender_name = "IT Support" if current_user.role in [UserRole.it, UserRole.admin] else "Workstation User"
 
+    now = datetime.now()
+    b_is_internal = is_internal.lower() == "true"
+    
     new_msg = TicketMessage(
         ticket_id=ticket.id,
         sender_type=current_user.role,
         sender_name=final_sender_name,
         message=message,
-        screenshot_paths=paths_str
+        screenshot_paths=paths_str,
+        is_internal=b_is_internal,
+        created_at=now
     )
     db.add(new_msg)
     
-    # Reopen ticket if a user replies
-    if current_user.role == UserRole.user and ticket.status != "open":
-        ticket.status = "open"
-        
+    # Update ticket timestamps and read states
+    ticket.updated_at = now
+    
+    if current_user.role == UserRole.user:
+        ticket.has_unread_admin = True
+        if ticket.status != "open":
+            ticket.status = "open"
+    else:
+        # IT replies - notify user (unless it's an internal whisper)
+        if not b_is_internal:
+            ticket.has_unread_user = True
+
     await db.commit()
     return {"status": "success"}
 
@@ -172,5 +238,6 @@ async def update_ticket_status(
         raise HTTPException(status_code=404, detail="Ticket not found")
         
     ticket.status = update_data.status
+    ticket.updated_at = datetime.now()
     await db.commit()
     return {"status": "success", "ticket_id": ticket_id}

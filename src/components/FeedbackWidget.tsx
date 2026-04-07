@@ -16,6 +16,13 @@ export interface Ticket {
   workstation: string;
   reporter_name: string | null;
   subject: string;
+  category: string;
+  urgency: string;
+  sys_ram: string | null;
+  sys_res: string | null;
+  sys_app: string | null;
+  has_unread_user: boolean;
+  has_unread_admin: boolean;
   status: string;
   created_at: string;
   updated_at: string;
@@ -47,10 +54,15 @@ export default function FeedbackWidget() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   
-  // Create / Reply State
+  // Unread Polling State
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Create State
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [reporterName, setReporterName] = useState('');
+  const [category, setCategory] = useState('General');
+  const [urgency, setUrgency] = useState('low');
   const [screenshots, setScreenshots] = useState<string[]>([]);
   
   const [showLimitError, setShowLimitError] = useState(false);
@@ -59,7 +71,45 @@ export default function FeedbackWidget() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll chat
+  // Global polling for unread notifications
+  useEffect(() => {
+    const checkUnread = async () => {
+      let wsName = workstation;
+      if (!wsName) {
+        if (window.electronAPI) {
+          try {
+            const ws = await window.electronAPI.getWorkstationInfo();
+            wsName = ws.hostname || 'SYSTEM';
+          } catch (e) {
+            wsName = 'SYSTEM';
+          }
+        } else {
+          wsName = 'SYSTEM';
+        }
+      }
+      
+      try {
+        const res = await helpApi.getUnreadCount(wsName);
+        if (res.data.unread_count > unreadCount) {
+          if (Notification.permission === 'granted') {
+             new Notification('IT Support Update', {
+               body: 'You have a new message from IT Support regarding your ticket.',
+             });
+          } else if (Notification.permission !== 'denied') {
+             Notification.requestPermission();
+          }
+        }
+        setUnreadCount(res.data.unread_count);
+      } catch (e) {
+        // fail silently
+      }
+    };
+
+    const poller = setInterval(checkUnread, 30000);
+    checkUnread();
+    return () => clearInterval(poller);
+  }, [workstation, unreadCount]);
+
   useEffect(() => {
     if (view === 'chat' && chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -69,8 +119,8 @@ export default function FeedbackWidget() {
   useEffect(() => {
     if (isOpen) {
       initApp();
+      // If we open, we visually are clearing the badge if we view the ticket, but unread logic handles it on fetch.
     } else {
-      // Reset when closed
       setView('list');
       setActiveTicket(null);
       resetForms();
@@ -87,7 +137,6 @@ export default function FeedbackWidget() {
           setWorkstation(wsName);
         }
       } catch (e) {
-        console.error(e);
         wsName = 'SYSTEM';
         setWorkstation(wsName);
       }
@@ -100,6 +149,9 @@ export default function FeedbackWidget() {
       setIsLoading(true);
       const res = await helpApi.getTickets(wsName);
       setTickets(res.data);
+      // Auto-refresh unread badge by recalculating from tickets
+      const newUnread = res.data.filter((t: Ticket) => t.has_unread_user).length;
+      setUnreadCount(newUnread);
     } catch (err) {
       console.error(err);
     } finally {
@@ -113,6 +165,8 @@ export default function FeedbackWidget() {
       const res = await helpApi.getTicketDetails(id);
       setActiveTicket(res.data);
       setView('chat');
+      // Opening details naturally clears its unread state, refresh inbox in bg
+      loadTickets(workstation);
     } catch (err) {
       console.error(err);
     } finally {
@@ -123,6 +177,8 @@ export default function FeedbackWidget() {
   const resetForms = () => {
     setSubject('');
     setMessage('');
+    setCategory('General');
+    setUrgency('low');
     setScreenshots([]);
     setShowLimitError(false);
   };
@@ -160,8 +216,19 @@ export default function FeedbackWidget() {
       const formData = new FormData();
       formData.append('subject', subject);
       formData.append('message', message);
+      formData.append('category', category);
+      formData.append('urgency', urgency);
       formData.append('workstation', workstation);
       if (reporterName) formData.append('reporter_name', reporterName);
+
+      // Telemetry: System Memory, Resolution, App
+      // @ts-ignore
+      const ram = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : 'Unknown';
+      const res = `${window.innerWidth}x${window.innerHeight}`;
+      const appVer = navigator.userAgent;
+      formData.append('sys_ram', ram);
+      formData.append('sys_res', res);
+      formData.append('sys_app', appVer);
 
       for (const s of screenshots) {
         try {
@@ -203,8 +270,9 @@ export default function FeedbackWidget() {
       }
 
       await helpApi.reply(activeTicket.id, formData);
-      resetForms();
-      await loadTicketDetails(activeTicket.id); // Reload chat
+      setMessage('');
+      setScreenshots([]);
+      await loadTicketDetails(activeTicket.id); 
     } catch (err) {
       console.error(err);
       alert('Failed to send reply.');
@@ -216,6 +284,7 @@ export default function FeedbackWidget() {
   if (!isOpen) {
     return (
       <div className="feedback-fab" onClick={() => setIsOpen(true)} title="Help Center">
+        {unreadCount > 0 && <span className="feedback-fab-badge">{unreadCount}</span>}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10" />
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
@@ -263,15 +332,22 @@ export default function FeedbackWidget() {
                 tickets.map(t => (
                   <div key={t.id} className="feedback-ticket-card" onClick={() => loadTicketDetails(t.id)}>
                     <div className="ticket-card-header">
-                      <span className="ticket-card-subject">{t.subject || 'No Subject'}</span>
+                      <span className="ticket-card-subject">
+                        {t.has_unread_user && <span className="ticket-unread-dot"></span>}
+                        {t.subject || 'No Subject'}
+                      </span>
                       <span className={`ticket-status badge-${t.status === 'open' ? 'danger' : t.status === 'in_progress' ? 'warning' : 'success'}`}>
                         {t.status.replace('_', ' ').toUpperCase()}
                       </span>
                     </div>
                     <div className="ticket-card-meta">
-                      <span>#TK-{t.id}</span>
+                      <span style={{color: t.urgency === 'high' || t.urgency === 'critical' ? '#e11d48' : 'inherit'}}>
+                        #{t.id} • {t.urgency.toUpperCase()}
+                      </span>
                       <span>•</span>
-                      <span>Last updated: {formatDate(t.updated_at)}</span>
+                      <span>{t.category}</span>
+                      <span>•</span>
+                      <span>{formatDate(t.updated_at)}</span>
                     </div>
                   </div>
                 ))
@@ -283,12 +359,29 @@ export default function FeedbackWidget() {
         {/* CREATE TICKET VIEW */}
         {view === 'create' && (
           <div className="feedback-create-view">
-            <div className="form-row">
-              <input type="text" className="feedback-input" placeholder="Your Name (Optional)" value={reporterName} onChange={e => setReporterName(e.target.value)} />
+            <div className="form-row" style={{ display: 'flex', gap: '12px' }}>
+              <input type="text" className="feedback-input" placeholder="Your Name (Optional)" value={reporterName} onChange={e => setReporterName(e.target.value)} style={{flex: 1}} />
             </div>
+            
+            <div className="form-row" style={{ display: 'flex', gap: '12px' }}>
+              <select className="feedback-input" value={category} onChange={e => setCategory(e.target.value)} style={{flex: 1}}>
+                <option value="General">General Support</option>
+                <option value="Bug">Software Bug</option>
+                <option value="Hardware">Hardware Issue</option>
+                <option value="Request">Feature Request</option>
+              </select>
+              <select className="feedback-input" value={urgency} onChange={e => setUrgency(e.target.value)} style={{flex: 1}}>
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            
             <div className="form-row">
               <input type="text" className="feedback-input" placeholder="Issue Subject (e.g., Printer not working)" value={subject} onChange={e => setSubject(e.target.value)} autoFocus />
             </div>
+            
             <div className={`feedback-input-wrapper ${showLimitError ? 'has-error' : ''}`}>
               <textarea 
                 className="feedback-textarea" placeholder="Describe the issue in detail... (Ctrl+V to attach up to 3 images)" 
@@ -319,7 +412,7 @@ export default function FeedbackWidget() {
         {view === 'chat' && activeTicket && (
           <div className="feedback-chat-view">
             <div className="chat-header">
-              <div className="chat-title">Ticket #TK-{activeTicket.id}: {activeTicket.subject}</div>
+              <div className="chat-title">Ticket #{activeTicket.id}: {activeTicket.subject}</div>
               <div className={`chat-status badge-${activeTicket.status === 'open' ? 'danger' : activeTicket.status === 'in_progress' ? 'warning' : 'success'}`}>
                 {activeTicket.status.replace('_', ' ').toUpperCase()}
               </div>
@@ -335,7 +428,7 @@ export default function FeedbackWidget() {
                     {isMe && <div className="chat-sender-name">{msg.sender_name || 'You'}</div>}
                     
                     <div className="chat-bubble">
-                      {msg.message && <div className="chat-text">{msg.message}</div>}
+                      {msg.message && <div className="chat-text" style={{whiteSpace: 'pre-wrap'}}>{msg.message}</div>}
                       {paths.length > 0 && (
                         <div className="chat-attachments">
                           {paths.map((p, idx) => (

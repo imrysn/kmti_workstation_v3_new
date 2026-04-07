@@ -144,6 +144,8 @@ export const helpApi = {
     api.post(`/help/tickets/${id}/reply`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   updateStatus: (id: number, status: string) => 
     api.patch(`/help/tickets/${id}/status`, { status }),
+  getUnreadCount: (workstation?: string) =>
+    api.get('/help/tickets/unread_count', { params: { workstation } }),
 }
 // --- Production Resiliency Interceptor ---
 // Automatically retry transient errors (503, 504) once before giving up.
