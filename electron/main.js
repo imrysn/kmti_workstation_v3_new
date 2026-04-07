@@ -235,20 +235,51 @@ app.whenReady().then(() => {
     } catch (err) { return null }
   })
 
-  // --- Auto Updater Handlers ---
-  ipcMain.handle('check-for-update', async () => {
-    if (!autoUpdater) return { error: 'Updater not available' }
-    return await autoUpdater.checkForUpdates()
+  // --- Stopwatch File System Handlers ---
+  const { exec } = require('child_process')
+  const XLSX = require('xlsx')
+  const stopwatchDir = path.join(app.getPath('documents'), 'Stopwatch Recordings')
+  const stopwatchFile = path.join(stopwatchDir, 'records.json')
+  const excelFile = path.join(stopwatchDir, 'Stopwatch_Records.xlsx')
+
+  ipcMain.handle('get-stopwatch-records', async () => {
+    try {
+      if (!fs.existsSync(stopwatchDir)) fs.mkdirSync(stopwatchDir, { recursive: true })
+      if (!fs.existsSync(stopwatchFile)) return []
+      const data = fs.readFileSync(stopwatchFile, 'utf8')
+      return JSON.parse(data)
+    } catch (err) { return [] }
   })
 
-  ipcMain.handle('download-update', async () => {
-    if (!autoUpdater) return { error: 'Updater not available' }
-    return await autoUpdater.downloadUpdate()
+  ipcMain.handle('save-stopwatch-records', async (_, records) => {
+    try {
+      if (!fs.existsSync(stopwatchDir)) fs.mkdirSync(stopwatchDir, { recursive: true })
+      
+      // 1. Save JSON (Source of truth)
+      fs.writeFileSync(stopwatchFile, JSON.stringify(records.slice(0, 50), null, 2))
+      
+      // 2. Set JSON as hidden (Windows only)
+      if (process.platform === 'win32') {
+        exec(`attrib +h "${stopwatchFile}"`)
+      }
+
+      // 3. Save Excel (.xlsx) for user viewing
+      const worksheetData = records.map(r => ({
+          Name: r.name,
+          Time: r.time
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Records");
+      XLSX.writeFile(workbook, excelFile);
+
+      return { success: true }
+    } catch (err) { return { success: false, error: err.message } }
   })
 
-  ipcMain.handle('install-and-restart', () => {
-    if (!autoUpdater) return
-    autoUpdater.quitAndInstall()
+  ipcMain.handle('open-stopwatch-folder', async () => {
+    if (!fs.existsSync(stopwatchDir)) fs.mkdirSync(stopwatchDir, { recursive: true })
+    shell.openPath(stopwatchDir)
   })
 
   createWindow()

@@ -115,7 +115,7 @@ export default function TitleBar() {
       <div className="titlebar-drag-region" />
       <div className="titlebar-app-info">
         <img src={logo} alt="K" className="titlebar-logo-img" style={{ height: '20px', width: 'auto', objectFit: 'contain' }} />
-        <span className="titlebar-title">KMTI Workstation <small style={{ opacity: 0.5, fontSize: '0.7em', marginLeft: '4px' }}>v3.6.1</small></span>
+        <span className="titlebar-title">KMTI Workstation</span>
       </div>
 
       <nav className="titlebar-nav">

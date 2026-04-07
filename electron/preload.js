@@ -14,10 +14,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getWorkstationInfo: () => ipcRenderer.invoke('get-workstation-info'),
 
   // --- Auto Updater ---
-  // Renderer → Main
   checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installAndRestart: () => ipcRenderer.invoke('install-and-restart'),
+
+  // --- Stopwatch ---
+  getStopwatchRecords: () => ipcRenderer.invoke('get-stopwatch-records'),
+  saveStopwatchRecords: (records) => ipcRenderer.invoke('save-stopwatch-records', records),
+  openStopwatchFolder: () => ipcRenderer.invoke('open-stopwatch-folder'),
 
   // Main → Renderer (push events)
   onUpdateAvailable: (cb) => ipcRenderer.on('update-available', (_, info) => cb(info)),

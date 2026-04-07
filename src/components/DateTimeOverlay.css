@@ -1,45 +1,53 @@
 .findr-global-datetime {
-  position: fixed;
-  z-index: 9999;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  padding: 12px 24px;
-  border-radius: 40px;
-  border: 1px solid transparent;
-  display: flex;
-  flex-direction: column-reverse; /* Expand UPWARD */
-  gap: 12px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-  cursor: grab;
-  user-select: none;
-  transition: 
-    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    background-color 0.4s ease,
-    color 0.4s ease,
-    border-color 0.4s ease,
-    width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
-    left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Snap on Bottom */
-  overflow: hidden;
-  min-width: 180px;
+    position: fixed;
+    z-index: 9999;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    padding: 12px 24px;
+    border-radius: 40px;
+    border: 1px solid transparent;
+    display: flex;
+    flex-direction: column-reverse;
+    /* Expand UPWARD */
+    gap: 12px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    cursor: grab;
+    user-select: none;
+    opacity: 1;
+    transition:
+        box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+        background-color 0.4s ease,
+        color 0.4s ease,
+        border-color 0.4s ease,
+        width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+        bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    overflow: hidden;
+    min-width: 180px;
+}
+
+.findr-global-datetime.inactive {
+    opacity: 0.5;
 }
 
 .findr-global-datetime.dragging {
-  transition: 
-    box-shadow 0.3s ease,
-    transform 0.3s ease,
-    background-color 0.4s ease,
-    color 0.4s ease,
-    border-color 0.4s ease;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
-  transform: scale(1.02);
+    opacity: 1 !important;
+    transition:
+        box-shadow 0.3s ease,
+        transform 0.3s ease,
+        background-color 0.4s ease,
+        color 0.4s ease,
+        border-color 0.4s ease;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+    transform: scale(1.02);
 }
 
 .findr-global-datetime:active {
-  cursor: grabbing;
+    cursor: grabbing;
 }
 
 /* --- Modes --- */
@@ -53,25 +61,25 @@
 
 /* --- Clock --- */
 .findr-datetime-time {
-  font-weight: 800;
-  font-size: 16px;
-  letter-spacing: 0.5px;
-  font-variant-numeric: tabular-nums;
-  transition: color 0.3s ease;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s ease;
 }
 
 .findr-datetime-separator {
-  width: 2px;
-  height: 18px;
-  border-radius: 2px;
-  transition: background-color 0.3s ease;
+    width: 2px;
+    height: 18px;
+    border-radius: 2px;
+    transition: background-color 0.3s ease;
 }
 
 .findr-datetime-date {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 /* --- Stopwatch --- */
@@ -87,7 +95,8 @@
     font-weight: 800;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.5px;
-    min-width: 70px;
+    min-width: 100px;
+    /* Wider for HH:MM:SS.CC */
     transition: color 0.3s ease;
 }
 
@@ -119,28 +128,41 @@
 .findr-global-datetime.expanded {
     border-radius: 28px;
     padding: 24px;
-    min-width: 280px;
+    min-width: 300px;
 }
 
 .findr-control-center {
-    border-bottom: 1px solid rgba(128, 128, 128, 0.1); /* Separator moved to bottom due to reversal */
+    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
     padding-bottom: 20px;
     margin-bottom: 8px;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 18px;
     animation: findrCCFadeUp 0.3s ease-out both;
 }
 
 @keyframes findrCCFadeUp {
-    from { opacity: 0; transform: translateY(-10px); }
-    to   { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .findr-cc-group {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.findr-cc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .findr-cc-label {
@@ -157,10 +179,10 @@
     flex-wrap: wrap;
 }
 
-/* 7 Colors per Row */
+/* 6 Colors per Row */
 .findr-cc-grid.colors {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    grid-template-columns: repeat(6, 1fr);
     gap: 10px;
     width: fit-content;
 }
@@ -193,7 +215,7 @@
 .findr-theme-opt-v2.active {
     transform: scale(1.1);
     border-color: #fff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .findr-theme-opt-v2.active .findr-theme-preview {
@@ -209,6 +231,9 @@
     border: 2px solid transparent;
     transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     background-origin: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .findr-palette-opt:hover {
@@ -221,6 +246,128 @@
     box-shadow: 0 0 10px currentColor;
 }
 
+.findr-palette-toggle {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.findr-palette-toggle:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.1);
+}
+
+/* --- Records List --- */
+.findr-sw-records {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+    /* Adjusted for larger items */
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-top: 6px;
+}
+
+.findr-sw-records::-webkit-scrollbar {
+    width: 4px;
+}
+
+.findr-sw-records::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.findr-sw-record-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    gap: 12px;
+    transition: all 0.2s ease;
+}
+
+.findr-sw-record-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.findr-sw-record-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.findr-sw-record-name {
+    font-size: 14px;
+    font-weight: 800;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0;
+    width: 100%;
+    cursor: text;
+}
+
+.findr-sw-record-time {
+    font-size: 16px;
+    opacity: 0.6;
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.2px;
+}
+
+.findr-sw-record-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.findr-sw-action-btn {
+    opacity: 0.3;
+    transition: all 0.2s ease;
+    padding: 4px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.findr-sw-record-item:hover .findr-sw-action-btn {
+    opacity: 0.6;
+}
+
+.findr-sw-action-btn:hover {
+    opacity: 1 !important;
+    background: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+.findr-sw-action-btn.delete:hover {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+}
+
 .findr-cc-footer {
     font-size: 9px;
     font-weight: 700;
@@ -230,10 +377,9 @@
     letter-spacing: 0.5px;
 }
 
-/* --- Theme Specific Enhancements --- */
-
+/* --- Theme Specific --- */
 .theme-blueprint {
-    background-image: 
+    background-image:
         linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
         linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
     background-size: 15px 15px;
@@ -243,20 +389,18 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(
-        to bottom,
-        rgba(18, 16, 16, 0) 50%,
-        rgba(0, 0, 0, 0.1) 50%
-    );
+    background: linear-gradient(to bottom,
+            rgba(18, 16, 16, 0) 50%,
+            rgba(0, 0, 0, 0.1) 50%);
     background-size: 100% 4px;
     pointer-events: none;
     z-index: 10;
 }
 
 .theme-cyber {
-    text-shadow: 0 0 10px rgba(255,255,255,0.2);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .theme-industrial {
-    background-image: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
 }
