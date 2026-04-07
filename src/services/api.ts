@@ -132,12 +132,18 @@ export const usersApi = {
   delete: (id: number) => api.delete(`/auth/users/${id}`),
 }
 
-// --- Help Center ---
+// --- Help Center (Tickets) ---
 export const helpApi = {
-  submit: (formData: FormData) => 
-    api.post('/help/submit', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
-  getLogs: () => api.get('/help/logs'),
-  resolve: (id: number) => api.patch(`/help/${id}/resolve`),
+  createTicket: (formData: FormData) => 
+    api.post('/help/tickets', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getTickets: (workstation?: string) => 
+    api.get('/help/tickets', { params: { workstation } }),
+  getTicketDetails: (id: number) => 
+    api.get(`/help/tickets/${id}`),
+  reply: (id: number, formData: FormData) => 
+    api.post(`/help/tickets/${id}/reply`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  updateStatus: (id: number, status: string) => 
+    api.patch(`/help/tickets/${id}/status`, { status }),
 }
 // --- Production Resiliency Interceptor ---
 // Automatically retry transient errors (503, 504) once before giving up.

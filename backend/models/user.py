@@ -2,7 +2,8 @@
 User and FeatureFlag models — RBAC support for KMTI Workstation v3.
 These create new tables in the shared NAS MySQL DB alongside existing tables.
 """
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, Enum
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, Enum, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 from db.database import Base
@@ -41,13 +42,26 @@ class FeatureFlag(Base):
     value = Column(Boolean, default=True, nullable=False)
     updated_by = Column(String(100), nullable=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
-class Feedback(Base):
-    __tablename__ = "kmti_feedback"
+class Ticket(Base):
+    __tablename__ = "kmti_tickets"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, nullable=False)  # ID of shared account (e.g. 'user')
-    workstation = Column(String(100), nullable=False)  # Computer name
-    message = Column(String(1000), nullable=False)
-    screenshot_path = Column(String(255), nullable=True)
-    status = Column(String(20), default="open", nullable=False)  # open, resolved
+    workstation = Column(String(100), nullable=False)
+    reporter_name = Column(String(100), nullable=True)
+    subject = Column(String(200), nullable=True)
+    status = Column(String(20), default="open", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+class TicketMessage(Base):
+    __tablename__ = "kmti_ticket_messages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    ticket_id = Column(Integer, ForeignKey("kmti_tickets.id"), nullable=False)
+    sender_type = Column(String(20), nullable=False)  # 'user', 'it', 'admin'
+    sender_name = Column(String(100), nullable=True)
+    message = Column(String(2000), nullable=False)
+    screenshot_paths = Column(String(1000), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    ticket = relationship("Ticket", backref="messages")
