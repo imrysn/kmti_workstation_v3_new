@@ -2,6 +2,7 @@
 Help Center router — users submit feedback with screenshots.
 Feedback is logged in DB and screenshots stored in backend/storage/feedback.
 """
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -25,29 +26,35 @@ os.makedirs(STORAGE_DIR, exist_ok=True)
 async def submit_feedback(
     message: str = Form(...),
     workstation: str = Form(...),
-    screenshot: UploadFile = File(None),
+    screenshots: List[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Submit a help request with an optional screenshot."""
-    screenshot_path = None
+    """Submit a help request with up to 3 optional screenshots."""
+    saved_paths = []
     
-    if screenshot:
-        ext = os.path.splitext(screenshot.filename)[1]
-        filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex}{ext}"
-        save_path = os.path.join(STORAGE_DIR, filename)
-        
-        with open(save_path, "wb") as buffer:
-            shutil.copyfileobj(screenshot.file, buffer)
-        
-        # Store relative path for frontend serving
-        screenshot_path = f"/storage/feedback/{filename}"
+    if screenshots:
+        for screenshot in screenshots:
+            if not screenshot.filename:
+                continue
+                
+            ext = os.path.splitext(screenshot.filename)[1]
+            filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex}{ext}"
+            save_path = os.path.join(STORAGE_DIR, filename)
+            
+            with open(save_path, "wb") as buffer:
+                shutil.copyfileobj(screenshot.file, buffer)
+            
+            # Collect path for DB
+            saved_paths.append(f"/storage/feedback/{filename}")
+
+    screenshot_paths_str = ",".join(saved_paths) if saved_paths else None
 
     new_feedback = Feedback(
         user_id=current_user.id,
         workstation=workstation,
         message=message,
-        screenshot_path=screenshot_path,
+        screenshot_path=screenshot_paths_str,
         status="open"
     )
     

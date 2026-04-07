@@ -2,10 +2,29 @@ import { useState, useEffect } from 'react';
 import { helpApi } from '../services/api';
 import './FeedbackWidget.css';
 
+/**
+ * Helper to convert Data URLs to Blobs for more reliable multipart/form-data uploads.
+ */
+function dataURLToBlob(dataURL: string): Blob {
+  const [header, base64Data] = dataURL.split(';base64,');
+  const contentType = header.split(':')[1];
+  const binaryString = window.atob(base64Data);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  return new Blob([bytes], { type: contentType });
+}
+
 export default function FeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [screenshots, setScreenshots] = useState<string[]>([]);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showLimitError, setShowLimitError] = useState(false);
   const [workstation, setWorkstation] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -18,12 +37,13 @@ export default function FeedbackWidget() {
         const timer = setTimeout(() => {
           setSubmitted(false);
           setMessage('');
-          setScreenshot(null);
+          setScreenshots([]);
+          setShowLimitError(false);
         }, 500);
         return () => clearTimeout(timer);
       }
     }
-  }, [isOpen]);
+  }, [isOpen, submitted]);
 
   const initFeedback = async () => {
     try {
@@ -37,13 +57,25 @@ export default function FeedbackWidget() {
 
   const handlePaste = (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
+
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
+        // Enforce 3-image limit
+        if (screenshots.length >= 3) {
+          setShowLimitError(true);
+          return;
+        }
+
         const blob = items[i].getAsFile();
         if (blob) {
           const reader = new FileReader();
           reader.onload = (event) => {
-            setScreenshot(event.target?.result as string);
+            const dataUrl = event.target?.result as string;
+            setScreenshots(prev => {
+              const next = [...prev, dataUrl];
+              if (next.length <= 3) setShowLimitError(false);
+              return next;
+            });
           };
           reader.readAsDataURL(blob);
         }
@@ -51,8 +83,16 @@ export default function FeedbackWidget() {
     }
   };
 
+  const removeScreenshot = (index: number) => {
+    setScreenshots(prev => {
+      const next = prev.filter((_, i) => i !== index);
+      if (next.length < 3) setShowLimitError(false);
+      return next;
+    });
+  };
+
   const handleSubmit = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() && screenshots.length === 0) return;
     setIsSubmitting(true);
 
     try {
@@ -60,10 +100,14 @@ export default function FeedbackWidget() {
       formData.append('message', message);
       formData.append('workstation', workstation || 'SYSTEM');
 
-      if (screenshot) {
-        const res = await fetch(screenshot);
-        const blob = await res.blob();
-        formData.append('screenshot', blob, 'pasted_image.png');
+      // Append all screenshots
+      for (const s of screenshots) {
+        try {
+          const blob = dataURLToBlob(s);
+          formData.append('screenshots', blob, 'pasted_image.png');
+        } catch (e) {
+          console.error("Failed to convert screenshot to blob", e);
+        }
       }
 
       await helpApi.submit(formData);
@@ -72,6 +116,7 @@ export default function FeedbackWidget() {
       setTimeout(() => setIsOpen(false), 1500);
     } catch (err) {
       console.error('Feedback submission failed:', err);
+      setShowLimitError(false);
       alert('Failed to submit feedback. Please check backend connection.');
     } finally {
       setIsSubmitting(false);
@@ -92,12 +137,12 @@ export default function FeedbackWidget() {
 
   return (
     <div className="feedback-modal-overlay">
-      <div className="feedback-modal">
+      <div className="feedback-modal light-theme">
         {submitted ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <div style={{ color: '#0099FF', fontSize: '48px', marginBottom: '20px' }}>✓</div>
-            <h2 style={{ color: '#fff', marginBottom: '10px' }}>Ticket Created</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>IT will review your request shortly.</p>
+          <div className="feedback-success-view">
+            <div className="feedback-success-icon">✓</div>
+            <h2>Ticket Created</h2>
+            <p>IT will review your request shortly.</p>
           </div>
         ) : (
           <>
@@ -110,45 +155,43 @@ export default function FeedbackWidget() {
               Help Center
             </div>
 
-            <div className="feedback-form-group">
-              <label className="feedback-label">Your Message</label>
-              <textarea 
-                className="feedback-textarea"
-                placeholder="Describe the issue... (You can also paste an image here with Ctrl+V)"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onPaste={handlePaste}
-                autoFocus
-              />
-            </div>
-
-            <div className="feedback-form-group">
-              <label className="feedback-label">Attached Image (Optional)</label>
-              <div className="feedback-screenshot-preview">
-                {screenshot ? (
-                  <>
-                    <img src={screenshot} alt="Pasted" />
-                    <div className="feedback-screenshot-overlay">
-                      <span>IMAGE ATTACHED FROM {workstation}</span>
-                      <button 
-                        style={{ marginLeft: '10px', background: 'rgba(255,0,0,0.5)', border: 'none', color: 'white', borderRadius: '4px', cursor: 'pointer', fontSize: '9px', padding: '2px 5px' }}
-                        onClick={() => setScreenshot(null)}
-                      >
-                        REMOVE
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#444', fontSize: '12px', gap: '8px' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
-                    </svg>
-                    <span>Paste image (Ctrl+V) to attach</span>
+            <div className="feedback-composer">
+              <div className={`feedback-input-wrapper ${showLimitError ? 'has-error' : ''}`}>
+                <textarea 
+                  className="feedback-textarea"
+                  placeholder="Describe the issue... (Ctrl+V to paste screenshot, max 3)"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onPaste={handlePaste}
+                  autoFocus
+                />
+                
+                {screenshots.length > 0 && (
+                  <div className="feedback-multi-previews">
+                    {screenshots.map((s, idx) => (
+                      <div key={idx} className="feedback-inline-preview">
+                        <img 
+                          src={s} 
+                          alt="Attachment" 
+                          className="feedback-pasted-thumb" 
+                          onClick={() => setPreviewImage(s)}
+                          title="Click to preview"
+                        />
+                        <button 
+                          className="feedback-remove-pasted" 
+                          onClick={() => removeScreenshot(idx)}
+                          title="Remove Attachment"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
+              {showLimitError && (
+                <div className="feedback-error-msg">Maximum of 3 images allowed</div>
+              )}
             </div>
 
             <div className="feedback-modal-actions">
@@ -162,7 +205,7 @@ export default function FeedbackWidget() {
               <button 
                 className="feedback-btn feedback-btn-primary"
                 onClick={handleSubmit}
-                disabled={isSubmitting || !message.trim()}
+                disabled={isSubmitting || (!message.trim() && screenshots.length === 0)}
               >
                 {isSubmitting ? 'Sending...' : 'Submit Request'}
               </button>
@@ -170,6 +213,18 @@ export default function FeedbackWidget() {
           </>
         )}
       </div>
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div className="feedback-viewer-overlay" onClick={() => setPreviewImage(null)}>
+          <div className="feedback-viewer-content" onClick={e => e.stopPropagation()}>
+            <img src={previewImage} alt="Large preview" className="feedback-viewer-img" />
+            <button className="feedback-viewer-close" onClick={() => setPreviewImage(null)} title="Close Preview">
+              ×
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import MaterialCalculator from './pages/MaterialCalculator'
 import Settings from './pages/Settings'
 import Users from './pages/Users'
 import ITControls from './pages/ITControls'
+import AdminHelpCenter from './pages/AdminHelpCenter'
 import FeatureClosed from './pages/FeatureClosed'
 import Maintenance from './pages/Maintenance'
 import Login from './pages/Login'
@@ -163,6 +164,14 @@ function WorkstationShell() {
               element={
                 <ProtectedRoute roles={['it']}>
                   <ITControls />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin-help"
+              element={
+                <ProtectedRoute roles={['admin', 'it']}>
+                  <AdminHelpCenter />
                 </ProtectedRoute>
               }
             />

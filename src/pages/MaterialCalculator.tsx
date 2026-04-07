@@ -144,10 +144,10 @@ export default function MaterialCalculator() {
       <div className="scratchpad-container glass-panel">
         <div className="scratchpad-grid">
           <div className="box-label input-label">
-            <span>INPUT DATA</span>
+            <span>INPUT MATERIAL</span>
           </div>
           <div className="box-label output-label">
-            <span>WEIGHT (KG)</span>
+            <span>TOTAL WEIGHT (KG)</span>
           </div>
 
           <div className="textarea-wrapper input-area">

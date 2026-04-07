@@ -29,14 +29,14 @@
   height: 28px;
 }
 
-/* Modal */
+/* Modal Layout */
 .feedback-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,31 +45,31 @@
   animation: fadeIn 0.3s ease;
 }
 
-.feedback-modal {
-  background: #0c0c0e;
+/* Light Theme Aesthetic */
+.feedback-modal.light-theme {
+  background: #ffffff;
   width: 500px;
   border-radius: 12px;
-  border: 1px solid rgba(0, 153, 255, 0.3);
+  border: 1px solid #e2e8f0;
   padding: 30px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
   position: relative;
   overflow: hidden;
 }
 
-.feedback-modal::before {
+.feedback-modal.light-theme::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, #0099FF, transparent);
+  height: 3px;
 }
 
 .feedback-modal-title {
   font-size: 20px;
   font-weight: 700;
-  color: #fff;
+  color: #1a202c;
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -80,76 +80,198 @@
   color: #0099FF;
 }
 
-.feedback-form-group {
-  margin-bottom: 20px;
+/* Input & Composition */
+.feedback-composer {
+  margin-top: 16px;
+  margin-bottom: 24px;
 }
 
-.feedback-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  color: #0099FF;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
+.feedback-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  transition: all 0.2s;
+}
+
+.feedback-input-wrapper:focus-within {
+  border-color: #0099FF;
+  background: #f1f5f9;
+  box-shadow: 0 0 0 3px rgba(0, 153, 255, 0.08);
+}
+
+.feedback-input-wrapper.has-error {
+  border-color: #f85149 !important;
+  background: rgba(248, 81, 73, 0.03) !important;
 }
 
 .feedback-textarea {
   width: 100%;
-  height: 120px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 12px;
-  color: #fff;
+  min-height: 120px;
+  background: transparent;
+  border: none;
+  color: #1a202c;
   font-family: inherit;
   font-size: 14px;
-  resize: none;
-  transition: border-color 0.2s;
-}
-
-.feedback-textarea:focus {
+  line-height: 1.5;
   outline: none;
-  border-color: #0099FF;
-  background: rgba(255, 255, 255, 0.05);
+  resize: vertical;
 }
 
-.feedback-screenshot-preview {
-  width: 100%;
-  height: 120px;
-  background: #1a1a1c;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.feedback-textarea::placeholder {
+  color: #a0aec0;
+}
+
+.feedback-error-msg {
+  color: #f85149;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Attachment Grid */
+.feedback-multi-previews {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.feedback-inline-preview {
   position: relative;
+  width: fit-content;
+  max-width: calc(33.33% - 7px);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #f1f5f9;
+  cursor: zoom-in;
+  transition: transform 0.2s;
 }
 
-.feedback-screenshot-preview img {
+.feedback-inline-preview:hover {
+  transform: translateY(-2px);
+  border-color: #0099FF;
+}
+
+.feedback-pasted-thumb {
+  display: block;
   width: 100%;
-  height: 100%;
+  height: 100px;
   object-fit: cover;
-  opacity: 0.7;
 }
 
-.feedback-screenshot-overlay {
+.feedback-remove-pasted {
   position: absolute;
-  inset: 0;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 153, 255, 0.1);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
 }
 
-.feedback-screenshot-overlay span {
-  font-size: 10px;
-  font-weight: 600;
-  color: #0099FF;
+.feedback-remove-pasted:hover {
+  background: #f85149;
+  border-color: #fff;
+}
+
+/* Viewport Modal Styles (ImageViewer) */
+.feedback-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.feedback-viewer-content {
+  position: relative;
+  max-width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.feedback-viewer-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.feedback-viewer-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
   background: rgba(0, 0, 0, 0.6);
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 153, 255, 0.3);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
 }
 
+.feedback-viewer-close:hover {
+  background: #f85149;
+  transform: rotate(90deg) scale(1.1);
+}
+
+/* Success View */
+.feedback-success-view {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.feedback-success-icon {
+  color: #0099FF;
+  font-size: 54px;
+  margin-bottom: 20px;
+}
+
+.feedback-success-view h2 {
+  color: #1a202c;
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.feedback-success-view p {
+  color: #4a5568;
+  font-size: 15px;
+}
+
+/* Buttons & Actions */
 .feedback-modal-actions {
   display: flex;
   gap: 12px;
@@ -157,7 +279,7 @@
 }
 
 .feedback-btn {
-  padding: 10px 20px;
+  padding: 10px 24px;
   border-radius: 6px;
   font-size: 13px;
   font-weight: 600;
@@ -166,14 +288,15 @@
 }
 
 .feedback-btn-secondary {
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #aaa;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #4a5568;
 }
 
 .feedback-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: #f1f5f9;
+  color: #1a202c;
+  border-color: #cbd5e0;
 }
 
 .feedback-btn-primary {
@@ -194,6 +317,11 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
