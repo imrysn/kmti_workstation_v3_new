@@ -1,13 +1,12 @@
 .calc-page {
-  max-width: 1100px;
+  max-width: 1400px;
   width: 100%;
   margin: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 40px 20px;
-  min-height: calc(100vh - 64px);
-  justify-content: center;
+  padding: 100px;
+  height: calc(100vh - 64px);
+  overflow: hidden;
   animation: fadeIn 0.4s ease-out;
 }
 
@@ -23,35 +22,7 @@
   }
 }
 
-.page-header {
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 16px;
-}
 
-.header-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-text h1 {
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
-.header-text p {
-  font-size: 13px;
-  color: var(--text-muted);
-  margin: 2px 0 0 0;
-}
 
 /* Flat Panel */
 .glass-panel {
@@ -62,7 +33,8 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  transition: transform 0.2s ease;
+  flex: 1;
+  /* Make it take up the full available height */
 }
 
 /* Grid Layout */
@@ -169,7 +141,9 @@
   z-index: 1;
   background: #000;
   flex: 1;
-  min-height: 520px;
+  min-height: 0;
+  /* Allow the textarea to shrink if necessary */
+  flex: 1;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 8px;
@@ -285,6 +259,16 @@
   background: var(--bg-surface-hover);
   color: var(--text-primary);
   border-color: var(--text-muted);
+}
+
+.btn-clear:hover {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #fff !important;
+}
+
+.btn-clear:hover svg {
+  stroke: #fff !important;
 }
 
 .btn-large {

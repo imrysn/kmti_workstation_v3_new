@@ -1,17 +1,26 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { calculateExcelBatchWeight } from '../utils/materialMath'
 import { useModal } from '../components/ModalContext'
 import './MaterialCalculator.css'
 
 export default function MaterialCalculator() {
   const { notify } = useModal()
-  const [input, setInput] = useState('')
-  const [results, setResults] = useState<{ value: string, isError: boolean }[]>([])
+  const [input, setInput] = useState(() => localStorage.getItem('material_calc_input') || '')
+  const [results, setResults] = useState<{ value: string, isError: boolean }[]>(() => {
+    const saved = localStorage.getItem('material_calc_results')
+    return saved ? JSON.parse(saved) : []
+  })
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const outputRef = useRef<HTMLTextAreaElement>(null)
   const inputBackdropRef = useRef<HTMLDivElement>(null)
   const outputBackdropRef = useRef<HTMLDivElement>(null)
+
+  // Persistence
+  useEffect(() => {
+    localStorage.setItem('material_calc_input', input)
+    localStorage.setItem('material_calc_results', JSON.stringify(results))
+  }, [input, results])
 
   const syncScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
     const { scrollTop } = e.currentTarget;
@@ -130,14 +139,7 @@ export default function MaterialCalculator() {
 
   return (
     <div className="page-container calc-page">
-      <div className="page-header">
-        <div className="header-content">
-          <div className="header-text">
-            <h1>Material Calculator</h1>
-            {/* <p>Smart weight estimation for engineering specs</p> */}
-          </div>
-        </div>
-      </div>
+
 
       <div className="scratchpad-container glass-panel">
         <div className="scratchpad-grid">
@@ -209,7 +211,7 @@ export default function MaterialCalculator() {
               Calculate
             </button>
             <button
-              className="btn btn-ghost btn-large"
+              className="btn btn-ghost btn-large btn-clear"
               onClick={() => { setInput(''); setResults([]); }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
