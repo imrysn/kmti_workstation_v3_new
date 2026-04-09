@@ -1,5 +1,0 @@
-# Used by electron-updater in dev mode to simulate update checks.
-# Points to the real GitHub repo so you can test against actual releases.
-owner: imrysn
-repo: kmti_workstation_v3_new
-provider: github
