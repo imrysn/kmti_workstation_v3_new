@@ -323,6 +323,20 @@ app.whenReady().then(() => {
     shell.openPath(stopwatchDir)
   })
 
+  // --- Auto Updater IPC Handlers ---
+  ipcMain.handle('check-for-update', async () => {
+    if (!autoUpdater) return { error: 'Updater not available' }
+    return await autoUpdater.checkForUpdates()
+  })
+  ipcMain.handle('download-update', async () => {
+    if (!autoUpdater) return { error: 'Updater not available' }
+    return await autoUpdater.downloadUpdate()
+  })
+  ipcMain.handle('install-and-restart', () => {
+    if (!autoUpdater) return
+    autoUpdater.quitAndInstall()
+  })
+
   createWindow()
   if (isDev) {
     startBackend()
