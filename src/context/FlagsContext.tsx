@@ -23,11 +23,13 @@ export interface FeatureFlags {
   character_search_enabled: boolean
   heat_treatment_enabled: boolean
   calculator_enabled: boolean
+  quotation_enabled: boolean
 
   purchased_parts_maintenance: boolean
   character_search_maintenance: boolean
   heat_treatment_maintenance: boolean
   calculator_maintenance: boolean
+  quotation_maintenance: boolean
 
   [key: string]: boolean
 }
@@ -35,7 +37,7 @@ export interface FeatureFlags {
 interface FlagsContextValue {
   flags: FeatureFlags
   isLoading: boolean
-  refresh: () => Promise<void>
+  refresh: (background?: boolean) => Promise<void>
   setFlag: (key: string, value: boolean) => Promise<void>
 }
 
@@ -47,11 +49,13 @@ const DEFAULT_FLAGS: FeatureFlags = {
   character_search_enabled: true,
   heat_treatment_enabled: true,
   calculator_enabled: true,
+  quotation_enabled: false,
 
   purchased_parts_maintenance: false,
   character_search_maintenance: false,
   heat_treatment_maintenance: false,
   calculator_maintenance: false,
+  quotation_maintenance: false,
 }
 
 const FlagsContext = createContext<FlagsContextValue | null>(null)
@@ -61,22 +65,29 @@ export function FlagsProvider({ children }: { children: ReactNode }) {
   const [flags, setFlags] = useState<FeatureFlags>(DEFAULT_FLAGS)
   const [isLoading, setIsLoading] = useState(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (background = false) => {
     if (!user) return
-    setIsLoading(true)
+    if (!background) setIsLoading(true)
     try {
       const res = await flagsApi.getAll()
       setFlags({ ...DEFAULT_FLAGS, ...res.data })
     } catch {
       // Non-fatal: fall back to defaults if fetch fails
     } finally {
-      setIsLoading(false)
+      if (!background) setIsLoading(false)
     }
   }, [user])
 
-  // Fetch flags whenever user logs in
+  // Fetch flags whenever user logs in and set up background polling
   useEffect(() => {
     refresh()
+    
+    // Dynamically poll backend every 10 seconds for real-time propagation across workstations
+    const timer = setInterval(() => {
+      refresh(true)
+    }, 10000)
+    
+    return () => clearInterval(timer)
   }, [refresh])
 
   const setFlag = useCallback(async (key: string, value: boolean) => {

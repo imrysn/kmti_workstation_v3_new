@@ -49,6 +49,19 @@ const nav = [
       </svg>
     )
   },
+  {
+    label: 'Quotation',
+    path: '/quotation',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+        <polyline points="14 2 14 8 20 8"></polyline>
+        <line x1="16" y1="13" x2="8" y2="13"></line>
+        <line x1="16" y1="17" x2="8" y2="17"></line>
+        <polyline points="10 9 9 9 8 9"></polyline>
+      </svg>
+    )
+  },
 ]
 
 export default function TitleBar() {
@@ -59,6 +72,7 @@ export default function TitleBar() {
   >(null)
   const [downloadPercent, setDownloadPercent] = useState(0)
   const [updateVersion, setUpdateVersion] = useState('')
+  const [isMaximized, setIsMaximized] = useState(false)
 
   const handleMinimize = () => window.electronAPI?.minimizeWindow()
   const handleMaximize = () => window.electronAPI?.maximizeWindow()
@@ -66,6 +80,14 @@ export default function TitleBar() {
 
   useEffect(() => {
     const api = (window as any).electronAPI
+    
+    if (api?.isWindowMaximized) {
+      api.isWindowMaximized().then(setIsMaximized)
+    }
+    if (api?.onWindowMaximized) {
+      api.onWindowMaximized((isMax: boolean) => setIsMaximized(isMax))
+    }
+
     if (!api?.onUpdateAvailable) return
 
     api.onUpdateAvailable((info: any) => {
@@ -88,7 +110,10 @@ export default function TitleBar() {
       setUpdateState(null)
     })
 
-    return () => api.removeUpdateListeners?.()
+    return () => {
+      api?.removeUpdateListeners?.()
+      api?.removeWindowMaximizedListener?.()
+    }
   }, [notify])
 
   const handleUpdateClick = () => {
@@ -124,10 +149,11 @@ export default function TitleBar() {
             key={item.path}
             to={item.path}
             className={({ isActive }) => `titlebar-link${isActive ? ' active' : ''}`}
+            title={item.label}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {item.icon}
-              {item.label}
+              <span className={`nav-label ${item.icon ? 'has-icon' : ''}`}>{item.label}</span>
             </span>
           </NavLink>
         ))}
@@ -211,9 +237,16 @@ export default function TitleBar() {
           <button className="titlebar-btn" onClick={handleMinimize} title="Minimize">
             <svg width="12" height="2" viewBox="0 0 12 2"><rect width="12" height="2" fill="currentColor" /></svg>
           </button>
-          <button className="titlebar-btn" onClick={handleMaximize} title="Maximize">
+          <button className="titlebar-btn" onClick={handleMaximize} title={isMaximized ? "Restore Down" : "Maximize"}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.5" />
+              {isMaximized ? (
+                <>
+                  <path d="M3.5 3.5V1.5A.5.5 0 0 1 4 1h6.5a.5.5 0 0 1 .5.5v6.5a.5.5 0 0 1-.5.5H8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <rect x="1" y="3.5" width="7.5" height="7.5" rx="0.5" stroke="currentColor" strokeWidth="1.5" />
+                </>
+              ) : (
+                <rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.5" />
+              )}
             </svg>
           </button>
           <button className="titlebar-btn close" onClick={handleClose} title="Close">

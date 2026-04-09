@@ -15,21 +15,13 @@
   padding: 0 24px 24px;
 }
 
-/* Main Column (80%) */
+/* Main Column */
 .heat-treatment-main {
-  flex: 0 0 80%;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  min-height: 0;
-}
-
-.heat-treatment-main {
-  flex: 0 0 80%;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 0;
 }
 
 .findr-search-input:focus {
@@ -37,12 +29,12 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Sidebar Column (20%) */
+/* Sidebar Column */
 .heat-treatment-sidebar {
-  flex: 0 0 20%;
+  width: 220px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  min-width: 200px;
 }
 
 .sidebar-card {
@@ -139,8 +131,8 @@
 
 /* Category Pills */
 .category-pills-container {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   overflow-y: auto;
   flex: 1;
@@ -168,8 +160,7 @@
 }
 
 .category-pill.all-pill {
-  flex: 1 0 calc(50% - 8px);
-  max-width: calc(100% - 4px);
+  flex: 1 1 100%;
 }
 
 .category-pill:hover {
@@ -353,5 +344,38 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1050px) {
+  .heat-treatment-container {
+    margin-top: calc(var(--page-padding-y) * -4);
+    margin-bottom: calc(var(--page-padding-y) * -2);
+    margin-left: calc(var(--page-padding-x) * -1);
+    margin-right: calc(var(--page-padding-x) * -1);
+    width: calc(100% + calc(var(--page-padding-x) * 2));
+    height: calc(100vh - var(--titlebar-height));
+    box-sizing: border-box;
+    padding: 5%;
+  }
+
+  .heat-treatment-content {
+    gap: 16px;
+    padding: 0;
+  }
+
+  .heat-treatment-sidebar {
+    width: 260px;
+  }
+
+  .sidebar-card {
+    padding: 20px 12px;
+  }
+
+  .category-pill {
+    padding: 8px 12px;
+    font-size: 11px;
+    min-width: 60px;
   }
 }

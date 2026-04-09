@@ -1,11 +1,13 @@
 .calc-page {
-  max-width: 1400px;
+  max-width: 1150px;
+  max-height: 750px;
   width: 100%;
   margin: auto;
   display: flex;
   flex-direction: column;
-  padding: 100px;
-  height: calc(100vh - 64px);
+  padding: 20px 0;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   animation: fadeIn 0.4s ease-out;
 }
@@ -40,7 +42,7 @@
 /* Grid Layout */
 .scratchpad-grid {
   display: grid;
-  grid-template-columns: 1fr 340px;
+  grid-template-columns: 1fr 380px;
   grid-template-rows: 60px 1fr;
   /* Fixed header row height */
   flex: 1;
@@ -279,6 +281,14 @@
 }
 
 /* Responsive */
+@media (max-width: 1050px) {
+  .scratchpad-grid {
+    grid-template-columns: 1fr 0.8fr;
+    gap: 0 20px;
+    padding: 20px;
+  }
+}
+
 @media (max-width: 900px) {
   .scratchpad-grid {
     grid-template-columns: 1fr;

@@ -29,12 +29,14 @@ DEFAULT_FLAGS = {
     "character_search_enabled": True,
     "heat_treatment_enabled": True,
     "calculator_enabled": True,
+    "quotation_enabled": False,
 
     # Per-Module Maintenance (Nominal/Locked)
     "purchased_parts_maintenance": False,
     "character_search_maintenance": False,
     "heat_treatment_maintenance": False,
     "calculator_maintenance": False,
+    "quotation_maintenance": False,
 }
 
 OVERRIDE_FILE = "status_override.json"

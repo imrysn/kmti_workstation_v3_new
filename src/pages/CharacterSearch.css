@@ -248,6 +248,74 @@
   font-family: 'Sawarabi Mincho', 'MS Mincho', serif !important;
 }
 
-.font-gothic, .font-none {
+.font-gothic,
+.font-none {
   font-family: var(--font-main) !important;
+}
+
+@media (max-width: 1050px) {
+  .char-search-container {
+    /* Break out of global app-content padding completely */
+    margin-top: calc(var(--page-padding-y) * -3);
+    margin-bottom: calc(var(--page-padding-y) * -2);
+    margin-left: calc(var(--page-padding-x) * -1);
+    margin-right: calc(var(--page-padding-x) * -1);
+    width: calc(100% + calc(var(--page-padding-x) * 2));
+    height: calc(100vh - var(--titlebar-height));
+    box-sizing: border-box;
+    /* Apply exactly 5% padding on all sides */
+    padding: 5%;
+  }
+
+  .char-pro-tip {
+    display: none;
+  }
+
+  .char-search-body {
+    /* 80/20 Horizontal Layout */
+    grid-template-columns: 8fr 2fr;
+    gap: 16px;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .char-sidebar-column {
+    width: auto;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .char-templates-card {
+    /* 70% Vertically */
+    flex: 7;
+    overflow-y: auto;
+    margin-bottom: 0;
+    min-height: 0;
+  }
+
+  .char-font-card {
+    /* 30% Vertically */
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow-y: auto;
+  }
+
+  .char-templates-title {
+    font-size: 10px;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .char-tpl-btn {
+    font-size: 24px;
+    min-height: 42px;
+  }
+
+  .char-search-header {
+    padding: 0 0 20px 0;
+  }
 }

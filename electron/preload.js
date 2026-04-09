@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
   maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
+  isWindowMaximized: () => ipcRenderer.invoke('is-window-maximized'),
+  onWindowMaximized: (cb) => ipcRenderer.on('window-maximized', (_, isMax) => cb(isMax)),
   closeWindow: () => ipcRenderer.invoke('close-window'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   getFileIcon: (filePath, isFolder) => ipcRenderer.invoke('get-file-icon', filePath, isFolder),
@@ -38,4 +40,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.removeAllListeners('update-download-progress')
     ipcRenderer.removeAllListeners('update-error')
   },
+  removeWindowMaximizedListener: () => ipcRenderer.removeAllListeners('window-maximized'),
 })

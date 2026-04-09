@@ -234,3 +234,22 @@
     box-shadow: 0 0 0 0 rgba(0, 255, 127, 0);
   }
 }
+
+/* Responsive adjustments */
+@media (max-width: 1050px) {
+  .nav-label.has-icon {
+    display: none;
+  }
+  .titlebar-link {
+    padding: 0 12px;
+  }
+  .titlebar-nav {
+    margin-left: 140px;
+  }
+  .titlebar-controls {
+    flex-shrink: 0;
+  }
+  .titlebar-app-info {
+    min-width: unset;
+  }
+}

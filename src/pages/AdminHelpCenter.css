@@ -805,3 +805,12 @@
 .ah-macro-item.selected strong {
   color: #0284c7;
 }
+
+/* === Responsive Adjustments for 1024x700 Minimum Size === */
+
+@media (max-width: 1050px) {
+  .ah-sidebar {
+    width: 300px;
+    min-width: 300px;
+  }
+}

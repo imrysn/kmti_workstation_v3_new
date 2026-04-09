@@ -11,6 +11,7 @@ import Settings from './pages/Settings'
 import Users from './pages/Users'
 import ITControls from './pages/ITControls'
 import AdminHelpCenter from './pages/AdminHelpCenter'
+import Quotation from './pages/Quotation'
 import FeatureClosed from './pages/FeatureClosed'
 import Maintenance from './pages/Maintenance'
 import Login from './pages/Login'
@@ -137,6 +138,17 @@ function WorkstationShell() {
                 <ProtectedRoute>
                   <ModuleGuard visibleKey="calculator_enabled" maintKey="calculator_maintenance">
                     <MaterialCalculator />
+                  </ModuleGuard>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/quotation"
+              element={
+                <ProtectedRoute>
+                  <ModuleGuard visibleKey="quotation_enabled" maintKey="quotation_maintenance">
+                    <Quotation />
                   </ModuleGuard>
                 </ProtectedRoute>
               }

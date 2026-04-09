@@ -54,6 +54,14 @@ const MODULES = [
     visibleKey: 'calculator_enabled',
     maintKey: 'calculator_maintenance',
   },
+  {
+    id: 'quote',
+    label: 'Quotation',
+    code: 'MOD_QUOTE',
+    desc: 'Pricing and quotation generation tool',
+    visibleKey: 'quotation_enabled',
+    maintKey: 'quotation_maintenance',
+  },
 ]
 
 interface ComponentRowProps {

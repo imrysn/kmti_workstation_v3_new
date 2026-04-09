@@ -287,11 +287,6 @@ export default function CharacterSearch() {
         <div className="char-sidebar-column">
           <div className="char-templates-card">
             <h2 className="char-templates-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="3" y1="9" x2="21" y2="9"></line>
-                <line x1="9" y1="21" x2="9" y2="9"></line>
-              </svg>
               Drafting Templates
             </h2>
             <div className="char-templates-grid">
@@ -306,7 +301,7 @@ export default function CharacterSearch() {
                 </button>
               ))}
             </div>
-            <div style={{ marginTop: 24, padding: 16, background: 'var(--bg-surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div className="char-pro-tip" style={{ marginTop: 24, padding: 16, background: 'var(--bg-surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
                 <strong>Pro Tip:</strong> Click any symbol to copy it instantly. These templates are optimized for standard CAD and drafting software.
               </p>

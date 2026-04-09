@@ -115,6 +115,8 @@ function createWindow() {
 
   mainWindow.on('resize', saveState)
   mainWindow.on('move', saveState)
+  mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized', true))
+  mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-maximized', false))
 }
 
 function startBackend() {
@@ -156,6 +158,11 @@ function killBackend() {
   }
 }
 
+// Ensure Windows Notifications display the true app name instead of 'electron.app.Electron'
+if (process.platform === 'win32') {
+  app.setAppUserModelId('KMTI Workstation')
+}
+
 app.whenReady().then(() => {
   initLogStream()
 
@@ -170,10 +177,32 @@ app.whenReady().then(() => {
 
   ipcMain.handle('open-folder', async (_, folderPath) => { shell.openPath(folderPath) })
   ipcMain.handle('open-file', async (_, filePath) => { shell.openPath(filePath) })
+  ipcMain.handle('is-window-maximized', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    return win ? win.isMaximized() : false
+  })
   ipcMain.handle('minimize-window', (event) => { BrowserWindow.fromWebContents(event.sender)?.minimize() })
   ipcMain.handle('maximize-window', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
-    win?.isMaximized() ? win.unmaximize() : win?.maximize()
+    if (!win) return
+    if (win.isMaximized()) {
+      win.unmaximize()
+      // Ensure the unmaximized size isn't still taking up the whole screen due to previous bad saved state
+      const bounds = win.getBounds()
+      const currentMonitor = screen.getDisplayMatching(bounds)
+      const { width, height } = currentMonitor.workArea
+      const { width: boundsW, height: boundsH } = bounds
+      if (boundsW >= width - 20 || boundsW < 1024 || boundsH < 700) {
+         win.setBounds({
+           width: 1024,
+           height: 700,
+           x: Math.round(currentMonitor.workArea.x + (width - 1024) / 2),
+           y: Math.round(currentMonitor.workArea.y + (height - 700) / 2)
+         })
+      }
+    } else {
+      win.maximize()
+    }
   })
   ipcMain.handle('close-window', (event) => { BrowserWindow.fromWebContents(event.sender)?.close() })
 
@@ -183,11 +212,17 @@ app.whenReady().then(() => {
     const { x, y, width, height } = currentMonitor.workArea
     mainWindow.setResizable(true)
     mainWindow.setMinimumSize(1024, 700)
-    if (windowState.width > 500) {
-      mainWindow.setBounds({ x: windowState.x ?? x, y: windowState.y ?? y, width: windowState.width, height: windowState.height }, false)
-    } else {
-      mainWindow.setBounds({ x, y, width, height }, false)
-    }
+    
+    // Set explicit restore down dimensions
+    mainWindow.setBounds({ 
+      x: Math.round(x + (width - 1024) / 2), 
+      y: Math.round(y + (height - 700) / 2), 
+      width: 1024, 
+      height: 700 
+    }, false)
+    
+    // Always start maximized
+    mainWindow.maximize()
   })
 
   ipcMain.handle('logout-reset', () => {

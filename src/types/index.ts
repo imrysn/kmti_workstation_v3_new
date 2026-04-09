@@ -71,6 +71,9 @@ export interface ElectronAPI {
   openFile: (path: string) => Promise<void>
   minimizeWindow: () => Promise<void>
   maximizeWindow: () => Promise<void>
+  isWindowMaximized: () => Promise<boolean>
+  onWindowMaximized: (cb: (isMax: boolean) => void) => void
+  removeWindowMaximizedListener: () => void
   closeWindow: () => Promise<void>
   selectFolder: () => Promise<string | null>
   getFileIcon: (filePath: string, isFolder: boolean) => Promise<string | null>
