@@ -146,6 +146,7 @@ export const helpApi = {
     api.patch(`/help/tickets/${id}/status`, { status }),
   getUnreadCount: (workstation?: string) =>
     api.get('/help/tickets/unread_count', { params: { workstation } }),
+  deleteTicket: (id: number) => api.delete(`/help/tickets/${id}`)
 }
 // --- Production Resiliency Interceptor ---
 // Automatically retry transient errors (503, 504) once before giving up.

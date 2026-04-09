@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Q
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
-from sqlalchemy import func
+from sqlalchemy import func, delete
 from pydantic import BaseModel
 import os
 import uuid
@@ -239,5 +239,23 @@ async def update_ticket_status(
         
     ticket.status = update_data.status
     ticket.updated_at = datetime.now()
+    await db.commit()
+    return {"status": "success", "ticket_id": ticket_id}
+
+@router.delete("/tickets/{ticket_id}")
+async def delete_ticket(
+    ticket_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.it, UserRole.admin])),
+):
+    """Delete a ticket and its messages."""
+    result = await db.execute(select(Ticket).where(Ticket.id == ticket_id))
+    ticket = result.scalar_one_or_none()
+    
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+        
+    await db.execute(delete(TicketMessage).where(TicketMessage.ticket_id == ticket_id))
+    await db.delete(ticket)
     await db.commit()
     return {"status": "success", "ticket_id": ticket_id}

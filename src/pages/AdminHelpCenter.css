@@ -90,8 +90,31 @@
 
 .ah-queue-item.active {
   background: #eff6ff;
-  /* light blue */
   border-left: 3px solid #0099FF;
+}
+
+.ah-resolved-divider {
+  padding: 12px 20px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.ah-resolved-divider:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.ah-dropdown-icon {
+  font-size: 10px;
 }
 
 .ah-queue-meta {
@@ -192,6 +215,12 @@
 }
 
 /* Red bg, white text */
+.urgency-status-resolved {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+/* Green bg, white text */
 
 /* Dynamic Header Background Colors */
 .ah-workspace-header {
@@ -224,28 +253,37 @@
   border-bottom-color: #b91c1c;
 }
 
-/* Text Constrasts for dark header backgrounds (Medium, High, Critical) */
+.ah-workspace-header.bg-status-resolved {
+  background: #16a34a;
+  border-bottom-color: #15803d;
+}
+
+/* Text Constrasts for dark header backgrounds */
 .ah-workspace-header.bg-urgency-medium .ah-ws-title,
 .ah-workspace-header.bg-urgency-high .ah-ws-title,
-.ah-workspace-header.bg-urgency-critical .ah-ws-title {
+.ah-workspace-header.bg-urgency-critical .ah-ws-title,
+.ah-workspace-header.bg-status-resolved .ah-ws-title {
   color: #ffffff;
 }
 
 .ah-workspace-header.bg-urgency-medium .ah-ws-subtitle,
 .ah-workspace-header.bg-urgency-high .ah-ws-subtitle,
-.ah-workspace-header.bg-urgency-critical .ah-ws-subtitle {
+.ah-workspace-header.bg-urgency-critical .ah-ws-subtitle,
+.ah-workspace-header.bg-status-resolved .ah-ws-subtitle {
   color: rgba(255, 255, 255, 0.85);
 }
 
 .ah-workspace-header.bg-urgency-medium .ah-ws-subtitle strong,
 .ah-workspace-header.bg-urgency-high .ah-ws-subtitle strong,
-.ah-workspace-header.bg-urgency-critical .ah-ws-subtitle strong {
+.ah-workspace-header.bg-urgency-critical .ah-ws-subtitle strong,
+.ah-workspace-header.bg-status-resolved .ah-ws-subtitle strong {
   color: #ffffff;
 }
 
 .ah-workspace-header.bg-urgency-medium .ah-device-badge,
 .ah-workspace-header.bg-urgency-high .ah-device-badge,
-.ah-workspace-header.bg-urgency-critical .ah-device-badge {
+.ah-workspace-header.bg-urgency-critical .ah-device-badge,
+.ah-workspace-header.bg-status-resolved .ah-device-badge {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.25);
   color: #ffffff;
@@ -253,21 +291,24 @@
 
 .ah-workspace-header.bg-urgency-medium .ah-btn-outline,
 .ah-workspace-header.bg-urgency-high .ah-btn-outline,
-.ah-workspace-header.bg-urgency-critical .ah-btn-outline {
+.ah-workspace-header.bg-urgency-critical .ah-btn-outline,
+.ah-workspace-header.bg-status-resolved .ah-btn-outline {
   border-color: rgba(255, 255, 255, 0.4);
   color: #ffffff;
 }
 
 .ah-workspace-header.bg-urgency-medium .ah-btn-outline:hover,
 .ah-workspace-header.bg-urgency-high .ah-btn-outline:hover,
-.ah-workspace-header.bg-urgency-critical .ah-btn-outline:hover {
+.ah-workspace-header.bg-urgency-critical .ah-btn-outline:hover,
+.ah-workspace-header.bg-status-resolved .ah-btn-outline:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.8);
 }
 
 .ah-workspace-header.bg-urgency-medium .ah-badge,
 .ah-workspace-header.bg-urgency-high .ah-badge,
-.ah-workspace-header.bg-urgency-critical .ah-badge {
+.ah-workspace-header.bg-urgency-critical .ah-badge,
+.ah-workspace-header.bg-status-resolved .ah-badge {
   background: rgba(255, 255, 255, 0.2) !important;
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -720,4 +761,47 @@
   to {
     opacity: 1;
   }
+}
+
+/* Macro Autocomplete Popup */
+.ah-macro-popup {
+  position: absolute;
+  bottom: 100%;
+  left: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: row;
+  /* display in 1 line */
+  gap: 8px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.ah-macro-item {
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  transition: background 0.1s, transform 0.1s;
+}
+
+.ah-macro-item:hover,
+.ah-macro-item.selected {
+  background: rgba(2, 132, 199, 0.08);
+  /* light subtle blue */
+  color: #0284c7;
+}
+
+.ah-macro-item strong {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.ah-macro-item.selected strong {
+  color: #0284c7;
 }
