@@ -18,12 +18,17 @@ interface ThemeConfig {
 }
 
 const THEMES: ThemeConfig[] = [
-  { name: 'Crystal', bg: 'rgba(255, 255, 255, 0.45)', text: '#0f172a', sub: '#64748b', border: 'rgba(255, 255, 255, 0.5)', glowOpacity: 0.1, className: 'theme-crystal' },
-  { name: 'Cyber', bg: 'rgba(10, 10, 15, 0.85)', text: '#ffffff', sub: 'rgba(255, 255, 255, 0.6)', border: 'rgba(255, 255, 255, 0.1)', glowOpacity: 0.5, className: 'theme-cyber' },
-  { name: 'Retro', bg: 'rgba(20, 25, 20, 0.9)', text: '#ffb000', sub: '#ffb00099', border: '#ffb00033', glowOpacity: 0.3, font: '"Courier New", monospace', className: 'theme-retro' },
-  { name: 'Industrial', bg: 'rgba(40, 45, 50, 0.85)', text: '#e2e8f0', sub: '#94a3b8', border: 'rgba(255, 255, 255, 0.1)', glowOpacity: 0.2, className: 'theme-industrial' },
-  { name: 'Stealth', bg: 'rgba(0, 0, 0, 0.95)', text: '#ffffff', sub: '#ffffff66', border: 'rgba(255, 255, 255, 0.05)', glowOpacity: 0.0, className: 'theme-stealth' },
-  { name: 'Blueprint', bg: 'rgba(2, 22, 60, 0.9)', text: '#94a3b8', sub: '#475569', border: 'rgba(56, 189, 248, 0.2)', glowOpacity: 0.4, className: 'theme-blueprint' }
+  { name: 'Crystal', bg: 'rgba(255, 255, 255, 0.3)', text: '#0f172a', sub: '#64748b', border: 'rgba(255, 255, 255, 0.7)', glowOpacity: 0.1, className: 'theme-crystal' },
+  { name: 'Cyber', bg: 'rgba(5, 5, 10, 0.95)', text: '#00ffff', sub: 'rgba(0, 255, 255, 0.6)', border: '#00ffff', glowOpacity: 0.8, font: '"Courier New", monospace', className: 'theme-cyber' },
+  { name: 'Retro', bg: '#111111', text: '#ffb000', sub: '#ffb00099', border: '#444444', glowOpacity: 0.4, font: '"Courier New", monospace', className: 'theme-retro' },
+  { name: 'Blueprint', bg: '#0f172a', text: '#38bdf8', sub: '#0ea5e9', border: '#38bdf8', glowOpacity: 0.5, font: 'monospace', className: 'theme-blueprint' },
+  { name: 'Hologram', bg: 'rgba(255, 255, 255, 0.2)', text: '#0f172a', sub: '#475569', border: 'rgba(255, 255, 255, 0.8)', glowOpacity: 0.8, className: 'theme-hologram' },
+  { name: 'Brutalism', bg: '#ffeb3b', text: '#000000', sub: '#333333', border: '#000000', glowOpacity: 0, font: '"Arial Black", system-ui, sans-serif', className: 'theme-brutalism' },
+  { name: 'Organic', bg: 'rgba(10, 30, 20, 0.7)', text: '#a7f3d0', sub: '#34d399', border: '#10b981', glowOpacity: 0.5, className: 'theme-organic' },
+  { name: 'Neumorph', bg: '#e0e5ec', text: '#4a5568', sub: '#718096', border: 'transparent', glowOpacity: 0, className: 'theme-neumorph' },
+  { name: 'Aurora', bg: '#1e1b4b', text: '#ffffff', sub: 'rgba(255,255,255,0.7)', border: 'rgba(255,255,255,0.2)', glowOpacity: 0.6, className: 'theme-aurora' },
+  { name: 'Vaporwave', bg: '#0f0c29', text: '#f72585', sub: '#4cc9f0', border: '#7209b7', glowOpacity: 0.8, font: '"Courier New", monospace', className: 'theme-vapor' },
+  { name: 'Luxury', bg: '#050505', text: '#d4af37', sub: 'rgba(212, 175, 55, 0.6)', border: '#d4af37', glowOpacity: 0.2, font: '"Playfair Display", "Times New Roman", serif', className: 'theme-luxury' }
 ];
 
 interface PaletteColor {
@@ -63,6 +68,7 @@ interface SettingsV6 {
   themeIndex: number;
   paletteIndex: number;
   bgPaletteIndex: number | null;
+  bgOpacity?: number;
   mode: 'clock' | 'stopwatch';
   swRunning: boolean;
   swAccumulated: number;
@@ -92,6 +98,7 @@ const DateTimeOverlay: React.FC = () => {
   const [themeIndex, setThemeIndex] = useState(initialSettings.themeIndex);
   const [paletteIndex, setPaletteIndex] = useState(initialSettings.paletteIndex);
   const [bgPaletteIndex, setBgPaletteIndex] = useState(initialSettings.bgPaletteIndex);
+  const [bgOpacity, setBgOpacity] = useState(initialSettings.bgOpacity ?? 0.85);
   const [mode, setMode] = useState<'clock' | 'stopwatch'>(initialSettings.mode);
   const [isExpanded, setIsExpanded] = useState(initialSettings.expanded);
   
@@ -103,6 +110,7 @@ const DateTimeOverlay: React.FC = () => {
   const [swRecords, setSwRecords] = useState<StopwatchRecord[]>([]);
 
   // UI States
+  const [showMoreThemes, setShowMoreThemes] = useState(false);
   const [showMoreColors, setShowMoreColors] = useState(false);
   const [showMoreBgColors, setShowMoreBgColors] = useState(false);
   const [lastActivity, setLastActivity] = useState(Date.now());
@@ -140,10 +148,14 @@ const DateTimeOverlay: React.FC = () => {
       if (!isDraggingRef.current) return;
       const newX = e.clientX - dragStartRef.current.x;
       const newY = (window.innerHeight - e.clientY) - dragStartRef.current.y;
+      
+      const overlayWidth = overlayRef.current?.offsetWidth || 200;
+      const overlayHeight = (overlayRef.current?.querySelector('.findr-datetime-content') as HTMLElement)?.offsetHeight || 44;
+
       const bounds = {
         minX: 10, minY: 10,
-        maxX: window.innerWidth - (overlayRef.current?.offsetWidth || 200) - 10,
-        maxY: window.innerHeight - (overlayRef.current?.offsetHeight || 60) - 10
+        maxX: window.innerWidth - overlayWidth - 10,
+        maxY: window.innerHeight - overlayHeight - 10
       };
       setPosition({
         x: Math.max(bounds.minX, Math.min(newX, bounds.maxX)),
@@ -252,40 +264,92 @@ const DateTimeOverlay: React.FC = () => {
   // Persistence Sync
   useEffect(() => {
     const settings: SettingsV6 = {
-      position, themeIndex, paletteIndex, bgPaletteIndex, mode,
+      position, themeIndex, paletteIndex, bgPaletteIndex, bgOpacity, mode,
       swRunning, swAccumulated, swStartTime, expanded: isExpanded
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [position, themeIndex, paletteIndex, bgPaletteIndex, mode, swRunning, swAccumulated, swStartTime, isExpanded]);
+  }, [position, themeIndex, paletteIndex, bgPaletteIndex, bgOpacity, mode, swRunning, swAccumulated, swStartTime, isExpanded]);
 
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
   const dateStr = time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-  const theme = THEMES[themeIndex];
-  const accentColor = COLOR_PALETTES[paletteIndex].hex;
-  const customBg = bgPaletteIndex !== null ? `${COLOR_PALETTES[bgPaletteIndex].hex}99` : theme.bg;
+  const safeThemeIndex = themeIndex >= THEMES.length ? 0 : themeIndex;
+  const theme = THEMES[safeThemeIndex];
+  const accentColor = COLOR_PALETTES[paletteIndex]?.hex || COLOR_PALETTES[0].hex;
+  
+  const activeColors = useMemo(() => {
+    const hexToRgbStr = (colorStr: string) => {
+        if (colorStr.startsWith('rgba') || colorStr.startsWith('rgb')) {
+            const match = colorStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+            if (match) return `${match[1]}, ${match[2]}, ${match[3]}`;
+        }
+        if (colorStr.startsWith('#')) {
+            let h = colorStr.slice(1);
+            if (h.length === 3) h = h.split('').map(c => c + c).join('');
+            if (h.length === 8) h = h.slice(0, 6);
+            const r = parseInt(h.slice(0, 2), 16);
+            const g = parseInt(h.slice(2, 4), 16);
+            const b = parseInt(h.slice(4, 6), 16);
+            return `${r}, ${g}, ${b}`;
+        }
+        return '0, 0, 0';
+    };
+
+    let baseColor = theme.bg;
+    let isLight = false;
+
+    if (bgPaletteIndex !== null) {
+      baseColor = COLOR_PALETTES[bgPaletteIndex].hex;
+      const rgb = hexToRgbStr(baseColor).split(',');
+      const yiq = ((parseInt(rgb[0]) * 299) + (parseInt(rgb[1]) * 587) + (parseInt(rgb[2]) * 114)) / 1000;
+      isLight = yiq >= 128;
+    } else {
+      const rgb = hexToRgbStr(baseColor).split(',');
+      if (rgb.length === 3 && !Number.isNaN(parseInt(rgb[0]))) {
+          const yiq = ((parseInt(rgb[0]) * 299) + (parseInt(rgb[1]) * 587) + (parseInt(rgb[2]) * 114)) / 1000;
+          isLight = yiq >= 128;
+      } else {
+          isLight = theme.name === 'Crystal' || theme.name === 'Brutalism';
+      }
+    }
+    
+    return {
+      bg: `rgba(${hexToRgbStr(baseColor)}, ${bgOpacity})`,
+      text: isLight ? '#0f172a' : '#ffffff',
+      sub: isLight ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.6)',
+      border: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
+      contrastRgb: isLight ? '0, 0, 0' : '255, 255, 255'
+    };
+  }, [bgPaletteIndex, theme, bgOpacity]);
+
   const isInactive = !isExpanded && (Date.now() - lastActivity > 30000);
+  const isTopHalf = useMemo(() => position.y > window.innerHeight / 2, [position.y]);
+  const clockHeight = 44; 
 
   return (
     <div 
       ref={overlayRef}
-      className={`findr-global-datetime ${theme.className} ${dragging ? 'dragging' : ''} ${isExpanded ? 'expanded' : ''} ${isInactive ? 'inactive' : ''} mode-${mode}`}
+      className={`findr-global-datetime ${theme.className} ${dragging ? 'dragging' : ''} ${isExpanded ? 'expanded' : ''} ${isInactive ? 'inactive' : ''} mode-${mode} ${isTopHalf ? 'expand-down' : 'expand-up'}`}
       style={{ 
-        left: `${position.x}px`, bottom: `${position.y}px`,
-        backgroundColor: customBg, color: theme.text, borderColor: theme.border,
+        left: `${position.x}px`, 
+        bottom: isTopHalf ? 'auto' : `${position.y}px`,
+        top: isTopHalf ? `${window.innerHeight - position.y - clockHeight}px` : 'auto',
+        backgroundColor: activeColors.bg, color: activeColors.text, borderColor: activeColors.border,
         boxShadow: theme.glowOpacity > 0 ? `0 0 20px ${accentColor}${Math.floor(theme.glowOpacity * 255).toString(16).padStart(2, '0')}, 0 20px 40px rgba(0,0,0,0.2)` : '0 20px 40px rgba(0,0,0,0.2)',
-        fontFamily: theme.font || 'inherit'
-      }}
+        fontFamily: theme.font || 'inherit',
+        '--sw-contrast': activeColors.contrastRgb
+      } as React.CSSProperties}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
       onMouseEnter={() => setLastActivity(Date.now())}
       onMouseMove={() => setLastActivity(Date.now())}
     >
+      {/* Control Center Interior */}
       <div className="findr-datetime-content">
         {mode === 'clock' ? (
           <>
             <span className="findr-datetime-time" style={{ color: accentColor }}>{timeStr}</span>
             <div className="findr-datetime-separator" style={{ backgroundColor: accentColor, opacity: 0.3 }} />
-            <span className="findr-datetime-date" style={{ color: theme.sub }}>{dateStr}</span>
+            <span className="findr-datetime-date" style={{ color: accentColor, opacity: 0.8 }}>{dateStr}</span>
           </>
         ) : (
           <div className="findr-stopwatch-container">
@@ -316,22 +380,30 @@ const DateTimeOverlay: React.FC = () => {
         <div className="findr-control-center">
             {mode === 'clock' ? (
                 <>
-                    {/* --- Themes --- */}
-                    <div className="findr-cc-group">
-                        <div className="findr-cc-label">THEMES</div>
-                        <div className="findr-cc-grid themes">
-                            {THEMES.map((t, idx) => (
-                                <div key={t.name} className={`findr-theme-opt-v2 ${themeIndex === idx ? 'active' : ''}`}
-                                    onClick={(e) => { e.stopPropagation(); setThemeIndex(idx); }}
-                                    style={{ backgroundColor: t.bg, borderColor: t.border }} title={t.name}>
-                                    <div className="findr-theme-preview" style={{ backgroundColor: t.text }} />
-                                </div>
-                            ))}
+                    <div className="findr-cc-group animate-1">
+                        <div className="findr-cc-header">
+                            <div className="findr-cc-label">THEMES</div>
+                            <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreThemes(!showMoreThemes); }} title={showMoreThemes ? "Show Less" : "Show All"}>
+                                {showMoreThemes ? (
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+                                ) : "..."}
+                            </button>
+                        </div>
+                        <div className="findr-cc-track">
+                          <div className="findr-cc-grid themes" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, width: 'fit-content' }}>
+                              {(showMoreThemes ? THEMES : THEMES.slice(0, 5)).map((t, idx) => (
+                                  <div key={t.name} className={`findr-theme-opt-v2 ${safeThemeIndex === idx ? 'active' : ''}`}
+                                      onClick={(e) => { e.stopPropagation(); setThemeIndex(idx); }}
+                                      style={{ backgroundColor: t.bg, borderColor: t.border }} title={t.name}>
+                                      <div className="findr-theme-preview" style={{ backgroundColor: t.text }} />
+                                  </div>
+                              ))}
+                          </div>
                         </div>
                     </div>
 
                     {/* --- Text Colors --- */}
-                    <div className="findr-cc-group">
+                    <div className="findr-cc-group animate-2">
                         <div className="findr-cc-header">
                             <div className="findr-cc-label">TEXT COLORS</div>
                             <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreColors(!showMoreColors); }} title={showMoreColors ? "Show Less" : "Show All"}>
@@ -340,17 +412,19 @@ const DateTimeOverlay: React.FC = () => {
                                 ) : "..."}
                             </button>
                         </div>
-                        <div className="findr-cc-grid colors">
-                            {(showMoreColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 6)).map((p, idx) => (
-                                <div key={p.name} className={`findr-palette-opt ${paletteIndex === idx ? 'active' : ''}`}
-                                    onClick={(e) => { e.stopPropagation(); setPaletteIndex(idx); }}
-                                    style={{ backgroundColor: p.hex }} title={p.name} />
-                            ))}
+                        <div className="findr-cc-track">
+                          <div className="findr-cc-grid colors">
+                              {(showMoreColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 6)).map((p, idx) => (
+                                  <div key={p.name} className={`findr-palette-opt ${paletteIndex === idx ? 'active' : ''}`}
+                                      onClick={(e) => { e.stopPropagation(); setPaletteIndex(idx); }}
+                                      style={{ backgroundColor: p.hex }} title={p.name} />
+                              ))}
+                          </div>
                         </div>
                     </div>
 
                     {/* --- Background Colors --- */}
-                    <div className="findr-cc-group">
+                    <div className="findr-cc-group animate-3">
                         <div className="findr-cc-header">
                             <div className="findr-cc-label">BG COLORS</div>
                             <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreBgColors(!showMoreBgColors); }} title={showMoreBgColors ? "Show Less" : "Show All"}>
@@ -359,15 +433,32 @@ const DateTimeOverlay: React.FC = () => {
                                 ) : "..."}
                             </button>
                         </div>
-                        <div className="findr-cc-grid colors">
-                            <div className={`findr-palette-opt ${bgPaletteIndex === null ? 'active' : ''}`}
-                                onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(null); }}
-                                style={{ background: 'transparent', border: '1px dashed rgba(255,255,255,0.3)' }} title="Theme Default" />
-                            {(showMoreBgColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 5)).map((p, idx) => (
-                                <div key={p.name} className={`findr-palette-opt ${bgPaletteIndex === idx ? 'active' : ''}`}
-                                    onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(idx); }}
-                                    style={{ backgroundColor: p.hex }} title={p.name} />
-                            ))}
+                        <div className="findr-cc-track">
+                          <div className="findr-cc-grid colors">
+                              <div className={`findr-palette-opt ${bgPaletteIndex === null ? 'active' : ''}`}
+                                  onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(null); }}
+                                  style={{ background: 'transparent', border: '1px dashed rgba(var(--sw-contrast),0.3)' }} title="Theme Default" />
+                              {(showMoreBgColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 5)).map((p, idx) => (
+                                  <div key={p.name} className={`findr-palette-opt ${bgPaletteIndex === idx ? 'active' : ''}`}
+                                      onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(idx); }}
+                                      style={{ backgroundColor: p.hex }} title={p.name} />
+                              ))}
+                          </div>
+                        </div>
+                        
+                        <div className="findr-cc-slider-wrap">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
+                            </svg>
+                            <input 
+                                type="range" 
+                                min="0" max="1" step="0.05"
+                                value={bgOpacity}
+                                onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                                className="findr-opacity-slider"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                title="Adjust Glassmorphism Opacity"
+                            />
                         </div>
                     </div>
                 </>

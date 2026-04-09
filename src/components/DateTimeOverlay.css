@@ -7,8 +7,9 @@
     border-radius: 40px;
     border: 1px solid transparent;
     display: flex;
+    display: flex;
     flex-direction: column-reverse;
-    /* Expand UPWARD */
+    /* Default: Expand UPWARD from bottom half */
     gap: 12px;
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
     cursor: grab;
@@ -26,8 +27,20 @@
         border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1),
         left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
         bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    overflow: hidden;
+    overflow: visible;
     min-width: 180px;
+}
+
+.findr-global-datetime.expand-down {
+    /* Expand DOWNWARD from top half */
+    flex-direction: column;
+}
+
+.findr-global-datetime.expanded {
+    transition: 
+        transform 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+        height 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+        border-radius 0.4s cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 .findr-global-datetime.inactive {
@@ -102,26 +115,30 @@
 
 .findr-sw-controls {
     display: flex;
-    gap: 12px;
+    gap: 16px;
     align-items: center;
 }
 
 .findr-sw-icon-btn {
-    background: transparent;
-    border: none;
+    background: rgba(var(--sw-contrast), 0.05);
+    border: 1px solid rgba(var(--sw-contrast), 0.1);
     cursor: pointer;
-    font-size: 18px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease, color 0.3s ease;
-    opacity: 0.8;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    color: inherit;
     padding: 0;
 }
 
 .findr-sw-icon-btn:hover {
-    transform: scale(1.2);
-    opacity: 1;
+    background: rgba(var(--sw-contrast), 0.1);
+    border-color: rgba(var(--sw-contrast), 0.3);
+    transform: scale(1.15);
+    box-shadow: 0 0 15px rgba(var(--sw-contrast), 0.2);
 }
 
 /* --- Expanded (Control Center) --- */
@@ -132,31 +149,34 @@
 }
 
 .findr-control-center {
-    border-bottom: 1px solid rgba(128, 128, 128, 0.1);
-    padding-bottom: 20px;
-    margin-bottom: 8px;
+    border-top: 1px solid rgba(var(--sw-contrast), 0.1);
+    padding-top: 20px;
+    margin-top: 8px;
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    animation: findrCCFadeUp 0.3s ease-out both;
+    gap: 20px;
 }
 
-@keyframes findrCCFadeUp {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
+/* Base group animations */
 .findr-cc-group {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    animation: findrCCFadeUp 0.4s ease both;
+}
+
+.animate-1 { animation-delay: 0.05s; }
+.animate-2 { animation-delay: 0.1s; }
+.animate-3 { animation-delay: 0.15s; }
+
+/* Tracks */
+.findr-cc-track {
+    background: rgba(var(--sw-contrast), 0.05);
+    border: 1px solid rgba(var(--sw-contrast), 0.08);
+    border-radius: 16px;
+    padding: 12px;
+    display: flex;
+    justify-content: center;
 }
 
 .findr-cc-header {
@@ -214,7 +234,7 @@
 
 .findr-theme-opt-v2.active {
     transform: scale(1.1);
-    border-color: #fff;
+    border-color: currentColor;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -242,14 +262,14 @@
 
 .findr-palette-opt.active {
     transform: scale(1.2);
-    border-color: #fff;
+    border-color: currentColor;
     box-shadow: 0 0 10px currentColor;
 }
 
 .findr-palette-toggle {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: rgba(var(--sw-contrast), 0.08);
+    border: 1px solid rgba(var(--sw-contrast), 0.1);
+    color: inherit;
     width: 26px;
     height: 26px;
     border-radius: 50%;
@@ -262,8 +282,18 @@
 }
 
 .findr-palette-toggle:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(var(--sw-contrast), 0.15);
     transform: scale(1.1);
+}
+
+.findr-cc-slider-wrap {
+    background: rgba(var(--sw-contrast), 0.05);
+    border-radius: 14px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
 }
 
 /* --- Records List --- */
@@ -283,7 +313,7 @@
 }
 
 .findr-sw-records::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(128, 128, 128, 0.3);
     border-radius: 2px;
 }
 
@@ -292,16 +322,16 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 14px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(128, 128, 128, 0.05);
+    border: 1px solid rgba(128, 128, 128, 0.1);
     border-radius: 14px;
     gap: 12px;
     transition: all 0.2s ease;
 }
 
 .findr-sw-record-item:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: rgba(128, 128, 128, 0.1);
+    border-color: rgba(128, 128, 128, 0.2);
 }
 
 .findr-sw-record-info {
@@ -314,7 +344,7 @@
 .findr-sw-record-name {
     font-size: 14px;
     font-weight: 800;
-    color: #fff;
+    color: currentColor;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -346,7 +376,7 @@
     border: none;
     background: transparent;
     border-radius: 8px;
-    color: #fff;
+    color: currentColor;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -359,7 +389,7 @@
 
 .findr-sw-action-btn:hover {
     opacity: 1 !important;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(128, 128, 128, 0.15);
     transform: scale(1.1);
 }
 
@@ -380,27 +410,190 @@
 /* --- Theme Specific --- */
 .theme-blueprint {
     background-image:
-        linear-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(56, 189, 248, 0.05) 1px, transparent 1px);
-    background-size: 15px 15px;
+        linear-gradient(rgba(56, 189, 248, 0.15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 
 .theme-retro::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom,
-            rgba(18, 16, 16, 0) 50%,
-            rgba(0, 0, 0, 0.1) 50%);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 50%, rgba(255, 255, 255, 0.05) 50%);
     background-size: 100% 4px;
     pointer-events: none;
     z-index: 10;
+    border-radius: inherit;
 }
 
 .theme-cyber {
-    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    background-image: linear-gradient(0deg, rgba(0,255,255,0.05) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0,255,255,0.05) 1px, transparent 1px);
+    background-size: 4px 4px;
+    text-shadow: 0 0 10px currentColor;
 }
 
-.theme-industrial {
-    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0) 100%);
+/* === STRUCTURAL THEME SHAPESHIFTING === */
+
+/* CRYSTAL: Premium Frosted Glass Edge */
+.findr-global-datetime.theme-crystal {
+    border-radius: 40px;
+    backdrop-filter: blur(24px) saturate(150%);
+    -webkit-backdrop-filter: blur(24px) saturate(150%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4), inset 0 0 20px rgba(255,255,255,0.3), 0 15px 35px rgba(0,0,0,0.1) !important;
+}
+
+/* CYBER: Angular Chamfers & Grid Base */
+.findr-global-datetime.theme-cyber {
+    border-radius: 0;
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+    border: 1px solid rgba(0, 255, 255, 0.3) !important;
+    box-shadow: inset 0 0 20px rgba(0, 255, 255, 0.15) !important;
+}
+.findr-global-datetime.theme-cyber.expanded {
+    clip-path: polygon(28px 0, 100% 0, 100% calc(100% - 28px), calc(100% - 28px) 100%, 0 100%, 0 28px);
+}
+
+/* BRUTALISM: Hard Blocks & Thick Drop Shadows */
+.findr-global-datetime.theme-brutalism {
+    border-radius: 0;
+    border: 4px solid #000 !important;
+    box-shadow: 8px 8px 0px #000 !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    color: #000 !important;
+}
+.findr-global-datetime.theme-brutalism.expanded {
+    border-radius: 0;
+    box-shadow: 14px 14px 0px #000 !important;
+}
+.findr-global-datetime.theme-brutalism .findr-sw-record-item {
+    border-radius: 0;
+    border: 2px solid #000;
+    box-shadow: 3px 3px 0 #000;
+}
+
+/* HOLOGRAM: Fluid Iridescent Edges */
+@keyframes holographicShift {
+    0% { background-position: 0% 50%; filter: hue-rotate(0deg); }
+    50% { background-position: 100% 50%; filter: hue-rotate(180deg); }
+    100% { background-position: 0% 50%; filter: hue-rotate(360deg); }
+}
+.findr-global-datetime.theme-hologram {
+    background-image: linear-gradient(120deg, rgba(255,255,255,0.4), rgba(255,192,203,0.3), rgba(0,255,255,0.3), rgba(255,255,255,0.4));
+    background-size: 200% 200%;
+    animation: holographicShift 6s linear infinite;
+    box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.8), 0 15px 35px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(16px);
+}
+
+/* ORGANIC: Breathing Asymmetrical Blob */
+@keyframes organicMorph {
+    0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+    34% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+    67% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; }
+    100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+}
+.findr-global-datetime.theme-organic {
+    animation: organicMorph 8s ease-in-out infinite;
+    background-image: radial-gradient(circle at 30% 30%, rgba(167, 243, 208, 0.2), rgba(16, 185, 129, 0.1));
+    box-shadow: inset 0 0 20px rgba(110, 231, 183, 0.3), 0 0 40px rgba(16, 185, 129, 0.2) !important;
+    border: 1px solid rgba(110, 231, 183, 0.3) !important;
+}
+.findr-global-datetime.theme-organic.dragging {
+    animation: none;
+    border-radius: 50% !important;
+}
+
+/* RETRO: Casio Digital Watch Bezel */
+.findr-global-datetime.theme-retro {
+    border-radius: 8px;
+    border: 3px ridge #444 !important;
+    box-shadow: inset 0 0 30px rgba(0,0,0,1), 0 10px 20px rgba(0,0,0,0.5) !important;
+    text-shadow: 0 0 6px currentColor;
+}
+.findr-global-datetime.theme-retro.expanded {
+    border-radius: 12px;
+}
+
+/* NEUMORPH: Extruded Clay Ambient Shadows */
+.findr-global-datetime.theme-neumorph {
+    border-radius: 40px;
+    box-shadow: 9px 9px 16px rgba(163, 177, 198, 0.4), -9px -9px 16px rgba(255, 255, 255, 0.5) !important;
+    border: none !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.findr-global-datetime.theme-neumorph.expanded {
+    border-radius: 28px;
+}
+
+/* AURORA: Northern Lights Animated Wash */
+@keyframes auroraSweep {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.findr-global-datetime.theme-aurora {
+    background: linear-gradient(-45deg, rgba(15,23,42,0.8), rgba(49,46,129,0.7), rgba(6,78,59,0.7), rgba(76,29,149,0.8));
+    background-size: 400% 400%;
+    animation: auroraSweep 12s ease-in-out infinite;
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* VAPORWAVE: 80s Synthwave Dual-Border Glow */
+.findr-global-datetime.theme-vapor {
+    border-radius: 0;
+    border: 2px solid #7209b7 !important;
+    box-shadow: 4px 4px 0 #4cc9f0, -4px -4px 0 #f72585 !important;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(247, 37, 133, 0.05) 2px, rgba(247, 37, 133, 0.05) 4px);
+}
+.findr-global-datetime.theme-vapor.expanded {
+    box-shadow: 6px 6px 0 #4cc9f0, -6px -6px 0 #f72585 !important;
+}
+
+/* LUXURY: Metallic Edge & Deep Contrast */
+.findr-global-datetime.theme-luxury {
+    border-radius: 0;
+    border: 2px solid #d4af37 !important;
+    border-top: none !important;
+    border-bottom: none !important;
+    box-shadow: inset 0 0 10px rgba(212, 175, 55, 0.1), 0 0 20px rgba(0, 0, 0, 0.8) !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+.findr-global-datetime.theme-luxury .findr-sw-record-item {
+    border-radius: 0;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+/* === UTILITY CONTROLS === */
+.findr-opacity-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(var(--sw-contrast), 0.1);
+    height: 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.findr-opacity-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 14px;
+    width: 14px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    transition: transform 0.1s ease;
+    border: 2px solid #fff;
+}
+
+.findr-opacity-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
 }
