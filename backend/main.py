@@ -88,7 +88,7 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="KMTI Workstation v3.6.1", version="3.6.1", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation v3.6.4", version="3.6.4", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -133,7 +133,7 @@ else:
 def health_check():
     return {
         "status": "ok", 
-        "version": "3.6.1", 
+        "version": "3.6.4", 
         "uptime_seconds": time.time() - START_TIME
     }
 

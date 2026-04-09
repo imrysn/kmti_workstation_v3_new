@@ -2,10 +2,12 @@
 
 .admin-help-wrapper {
   display: flex;
-  height: 100%;
-  width: 100%;
-  padding: 0;
+  height: calc(100% + 2 * var(--page-padding-y));
+  /* Compensation for parent padding */
+  width: calc(100% + 2 * var(--page-padding-x));
+  margin: calc(-1 * var(--page-padding-y)) calc(-1 * var(--page-padding-x));
   background: #f8fafc;
+  overflow: hidden;
 }
 
 .ah-layout {
@@ -26,6 +28,8 @@
   display: flex;
   flex-direction: column;
   z-index: 10;
+  padding-left: 20px;
+  /* Base safety padding */
 }
 
 .ah-sidebar-header {
@@ -223,15 +227,7 @@
 /* Green bg, white text */
 
 /* Dynamic Header Background Colors */
-.ah-workspace-header {
-  padding: 20px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: background 0.3s ease, color 0.3s ease;
-}
+/* (Combined with the workspace header below to avoid duplication) */
 
 .ah-workspace-header.bg-urgency-low {
   background: #e0f2fe;
@@ -808,9 +804,182 @@
 
 /* === Responsive Adjustments for 1024x700 Minimum Size === */
 
+/* -------------------------------------------------------------
+ * RIGHT SIDEBAR: SUPPORT ANALYTICS
+ * ------------------------------------------------------------- */
+.ah-info-sidebar {
+  width: 300px;
+  min-width: 300px;
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  padding-right: 15px; /* Space for FABs */
+}
+
+.ah-info-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.ah-info-header h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 4px 0;
+}
+
+.ah-info-timestamp {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.ah-analytics-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ah-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ah-stat-card {
+  padding: 16px 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.ah-stat-card.open {
+  background: #fff5f5;
+  border-color: #feb2b2;
+}
+
+.ah-stat-card.open .ah-stat-value { color: #c53030; }
+
+.ah-stat-card.resolved {
+  background: #f0fff4;
+  border-color: #9ae6b4;
+}
+
+.ah-stat-card.resolved .ah-stat-value { color: #2f855a; }
+
+.ah-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ah-stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 1px;
+}
+
+.ah-charts-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ah-chart-section {
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s;
+}
+
+.ah-chart-section:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.ah-graph-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.recharts-responsive-container {
+  margin-left: -10px; /* Offset for YAxis labels alignment */
+}
+
+.ah-sidebar-telemetry {
+  margin-top: auto;
+  padding: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.ah-tel-header {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.ah-tel-ws {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.ah-tel-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.ah-tel-row span { color: #64748b; }
+.ah-tel-row strong { color: #0f172a; }
+
+.ah-info-empty-msg {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  text-align: center;
+  gap: 12px;
+}
+
+.ah-info-empty-msg p {
+  font-size: 13px;
+  margin: 0;
+}
+
 @media (max-width: 1050px) {
   .ah-sidebar {
     width: 300px;
     min-width: 300px;
+  }
+  .ah-info-sidebar {
+    display: none;
   }
 }

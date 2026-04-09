@@ -59,9 +59,14 @@ function statusClass(status: string) {
   }
 }
 
-function formatDate(ds: string) {
+const formatRelative = (ds: string) => {
   const d = new Date(ds);
-  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const now = new Date();
+  const diff = Math.floor((now.getTime() - d.getTime()) / 60000);
+  if (diff < 1) return 'Just now';
+  if (diff < 60) return `${diff}m ago`;
+  if (diff < 1440) return `${Math.floor(diff / 60)}h ago`;
+  return `${Math.floor(diff / 1440)}d ago`;
 }
 
 export default function FeedbackWidget() {
@@ -397,8 +402,8 @@ export default function FeedbackWidget() {
                   <div key={t.id} className="feedback-ticket-card" onClick={() => loadTicketDetails(t.id)}>
                     <div className="ticket-card-header">
                       <span className="ticket-card-subject">
-                        {t.has_unread_user && <span className="ticket-unread-dot"></span>}
                         {t.subject || 'No Subject'}
+                        {t.has_unread_user && <span className="ticket-unread-dot" title="New Message"></span>}
                       </span>
                       <span className={statusClass(t.status)}>
                         {t.status.replace('_', ' ').toUpperCase()}
@@ -411,7 +416,7 @@ export default function FeedbackWidget() {
                       <span>•</span>
                       <span>{t.category}</span>
                       <span>•</span>
-                      <span>{formatDate(t.updated_at)}</span>
+                      <span>{formatRelative(t.updated_at)}</span>
                     </div>
                   </div>
                 ))
@@ -501,7 +506,7 @@ export default function FeedbackWidget() {
                         </div>
                       )}
                     </div>
-                    <div className="chat-timestamp">{formatDate(msg.created_at)}</div>
+                    <div className="chat-timestamp">{formatRelative(msg.created_at)}</div>
                   </div>
                 );
               })}

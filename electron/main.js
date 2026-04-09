@@ -4,7 +4,7 @@ const path = require('path')
 const os = require('os')
 const fs = require('fs')
 
-// v3.6.1-mysql-ready-sorting
+// v3.6.4-HUD-optimized-modular-architecture
 // electron-updater — handles downloads from GitHub Releases
 let autoUpdater
 try {
@@ -280,10 +280,13 @@ app.whenReady().then(() => {
   ipcMain.handle('get-stopwatch-records', async () => {
     try {
       if (!fs.existsSync(stopwatchDir)) fs.mkdirSync(stopwatchDir, { recursive: true })
-      if (!fs.existsSync(stopwatchFile)) return []
+      if (!fs.existsSync(stopwatchFile)) return { success: true, data: [] }
       const data = fs.readFileSync(stopwatchFile, 'utf8')
-      return JSON.parse(data)
-    } catch (err) { return [] }
+      return { success: true, data: JSON.parse(data) }
+    } catch (err) { 
+      console.error('[IPC] get-stopwatch-records error:', err)
+      return { success: false, data: [], error: err.message } 
+    }
   })
 
   ipcMain.handle('save-stopwatch-records', async (_, records) => {
@@ -295,7 +298,7 @@ app.whenReady().then(() => {
       
       // 2. Set JSON as hidden (Windows only)
       if (process.platform === 'win32') {
-        exec(`attrib +h "${stopwatchFile}"`)
+        try { exec(`attrib +h "${stopwatchFile}"`) } catch (e) {}
       }
 
       // 3. Save Excel (.xlsx) for user viewing
@@ -309,7 +312,10 @@ app.whenReady().then(() => {
       XLSX.writeFile(workbook, excelFile);
 
       return { success: true }
-    } catch (err) { return { success: false, error: err.message } }
+    } catch (err) { 
+      console.error('[IPC] save-stopwatch-records error:', err)
+      return { success: false, error: err.message } 
+    }
   })
 
   ipcMain.handle('open-stopwatch-folder', async () => {

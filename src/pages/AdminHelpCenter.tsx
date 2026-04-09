@@ -1,8 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { helpApi, SERVER_BASE } from '../services/api'
 import type { Ticket } from '../components/FeedbackWidget'
 import ReactMarkdown from 'react-markdown'
 import { useModal } from '../components/ModalContext'
+import { formatDistanceToNow } from 'date-fns'
+import { 
+  BarChart, Bar, XAxis, YAxis, Cell, 
+  ResponsiveContainer, Tooltip 
+} from 'recharts'
 import './AdminHelpCenter.css'
 
 export default function AdminHelpCenter() {
@@ -114,19 +119,50 @@ export default function AdminHelpCenter() {
       fetchTickets(false)
     }, 30000)
 
-    // Disregard global padding to make the workspace full-bleed vertically, but maintain horizontal padding to avoid clipping floating widgets
-    const appContent = document.querySelector('.app-content') as HTMLElement;
-    if (appContent) {
-      appContent.style.padding = '0 100px';
-    }
-
     return () => {
       clearInterval(timer)
-      if (appContent) {
-        appContent.style.padding = '';
-      }
     }
   }, [])
+
+  // Optimized Analytics Calculations
+  const stats = useMemo(() => {
+    const open = tickets.filter(t => t.status !== 'resolved').length;
+    const resolved = tickets.filter(t => t.status === 'resolved').length;
+    
+    // Urgency distribution for horizontal chart
+    const urgencies = [
+      { name: 'Critical', key: 'critical', color: '#ef4444' },
+      { name: 'High',     key: 'high',     color: '#f97316' },
+      { name: 'Medium',   key: 'medium',   color: '#fbbf24' },
+      { name: 'Low',      key: 'low',      color: '#3b82f6' }
+    ];
+    
+    const chartData = urgencies.map(u => ({
+      name: u.name,
+      value: tickets.filter(t => t.urgency === u.key).length,
+      fill: u.color
+    }));
+
+    // Category distribution
+    const categories = ['General', 'Bug', 'Hardware', 'Request'];
+    const categoryData = categories.map(c => ({
+      name: c,
+      value: tickets.filter(t => t.category === c).length,
+      fill: '#06b6d4' // Cyan/Teal
+    }));
+
+    // Top Workstations (Top 5)
+    const wsMap: Record<string, number> = {};
+    tickets.forEach(t => {
+      wsMap[t.workstation] = (wsMap[t.workstation] || 0) + 1;
+    });
+    const workstationData = Object.entries(wsMap)
+      .map(([name, value]) => ({ name, value, fill: '#8b5cf6' })) // Purple
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    return { open, resolved, chartData, categoryData, workstationData };
+  }, [tickets]);
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -472,6 +508,140 @@ export default function AdminHelpCenter() {
               <p>Choose a ticket from the inbox to view the conversation</p>
             </div>
           )}
+        </div>
+
+        {/* RIGHT COMPONENT: SUPPORT ANALYTICS */}
+        <div className="ah-info-sidebar">
+          <div className="ah-info-header">
+            <h3>Live Recent Support Audit</h3>
+            <div className="ah-info-timestamp">Live Monitoring</div>
+          </div>
+          
+          <div className="ah-analytics-content">
+            {/* 1. Global Stats Cards */}
+            <div className="ah-stats-grid">
+              <div className="ah-stat-card open">
+                <span className="ah-stat-value">{stats.open}</span>
+                <span className="ah-stat-label">OPEN</span>
+              </div>
+              <div className="ah-stat-card resolved">
+                <span className="ah-stat-value">{stats.resolved}</span>
+                <span className="ah-stat-label">FIXED</span>
+              </div>
+            </div>
+
+            {/* 2. Recharts Horizontal Bar Charts */}
+            <div className="ah-charts-stack">
+              {/* Urgency Chart */}
+              <div className="ah-chart-section">
+                <div className="ah-graph-label">Priority Volume</div>
+                <div style={{ width: '100%', height: 140 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={stats.chartData}
+                      margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        type="category" 
+                        dataKey="name" 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        fontWeight={600}
+                        tickLine={false}
+                        axisLine={false}
+                        width={65}
+                      />
+                      <Tooltip cursor={{ fill: 'transparent' }} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12} animationDuration={800}>
+                        {stats.chartData.map((e, index) => <Cell key={index} fill={e.fill} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Category Chart */}
+              <div className="ah-chart-section">
+                <div className="ah-graph-label">Issue Categories</div>
+                <div style={{ width: '100%', height: 140 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={stats.categoryData}
+                      margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        type="category" 
+                        dataKey="name" 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        fontWeight={600}
+                        tickLine={false}
+                        axisLine={false}
+                        width={65}
+                      />
+                      <Tooltip cursor={{ fill: 'transparent' }} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12} fill="#06b6d4" animationDuration={800} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Top Workstations Chart */}
+              <div className="ah-chart-section">
+                <div className="ah-graph-label">Top Problematic PCs</div>
+                <div style={{ width: '100%', height: 160 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={stats.workstationData}
+                      margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis 
+                        type="category" 
+                        dataKey="name" 
+                        stroke="#64748b" 
+                        fontSize={10} 
+                        fontWeight={600}
+                        tickLine={false}
+                        axisLine={false}
+                        width={65}
+                      />
+                      <Tooltip cursor={{ fill: 'transparent' }} />
+                      <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12} fill="#8b5cf6" animationDuration={800} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Active Context Specs (If ticket selected) */}
+            {activeTicket && (
+              <div className="ah-sidebar-telemetry">
+                <div className="ah-tel-header">Active Machine</div>
+                <div className="ah-tel-ws">{activeTicket.workstation}</div>
+                <div className="ah-tel-row">
+                  <span>Memory</span>
+                  <strong>{activeTicket.sys_ram || 'N/A'}</strong>
+                </div>
+                <div className="ah-tel-row">
+                  <span>Display</span>
+                  <strong>{activeTicket.sys_res || 'N/A'}</strong>
+                </div>
+              </div>
+            )}
+
+            {!activeTicket && (
+              <div className="ah-info-empty-msg">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <p>Select a ticket to see<br/>workstation details</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

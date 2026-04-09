@@ -84,7 +84,7 @@ class KMTIServerGUI(ctk.CTk):
         self.server_thread = None
         self.should_exit = False
         
-        VERSION = "3.6.1"
+        VERSION = "3.6.4"
         # Window Configuration
         self.title(f"KMTI Workstation v{VERSION} — Control Center")
         self.geometry("900x600")
@@ -100,7 +100,7 @@ class KMTIServerGUI(ctk.CTk):
         self.logo_label = ctk.CTkLabel(self.sidebar, text="KMTI WORKSTATION", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         
-        self.subtitle_label = ctk.CTkLabel(self.sidebar, text="Backend Control Center v3.6.1", font=ctk.CTkFont(size=11), text_color="gray")
+        self.subtitle_label = ctk.CTkLabel(self.sidebar, text="Backend Control Center v3.6.4", font=ctk.CTkFont(size=11), text_color="gray")
         self.subtitle_label.grid(row=1, column=0, padx=20, pady=(0, 20))
 
         # 🍱 Heartbeat Indicators
