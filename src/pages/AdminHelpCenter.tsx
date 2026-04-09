@@ -8,7 +8,7 @@ import './AdminHelpCenter.css'
 export default function AdminHelpCenter() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  
+
   const [activeId, setActiveId] = useState<number | null>(null)
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -17,9 +17,9 @@ export default function AdminHelpCenter() {
   const [isInternal, setIsInternal] = useState(false)
   const [isReplying, setIsReplying] = useState(false)
   const [showResolved, setShowResolved] = useState(false)
-  
+
   const { confirm, alert, notify } = useModal()
-  
+
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   // MACRO / AUTOCOMPLETE STATE
@@ -40,7 +40,7 @@ export default function AdminHelpCenter() {
 
   const handleComposerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     let text = e.target.value;
-    
+
     // Auto-expand if the user types the macro immediately followed by a space
     for (const [trigger, macroText] of Object.entries(MACROS)) {
       if (text.endsWith(`${trigger} `) || text.endsWith(`${trigger}\n`)) {
@@ -49,17 +49,17 @@ export default function AdminHelpCenter() {
       }
     }
     setReplyMessage(text);
-    
+
     // Check for popup menu autocomplete
     const cursor = e.target.selectionStart;
     const textBefore = text.slice(0, cursor);
     const match = textBefore.match(/(?:^|\s)(\/[^\s]*)$/);
     if (match) {
-      setMacroOverlay({ 
-        active: true, 
-        filter: match[1].toLowerCase(), 
-        replaceStart: cursor - match[1].length, 
-        replaceEnd: cursor 
+      setMacroOverlay({
+        active: true,
+        filter: match[1].toLowerCase(),
+        replaceStart: cursor - match[1].length,
+        replaceEnd: cursor
       });
       setMacroIndex(0);
     } else {
@@ -113,7 +113,7 @@ export default function AdminHelpCenter() {
     const timer = setInterval(() => {
       fetchTickets(false)
     }, 30000)
-    
+
     // Disregard global padding to make the workspace full-bleed vertically, but maintain horizontal padding to avoid clipping floating widgets
     const appContent = document.querySelector('.app-content') as HTMLElement;
     if (appContent) {
@@ -130,7 +130,7 @@ export default function AdminHelpCenter() {
 
   useEffect(() => {
     if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({behavior: 'smooth'})
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [activeTicket?.messages])
 
@@ -138,7 +138,7 @@ export default function AdminHelpCenter() {
     if (showLoading) setIsLoading(true)
     try {
       const res = await helpApi.getTickets()
-      
+
       const rawTickets = res.data as Ticket[];
       const urgencyRank: Record<string, number> = {
         'critical': 4,
@@ -146,23 +146,23 @@ export default function AdminHelpCenter() {
         'medium': 2,
         'low': 1
       };
-      
+
       const sortedTickets = rawTickets.sort((a, b) => {
         if (a.status === 'resolved' && b.status !== 'resolved') return 1;
         if (a.status !== 'resolved' && b.status === 'resolved') return -1;
-        
+
         const rankA = urgencyRank[a.urgency] || 0;
         const rankB = urgencyRank[b.urgency] || 0;
-        
+
         if (rankA !== rankB) {
           return rankB - rankA;
         }
-        
+
         return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       });
 
       setTickets(sortedTickets)
-      
+
       // If we have an active ticket, and we just refreshed, we should ideally fetch its details to see if someone else replied, 
       // but to optimize we could just rely on manual refresh. We'll do a quick silent fetch if active.
       if (activeId) {
@@ -201,15 +201,15 @@ export default function AdminHelpCenter() {
       const formData = new FormData()
       formData.append('message', finalMessage)
       formData.append('is_internal', isInternal ? "true" : "false")
-      
+
       await helpApi.reply(activeId, formData)
       setReplyMessage('')
-      
+
       // Reload ticket specifics
       const res = await helpApi.getTicketDetails(activeId)
       setActiveTicket(res.data)
       fetchTickets(false)
-      
+
     } catch (err) {
       console.error('Reply failed:', err)
     } finally {
@@ -232,7 +232,7 @@ export default function AdminHelpCenter() {
 
   const handleDeleteTicket = async () => {
     if (!activeId) return
-    
+
     confirm(
       `Are you sure you want to delete ticket #${activeId}? This action cannot be undone.`,
       async () => {
@@ -254,27 +254,27 @@ export default function AdminHelpCenter() {
 
   // Formatting helpers
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('en-US', { 
-      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+    return new Date(dateStr).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
     })
   }
 
   const formatRelative = (dateStr: string) => {
     const d = new Date(dateStr)
     const now = new Date()
-    const diff = Math.floor((now.getTime() - d.getTime()) / 60000) 
+    const diff = Math.floor((now.getTime() - d.getTime()) / 60000)
     if (diff < 1) return 'Just now'
     if (diff < 60) return `${diff}m ago`
-    if (diff < 1440) return `${Math.floor(diff/60)}h ago`
-    return `${Math.floor(diff/1440)}d ago`
+    if (diff < 1440) return `${Math.floor(diff / 60)}h ago`
+    return `${Math.floor(diff / 1440)}d ago`
   }
 
   const activeTickets = tickets.filter(t => t.status !== 'resolved')
   const resolvedTickets = tickets.filter(t => t.status === 'resolved')
 
   const renderTicket = (t: Ticket) => (
-    <div 
-      key={t.id} 
+    <div
+      key={t.id}
       className={`ah-queue-item ${activeId === t.id ? 'active' : ''}`}
       onClick={() => handleSelectTicket(t.id)}
     >
@@ -302,26 +302,26 @@ export default function AdminHelpCenter() {
   return (
     <div className="admin-help-wrapper">
       <div className="ah-layout">
-        
+
         {/* LEFT COMPONENT: TICKET QUEUE */}
         <div className="ah-sidebar">
           <div className="ah-sidebar-header">
             <h2>Ticket Inbox</h2>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                className="ah-refresh-btn" 
-                onClick={handleDeleteTicket} 
+              <button
+                className="ah-refresh-btn"
+                onClick={handleDeleteTicket}
                 title={activeId ? `Delete Ticket #${activeId}` : "Select a ticket to delete"}
                 disabled={!activeId}
                 style={{ opacity: activeId ? 1 : 0.4, color: activeId ? '#ef4444' : undefined }}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+                  <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" />
                 </svg>
               </button>
               <button className="ah-refresh-btn" onClick={() => fetchTickets()} title="Refresh Inbox">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-10.8l4.25 4.23"/>
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-10.8l4.25 4.23" />
                 </svg>
               </button>
             </div>
@@ -360,24 +360,24 @@ export default function AdminHelpCenter() {
                     <span className={`ah-badge ${activeTicket.status}`}>{activeTicket.status.replace('_', ' ').toUpperCase()}</span>
                   </div>
                   <div className="ah-ws-subtitle">
-                    Reported by <strong>{activeTicket.reporter_name || 'Workstation User'}</strong> 
+                    Reported by <strong>{activeTicket.reporter_name || 'Workstation User'}</strong>
                     from workstation <strong>{activeTicket.workstation}</strong>
-                    
+
                     {/* Telemetry Data */}
                     {(activeTicket.sys_ram || activeTicket.sys_res) && (
                       <span className="ah-device-badge" title={activeTicket.sys_app || undefined}>
-                        {activeTicket.sys_ram && `${activeTicket.sys_ram} RAM `} 
+                        {activeTicket.sys_ram && `${activeTicket.sys_ram} RAM `}
                         {activeTicket.sys_res && `| ${activeTicket.sys_res}`}
                       </span>
                     )}
                   </div>
                 </div>
-                
+
                 <div className="ah-ws-actions">
                   {activeTicket.status !== 'resolved' ? (
-                     <button className="ah-btn ah-btn-success" onClick={() => handleStatusChange('resolved')}>
-                       Mark Resolved
-                     </button>
+                    <button className="ah-btn ah-btn-success" onClick={() => handleStatusChange('resolved')}>
+                      Mark Resolved
+                    </button>
                   ) : (
                     <button className="ah-btn ah-btn-outline" onClick={() => handleStatusChange('open')}>
                       Reopen Ticket
@@ -396,18 +396,18 @@ export default function AdminHelpCenter() {
                   return (
                     <div key={msg.id} className={`ah-bubble-wrapper ${isIt ? 'is-it' : 'is-user'} ${isWhisper ? 'is-internal' : ''}`}>
                       <div className="ah-sender">
-                        {isWhisper && '🤫 Internal Note • '}{msg.sender_name || (isIt ? 'IT Support' : 'User')} • {formatDate(msg.created_at)}
+                        {isWhisper && '🤫 '}{msg.sender_name || (isIt ? 'IT Support' : 'User')} • {formatDate(msg.created_at)}
                       </div>
                       <div className="ah-bubble">
                         <ReactMarkdown>{msg.message}</ReactMarkdown>
                         {paths.length > 0 && (
                           <div className="ah-attachments">
                             {paths.map(p => (
-                              <img 
-                                key={p} 
-                                src={`${SERVER_BASE}${p}`} 
-                                alt="Attachment" 
-                                className="ah-attachment-img" 
+                              <img
+                                key={p}
+                                src={`${SERVER_BASE}${p}`}
+                                alt="Attachment"
+                                className="ah-attachment-img"
                                 onClick={() => setPreviewImage(`${SERVER_BASE}${p}`)}
                               />
                             ))}
@@ -425,8 +425,8 @@ export default function AdminHelpCenter() {
                 {macroOverlay.active && availableMacros.length > 0 && (
                   <div className="ah-macro-popup">
                     {availableMacros.map(([trigger, macroText], idx) => (
-                      <div 
-                        key={trigger} 
+                      <div
+                        key={trigger}
                         className={`ah-macro-item ${idx === macroIndex ? 'selected' : ''}`}
                         onClick={() => applyMacro(trigger, macroText)}
                         title={macroText}
@@ -437,29 +437,29 @@ export default function AdminHelpCenter() {
                   </div>
                 )}
                 <div className="ah-composer-actions">
-                   <label className="ah-toggle-wrapper">
-                      Public Reply
-                      <input type="checkbox" checked={isInternal} onChange={e => setIsInternal(e.target.checked)} />
-                      <div className="ah-toggle-switch"></div>
-                      Whisper (Internal)
-                   </label>
+                  <label className="ah-toggle-wrapper">
+                    Public Reply
+                    <input type="checkbox" checked={isInternal} onChange={e => setIsInternal(e.target.checked)} />
+                    <div className="ah-toggle-switch"></div>
+                    Whisper (Internal)
+                  </label>
                 </div>
                 <div className="ah-composer-row">
-                  <textarea 
+                  <textarea
                     className={`ah-composer-input ${isInternal ? 'internal-mode' : ''}`}
                     placeholder={isInternal ? "Type an internal note (Users cannot see this)..." : "Type a reply to the user... (Tip: type / to open command menu)"}
                     value={replyMessage}
                     onChange={handleComposerChange}
                     onKeyDown={handleKeyDown}
                   />
-                  <button 
+                  <button
                     className={`ah-send-btn ${isInternal ? 'internal-mode' : ''}`}
                     disabled={!replyMessage.trim() || isReplying}
                     onClick={handleReply}
                     title={isInternal ? "Save Internal Note" : "Send Reply"}
                   >
                     {isReplying ? '...' : (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
                     )}
                   </button>
                 </div>
@@ -467,7 +467,7 @@ export default function AdminHelpCenter() {
             </>
           ) : (
             <div className="ah-no-selection">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
               <h3>Select a ticket</h3>
               <p>Choose a ticket from the inbox to view the conversation</p>
             </div>

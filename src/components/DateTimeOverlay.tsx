@@ -28,7 +28,8 @@ const THEMES: ThemeConfig[] = [
   { name: 'Neumorph', bg: '#e0e5ec', text: '#4a5568', sub: '#718096', border: 'transparent', glowOpacity: 0, className: 'theme-neumorph' },
   { name: 'Aurora', bg: '#1e1b4b', text: '#ffffff', sub: 'rgba(255,255,255,0.7)', border: 'rgba(255,255,255,0.2)', glowOpacity: 0.6, className: 'theme-aurora' },
   { name: 'Vaporwave', bg: '#0f0c29', text: '#f72585', sub: '#4cc9f0', border: '#7209b7', glowOpacity: 0.8, font: '"Courier New", monospace', className: 'theme-vapor' },
-  { name: 'Luxury', bg: '#050505', text: '#d4af37', sub: 'rgba(212, 175, 55, 0.6)', border: '#d4af37', glowOpacity: 0.2, font: '"Playfair Display", "Times New Roman", serif', className: 'theme-luxury' }
+  { name: 'Luxury', bg: '#050505', text: '#d4af37', sub: 'rgba(212, 175, 55, 0.6)', border: '#d4af37', glowOpacity: 0.2, font: '"Playfair Display", "Times New Roman", serif', className: 'theme-luxury' },
+  { name: 'Galactic', bg: '#03000f', text: '#e0c4ff', sub: 'rgba(176, 100, 255, 0.7)', border: '#7c3aed', glowOpacity: 0.9, font: '"Courier New", monospace', className: 'theme-galactic' }
 ];
 
 interface PaletteColor {
@@ -57,10 +58,10 @@ const COLOR_PALETTES: PaletteColor[] = [
 const STORAGE_KEY = 'kmti_clock_settings_v6';
 
 interface StopwatchRecord {
-    id: string;
-    name: string;
-    time: string;
-    timestamp: number;
+  id: string;
+  name: string;
+  time: string;
+  timestamp: number;
 }
 
 interface SettingsV6 {
@@ -101,7 +102,7 @@ const DateTimeOverlay: React.FC = () => {
   const [bgOpacity, setBgOpacity] = useState(initialSettings.bgOpacity ?? 0.85);
   const [mode, setMode] = useState<'clock' | 'stopwatch'>(initialSettings.mode);
   const [isExpanded, setIsExpanded] = useState(initialSettings.expanded);
-  
+
   // Stopwatch state
   const [swRunning, setSwRunning] = useState(initialSettings.swRunning);
   const [swAccumulated, setSwAccumulated] = useState(initialSettings.swAccumulated);
@@ -116,18 +117,174 @@ const DateTimeOverlay: React.FC = () => {
   const [lastActivity, setLastActivity] = useState(Date.now());
   const [dragging, setDragging] = useState(false);
 
+  // Derive theme early so it is available to all hooks below (avoids TDZ)
+  const safeThemeIndex = themeIndex >= THEMES.length ? 0 : themeIndex;
+  const theme = THEMES[safeThemeIndex];
+
+  // Black hole canvas ref
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const bhAnimRef = useRef<number>(0);
+
   // Dragging Refs
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const dragStartCoordsRef = useRef({ x: 0, y: 0 });
   const overlayRef = useRef<HTMLDivElement>(null);
-  
+
   // Load Records on Init
   useEffect(() => {
     (window as any).electronAPI?.getStopwatchRecords().then((list: StopwatchRecord[]) => {
       if (list) setSwRecords(list);
     });
   }, []);
+
+  // Black hole canvas animation (Galactic theme only)
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (theme.className !== 'theme-galactic') {
+      cancelAnimationFrame(bhAnimRef.current);
+      return;
+    }
+    const ctx = canvas.getContext('2d')!;
+
+    // Seed stable stars and particles once
+    const stars: { x: number; y: number; r: number; a: number }[] = [];
+    for (let i = 0; i < 120; i++) {
+      stars.push({ x: Math.random(), y: Math.random(), r: Math.random() * 1.2 + 0.2, a: Math.random() * 0.7 + 0.1 });
+    }
+    const particles: { x: number; y: number; s: number; v: number; a: number }[] = [];
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * 2 * Math.PI,
+        y: Math.random() * 50 + 100,
+        s: Math.random() * 0.5 + 0.5,
+        v: Math.random() * 0.02 + 0.01,
+        a: Math.random()
+      });
+    }
+
+    let t = 0;
+    const draw = () => {
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      const cx = W / 2, cy = H / 2;
+      const pillW = overlayRef.current?.offsetWidth || 220;
+      const pillH = overlayRef.current?.offsetHeight || 64;
+      const bhRx = pillW / 2;
+      const bhRy = pillH / 2;
+
+      // Explicit Pill Path Generator
+      const drawPillPath = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
+        const r = h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.arcTo(x + w, y, x + w, y + r, r);
+        ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+        ctx.lineTo(x + r, y + h);
+        ctx.arcTo(x, y + h, x, y + h - r, r);
+        ctx.arcTo(x, y, x + r, y, r);
+        ctx.closePath();
+      };
+
+      // 1. (Base background removed as per request to remove the "big box")
+
+      // 3. (Glows and Accretion Disks removed as per request)
+
+      // 4. THE BLACK HOLE (The Pill)
+      drawPillPath(ctx, cx - bhRx, cy - bhRy, pillW, pillH);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+
+      // --- NEON ORANGE BORDER (The Event Horizon Rim) ---
+      ctx.save();
+
+      // 1. Primary Inner Static Rim
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ff6600';
+      ctx.strokeStyle = '#ffae00';
+      ctx.lineWidth = 1.5;
+      drawPillPath(ctx, cx - bhRx, cy - bhRy, pillW, pillH);
+      ctx.stroke();
+
+      // 2. Secondary Outer Rotating "Plasma Glow"
+      ctx.save();
+      const offset = 6;
+      const oW = pillW + offset * 2;
+      const oH = pillH + offset * 2;
+      const ox = cx - (oW / 2);
+      const oy = cy - (oH / 2);
+      const oPerimeter = (oW * 2) + (oH * Math.PI);
+
+      // Layered Glow effect
+      // A) Subtle outer wide glow
+      ctx.filter = 'blur(12px)';
+      ctx.shadowBlur = 45;
+      ctx.shadowColor = '#ff4400';
+      ctx.strokeStyle = 'rgba(255, 68, 0, 0.2)';
+      ctx.lineWidth = 12;
+      ctx.setLineDash([oPerimeter * 0.3, oPerimeter * 0.7]);
+      ctx.lineDashOffset = -t * 400; // Increased rotation speed
+      drawPillPath(ctx, ox, oy, oW, oH);
+      ctx.stroke();
+
+      // B) More intense middle glow
+      ctx.filter = 'blur(100px)';
+      ctx.shadowBlur = 20;
+      ctx.strokeStyle = 'rgba(255, 120, 0, 0.4)';
+      ctx.lineWidth = 6;
+      ctx.stroke();
+
+      // C) Brighter "Hot" core dash
+      ctx.filter = 'none';
+      ctx.shadowBlur = 10;
+      ctx.strokeStyle = 'rgba(255, 200, 50, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.restore();
+      // --------------------------------------------------
+
+      // 5. Hawking Radiation Particles (Orbiting Outside)
+      particles.forEach(p => {
+        p.x += p.v * 1.5; // Slightly faster particle speed
+        // Orbit slightly further to stay clear of the pill edge
+        const distMult = 1.35 + Math.sin(t * 0.15 + p.a * 10) * 0.25;
+        const orbitX = cx + Math.cos(p.x) * bhRx * (distMult + 0.2);
+        const orbitY = cy + Math.sin(p.x) * bhRy * (distMult + 0.4);
+
+        const size = p.s * 1.5;
+        const alpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 0.8 + p.a));
+
+        // Draw particle with a glowing core for visibility on light/dark
+        ctx.beginPath();
+        ctx.arc(orbitX, orbitY, size + 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 100, 0, ${alpha * 0.3})`; // Subtle outer glow
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(orbitX, orbitY, size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 200, 50, ${alpha})`; // Bright core
+        ctx.fill();
+      });
+
+      // 6. DEPTH OVERLAY (Inner soft lens)
+      const innerLens = ctx.createRadialGradient(cx, cy, 0, cx, cy, bhRx);
+      innerLens.addColorStop(0, 'rgba(255, 255, 255, 0.02)');
+      innerLens.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+      drawPillPath(ctx, cx - bhRx, cy - bhRy, pillW, pillH);
+      ctx.fillStyle = innerLens;
+      ctx.fill();
+
+      t += 0.012;
+      bhAnimRef.current = requestAnimationFrame(draw);
+    };
+
+    draw();
+    return () => cancelAnimationFrame(bhAnimRef.current);
+  }, [theme.className]);
 
   // Tick for Clock & Stopwatch
   useEffect(() => {
@@ -148,7 +305,7 @@ const DateTimeOverlay: React.FC = () => {
       if (!isDraggingRef.current) return;
       const newX = e.clientX - dragStartRef.current.x;
       const newY = (window.innerHeight - e.clientY) - dragStartRef.current.y;
-      
+
       const overlayWidth = overlayRef.current?.offsetWidth || 200;
       const overlayHeight = (overlayRef.current?.querySelector('.findr-datetime-content') as HTMLElement)?.offsetHeight || 44;
 
@@ -168,7 +325,7 @@ const DateTimeOverlay: React.FC = () => {
       isDraggingRef.current = false;
       setDragging(false);
       const dist = Math.sqrt(
-        Math.pow(e.clientX - dragStartCoordsRef.current.x, 2) + 
+        Math.pow(e.clientX - dragStartCoordsRef.current.x, 2) +
         Math.pow(e.clientY - dragStartCoordsRef.current.y, 2)
       );
       if (dist < 5) { setIsExpanded(prev => !prev); } else { snapToEdge(); }
@@ -187,14 +344,14 @@ const DateTimeOverlay: React.FC = () => {
     const padding = 20, snapThreshold = 60;
     const width = overlayRef.current.offsetWidth, height = overlayRef.current.offsetHeight;
     setPosition(prev => {
-        const distToLeft = prev.x, distToRight = window.innerWidth - (prev.x + width);
-        const distToBottom = prev.y, distToTop = window.innerHeight - (prev.y + height);
-        let targetX = prev.x, targetY = prev.y;
-        if (distToLeft < snapThreshold) targetX = padding;
-        else if (distToRight < snapThreshold) targetX = window.innerWidth - width - padding;
-        if (distToBottom < snapThreshold) targetY = padding;
-        else if (distToTop < snapThreshold) targetY = window.innerHeight - height - padding;
-        return { x: targetX, y: targetY };
+      const distToLeft = prev.x, distToRight = window.innerWidth - (prev.x + width);
+      const distToBottom = prev.y, distToTop = window.innerHeight - (prev.y + height);
+      let targetX = prev.x, targetY = prev.y;
+      if (distToLeft < snapThreshold) targetX = padding;
+      else if (distToRight < snapThreshold) targetX = window.innerWidth - width - padding;
+      if (distToBottom < snapThreshold) targetY = padding;
+      else if (distToTop < snapThreshold) targetY = window.innerHeight - height - padding;
+      return { x: targetX, y: targetY };
     });
   };
 
@@ -238,27 +395,27 @@ const DateTimeOverlay: React.FC = () => {
   };
 
   const saveRecord = async () => {
-      const newRecord: StopwatchRecord = {
-          id: Math.random().toString(36).substr(2, 9),
-          name: `Record ${swRecords.length + 1}`,
-          time: formatStopwatch(swCurrent),
-          timestamp: Date.now()
-      };
-      const updated = [newRecord, ...swRecords].slice(0, 50);
-      setSwRecords(updated);
-      await (window as any).electronAPI?.saveStopwatchRecords(updated);
+    const newRecord: StopwatchRecord = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: `Record ${swRecords.length + 1}`,
+      time: formatStopwatch(swCurrent),
+      timestamp: Date.now()
+    };
+    const updated = [newRecord, ...swRecords].slice(0, 50);
+    setSwRecords(updated);
+    await (window as any).electronAPI?.saveStopwatchRecords(updated);
   };
 
   const deleteRecord = async (id: string) => {
-      const updated = swRecords.filter(r => r.id !== id);
-      setSwRecords(updated);
-      await (window as any).electronAPI?.saveStopwatchRecords(updated);
+    const updated = swRecords.filter(r => r.id !== id);
+    setSwRecords(updated);
+    await (window as any).electronAPI?.saveStopwatchRecords(updated);
   };
 
   const renameRecord = async (id: string, newName: string) => {
-      const updated = swRecords.map(r => r.id === id ? { ...r, name: newName } : r);
-      setSwRecords(updated);
-      await (window as any).electronAPI?.saveStopwatchRecords(updated);
+    const updated = swRecords.map(r => r.id === id ? { ...r, name: newName } : r);
+    setSwRecords(updated);
+    await (window as any).electronAPI?.saveStopwatchRecords(updated);
   };
 
   // Persistence Sync
@@ -272,26 +429,24 @@ const DateTimeOverlay: React.FC = () => {
 
   const timeStr = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
   const dateStr = time.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
-  const safeThemeIndex = themeIndex >= THEMES.length ? 0 : themeIndex;
-  const theme = THEMES[safeThemeIndex];
   const accentColor = COLOR_PALETTES[paletteIndex]?.hex || COLOR_PALETTES[0].hex;
-  
+
   const activeColors = useMemo(() => {
     const hexToRgbStr = (colorStr: string) => {
-        if (colorStr.startsWith('rgba') || colorStr.startsWith('rgb')) {
-            const match = colorStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-            if (match) return `${match[1]}, ${match[2]}, ${match[3]}`;
-        }
-        if (colorStr.startsWith('#')) {
-            let h = colorStr.slice(1);
-            if (h.length === 3) h = h.split('').map(c => c + c).join('');
-            if (h.length === 8) h = h.slice(0, 6);
-            const r = parseInt(h.slice(0, 2), 16);
-            const g = parseInt(h.slice(2, 4), 16);
-            const b = parseInt(h.slice(4, 6), 16);
-            return `${r}, ${g}, ${b}`;
-        }
-        return '0, 0, 0';
+      if (colorStr.startsWith('rgba') || colorStr.startsWith('rgb')) {
+        const match = colorStr.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+        if (match) return `${match[1]}, ${match[2]}, ${match[3]}`;
+      }
+      if (colorStr.startsWith('#')) {
+        let h = colorStr.slice(1);
+        if (h.length === 3) h = h.split('').map(c => c + c).join('');
+        if (h.length === 8) h = h.slice(0, 6);
+        const r = parseInt(h.slice(0, 2), 16);
+        const g = parseInt(h.slice(2, 4), 16);
+        const b = parseInt(h.slice(4, 6), 16);
+        return `${r}, ${g}, ${b}`;
+      }
+      return '0, 0, 0';
     };
 
     let baseColor = theme.bg;
@@ -305,13 +460,13 @@ const DateTimeOverlay: React.FC = () => {
     } else {
       const rgb = hexToRgbStr(baseColor).split(',');
       if (rgb.length === 3 && !Number.isNaN(parseInt(rgb[0]))) {
-          const yiq = ((parseInt(rgb[0]) * 299) + (parseInt(rgb[1]) * 587) + (parseInt(rgb[2]) * 114)) / 1000;
-          isLight = yiq >= 128;
+        const yiq = ((parseInt(rgb[0]) * 299) + (parseInt(rgb[1]) * 587) + (parseInt(rgb[2]) * 114)) / 1000;
+        isLight = yiq >= 128;
       } else {
-          isLight = theme.name === 'Crystal' || theme.name === 'Brutalism';
+        isLight = theme.name === 'Crystal' || theme.name === 'Brutalism';
       }
     }
-    
+
     return {
       bg: `rgba(${hexToRgbStr(baseColor)}, ${bgOpacity})`,
       text: isLight ? '#0f172a' : '#ffffff',
@@ -323,14 +478,14 @@ const DateTimeOverlay: React.FC = () => {
 
   const isInactive = !isExpanded && (Date.now() - lastActivity > 30000);
   const isTopHalf = useMemo(() => position.y > window.innerHeight / 2, [position.y]);
-  const clockHeight = 44; 
+  const clockHeight = 44;
 
   return (
-    <div 
+    <div
       ref={overlayRef}
       className={`findr-global-datetime ${theme.className} ${dragging ? 'dragging' : ''} ${isExpanded ? 'expanded' : ''} ${isInactive ? 'inactive' : ''} mode-${mode} ${isTopHalf ? 'expand-down' : 'expand-up'}`}
-      style={{ 
-        left: `${position.x}px`, 
+      style={{
+        left: `${position.x}px`,
         bottom: isTopHalf ? 'auto' : `${position.y}px`,
         top: isTopHalf ? `${window.innerHeight - position.y - clockHeight}px` : 'auto',
         backgroundColor: activeColors.bg, color: activeColors.text, borderColor: activeColors.border,
@@ -343,6 +498,15 @@ const DateTimeOverlay: React.FC = () => {
       onMouseEnter={() => setLastActivity(Date.now())}
       onMouseMove={() => setLastActivity(Date.now())}
     >
+      {/* Black hole canvas background */}
+      {theme.className === 'theme-galactic' && (
+        <canvas
+          ref={canvasRef}
+          className="bh-canvas"
+          width={600}
+          height={480}
+        />
+      )}
       {/* Control Center Interior */}
       <div className="findr-datetime-content">
         {mode === 'clock' ? (
@@ -353,162 +517,162 @@ const DateTimeOverlay: React.FC = () => {
           </>
         ) : (
           <div className="findr-stopwatch-container">
-             <div className="findr-sw-display" style={{ color: accentColor }}>{formatStopwatch(swCurrent)}</div>
-             <div className="findr-datetime-separator" style={{ backgroundColor: accentColor, opacity: 0.3 }} />
-             <div className="findr-sw-controls">
-                <button className="findr-sw-icon-btn" onClick={(e) => { e.stopPropagation(); toggleStopwatch(); }} style={{ color: accentColor }} title={swRunning ? 'Pause' : 'Start'}>
-                  {swRunning ? (
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
-                  ) : (
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                  )}
-                </button>
-                <button className="findr-sw-icon-btn" onClick={(e) => { e.stopPropagation(); saveRecord(); }} style={{ color: accentColor }} title="Record Lap">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
-                </button>
-                <button className="findr-sw-icon-btn" onClick={(e) => { e.stopPropagation(); resetStopwatch(); }} style={{ color: accentColor }} title="Reset">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />
-                  </svg>
-                </button>
-             </div>
+            <div className="findr-sw-display" style={{ color: accentColor }}>{formatStopwatch(swCurrent)}</div>
+            <div className="findr-datetime-separator" style={{ backgroundColor: accentColor, opacity: 0.3 }} />
+            <div className="findr-sw-controls">
+              <button className="findr-sw-icon-btn" onClick={(e) => { e.stopPropagation(); toggleStopwatch(); }} style={{ color: accentColor }} title={swRunning ? 'Pause' : 'Start'}>
+                {swRunning ? (
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                )}
+              </button>
+              <button className="findr-sw-icon-btn" onClick={(e) => { e.stopPropagation(); saveRecord(); }} style={{ color: accentColor }} title="Record Lap">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z" /></svg>
+              </button>
+              <button className="findr-sw-icon-btn" onClick={(e) => { e.stopPropagation(); resetStopwatch(); }} style={{ color: accentColor }} title="Reset">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" />
+                </svg>
+              </button>
+            </div>
           </div>
         )}
       </div>
 
       {isExpanded && (
         <div className="findr-control-center">
-            {mode === 'clock' ? (
-                <>
-                    <div className="findr-cc-group animate-1">
-                        <div className="findr-cc-header">
-                            <div className="findr-cc-label">THEMES</div>
-                            <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreThemes(!showMoreThemes); }} title={showMoreThemes ? "Show Less" : "Show All"}>
-                                {showMoreThemes ? (
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
-                                ) : "..."}
-                            </button>
-                        </div>
-                        <div className="findr-cc-track">
-                          <div className="findr-cc-grid themes" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, width: 'fit-content' }}>
-                              {(showMoreThemes ? THEMES : THEMES.slice(0, 5)).map((t, idx) => (
-                                  <div key={t.name} className={`findr-theme-opt-v2 ${safeThemeIndex === idx ? 'active' : ''}`}
-                                      onClick={(e) => { e.stopPropagation(); setThemeIndex(idx); }}
-                                      style={{ backgroundColor: t.bg, borderColor: t.border }} title={t.name}>
-                                      <div className="findr-theme-preview" style={{ backgroundColor: t.text }} />
-                                  </div>
-                              ))}
-                          </div>
-                        </div>
-                    </div>
-
-                    {/* --- Text Colors --- */}
-                    <div className="findr-cc-group animate-2">
-                        <div className="findr-cc-header">
-                            <div className="findr-cc-label">TEXT COLORS</div>
-                            <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreColors(!showMoreColors); }} title={showMoreColors ? "Show Less" : "Show All"}>
-                                {showMoreColors ? (
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
-                                ) : "..."}
-                            </button>
-                        </div>
-                        <div className="findr-cc-track">
-                          <div className="findr-cc-grid colors">
-                              {(showMoreColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 6)).map((p, idx) => (
-                                  <div key={p.name} className={`findr-palette-opt ${paletteIndex === idx ? 'active' : ''}`}
-                                      onClick={(e) => { e.stopPropagation(); setPaletteIndex(idx); }}
-                                      style={{ backgroundColor: p.hex }} title={p.name} />
-                              ))}
-                          </div>
-                        </div>
-                    </div>
-
-                    {/* --- Background Colors --- */}
-                    <div className="findr-cc-group animate-3">
-                        <div className="findr-cc-header">
-                            <div className="findr-cc-label">BG COLORS</div>
-                            <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreBgColors(!showMoreBgColors); }} title={showMoreBgColors ? "Show Less" : "Show All"}>
-                                {showMoreBgColors ? (
-                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
-                                ) : "..."}
-                            </button>
-                        </div>
-                        <div className="findr-cc-track">
-                          <div className="findr-cc-grid colors">
-                              <div className={`findr-palette-opt ${bgPaletteIndex === null ? 'active' : ''}`}
-                                  onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(null); }}
-                                  style={{ background: 'transparent', border: '1px dashed rgba(var(--sw-contrast),0.3)' }} title="Theme Default" />
-                              {(showMoreBgColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 5)).map((p, idx) => (
-                                  <div key={p.name} className={`findr-palette-opt ${bgPaletteIndex === idx ? 'active' : ''}`}
-                                      onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(idx); }}
-                                      style={{ backgroundColor: p.hex }} title={p.name} />
-                              ))}
-                          </div>
-                        </div>
-                        
-                        <div className="findr-cc-slider-wrap">
-                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
-                                <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>
-                            </svg>
-                            <input 
-                                type="range" 
-                                min="0" max="1" step="0.05"
-                                value={bgOpacity}
-                                onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
-                                className="findr-opacity-slider"
-                                onMouseDown={(e) => e.stopPropagation()}
-                                title="Adjust Glassmorphism Opacity"
-                            />
-                        </div>
-                    </div>
-                </>
-            ) : (
-                /* --- Stopwatch Records --- */
-                <div className="findr-cc-group">
-                    <div className="findr-cc-header">
-                        <div className="findr-cc-label">RECORDS ({swRecords.length})</div>
-                        <button className="findr-sw-icon-btn" style={{ opacity: 0.6 }} onClick={(e) => { e.stopPropagation(); (window as any).electronAPI?.openStopwatchFolder(); }} title="Open Recording Folder">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                        </button>
-                    </div>
-                    <div className="findr-sw-records">
-                        {swRecords.length === 0 ? (
-                            <div style={{ fontSize: '10px', opacity: 0.3, textAlign: 'center', padding: '10px' }}>NO RECORDS</div>
-                        ) : (
-                            swRecords.map((r) => (
-                                <div key={r.id} className="findr-sw-record-item">
-                                    <div className="findr-sw-record-info">
-                                        <input 
-                                            className="findr-sw-record-name" 
-                                            defaultValue={r.name} 
-                                            onBlur={(e) => renameRecord(r.id, e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    (e.target as HTMLInputElement).blur();
-                                                }
-                                            }}
-                                        />
-                                        <div className="findr-sw-record-time">{r.time}</div>
-                                    </div>
-                                    <div className="findr-sw-record-actions">
-                                        <button className="findr-sw-action-btn" title="Rename" onClick={(e) => { 
-                                            const input = (e.currentTarget.closest('.findr-sw-record-item')?.querySelector('.findr-sw-record-name') as HTMLInputElement);
-                                            input?.focus();
-                                        }}>
-                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                        </button>
-                                        <button className="findr-sw-action-btn delete" title="Delete" onClick={(e) => { e.stopPropagation(); deleteRecord(r.id); }}>
-                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
+          {mode === 'clock' ? (
+            <>
+              <div className="findr-cc-group animate-1">
+                <div className="findr-cc-header">
+                  <div className="findr-cc-label">THEMES</div>
+                  <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreThemes(!showMoreThemes); }} title={showMoreThemes ? "Show Less" : "Show All"}>
+                    {showMoreThemes ? (
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                    ) : "..."}
+                  </button>
                 </div>
-            )}
-            
-            <div className="findr-cc-footer">RIGHT CLICK TO TOGGLE MODE</div>
+                <div className="findr-cc-track">
+                  <div className="findr-cc-grid themes" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, width: 'fit-content' }}>
+                    {(showMoreThemes ? THEMES : THEMES.slice(0, 5)).map((t, idx) => (
+                      <div key={t.name} className={`findr-theme-opt-v2 ${safeThemeIndex === idx ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); setThemeIndex(idx); }}
+                        style={{ backgroundColor: t.bg, borderColor: t.border }} title={t.name}>
+                        <div className="findr-theme-preview" style={{ backgroundColor: t.text }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* --- Text Colors --- */}
+              <div className="findr-cc-group animate-2">
+                <div className="findr-cc-header">
+                  <div className="findr-cc-label">TEXT COLORS</div>
+                  <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreColors(!showMoreColors); }} title={showMoreColors ? "Show Less" : "Show All"}>
+                    {showMoreColors ? (
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                    ) : "..."}
+                  </button>
+                </div>
+                <div className="findr-cc-track">
+                  <div className="findr-cc-grid colors">
+                    {(showMoreColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 6)).map((p, idx) => (
+                      <div key={p.name} className={`findr-palette-opt ${paletteIndex === idx ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); setPaletteIndex(idx); }}
+                        style={{ backgroundColor: p.hex }} title={p.name} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* --- Background Colors --- */}
+              <div className="findr-cc-group animate-3">
+                <div className="findr-cc-header">
+                  <div className="findr-cc-label">BG COLORS</div>
+                  <button className="findr-palette-toggle" onClick={(e) => { e.stopPropagation(); setShowMoreBgColors(!showMoreBgColors); }} title={showMoreBgColors ? "Show Less" : "Show All"}>
+                    {showMoreBgColors ? (
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6" /></svg>
+                    ) : "..."}
+                  </button>
+                </div>
+                <div className="findr-cc-track">
+                  <div className="findr-cc-grid colors">
+                    <div className={`findr-palette-opt ${bgPaletteIndex === null ? 'active' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(null); }}
+                      style={{ background: 'transparent', border: '1px dashed rgba(var(--sw-contrast),0.3)' }} title="Theme Default" />
+                    {(showMoreBgColors ? COLOR_PALETTES : COLOR_PALETTES.slice(0, 5)).map((p, idx) => (
+                      <div key={p.name} className={`findr-palette-opt ${bgPaletteIndex === idx ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); setBgPaletteIndex(idx); }}
+                        style={{ backgroundColor: p.hex }} title={p.name} />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="findr-cc-slider-wrap">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, flexShrink: 0 }}>
+                    <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                  </svg>
+                  <input
+                    type="range"
+                    min="0" max="1" step="0.05"
+                    value={bgOpacity}
+                    onChange={(e) => setBgOpacity(parseFloat(e.target.value))}
+                    className="findr-opacity-slider"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    title="Adjust Glassmorphism Opacity"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            /* --- Stopwatch Records --- */
+            <div className="findr-cc-group">
+              <div className="findr-cc-header">
+                <div className="findr-cc-label">RECORDS ({swRecords.length})</div>
+                <button className="findr-sw-icon-btn" style={{ opacity: 0.6 }} onClick={(e) => { e.stopPropagation(); (window as any).electronAPI?.openStopwatchFolder(); }} title="Open Recording Folder">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                </button>
+              </div>
+              <div className="findr-sw-records">
+                {swRecords.length === 0 ? (
+                  <div style={{ fontSize: '10px', opacity: 0.3, textAlign: 'center', padding: '10px' }}>NO RECORDS</div>
+                ) : (
+                  swRecords.map((r) => (
+                    <div key={r.id} className="findr-sw-record-item">
+                      <div className="findr-sw-record-info">
+                        <input
+                          className="findr-sw-record-name"
+                          defaultValue={r.name}
+                          onBlur={(e) => renameRecord(r.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                        />
+                        <div className="findr-sw-record-time">{r.time}</div>
+                      </div>
+                      <div className="findr-sw-record-actions">
+                        <button className="findr-sw-action-btn" title="Rename" onClick={(e) => {
+                          const input = (e.currentTarget.closest('.findr-sw-record-item')?.querySelector('.findr-sw-record-name') as HTMLInputElement);
+                          input?.focus();
+                        }}>
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                        </button>
+                        <button className="findr-sw-action-btn delete" title="Delete" onClick={(e) => { e.stopPropagation(); deleteRecord(r.id); }}>
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="findr-cc-footer">RIGHT CLICK TO TOGGLE MODE</div>
         </div>
       )}
     </div>
