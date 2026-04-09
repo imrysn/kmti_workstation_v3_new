@@ -604,19 +604,26 @@
     position: relative;
     z-index: 5;
     padding: 14px 32px;
-    background: transparent !important;
+    background: rgba(0, 0, 0, 0.5) !important;
     border-radius: 999px;
-    backdrop-filter: none;
+    backdrop-filter: blur(12px);
+    transition: border-radius 0.3s ease;
+}
+
+/* Flatten bottom of top part when expanded to blend into CC */
+.findr-global-datetime.theme-galactic.expanded .findr-datetime-content {
+    border-radius: 32px 32px 0 0;
+    background: rgba(0, 0, 0, 0.6) !important;
 }
 
 .findr-global-datetime.theme-galactic .findr-control-center {
     position: relative;
     z-index: 5;
-    padding: 16px 24px 24px;
-    background: transparent !important;
-    border: none !important;
-    backdrop-filter: none;
-    border-radius: 0 0 40px 40px;
+    padding: 0 24px 24px;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border-top: 1px solid rgba(255, 120, 30, 0.1);
+    backdrop-filter: blur(12px);
+    border-radius: 0 0 32px 32px;
 }
 
 /* Time — glowing orange/amber like accretion light */

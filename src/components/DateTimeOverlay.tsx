@@ -175,9 +175,9 @@ const DateTimeOverlay: React.FC = () => {
       const bhRx = pillW / 2;
       const bhRy = pillH / 2;
 
-      // Explicit Pill Path Generator
+      // Explicit Pill Path Generator - now with stable corner radius
       const drawPillPath = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) => {
-        const r = h / 2;
+        const r = Math.min(w / 2, h / 2, 32); // Cap radius so it doesn't become a circle
         ctx.beginPath();
         ctx.moveTo(x + r, y);
         ctx.lineTo(x + w - r, y);
@@ -231,7 +231,7 @@ const DateTimeOverlay: React.FC = () => {
       ctx.stroke();
 
       // B) More intense middle glow
-      ctx.filter = 'blur(100px)';
+      ctx.filter = 'blur(6px)';
       ctx.shadowBlur = 20;
       ctx.strokeStyle = 'rgba(255, 120, 0, 0.4)';
       ctx.lineWidth = 6;
@@ -465,6 +465,15 @@ const DateTimeOverlay: React.FC = () => {
       } else {
         isLight = theme.name === 'Crystal' || theme.name === 'Brutalism';
       }
+    }
+
+    if (theme.className === 'theme-galactic') {
+      return {
+        bg: bgPaletteIndex !== null ? `rgba(${hexToRgbStr(COLOR_PALETTES[bgPaletteIndex].hex)}, ${bgOpacity})` : theme.bg,
+        text: '#ffffff',
+        border: 'rgba(255, 120, 30, 0.4)',
+        isLight: false
+      };
     }
 
     return {
