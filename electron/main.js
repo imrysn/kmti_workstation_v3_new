@@ -326,6 +326,9 @@ app.whenReady().then(() => {
   createWindow()
   if (isDev) {
     startBackend()
+  } else {
+    // Check for updates on startup in production
+    autoUpdater?.checkForUpdatesAndNotify()
   }
 
   app.on('activate', () => {
