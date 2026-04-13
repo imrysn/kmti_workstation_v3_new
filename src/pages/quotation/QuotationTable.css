@@ -1,0 +1,90 @@
+/* Drag and Drop Styles */
+.main-task-row.dragging {
+  opacity: 0.6;
+  cursor: grabbing !important;
+}
+
+.main-task-row.drag-over {
+  border-top: 2px solid #2196f3;
+}
+
+.main-task-row[draggable="true"] {
+  cursor: grab;
+}
+
+.main-task-row[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* Ensure sub-tasks are not draggable */
+.sub-task-row {
+  cursor: default !important;
+}
+
+.sub-task-row[draggable="true"] {
+  cursor: default !important;
+}
+
+/* Scrollable table body - max 11 rows visible (1 value basis row + 10 task rows) */
+.tasks-table-body {
+  max-height: calc(11 * 60px); /* 11 rows x approximately 60px per row */
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: block;
+  scrollbar-gutter: stable; /* Always reserve space for scrollbar */
+  background: #f9fafb; /* Ensure gutter area has background color */
+}
+
+.tasks-table-body table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Ensure header stays fixed and accounts for scrollbar */
+.tasks-table-header {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  padding-right: 8px; /* Match scrollbar gutter width */
+  box-sizing: border-box;
+  position: relative;
+  background: white;
+}
+
+/* Add colored scrollbar gutter space in header */
+.tasks-table-header::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 8px;
+  height: 100%;
+  background: #f9fafb; /* Match header background color */
+  border-left: 1px solid #e5e7eb;
+}
+
+.tasks-table-header table {
+  width: 100%;
+  table-layout: fixed;
+}
+
+/* Custom scrollbar styling */
+.tasks-table-body::-webkit-scrollbar {
+  width: 8px;
+  background: #f9fafb; /* Match header background */
+}
+
+.tasks-table-body::-webkit-scrollbar-track {
+  background: #f9fafb; /* Match header background */
+  border-radius: 0;
+  border-left: 1px solid #e5e7eb;
+}
+
+.tasks-table-body::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.tasks-table-body::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}

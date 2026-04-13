@@ -1,0 +1,2126 @@
+/* PRINT PREVIEW MODAL STYLES - MATCHING HOME UI DESIGN */
+
+@import url('https://fonts.googleapis.com/css2?family=Arimo:wght@400;600;700&display=swap');
+
+.print-preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Arimo', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  /* Removed backdrop-filter blur - very expensive on scroll */
+}
+
+.modal-container {
+  position: relative;
+  width: 98vw;
+  height: 98vh;
+  max-width: 1600px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* GPU acceleration */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Modal Header - Matching Home UI */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-icon {
+  width: 20px;
+  height: 20px;
+  color: #3b82f6;
+}
+
+.modal-title h2 {
+  font-family: 'Arimo', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #101828;
+  line-height: 28px;
+  margin: 0;
+}
+
+/* Header Action Buttons - Matching Home UI */
+.modal-header-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Print Mode Toggle Buttons */
+.print-mode-buttons {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  background: #f2f2f7;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.mode-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px;
+  border: none;
+  border-radius: 10px;
+  font-family: 'Arimo', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  background: transparent;
+  color: #6a7282;
+}
+
+.mode-button.active {
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.mode-button:hover:not(.active) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.action-separator {
+  width: 1px;
+  height: 24px;
+  background: #e5e7eb;
+}
+
+.modal-header-actions .action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 11px;
+  border: 1px solid #d1d1d6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1d1d1f;
+  font-family: 'Arimo', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.modal-header-actions .action-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.modal-header-actions .action-button.primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.modal-header-actions .action-button.primary:hover {
+  background: #2563eb;
+}
+
+.modal-header-actions .action-button.export {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.modal-header-actions .action-button.export:hover {
+  background: #059669;
+}
+
+.modal-header-actions .action-button:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
+.close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d1d6;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #1d1d1f;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Modal Body - Two Panel Layout */
+.modal-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Full Width Preview Panel - Matching Home UI */
+.preview-panel-full {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fafbfc;
+  overflow: hidden;
+}
+
+/* Preview Container - Full Width */
+.preview-panel-full .preview-container {
+  flex: 1;
+  padding: 32px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* PERFORMANCE: Smooth scrolling optimizations */
+  will-change: scroll-position;
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  /* PERFORMANCE: Custom scrollbar for better performance */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+.preview-panel-full .preview-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.preview-panel-full .preview-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.preview-panel-full .preview-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.preview-panel-full .preview-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.preview-panel-full .preview-page {
+  background: #ffffff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 0 auto;
+  /* PERFORMANCE: GPU acceleration */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Preview Info - Full Width */
+.preview-panel-full .preview-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  font-family: 'Arimo', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #6a7282;
+  line-height: 20px;
+}
+
+.preview-panel-full .page-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-panel-full .zoom-info {
+  font-weight: 600;
+}
+
+/* Settings Panel (Left Side) */
+.settings-panel {
+  width: 280px;
+  background: #f8f9fa;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.settings-section {
+  padding: 24px;
+  flex: 1;
+}
+
+.settings-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0 0 20px 0;
+}
+
+.setting-group {
+  margin-bottom: 20px;
+}
+
+.setting-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.setting-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 13px;
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.setting-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zoom-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.zoom-button:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.zoom-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.zoom-select {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Action Buttons */
+.action-buttons {
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.action-button.primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.action-button.primary:hover:not(:disabled) {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.action-button.secondary {
+  background: #ffffff;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.action-button.secondary:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Preview Panel (Right Side) */
+.preview-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.preview-container {
+  flex: 1;
+  padding: 10px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  min-height: 800px;
+  /* PERFORMANCE: GPU acceleration for smooth scrolling */
+  will-change: scroll-position;
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+  /* PERFORMANCE: Isolate rendering context */
+  contain: layout style paint;
+}
+
+.preview-page {
+  background: #ffffff;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  position: relative;
+  margin: 10px auto;
+  overflow: visible;
+  border-radius: 4px;
+  width: fit-content;
+  height: fit-content;
+  /* PERFORMANCE: GPU acceleration */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.preview-content {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  position: relative;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  /* PERFORMANCE: Optimized font rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* PERFORMANCE: GPU acceleration */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Preview Info Bar */
+.preview-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.page-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zoom-info {
+  font-weight: 500;
+}
+
+/* Invoice Content in Preview - DUAL VERSION: RESPONSIVE + PDF */
+.preview-content .quotation-paper-exact {
+  box-shadow: none;
+  border-radius: 0;
+  max-width: none;
+  min-height: auto;
+  padding: 5mm;
+  margin: 0;
+  width: 100%;
+  page-break-inside: avoid;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  background: white;
+  /* PERFORMANCE: GPU acceleration for smooth scrolling */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* PDF Generation Specific Styles - Match Print Exactly */
+.pdf-generation .quotation-paper-exact {
+  padding: 0; /* No padding - margins handled by PDF tool */
+  font-size: 11px;
+}
+
+.pdf-generation .header-section {
+  position: relative;
+  margin-bottom: 15px;
+  min-height: 80px;
+  display: block;
+}
+
+.pdf-generation .logo-section {
+  position: absolute;
+  left: 5mm;
+  top: 3mm;
+  width: 28mm;
+  height: 28mm;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pdf-generation .company-logo-circle {
+  width: 28mm;
+  height: 28mm;
+  border: 2px solid #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.pdf-generation .logo-image {
+  width: 20mm;
+  height: 20mm;
+  object-fit: contain;
+}
+
+.pdf-generation .header-text {
+  position: absolute;
+  left: 40mm;
+  top: 0mm;
+  right: 40mm;
+  text-align: center;
+  display: block;
+}
+
+.pdf-generation .company-name-header {
+  font-size: 22pt;
+  font-weight: bold;
+  color: #000;
+  margin-bottom: 6pt;
+  letter-spacing: 0.5pt;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.pdf-generation .quotation-title {
+  font-size: 22pt;
+  font-weight: 600;
+  color: #000;
+  letter-spacing: 0.3pt;
+  text-align: center;
+}
+
+.pdf-generation .quotation-details-box {
+  position: absolute;
+  right: 0mm;
+  top: 15mm;
+  width: 65mm;
+}
+
+.pdf-generation .detail-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3pt;
+  font-size: 9pt;
+  align-items: center;
+}
+
+.pdf-generation .detail-label {
+  font-weight: 600;
+  color: #000;
+}
+
+.pdf-generation .detail-value {
+  color: #000;
+  font-weight: 500;
+  border-bottom: 1pt solid #000;
+  padding-bottom: 1pt;
+  min-width: 35mm;
+  text-align: left;
+}
+
+.pdf-generation .contact-section {
+  display: table;
+  width: 100%;
+  margin-bottom: 10pt;
+  margin-top: 50px;
+  border: 2px solid #000;
+  border-collapse: collapse;
+}
+
+.pdf-generation .quotation-to,
+.pdf-generation .company-from {
+  display: table-cell;
+  width: 50%;
+  padding: 8pt;
+  vertical-align: top;
+  border: 1px solid #000;
+}
+
+.pdf-generation .quotation-to {
+  border-right: 2px solid #000;
+}
+
+.pdf-generation .contact-header {
+  font-weight: bold;
+  font-size: 10pt;
+  margin-bottom: 6pt;
+  color: #000;
+  background: #f0f0f0;
+  padding: 3pt 6pt;
+  border-bottom: 1px solid #000;
+  margin: -8pt -8pt 6pt -8pt;
+}
+
+.pdf-generation .company-name {
+  font-weight: bold;
+  font-size: 11pt;
+  color: #000;
+  margin-bottom: 4pt;
+}
+
+.pdf-generation .contact-person {
+  font-weight: 600;
+  font-size: 10pt;
+  margin-bottom: 4pt;
+  color: #000;
+}
+
+.pdf-generation .address-line,
+.pdf-generation .phone-line,
+.pdf-generation .from-address,
+.pdf-generation .from-phone {
+  font-size: 9pt;
+  color: #000;
+  margin-bottom: 3pt;
+  line-height: 1.3;
+}
+
+.pdf-generation .quotation-table-exact {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12pt;
+  font-size: 9pt;
+  border: 2px solid #000 !important;
+}
+
+/* Header row - 2px borders */
+.pdf-generation .table-header th {
+  border: 2px solid #000 !important;
+  border-top: none !important;
+  padding: 3pt 4pt;
+  text-align: center;
+  vertical-align: middle;
+  background-color: #f0f0f0;
+  font-weight: bold;
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.5pt;
+}
+
+/* Data rows - 1px borders (no fractional pixels) */
+.pdf-generation .item-row td {
+  border: 1px solid #ddd !important;
+  padding: 3pt 4pt;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Total row - 2px borders */
+.pdf-generation .total-amount-row td {
+  border: 2px solid #000 !important;
+  padding: 3pt 4pt;
+  text-align: center;
+  vertical-align: middle;
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.pdf-generation .item-row .col-description {
+  text-align: left;
+  padding-left: 6pt;
+}
+
+.pdf-generation .item-row .col-price {
+  text-align: right;
+  font-weight: 500;
+  padding-right: 6pt;
+}
+
+.pdf-generation .total-amount-row {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.pdf-generation .total-label {
+  text-align: center;
+  font-weight: bold;
+}
+
+.pdf-generation .total-value {
+  text-align: right;
+  font-weight: bold;
+  font-size: 10pt;
+  padding-right: 6pt;
+}
+
+.pdf-generation .terms-section {
+  margin-bottom: 10pt;
+  font-size: 9pt;
+  line-height: 1.4;
+}
+
+.pdf-generation .terms-section p {
+  margin-bottom: 4pt;
+  color: #000;
+}
+
+.pdf-generation .signatures-section {
+  margin-bottom: 8pt;
+}
+
+.pdf-generation .signature-top-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.pdf-generation .signature-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.2rem;
+}
+
+.pdf-generation .sig-group {
+  text-align: center;
+  font-size: 9pt;
+  min-width: 240px;
+  max-width: 240px;
+}
+
+.pdf-generation .sig-title {
+  font-weight: normal;
+  margin-bottom: 12pt;
+  color: #000;
+  font-size: 10pt;
+  text-align: left;
+}
+
+.pdf-generation .sig-space {
+  height: 30pt;
+  border-bottom: 1px solid #000;
+  margin-bottom: 6pt;
+  width: 55mm;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.pdf-generation .sig-name {
+  font-weight: bold;
+  font-size: 10pt;
+  color: #000;
+  margin-bottom: 3pt;
+  text-align: center;
+}
+
+.pdf-generation .sig-role {
+  font-size: 8pt;
+  color: #000;
+  font-style: italic;
+  text-align: center;
+}
+
+.pdf-generation .footer-section {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8pt;
+  color: #000;
+  margin-top: 10pt;
+  padding-top: 6pt;
+  border-top: 1px solid #ddd;
+}
+
+.pdf-generation .footer-left,
+.pdf-generation .footer-right {
+  font-style: italic;
+}
+
+.pdf-generation * {
+  color: #000 !important;
+  background: transparent !important;
+}
+
+.pdf-generation .contact-header {
+  background: #f0f0f0 !important;
+}
+
+.pdf-generation .table-header th {
+  background: #f0f0f0 !important;
+}
+
+.pdf-generation .total-amount-row {
+  background: #f0f0f0 !important;
+}
+
+.pdf-generation .continuation-note {
+  display: none !important;
+  height: 0 !important;
+  line-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  visibility: hidden !important;
+}
+
+.pdf-generation .page-separator {
+  display: none !important;
+}
+
+/* Ensure empty rows don't show gray backgrounds in PDF */
+.pdf-generation .table-visual tbody tr td:empty {
+  background-color: transparent !important;
+}
+
+/* Force white background on entire document */
+.pdf-generation .quotation-visual-exact {
+  background-color: white !important;
+}
+
+.pdf-generation .preview-content {
+  background-color: white !important;
+}
+
+/* Remove extra spacing from table */
+.pdf-generation .table-visual {
+  margin-bottom: 20pt !important; /* Consistent bottom margin */
+}
+
+/* Ensure quotation container has no extra height */
+.pdf-generation .quotation-visual-exact {
+  height: auto !important;
+  min-height: auto !important;
+}
+
+/* Ensure continuation row takes absolutely no space */
+.pdf-generation tbody .continuation-note {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* PDF Generation: Remove only container padding, keep content structure */
+.pdf-generation .preview-content {
+  padding: 0 !important;
+}
+
+.pdf-generation .preview-page {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* Keep all internal content structure intact */
+.pdf-generation .header-section {
+  margin-bottom: 15px;
+}
+
+.pdf-generation .contact-section {
+  margin-bottom: 10pt;
+  margin-top: 50px;
+  border: 2pt solid #000;
+}
+
+.pdf-generation .quotation-table-exact {
+  margin-bottom: 8pt;
+}
+
+.pdf-generation .terms-section {
+  margin-bottom: 10pt;
+}
+
+.pdf-generation .signatures-section {
+  margin-bottom: 8pt;
+}
+
+.pdf-generation .footer-section {
+  margin-top: 10pt;
+  padding-top: 6pt;
+  border-top: 1pt solid #ddd;
+}
+
+/* Keep all internal padding intact */
+.pdf-generation .quotation-to,
+.pdf-generation .company-from {
+  padding: 8pt;
+}
+
+.pdf-generation .contact-header {
+  padding: 3pt 6pt;
+  margin: -8pt -8pt 6pt -8pt;
+  background: #f0f0f0;
+  border-bottom: 1pt solid #000;
+}
+
+.pdf-generation .quotation-table-exact th,
+.pdf-generation .quotation-table-exact td {
+  padding: 3pt 4pt;
+  border: 1px solid #000;
+}
+
+.pdf-generation .detail-value {
+  padding-bottom: 1px;
+  border-bottom: 1px solid #000;
+}
+
+/* Right section absolute positioning */
+.preview-content .right-details-section {
+  position: absolute;
+  right: 0;
+  top: 5mm;
+  width: 70mm;
+}
+
+/* Print Header Section - ABSOLUTE POSITIONING FOR TRUE CENTER */
+.preview-content .header-section {
+  position: relative;
+  margin-bottom: 20px;
+  min-height: 150px;
+  display: block; /* Switch to block for absolute positioning */
+  page-break-inside: avoid;
+}
+
+.preview-content .logo-section {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 35mm;
+  height: 35mm;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.preview-content .logo-image {
+  width: 35mm;
+  height: 35mm;
+  object-fit: contain;
+}
+
+.preview-content .header-text {
+  position: absolute;
+  left: 50%; /* Position at 50% of container width */
+  top: 50%;
+  transform: translate(-50%, -50%); /* Center exactly */
+  text-align: center;
+  z-index: 2;
+}
+
+.preview-content .company-name-header {
+  font-size: 22pt;
+  font-weight: bold;
+  color: #000;
+  margin-bottom: 8pt;
+  letter-spacing: 0.5pt;
+  line-height: 1.1;
+  white-space: pre-line; /* Allow line breaks for company name */
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+}
+
+.preview-content .quotation-title {
+  font-size: 22pt;
+  font-weight: 600;
+  color: #000;
+  letter-spacing: 0.3pt;
+  margin-left: 0px;
+  margin-top: 0; /* Remove top margin for alignment */
+  text-align: center;
+  position: relative;
+}
+
+.preview-content .quotation-details-box {
+  position: absolute;
+  right: 0mm;
+  top: 45mm; /* Moved down independently of company info */
+  width: 65mm;
+  display: block;
+}
+
+.preview-content .detail-line {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3pt;
+  font-size: 9pt;
+  align-items: center;
+}
+
+.preview-content .detail-label {
+  font-weight: 600;
+  color: #000;
+}
+
+.preview-content .detail-value {
+  color: #000;
+  font-weight: 500;
+  border-bottom: 1px solid #000;
+  padding-bottom: 1px;
+  min-width: 35mm;
+  text-align: left;
+}
+
+/* Print Contact Section - EXACT MATCH */
+.preview-content .contact-section {
+  display: table;
+  width: 100%;
+  margin-bottom: 15pt;
+  margin-top: 70px;
+  border: 2px solid #000;
+  border-collapse: collapse;
+}
+
+.preview-content .quotation-to,
+.preview-content .company-from {
+  display: table-cell;
+  width: 50%;
+  padding: 8pt;
+  vertical-align: top;
+  border: 1px solid #000;
+}
+
+.preview-content .quotation-to {
+  border-right: 2px solid #000;
+}
+
+.preview-content .contact-header {
+  font-weight: bold;
+  font-size: 10pt;
+  margin-bottom: 6pt;
+  color: #000;
+  background: #f0f0f0;
+  padding: 3pt 6pt;
+  border-bottom: 1px solid #000;
+  margin: -8pt -8pt 6pt -8pt;
+}
+
+.preview-content .company-name {
+  font-weight: bold;
+  font-size: 11pt;
+  color: #000;
+  margin-bottom: 4pt;
+}
+
+.preview-content .contact-person {
+  font-weight: 600;
+  font-size: 10pt;
+  margin-bottom: 4pt;
+  color: #000;
+}
+
+.preview-content .address-line,
+.preview-content .phone-line,
+.preview-content .from-address,
+.preview-content .from-phone {
+  font-size: 9pt;
+  color: #000;
+  margin-bottom: 3pt;
+  line-height: 1.3;
+}
+
+/* Print Table - WHOLE INTEGER PIXELS ONLY */
+.preview-content .quotation-table-exact {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12pt;
+  font-size: 9pt;
+  page-break-inside: avoid;
+  border: 2px solid #000; /* Outer border - 2px */
+  /* PERFORMANCE: GPU acceleration for tables */
+  will-change: contents;
+  transform: translateZ(0);
+}
+
+/* Header row - 2px borders (thick) */
+.preview-content .table-header th {
+  border: 2px solid #000;
+  border-top: none; /* No double top border */
+  padding: 3pt 4pt;
+  text-align: center;
+  vertical-align: middle;
+  background-color: #f0f0f0;
+  font-weight: bold;
+  font-size: 8pt;
+  text-transform: uppercase;
+  letter-spacing: 0.5pt;
+}
+
+/* Data rows - 1px borders (thin) - NO FRACTIONAL PIXELS */
+.preview-content .item-row td {
+  border: 1px solid #ddd;
+  padding: 3pt 4pt;
+  text-align: center;
+  vertical-align: middle;
+}
+
+/* Total row - 2px borders (thick) */
+.preview-content .total-amount-row td {
+  border: 2px solid #000;
+  border-bottom: none; /* No double bottom border */
+  padding: 3pt 4pt;
+  text-align: center;
+  vertical-align: middle;
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.preview-content .item-row .col-description {
+  text-align: left;
+  padding-left: 6pt;
+}
+
+.preview-content .item-row .col-price {
+  text-align: right;
+  font-weight: 500;
+  padding-right: 6pt;
+}
+
+.preview-content .total-amount-row {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+.preview-content .total-label {
+  text-align: center;
+  font-weight: bold;
+}
+
+.preview-content .total-value {
+  text-align: right;
+  font-weight: bold;
+  font-size: 10pt;
+  padding-right: 6pt;
+}
+
+/* Print Terms - EXACT MATCH */
+.preview-content .terms-section {
+  margin-bottom: 15pt;
+  font-size: 9pt;
+  line-height: 1.4;
+}
+
+.preview-content .terms-section p {
+  margin-bottom: 4pt;
+  color: #000;
+}
+
+/* Print Signatures - EXACT MATCH */
+.preview-content .signatures-section {
+  margin-bottom: 12pt;
+  page-break-inside: avoid;
+}
+
+.preview-content .signature-top-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 1.5rem;
+}
+
+.preview-content .signature-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.2rem;
+}
+
+.preview-content .sig-group {
+  text-align: center;
+  font-size: 9pt;
+  min-width: 240px;
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.preview-content .sig-title {
+  font-weight: normal;
+  margin-bottom: 12pt;
+  color: #000;
+  font-size: 10pt;
+  text-align: left;
+  width: 100%;
+}
+
+.preview-content .sig-space {
+  height: 30pt;
+  border-bottom: 1px solid #000;
+  margin-bottom: 6pt;
+  width: 55mm;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.preview-content .sig-name {
+  font-weight: bold;
+  font-size: 10pt;
+  color: #000;
+  margin-bottom: 3pt;
+  text-align: center;
+  width: 100%;
+}
+
+.preview-content .sig-role {
+  font-size: 8pt;
+  color: #000;
+  font-style: italic;
+  text-align: center;
+  width: 100%;
+}
+
+/* Print Footer - EXACT MATCH */
+.preview-content .footer-section {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8pt;
+  color: #000;
+  margin-top: 15pt;
+  padding-top: 8pt;
+  border-top: 1px solid #ddd;
+}
+
+.preview-content .footer-left,
+.preview-content .footer-right {
+  font-style: italic;
+}
+
+/* Paper Size Responsive Scaling */
+.preview-content {
+  font-size: calc(11px * var(--scale-factor, 1));
+}
+
+.preview-content .company-name-header {
+  font-size: calc(clamp(16px, 4vw, 26px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .quotation-title {
+  font-size: calc(clamp(16px, 4vw, 26px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .detail-line {
+  font-size: calc(clamp(8px, 1.8vw, 11px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .contact-header {
+  font-size: calc(clamp(9px, 2vw, 12px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .company-name {
+  font-size: calc(clamp(10px, 2.2vw, 13px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .quotation-table-exact {
+  font-size: calc(clamp(8px, 1.8vw, 11px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .table-header th {
+  font-size: calc(clamp(7px, 1.5vw, 9px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .terms-section {
+  font-size: calc(clamp(8px, 1.8vw, 11px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .sig-group {
+  font-size: calc(clamp(8px, 1.8vw, 11px) * var(--scale-factor, 1)) !important;
+}
+
+.preview-content .footer-section {
+  font-size: calc(clamp(7px, 1.5vw, 9px) * var(--scale-factor, 1)) !important;
+}
+
+/* Padding adjustment for different paper sizes - Use selected margins */
+.preview-content {
+  padding-top: calc(var(--margin-top) * var(--scale-factor, 1));
+  padding-right: calc(var(--margin-right) * var(--scale-factor, 1));
+  padding-bottom: calc(var(--margin-bottom) * var(--scale-factor, 1));
+  padding-left: calc(var(--margin-left) * var(--scale-factor, 1));
+}
+
+/* No margins - content goes to edge */
+.preview-content.no-margins {
+  padding: 0 !important;
+}
+
+/* Quotation Visual Exact - Main container GPU acceleration */
+.preview-content .quotation-visual-exact {
+  /* PERFORMANCE: GPU acceleration for main content container */
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Ensure black text for preview - EXACT MATCH */
+.preview-content * {
+  color: #000 !important;
+  background: transparent !important;
+}
+
+.preview-content .contact-header {
+  background: #f0f0f0 !important;
+}
+
+.preview-content .table-header th {
+  background: #f0f0f0 !important;
+}
+
+.preview-content .total-amount-row {
+  background: #f0f0f0 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .modal-container {
+    width: 98vw;
+    height: 95vh;
+  }
+  
+  .preview-container {
+    padding: 20px;
+  }
+  
+  .modal-header-actions .action-button {
+    padding: 4px 8px;
+    font-size: 11px;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .modal-header {
+    padding: 12px 16px;
+  }
+  
+  .modal-title h2 {
+    font-size: 16px;
+  }
+  
+  .modal-header-actions {
+    gap: 6px;
+  }
+  
+  .modal-header-actions .action-button {
+    padding: 6px 8px;
+    font-size: 10px;
+    gap: 3px;
+  }
+  
+  .preview-panel-full {
+    flex: 1;
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-header-actions .action-button {
+    padding: 5px 6px;
+    font-size: 9px;
+    gap: 2px;
+  }
+  
+  .modal-title h2 {
+    font-size: 14px;
+  }
+}
+
+/* Print Styles - When Actually Printing */
+@media print {
+  .print-preview-modal {
+    display: none;
+  }
+  
+  /* Hide page separators during actual printing */
+  .page-separator {
+    display: none !important;
+  }
+}
+
+/* Signature positioning fixes for preview modal */
+.preview-content .signatures-visual {
+  margin-bottom: 20px;
+  position: relative; /* Add relative positioning for absolute children */
+}
+
+.preview-content .signature-row-visual {
+  display: flex;
+  margin-bottom: 20px;
+  position: relative;
+  min-height: 80px; /* Ensure enough height for absolute positioned elements */
+}
+
+.preview-content .signature-left-visual {
+  flex: 1;
+  max-width: 45%;
+}
+
+.preview-content .signature-right-visual {
+  position: absolute !important; /* Use absolute positioning */
+  right: 0 !important; /* Stick to right margin */
+  top: 0;
+  width: 250px !important; /* Fixed width for right section */
+  margin-left: 0 !important; /* Remove margin */
+  padding-left: 0 !important; /* Remove padding */
+}
+
+.preview-content .sig-label-visual {
+  font-size: 13px;
+  margin-bottom: 15px;
+  text-align: left !important; /* Left-align all labels including 'Received by' */
+}
+
+.preview-content .sig-line-visual {
+  border-bottom: 1px solid black;
+  width: 250px !important; /* Make signature lines longer */
+  height: 30px;
+  margin-bottom: 5px;
+}
+
+.preview-content .sig-name-visual {
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  width: 250px !important; /* Match longer line width */
+}
+
+.preview-content .sig-title-visual {
+  font-size: 11px;
+  text-align: center;
+  width: 250px !important; /* Match longer line width */
+  font-style: italic;
+}
+
+/* Bank Details Section for Billing Statement */
+.bank-details-section {
+  margin-bottom: 15px;
+  font-size: 11px;
+  color: #000;
+}
+
+.bank-details-title {
+  font-weight: bold;
+  margin-bottom: 8px;
+  font-size: 12px;
+  text-decoration: underline;
+}
+
+.bank-details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-left: 20px;
+}
+
+.bank-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bank-label {
+  font-weight: bold;
+  min-width: 180px;
+  font-size: 11px;
+}
+
+.bank-value {
+  font-weight: normal;
+  font-size: 11px;
+}
+
+.footer-bottom {
+  margin-top: 10px;
+  font-size: 10px;
+  font-style: italic;
+  text-align: right;
+  color: #000;
+}
+
+/* Original Quotation Header Styles for Preview */
+.preview-content .header-visual {
+  display: block !important;
+  position: relative !important;
+  margin-bottom: 25px !important;
+  margin-top: 0 !important;
+  min-height: 150px !important;
+  /* PERFORMANCE: GPU acceleration */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+.preview-content .logo-visual {
+  position: absolute !important;
+  left: 0 !important;
+  top: 5px !important;
+  width: 125px !important;
+  height: 140px !important;
+}
+
+.preview-content .logo-visual img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.preview-content .center-text-visual {
+  position: absolute !important;
+  left: 40% !important;
+  top: 60% !important;
+  transform: translate(-50%, -50%) !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  z-index: 2 !important;
+  width: auto !important;
+  display: block !important;
+  flex-direction: unset !important;
+  align-items: unset !important;
+  margin-left: 0 !important;
+  margin-top: 0 !important;
+}
+
+.preview-content .company-name-visual {
+  font-size: 28px !important;
+  font-weight: bold !important;
+  margin-bottom: 10px !important;
+  line-height: 1.1 !important;
+  white-space: pre-line !important; /* Allow BR tags for quotation */
+  color: #000 !important;
+}
+
+.preview-content .quotation-title-visual {
+  font-size: 26px !important;
+  font-weight: bold !important;
+  margin-top: 45px !important;
+  white-space: nowrap !important;
+  color: #000 !important;
+}
+
+.preview-content .right-details-visual {
+  position: absolute !important;
+  right: 0 !important;
+  top: 19px !important;
+  width: 280px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  min-height: 150px !important;
+}
+
+.preview-content .company-info-visual {
+  font-size: 12px !important;
+  text-align: right !important;
+  margin-bottom: 25px !important;
+  line-height: 1.4 !important;
+  position: relative !important;
+  min-height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+}
+
+.preview-content .company-name-info {
+  font-size: 12px !important;
+  font-weight: bold !important;
+  margin-bottom: 0px !important;
+  min-height: auto !important;
+}
+
+.preview-content .quotation-details-visual {
+  font-size: 12px !important;
+  position: absolute !important;
+  top: 190px !important;
+  right: 0 !important;
+  width: 280px !important;
+}
+
+.preview-content .detail-row-visual {
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 20px !important;
+  margin-bottom: 6px !important;
+  align-items: center !important;
+  min-height: 20px !important;
+}
+
+.preview-content .detail-label-visual {
+  font-weight: bold !important;
+  font-size: 12px !important;
+}
+
+.preview-content .detail-value-visual {
+  border-bottom: 1px solid black !important;
+  width: 130px !important;
+  min-width: 130px !important;
+  padding-bottom: 0px !important;
+  margin-bottom: 0px !important;
+  text-align: center !important;
+  font-size: 11px !important;
+  height: 14px !important;
+  line-height: 14px !important;
+  display: inline-block !important;
+  vertical-align: bottom !important;
+}
+
+/* Billing Header Styles for Preview - Override the above */
+.preview-content .header-visual.billing-header {
+  min-height: 100px !important;
+  margin-bottom: 10px !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  position: relative !important;
+}
+
+.preview-content .billing-header .logo-visual {
+  position: absolute !important;
+  left: 50px !important;        /* 50px from left edge */
+  top: 10px !important;         /* 10px from top */
+  width: 100px !important;      /* Logo width */
+  height: 100px !important;     /* Logo height */
+}
+
+.preview-content .billing-header .center-text-visual {
+  position: static !important;
+  text-align: center !important;
+  transform: none !important;
+  margin-top: 10px !important;          /* 10px from top */
+  margin-left: 25px !important;         /* 25px left adjustment for logo space */
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
+.preview-content .billing-header .company-name-visual {
+  font-size: 20px !important;           /* Company name font size */
+  font-weight: bold !important;
+  margin-bottom: 8px !important;        /* 8px space below company name */
+  line-height: 1.2 !important;
+  color: #000 !important;
+  white-space: nowrap !important;       /* Single line */
+}
+
+.preview-content .billing-header .company-address-visual {
+  font-size: 13px !important;           /* Address font size - larger */
+  line-height: 1.4 !important;
+  color: #000 !important;
+  margin-bottom: 15px !important;       /* 15px space below address */
+  text-align: center !important;
+  font-weight: normal !important;       /* Not bold */
+  max-width: 400px !important;          /* Maximum width for address block */
+}
+
+.preview-content .billing-header .quotation-title-visual {
+  font-size: 18px !important;           /* "BILLING STATEMENT" font size */
+  font-weight: normal !important;       /* Not bold */
+  margin-top: 0 !important;
+  color: #000 !important;
+}
+
+.preview-content .billing-header .right-details-visual {
+  display: none !important;
+}
+
+/* Billing Details Positioning - constrain to page margins */
+.preview-content .billing-header + .quotation-details-visual {
+  position: absolute !important;
+  right: 8mm !important;
+  top: 210px !important;
+  width: 70mm !important;
+  max-width: 70mm !important;
+}
+
+.preview-content .billing-header .company-info-visual {
+  display: none !important;
+}
+
+.preview-content .billing-header .quotation-details-visual {
+  display: none !important;
+}
+
+/* Billing Details Section Styles for Preview */
+.preview-content .billing-details-section {
+  margin: 15px 0 !important;
+  padding: 10px 0 !important;
+  border-top: 1px solid #ccc !important;
+  border-bottom: 1px solid #ccc !important;
+}
+
+.preview-content .billing-detail-row {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  margin-bottom: 4px !important;
+  font-size: 12px !important;
+}
+
+.preview-content .billing-detail-row:last-child {
+  margin-bottom: 0 !important;
+}
+
+.preview-content .billing-detail-label {
+  font-weight: bold !important;
+  margin-right: 20px !important;
+  min-width: 100px !important;
+  text-align: right !important;
+  color: #000 !important;
+}
+
+.preview-content .billing-detail-value {
+  border-bottom: 1px solid #000 !important;
+  min-width: 120px !important;
+  padding: 2px 0 !important;
+  text-align: center !important;
+  color: #000 !important;
+  font-weight: normal !important;
+}
+
+/* Bottom alignment for client and quotation details - BILLING MODE ONLY */
+.preview-content .quotation-visual-exact:has(.billing-header) .contact-section-visual {
+  min-height: 110px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+}
+
+.preview-content .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
+  height: 85px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+}
+
+/* Hide terms section in billing mode to make room for bank details */
+.preview-content .quotation-visual-exact:has(.billing-header) .terms-visual {
+  display: none !important;
+}
+
+/* Bank Details Section Styling for Billing Statement - Preview Mode - MAXIMUM COMPRESSION */
+.preview-content .bank-details-section {
+  margin-bottom: 10px !important; /* Tightest margin */
+  font-size: 8px !important; /* Maximum compression as default */
+  color: #000 !important;
+  border: 2px solid #000 !important; /* Match print layout */
+  padding: 5px !important; /* Tightest padding */
+  margin-top: 15px !important; /* Adjusted for maximum compression */
+}
+
+.preview-content .bank-details-title {
+  font-weight: bold !important;
+  margin-bottom: 3px !important; /* Tightest margin */
+  font-size: 8px !important; /* Maximum compression as default */
+  color: #000 !important;
+}
+
+.preview-content .bank-details-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 1px !important; /* Tightest gap */
+}
+
+.preview-content .bank-detail-row {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  margin-bottom: 2px !important;
+}
+
+.preview-content .bank-label {
+  font-weight: normal !important;
+  min-width: 200px !important;
+  font-size: 8px !important; /* Maximum compression as default */
+  flex-shrink: 0 !important;
+}
+
+.preview-content .bank-value {
+  font-weight: normal !important;
+  font-size: 8px !important; /* Maximum compression as default */
+  flex: 1 !important;
+  word-wrap: break-word !important;
+  line-height: 1.3 !important;
+}
+
+
+/* ================================================================
+   PPM-* SCOPED CLASSES  (Print Preview Modal v2)
+   Isolated from QuickEditModal's .modal-* namespace
+   ================================================================ */
+
+/* Backdrop */
+.ppm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  z-index: 0;
+}
+
+/* Outer shell */
+.print-preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Arimo', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
+/* Modal container */
+.ppm-container {
+  position: relative;
+  z-index: 1;
+  width: 100vw;
+  height: 100vh;
+  max-width: none;
+  background: #ffffff;
+  border-radius: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.ppm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  padding: 0 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #ffffff;
+  flex-shrink: 0;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.ppm-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  color: #3b82f6;
+}
+
+.ppm-title h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #101828;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.ppm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+/* Mode toggle pill */
+.ppm-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #f2f2f7;
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.ppm-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Arimo', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  background: transparent;
+  color: #6a7282;
+}
+
+.ppm-mode-btn.active {
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.25);
+}
+
+.ppm-mode-btn:hover:not(.active) {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+/* Separator */
+.ppm-sep {
+  width: 1px;
+  height: 22px;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* Action buttons */
+.ppm-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-family: 'Arimo', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+  border: 1px solid #d1d1d6;
+  background: #ffffff;
+  color: #1d1d1f;
+}
+
+.ppm-action-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.ppm-action-btn.primary {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.ppm-action-btn.primary:hover {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+
+.ppm-action-btn.export {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.ppm-action-btn.export:hover {
+  background: #059669;
+  border-color: #059669;
+}
+
+.ppm-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ppm-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d1d6;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #6a7282;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.ppm-close-btn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* ── Body ────────────────────────────────────────────────────── */
+.ppm-body {
+  flex: 1;
+  overflow: auto;
+  background: #e9ebee;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,.25) transparent;
+}
+
+.ppm-body::-webkit-scrollbar { width: 8px; height: 8px; }
+.ppm-body::-webkit-scrollbar-track { background: transparent; }
+.ppm-body::-webkit-scrollbar-thumb { background: rgba(0,0,0,.25); border-radius: 4px; }
+
+.ppm-scroll-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* A4 scaler wrapper — JS sets width/height to match scaled dimensions */
+.ppm-a4-scaler {
+  position: relative;
+}
+
+/* The A4 sheet itself sits inside the scaler */
+.ppm-a4-scaler > div {
+  box-shadow: 0 8px 24px rgba(0,0,0,.18), 0 2px 6px rgba(0,0,0,.1);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
+/* Page 2 separator (only visible in preview, @media print hides it) */
+.ppm-page-break-indicator {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Arimo', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #9ca3af;
+  background: transparent;
+}
+
+/* ── Footer bar ──────────────────────────────────────────────── */
+.ppm-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-family: 'Arimo', sans-serif;
+  font-size: 13px;
+  color: #6a7282;
+  flex-shrink: 0;
+}
+
+.ppm-zoom-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+/* ── Print media ─────────────────────────────────────────────── */
+@media print {
+  .ppm-backdrop,
+  .ppm-header,
+  .ppm-footer-bar,
+  .ppm-page-break-indicator { display: none !important; }
+
+  .print-preview-modal { position: static !important; }
+  .ppm-container { width: 100% !important; height: auto !important; box-shadow: none !important; border-radius: 0 !important; }
+  .ppm-body { overflow: visible !important; background: white !important; padding: 0 !important; }
+  .ppm-scroll-area { width: 100% !important; }
+  .ppm-a4-scaler { width: 210mm !important; height: auto !important; }
+  .ppm-a4-scaler > div { transform: none !important; width: 210mm !important; box-shadow: none !important; }
+}

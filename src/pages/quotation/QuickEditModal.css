@@ -1,0 +1,303 @@
+/* Quick Edit Modal Styles */
+.quick-edit-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.quick-edit-modal .modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.quick-edit-modal .modal-container {
+  position: relative;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 1200px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.quick-edit-modal .modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f9fafb;
+}
+
+.quick-edit-modal .modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quick-edit-modal .title-icon {
+  color: #3b82f6;
+}
+
+.quick-edit-modal .modal-title h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.quick-edit-modal .modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-edit-modal .action-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-edit-modal .action-button.primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.quick-edit-modal .action-button.primary:hover {
+  background: #2563eb;
+}
+
+.quick-edit-modal .action-button.secondary {
+  background: white;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+}
+
+.quick-edit-modal .action-button.secondary:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.quick-edit-modal .close-button {
+  padding: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.quick-edit-modal .close-button:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+/* Body */
+.quick-edit-modal .modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: block !important;
+}
+
+.quick-edit-modal .edit-instructions {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  color: #1e40af;
+  font-size: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.quick-edit-modal .edit-instructions p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Edit Table */
+.quick-edit-modal .edit-table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: block;
+}
+
+.quick-edit-modal .edit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.quick-edit-modal .edit-table thead {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.quick-edit-modal .edit-table th {
+  padding: 12px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quick-edit-modal .edit-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+
+.quick-edit-modal .edit-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.quick-edit-modal .edit-table td {
+  padding: 12px 8px;
+  vertical-align: middle;
+}
+
+.quick-edit-modal .edit-table td.center {
+  text-align: center;
+}
+
+/* Input Styles */
+.quick-edit-modal .edit-input,
+.quick-edit-modal .edit-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.quick-edit-modal .edit-input:focus,
+.quick-edit-modal .edit-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.quick-edit-modal .price-input {
+  text-align: right;
+  font-weight: 500;
+}
+
+.quick-edit-modal .reset-price-btn {
+  padding: 6px 8px;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.quick-edit-modal .reset-price-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+/* Summary Rows */
+.quick-edit-modal .summary-row {
+  background: #f9fafb;
+  font-weight: 500;
+}
+
+.quick-edit-modal .summary-label {
+  text-align: right;
+  padding-right: 16px;
+  color: #6b7280;
+}
+
+.quick-edit-modal .summary-value {
+  text-align: right;
+  font-weight: 600;
+  color: #374151;
+}
+
+.quick-edit-modal .total-row {
+  background: #3b82f6;
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.quick-edit-modal .total-label {
+  text-align: right;
+  padding-right: 16px;
+}
+
+.quick-edit-modal .total-value {
+  text-align: right;
+  font-size: 16px;
+}
+
+.quick-edit-modal .total-row td {
+  padding: 16px 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .quick-edit-modal .modal-container {
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .quick-edit-modal .modal-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .quick-edit-modal .modal-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .quick-edit-modal .edit-table {
+    font-size: 12px;
+  }
+
+  .quick-edit-modal .edit-input,
+  .quick-edit-modal .edit-select {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+}
