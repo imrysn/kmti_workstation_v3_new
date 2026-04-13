@@ -3,7 +3,7 @@ Help Center router — users submit tickets with screenshots and reply in thread
 Tickets are logged in DB and screenshots stored in backend/storage/feedback.
 """
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -53,10 +53,12 @@ async def create_ticket(
     screenshots: List[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    request: Request = None,
 ):
     """Submit a new help request ticket."""
     paths_str = await _save_screenshots(screenshots)
     now = datetime.now()
+    client_ip = request.client.host if request and request.client else None
 
     new_ticket = Ticket(
         workstation=workstation,
@@ -70,6 +72,7 @@ async def create_ticket(
         has_unread_admin=True, # Notify IT immediately
         has_unread_user=False,
         status="open",
+        ip_address=client_ip,
         created_at=now,
         updated_at=now
     )
@@ -96,19 +99,29 @@ async def get_tickets(
     workstation: str = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    request: Request = None,
 ):
-    """Retrieve tickets. IT/Admin get all by default. Users get theirs by workstation."""
+    """Retrieve tickets. IT/Admin get all by default. Users get theirs by IP isolation."""
     stmt = select(Ticket).order_by(Ticket.updated_at.desc())
+    client_ip = request.client.host if request and request.client else None
     
-    # Restrict users so they only see their workstation's tickets
+    # Restrict users so they only see tickets created from their specific IP
     if current_user.role == UserRole.user:
-        if not workstation:
-            raise HTTPException(status_code=400, detail="Workstation name required for users.")
-        stmt = stmt.where(Ticket.workstation == workstation)
+        # Priority 1: IP isolation for the shared account
+        if client_ip:
+            stmt = stmt.where(Ticket.ip_address == client_ip)
+        else:
+            # Fallback to workstation if IP is unavailable (unlikely in production)
+            if not workstation:
+                raise HTTPException(status_code=400, detail="Workstation name or IP required for users.")
+            stmt = stmt.where(Ticket.workstation == workstation)
     else:
-        # IT/Admin filtering by workstation optionally
+        # IT/Admin filtering - allow global view but optional IP drilldown
         if workstation:
             stmt = stmt.where(Ticket.workstation == workstation)
+        if client_ip and current_user.role not in [UserRole.it, UserRole.admin]:
+            # This branch handles any other non-user roles if they exist
+            stmt = stmt.where(Ticket.ip_address == client_ip)
 
     result = await db.execute(stmt)
     tickets = result.scalars().all()
@@ -120,13 +133,18 @@ async def get_unread_count(
     workstation: str = Query(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    request: Request = None,
 ):
     """Get the number of tickets with unread messages for a given context."""
+    client_ip = request.client.host if request and request.client else None
+
     if current_user.role == UserRole.user:
-        if not workstation:
-            raise HTTPException(status_code=400, detail="Workstation name required for users.")
-        # Count tickets for this workstation where user hasn't read it
-        stmt = select(func.count(Ticket.id)).where(Ticket.workstation == workstation, Ticket.has_unread_user == True, Ticket.status != 'resolved')
+        if client_ip:
+            stmt = select(func.count(Ticket.id)).where(Ticket.ip_address == client_ip, Ticket.has_unread_user == True, Ticket.status != 'resolved')
+        else:
+            if not workstation:
+                raise HTTPException(status_code=400, detail="Workstation name or IP required for users.")
+            stmt = select(func.count(Ticket.id)).where(Ticket.workstation == workstation, Ticket.has_unread_user == True, Ticket.status != 'resolved')
     else:
         # Admins want the total unread messages explicitly waiting for IT
         stmt = select(func.count(Ticket.id)).where(Ticket.has_unread_admin == True, Ticket.status != 'resolved')

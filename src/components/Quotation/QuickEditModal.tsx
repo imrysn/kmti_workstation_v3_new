@@ -62,8 +62,13 @@ const QuickEditModal = ({
       aggregatedOvertime += subTask.overtimeHours || 0
       aggregatedSoftware += subTask.softwareUnits || 0
     })
-    const taskTimeChargeRate = task.type === '2D' ? baseRates.timeChargeRate2D : baseRates.timeChargeRate3D
-    let basicLabor = aggregatedHours * taskTimeChargeRate
+    // Mirror TasksTable rate logic — use timeChargeRateOthers for non-2D/3D
+    const getRate = (type: string) => {
+      if (type === '2D') return baseRates.timeChargeRate2D
+      if (type === '3D' || !type) return baseRates.timeChargeRate3D
+      return baseRates.timeChargeRateOthers || 0
+    }
+    let basicLabor = aggregatedHours * getRate(mainTask.type)
     let overtime = aggregatedOvertime * baseRates.overtimeRate
     let software = aggregatedSoftware * baseRates.softwareRate
     const override = editedOverrides[task.id]

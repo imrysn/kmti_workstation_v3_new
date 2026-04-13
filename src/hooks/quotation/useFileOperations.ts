@@ -5,6 +5,8 @@ type NotificationType = 'success' | 'error' | 'info' | 'warning'
 interface FileOperationsOptions {
   hasUnsavedChanges: boolean
   getSaveData: () => object
+  /** Returns the current quotation number — used to build a meaningful filename */
+  getQuotationNo: () => string
   loadData: (data: any, fileName: string) => void
   resetToNew: () => void
   setCurrentFilePath: (path: string | null) => void
@@ -15,6 +17,7 @@ interface FileOperationsOptions {
 export function useFileOperations({
   hasUnsavedChanges,
   getSaveData,
+  getQuotationNo,
   loadData,
   resetToNew,
   setCurrentFilePath,
@@ -26,7 +29,7 @@ export function useFileOperations({
     else alert(msg)
   }, [notify])
 
-  // ── New Invoice ──────────────────────────────────────────────────────────
+  // New Invoice
   const newInvoice = useCallback(() => {
     if (
       hasUnsavedChanges &&
@@ -35,21 +38,24 @@ export function useFileOperations({
     resetToNew()
   }, [hasUnsavedChanges, resetToNew])
 
-  // ── Save Invoice ─────────────────────────────────────────────────────────
+  // Save Invoice
   const saveInvoice = useCallback(async () => {
     try {
       const data = getSaveData()
       const jsonString = JSON.stringify(data, null, 2)
-      const fileName = `KMTI_Quotation_${new Date().toISOString().split('T')[0]}.json`
+      // Build filename from quotation number — more meaningful than a plain date stamp
+      const quotNo = getQuotationNo().replace(/[^a-zA-Z0-9_\-]/g, '_') || 'Draft'
+      const dateStamp = new Date().toISOString().split('T')[0]
+      const fileName = `KMTI_Quotation_${quotNo}_${dateStamp}.json`
 
       // Electron: use native save dialog
       const electronAPI = (window as any).electronAPI
       if (electronAPI?.showSaveDialog && electronAPI?.writeFile) {
-        const filePath: string | null = await electronAPI.showSaveDialog({
+        const { filePath, canceled } = await electronAPI.showSaveDialog({
           defaultPath: fileName,
           filters: [{ name: 'KMTI Quotation', extensions: ['json'] }],
         })
-        if (!filePath) return // user cancelled
+        if (canceled || !filePath) return // user cancelled
         await electronAPI.writeFile(filePath, jsonString)
         setCurrentFilePath(filePath)
         setHasUnsavedChanges(false)
@@ -73,9 +79,9 @@ export function useFileOperations({
       console.error('Save failed:', error)
       showMessage(`Error saving file: ${error.message}`, 'error')
     }
-  }, [getSaveData, setCurrentFilePath, setHasUnsavedChanges, showMessage])
+  }, [getSaveData, getQuotationNo, setCurrentFilePath, setHasUnsavedChanges, showMessage])
 
-  // ── Load Invoice ─────────────────────────────────────────────────────────
+  // Load Invoice
   const loadInvoice = useCallback(async () => {
     if (
       hasUnsavedChanges &&
@@ -145,7 +151,7 @@ export function useFileOperations({
   return { newInvoice, saveInvoice, loadInvoice }
 }
 
-// ── Helper ───────────────────────────────────────────────────────────────────
+// Helper
 async function readFileWithTimeout(file: File, timeout = 15000): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()

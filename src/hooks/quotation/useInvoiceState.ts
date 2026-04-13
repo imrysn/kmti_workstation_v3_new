@@ -97,6 +97,9 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T 
   } as T
 }
 
+// Pattern for auto-generated quotation numbers: KMTE-YYMMDD-NNN
+const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
+
 function generateQuotationNumber(date: string, sequential = '001'): string {
   const dateObj = new Date(date)
   const year = dateObj.getFullYear().toString().slice(-2)
@@ -201,8 +204,14 @@ export function useInvoiceState() {
   const updateQuotationDetails = useCallback((updates: Partial<QuotationDetails>) => {
     setQuotationDetails(prev => {
       const newDetails = { ...prev, ...updates }
+      // Only auto-regenerate quotation number if:
+      //   1. The date changed, AND
+      //   2. The current quotation number matches the auto-generated pattern
+      //      (meaning the user hasn't manually customised it)
       if (updates.date && updates.date !== prev.date) {
-        debouncedQuotationUpdate(updates.date)
+        if (GENERATED_QUOT_PATTERN.test(prev.quotationNo)) {
+          debouncedQuotationUpdate(updates.date)
+        }
       }
       return newDetails
     })
@@ -315,7 +324,7 @@ export function useInvoiceState() {
 
   const resetToNew = useCallback(() => {
     const newToday = new Date().toISOString().split('T')[0]
-    setCompanyInfo({ name: '', address: '', city: '', location: '', phone: '' })
+    setCompanyInfo(DEFAULT_COMPANY)
     setClientInfo({ company: '', contact: '', address: '', phone: '' })
     setQuotationDetails({
       quotationNo: generateQuotationNumber(newToday),

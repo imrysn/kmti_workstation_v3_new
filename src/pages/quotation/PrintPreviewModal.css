@@ -1370,6 +1370,12 @@
   background: transparent !important;
 }
 
+/* Quotation footer - gray transparent to match print design */
+.preview-content .quotation-visual-exact:not(:has(.billing-header)) .footer-visual,
+.preview-content .quotation-visual-exact:not(:has(.billing-header)) .footer-visual * {
+  color: rgba(87, 87, 87, 0.45) !important;
+}
+
 .preview-content .contact-header {
   background: #f0f0f0 !important;
 }
@@ -1777,13 +1783,17 @@
   display: none !important;
 }
 
-/* Billing Details Positioning - constrain to page margins */
-.preview-content .billing-header+.quotation-details-visual {
+/* Billing Details Positioning - CORRECT SELECTOR using :has() */
+.preview-content .quotation-visual-exact:has(.billing-header) > .quotation-details-visual {
   position: absolute !important;
   right: 8mm !important;
-  top: 210px !important;
+  top: 197px !important;
   width: 70mm !important;
   max-width: 70mm !important;
+  height: auto !important;
+  display: block !important;
+  flex-direction: unset !important;
+  justify-content: unset !important;
 }
 
 .preview-content .billing-header .company-info-visual {
@@ -1839,12 +1849,7 @@
   justify-content: flex-end !important;
 }
 
-.preview-content .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
-  height: 85px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: flex-end !important;
-}
+/* Billing mode .quotation-details-visual positioning handled above with > direct child selector */
 
 /* Hide terms section in billing mode to make room for bank details */
 .preview-content .quotation-visual-exact:has(.billing-header) .terms-visual {

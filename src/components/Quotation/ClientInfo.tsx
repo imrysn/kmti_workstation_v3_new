@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import type { ClientInfo } from '../../hooks/quotation'
 
 interface Props {
@@ -7,77 +7,128 @@ interface Props {
 }
 
 const ClientInfoForm = memo(({ clientInfo, onUpdate }: Props) => {
+  const [isEditing, setIsEditing] = useState(false)
+
   const handleChange = (field: keyof ClientInfo, value: string) => {
     onUpdate({ ...clientInfo, [field]: value })
   }
+
+  const hasContent = clientInfo.company || clientInfo.contact || clientInfo.address
 
   return (
     <div className="section-card">
       <div className="card-header">
         <div className="section-icon client">
-          {/* User icon */}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
             <circle cx="12" cy="7" r="4"/>
           </svg>
         </div>
         <h2 className="section-title">Client Information</h2>
+
+        <button
+          className="info-card-edit-btn"
+          onClick={() => setIsEditing(e => !e)}
+          title={isEditing ? 'Done editing' : 'Edit client info'}
+        >
+          {isEditing ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Done
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Edit
+            </>
+          )}
+        </button>
       </div>
 
       <div className="card-content">
-        <div className="input-group">
-          <label>Client Company</label>
-          <input
-            type="text"
-            value={clientInfo.company}
-            onChange={e => handleChange('company', e.target.value)}
-            className="form-input"
-          />
-        </div>
-
-        <div className="input-group">
-          <label>Contact Person</label>
-          <input
-            type="text"
-            value={clientInfo.contact}
-            onChange={e => handleChange('contact', e.target.value)}
-            className="form-input"
-          />
-        </div>
-
-        <div className="input-group">
-          <label>Client Address</label>
-          <div className="input-with-icon">
-            <textarea
-              value={clientInfo.address}
-              onChange={e => handleChange('address', e.target.value)}
-              className="form-textarea"
-              rows={3}
-              style={{ minHeight: '80px' }}
-            />
-            {/* MapPin icon */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="input-icon" style={{ top: '16px' }}>
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-              <circle cx="12" cy="10" r="3"/>
-            </svg>
+        {isEditing ? (
+          /* ── Edit mode ── */
+          <>
+            <div className="input-group">
+              <label>Client Company</label>
+              <input
+                type="text"
+                value={clientInfo.company}
+                onChange={e => handleChange('company', e.target.value)}
+                className="form-input"
+                placeholder="Company name"
+                autoFocus
+              />
+            </div>
+            <div className="input-group">
+              <label>Contact Person</label>
+              <input
+                type="text"
+                value={clientInfo.contact}
+                onChange={e => handleChange('contact', e.target.value)}
+                className="form-input"
+                placeholder="Mr. / Ms. ..."
+              />
+            </div>
+            <div className="input-group">
+              <label>Address</label>
+              <textarea
+                value={clientInfo.address}
+                onChange={e => handleChange('address', e.target.value)}
+                className="form-textarea"
+                rows={3}
+                placeholder="Full address"
+              />
+            </div>
+            <div className="input-group">
+              <label>Phone</label>
+              <input
+                type="text"
+                value={clientInfo.phone}
+                onChange={e => handleChange('phone', e.target.value)}
+                className="form-input"
+                placeholder="TEL: ..."
+              />
+            </div>
+          </>
+        ) : (
+          /* ── Read-only display mode ── */
+          <div className="info-card-display">
+            {hasContent ? (
+              <>
+                {clientInfo.company && (
+                  <div className="info-display-name">{clientInfo.company}</div>
+                )}
+                {clientInfo.contact && (
+                  <div className="info-display-contact">{clientInfo.contact}</div>
+                )}
+                {clientInfo.address && (
+                  <div className="info-display-address">{clientInfo.address}</div>
+                )}
+                {clientInfo.phone && (
+                  <div className="info-display-phone">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.55 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.13 6.13l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    {clientInfo.phone}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="info-display-empty">
+                No client information entered.{' '}
+                <button className="info-display-empty-link" onClick={() => setIsEditing(true)}>
+                  Click Edit to add.
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-
-        <div className="input-group">
-          <label>Client Phone</label>
-          <div className="input-with-icon">
-            <input
-              type="text"
-              value={clientInfo.phone}
-              onChange={e => handleChange('phone', e.target.value)}
-              className="form-input"
-            />
-            {/* Phone icon */}
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="input-icon">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.55 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.13 6.13l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-            </svg>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   )

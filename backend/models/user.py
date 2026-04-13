@@ -57,6 +57,7 @@ class Ticket(Base):
     has_unread_user = Column(Boolean, default=False, nullable=False)
     has_unread_admin = Column(Boolean, default=False, nullable=False)
     status = Column(String(20), default="open", nullable=False)
+    ip_address = Column(String(45), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 

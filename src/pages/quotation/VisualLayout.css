@@ -456,14 +456,7 @@
   color: #000;
 }
 
-/* Billing Details Positioning - constrain to page margins */
-.billing-header+.quotation-details-visual {
-  position: absolute;
-  right: 8mm;
-  top: 190px;
-  width: 70mm;
-  max-width: 70mm;
-}
+/* Billing Details Positioning - now handled by :has() rule below .quotation-details-visual */
 
 .company-info-visual {
   font-size: 12px; /* Restored font size */
@@ -487,9 +480,17 @@
 .quotation-details-visual {
   font-size: 12px;
   position: absolute;
-  top: 190px;
+  top: 216px;
   right: 0;
   width: 300px;
+}
+
+/* Billing mode override — moves details block down so Invoice No. aligns with client name */
+.quotation-visual-exact:has(.billing-header) .quotation-details-visual {
+  top: 278px;
+  right: 8mm;
+  width: 70mm;
+  max-width: 70mm;
 }
 
 .detail-row-visual {

@@ -76,10 +76,16 @@ const PrintPreviewModal = memo(({
     onUpdateManualOverrides?.(editedOverrides)
   }, [onUpdateTasks, onUpdateManualOverrides])
 
+  // ── Task rate helper — mirrors TasksTable logic exactly ──────────────────
+  const getTaskRate = useCallback((type: string): number => {
+    if (type === '2D') return baseRates.timeChargeRate2D
+    if (type === '3D' || !type) return baseRates.timeChargeRate3D
+    return baseRates.timeChargeRateOthers || 0
+  }, [baseRates])
+
   // ── Task total calculation ─────────────────────────────────────────────────
   const calculateTaskTotal = useCallback((task: Task): number => {
     const subTasks = localTasks.filter(t => t.parentId === task.id)
-    const rate = task.type === '2D' ? baseRates.timeChargeRate2D : baseRates.timeChargeRate3D
     let hours = (task.hours || 0) + (task.minutes || 0) / 60
     let overtime = task.overtimeHours
     let software = task.softwareUnits || 0
@@ -88,7 +94,7 @@ const PrintPreviewModal = memo(({
       overtime += sub.overtimeHours
       software += sub.softwareUnits || 0
     })
-    let basicLabor = hours * rate
+    let basicLabor = hours * getTaskRate(task.type)
     let ot = overtime * baseRates.overtimeRate
     let sw = software * baseRates.softwareRate
     const ov = localManualOverrides[task.id]
@@ -99,7 +105,7 @@ const PrintPreviewModal = memo(({
       if (ov.total !== undefined) return ov.total
     }
     return basicLabor + ot + sw
-  }, [localTasks, baseRates, localManualOverrides])
+  }, [localTasks, baseRates, localManualOverrides, getTaskRate])
 
   // ── Pagination / layout memo ──────────────────────────────────────────────
   const {
@@ -241,8 +247,9 @@ const PrintPreviewModal = memo(({
         </div>
         {printMode === 'billing' && (
           <div className="company-address-visual">
-            Vital Industrial Properties Inc., Bldg B. Unit 2B First Cavite<br />
-            Industrial Estate, Langkaan, Dasmarinas, Cavite, Philippines<br />
+            {[companyInfo.address, companyInfo.city, companyInfo.location]
+              .filter(Boolean)
+              .join(', ')}<br />
             Vat Reg. TIN: 008-883-390-000
           </div>
         )}
@@ -459,13 +466,20 @@ const PrintPreviewModal = memo(({
             <span className="detail-value-visual">{quotationDetails.quotationNo || ''}</span>
           </div>
           <div className="detail-row-visual">
+            <span className="detail-label-visual">Reference No.:</span>
+            <span className="detail-value-visual">{quotationDetails.referenceNo || ''}</span>
+          </div>
+          <div className="detail-row-visual">
             <span className="detail-label-visual">Job Order No.:</span>
             <span className="detail-value-visual">{quotationDetails.jobOrderNo || ''}</span>
           </div>
         </div>
       )}
       <div className="contact-section-visual">
-        {printMode !== 'billing' && <div className="quotation-to-visual">Quotation to:</div>}
+        {printMode !== 'billing'
+          ? <div className="quotation-to-visual">Quotation to:</div>
+          : <div className="quotation-to-visual"></div>
+        }
         <div className="client-details-visual">
           <div className="client-company-name">{clientInfo.company}</div>
           <div className="client-person-name">{clientInfo.contact}</div>

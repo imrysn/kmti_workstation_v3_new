@@ -12,60 +12,6 @@ interface TaskSubtotals {
   total: number
 }
 
-// ── ValueBasisRow ─────────────────────────────────────────────────────────────
-const ValueBasisRow = memo(({ baseRates, onUpdate }: { baseRates: BaseRates; onUpdate: (field: keyof BaseRates, value: number) => void }) => {
-  const handleUpdate = useCallback((field: keyof BaseRates, value: string) => {
-    onUpdate(field, parseFloat(value) || 0)
-  }, [onUpdate])
-
-  return (
-    <tr className="value-basis-row">
-      <td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>
-      <td>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-          {(['2D', '3D', 'Oth'] as const).map((label, i) => {
-            const field = i === 0 ? 'timeChargeRate2D' : i === 1 ? 'timeChargeRate3D' : 'timeChargeRateOthers'
-            return (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <label style={{ fontSize: '10px', fontWeight: '600', minWidth: '20px' }}>{label}:</label>
-                <input type="number" value={(baseRates as any)[field]}
-                  onChange={e => handleUpdate(field as keyof BaseRates, e.target.value)}
-                  className="table-input" style={{ width: '50px', fontSize: '11px', padding: '2px 4px' }} min="0" />
-              </div>
-            )
-          })}
-        </div>
-      </td>
-      <td>
-        <input type="number" value={baseRates.otHoursMultiplier}
-          onChange={e => handleUpdate('otHoursMultiplier', e.target.value)}
-          className="table-input" style={{ width: '60px', fontSize: '11px', padding: '2px 4px' }} min="0" step="0.1" />
-      </td>
-      <td>
-        <input type="number" value={baseRates.overtimeRate}
-          onChange={e => handleUpdate('overtimeRate', e.target.value)}
-          className="table-input" style={{ width: '70px', fontSize: '11px', padding: '2px 4px' }} min="0" />
-      </td>
-      <td>
-        <input type="number" value={baseRates.softwareRate}
-          onChange={e => handleUpdate('softwareRate', e.target.value)}
-          className="table-input" style={{ width: '80px', fontSize: '11px', padding: '2px 4px' }} min="0" />
-      </td>
-      <td>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-          <input type="number" value={baseRates.overheadPercentage}
-            onChange={e => handleUpdate('overheadPercentage', e.target.value)}
-            className="table-input" style={{ width: '50px', fontSize: '11px', padding: '2px 4px' }} min="0" max="100" step="1" />
-          <span style={{ fontSize: '12px', fontWeight: '600' }}>%</span>
-        </div>
-      </td>
-      <td>-</td>
-      <td><strong>Base Rates</strong></td>
-      <td>-</td>
-    </tr>
-  )
-})
-
 // ── TaskRow ───────────────────────────────────────────────────────────────────
 interface TaskRowProps {
   task: Task
@@ -202,14 +148,12 @@ const TaskRow = memo(({
         <div className="action-buttons-container">
           <button onClick={handleEditToggle} className={`edit-task-button ${isEditing ? 'editing' : ''}`}
             title={isEditing ? 'Save changes' : 'Edit values'}>
-            {/* Edit3 icon */}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="edit-icon">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
           <button onClick={handleRemove} className="remove-task-button" title="Remove task">
-            {/* Trash2 icon */}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="remove-icon">
               <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
               <path d="M10 11v6"/><path d="M14 11v6"/>
@@ -235,13 +179,14 @@ interface TasksTableProps {
   onMainTaskSelect: (id: number) => void
   onBaseRateUpdate: (field: keyof BaseRates, value: number) => void
   onManualOverridesChange?: (overrides: ManualOverrides) => void
+  onOpenRateSettings?: () => void
   notify?: (message: string, type?: NotificationType) => void
 }
 
 const TasksTable = memo(({
   tasks, baseRates, selectedMainTaskId,
   onTaskUpdate, onTaskAdd, onSubTaskAdd, onTaskRemove, onTaskReorder,
-  onMainTaskSelect, onBaseRateUpdate, onManualOverridesChange, notify
+  onMainTaskSelect, onBaseRateUpdate, onManualOverridesChange, onOpenRateSettings, notify
 }: TasksTableProps) => {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editedValues, setEditedValues] = useState<Record<number, Partial<TaskSubtotals>>>({})
@@ -255,7 +200,7 @@ const TasksTable = memo(({
 
     const totals: TaskSubtotals[] = tasks.map(task => {
       const totalHours = (task.hours || 0) + (task.minutes || 0) / 60
-      let timeChargeRate = task.type === '2D' ? baseRates.timeChargeRate2D
+      const timeChargeRate = task.type === '2D' ? baseRates.timeChargeRate2D
         : task.type === '3D' || !task.type ? baseRates.timeChargeRate3D
         : baseRates.timeChargeRateOthers || 0
       const basicLabor = totalHours * timeChargeRate
@@ -394,7 +339,6 @@ const TasksTable = memo(({
       <div className="computation-header">
         <div className="section-header" style={{ height: '32px' }}>
           <div className="section-icon computation">
-            {/* Calculator icon */}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="4" y="2" width="16" height="20" rx="2"/>
               <line x1="8" y1="6" x2="16" y2="6"/>
@@ -406,9 +350,18 @@ const TasksTable = memo(({
           <h2 className="section-title">Computation Table</h2>
         </div>
         <div className="computation-buttons">
+          {/* Rate Settings button — opens BaseRatesPanel */}
+          {onOpenRateSettings && (
+            <button className="add-button rate-settings-btn" onClick={onOpenRateSettings} title="Configure base rates">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+              </svg>
+              Rate Settings
+            </button>
+          )}
           <button className="add-button primary" onClick={onTaskAdd}
             disabled={mainTaskCount >= 27} title={mainTaskCount >= 27 ? 'Maximum 27 assembly tasks reached' : 'Add assembly task'}>
-            {/* Plus icon */}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="add-icon">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
@@ -440,7 +393,6 @@ const TasksTable = memo(({
         <div className="tasks-table-body">
           <table className="tasks-table">
             <tbody>
-              <ValueBasisRow baseRates={baseRates} onUpdate={onBaseRateUpdate} />
               {tasks.map((task, index) => {
                 let rowNumber: number
                 if (task.isMainTask) {
@@ -463,6 +415,13 @@ const TasksTable = memo(({
                   />
                 )
               })}
+              {tasks.length === 0 && (
+                <tr className="empty-table-row">
+                  <td colSpan={13}>
+                    <span className="empty-table-hint">No tasks yet — click Add Assembly to start</span>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -476,7 +435,6 @@ const TasksTable = memo(({
   )
 })
 
-ValueBasisRow.displayName = 'ValueBasisRow'
 TaskRow.displayName = 'TaskRow'
 TasksTable.displayName = 'TasksTable'
 

@@ -25,14 +25,14 @@
   cursor: default !important;
 }
 
-/* Scrollable table body - max 11 rows visible (1 value basis row + 10 task rows) */
+/* Scrollable table body - max 15 rows visible (Higher density) */
 .tasks-table-body {
-  max-height: calc(11 * 60px); /* 11 rows x approximately 60px per row */
+  max-height: 580px; /* Approximately 13-14 rows */
   overflow-y: auto;
   overflow-x: hidden;
   display: block;
-  scrollbar-gutter: stable; /* Always reserve space for scrollbar */
-  background: #f9fafb; /* Ensure gutter area has background color */
+  scrollbar-gutter: stable;
+  background: #ffffff;
 }
 
 .tasks-table-body table {

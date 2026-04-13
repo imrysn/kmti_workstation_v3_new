@@ -10,17 +10,33 @@
 @import './QuickEditModal.css';
 @import './VisualLayout.css';
 
+/* ── Professional Design System Variables ─────────────────── */
+:root {
+  --quot-primary: #334155;
+  --quot-primary-deep: #1e293b;
+  --quot-accent: #64748b;
+  --quot-bg-main: #f8fafc;
+  --quot-bg-card: #ffffff;
+  --quot-border: #e2e8f0;
+  --quot-text-main: #0f172a;
+  --quot-text-muted: #64748b;
+  --quot-radius-lg: 8px;
+  --quot-radius-sm: 4px;
+  --quot-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --quot-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
 /* ── Root wrapper ───────────────────────────────────────────── */
 .quot-app-root {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: #fafbfc;
+  background: var(--quot-bg-main);
   font-family: 'Arimo', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  font-size: 14px;
-  line-height: 1.43;
-  color: #101828;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--quot-text-main);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -29,87 +45,166 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 16px;
   height: 52px;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--quot-bg-card);
+  border-bottom: 1px solid var(--quot-border);
   flex-shrink: 0;
   gap: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  z-index: 10;
 }
 
-.quot-toolbar-info { flex: 1; }
+/* ── Toolbar: Document Identity (Phase 1) ─────────────────── */
+.quot-toolbar-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
 
-.quot-file-status {
-  display: block;
-  font-size: 12px;
-  font-weight: 400;
-  color: #6a7282;
+.quot-doc-icon {
+  width: 30px;
+  height: 30px;
+  background: var(--quot-primary);
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.quot-doc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.quot-doc-primary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quot-doc-number {
+  font-family: 'Arimo', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--quot-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Unsaved dot indicator — replaces text "Edited" */
+.quot-unsaved-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  flex-shrink: 0;
+}
+
+.quot-doc-secondary {
+  font-size: 11px;
+  color: var(--quot-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quot-file-path {
+  opacity: 0.7;
 }
 
 .quot-toolbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 /* Override workstation .btn for quotation toolbar */
 .quot-app-root .btn {
   font-family: 'Arimo', sans-serif;
-  height: 32px;
+  height: 30px;
   padding: 0 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid #d1d1d6;
-  background: #ffffff;
-  color: #1d1d1f;
-  transition: all 0.2s ease;
+  border: 1px solid var(--quot-border);
+  background: var(--quot-bg-card);
+  color: var(--quot-text-main);
+  transition: all 0.15s ease;
 }
-.quot-app-root .btn:hover { background: #f9fafb; }
-.quot-app-root .btn-primary { background: #155dfc; border-color: #155dfc; color: #ffffff; }
-.quot-app-root .btn-primary:hover { background: #1348d6; }
-.quot-app-root .btn-ghost { background: #ffffff; color: #1d1d1f; border-color: #d1d1d6; }
-.quot-app-root .btn-ghost:hover { background: #f9fafb; }
+.quot-app-root .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
+.quot-app-root .btn-primary { background: var(--quot-primary); border-color: var(--quot-primary); color: #ffffff; }
+.quot-app-root .btn-primary:hover { background: var(--quot-primary-deep); }
+.quot-app-root .btn-ghost { background: var(--quot-bg-card); border: 1px solid var(--quot-border); }
 
 /* ── Scrollable body ────────────────────────────────────────── */
 .quot-body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: 16px;
   display: flex;
   justify-content: center;
 }
 
 .quot-content-wrapper {
   width: 100%;
-  max-width: 1680px;
+  max-width: 1600px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .quot-info-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  min-height: 479px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  min-height: auto;
 }
 
-/* ── Form Elements (scoped) ─────────────────────────────────── */
-.quot-app-root .quotation-details-section {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 12px;
-  padding: 25px;
+/* ── Section Cards ──────────────────────────────────────────── */
+.quot-app-root .section-card {
+  background: var(--quot-bg-card);
+  border: 1px solid var(--quot-border);
+  border-radius: var(--quot-radius-lg);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  box-shadow: var(--quot-shadow);
+  flex-shrink: 0;
 }
 
+.quot-app-root .card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  min-height: 44px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.quot-app-root .card-content {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Section header shared ──────────────────────────────────── */
 .quot-app-root .section-header {
   display: flex;
   align-items: center;
@@ -120,25 +215,230 @@
 .quot-app-root .section-icon {
   width: 32px;
   height: 32px;
-  border-radius: 12px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
-.quot-app-root .section-icon.quotation { background: #155dfc; }
-.quot-app-root .section-icon.company { background: #d0fae5; }
-.quot-app-root .section-icon.client { background: #f3e8ff; }
-.quot-app-root .section-icon.computation { background: #ffedd4; }
-.quot-app-root .section-icon.quotation-signatures { background: #e0e7ff; }
-.quot-app-root .section-icon.billing-signatures { background: #fce7f3; }
+.quot-app-root .section-icon.quotation           { background: var(--quot-primary); color: #ffffff; }
+.quot-app-root .section-icon.company             { background: #f1f5f9; color: var(--quot-primary); }
+.quot-app-root .section-icon.client              { background: #f1f5f9; color: var(--quot-primary); }
+.quot-app-root .section-icon.doc-details         { background: #f1f5f9; color: var(--quot-primary); }
+.quot-app-root .section-icon.computation         { background: #f1f5f9; color: var(--quot-primary); }
+.quot-app-root .section-icon.quotation-signatures{ background: #f1f5f9; color: var(--quot-primary); }
+.quot-app-root .section-icon.billing-signatures  { background: #f1f5f9; color: var(--quot-primary); }
 
 .quot-app-root .section-title {
   font-family: 'Arimo', sans-serif;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   color: #101828;
-  line-height: 28px;
+  line-height: 1;
+}
+
+/* ── Edit button on info cards (Phase 2) ─────────────────── */
+.quot-app-root .info-card-edit-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--quot-border);
+  border-radius: 6px;
+  background: var(--quot-bg-card);
+  color: var(--quot-text-muted);
+  font-family: 'Arimo', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.quot-app-root .info-card-edit-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: var(--quot-text-main);
+}
+
+/* ── Read-only display (Phase 2) ─────────────────────────── */
+.quot-app-root .info-card-display {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0;
+}
+
+.quot-app-root .info-display-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--quot-text-main);
+  line-height: 1.3;
+}
+
+.quot-app-root .info-display-contact {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--quot-text-main);
+}
+
+.quot-app-root .info-display-address {
+  font-size: 12px;
+  color: var(--quot-text-muted);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.quot-app-root .info-display-phone {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--quot-text-muted);
+  margin-top: 2px;
+}
+
+.quot-app-root .info-display-empty {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 6px 0;
+}
+
+.quot-app-root .info-display-empty-link {
+  background: none;
+  border: none;
+  color: #155dfc;
+  font-size: 12px;
+  font-style: italic;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ── Client card ref badge ──────────────────────────────────── */
+.quot-app-root .client-ref-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.quot-app-root .client-ref-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--quot-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quot-app-root .client-ref-value {
+  font-family: 'Arimo', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--quot-text-main);
+}
+
+/* ── Quotation number manual-edit row ───────────────────────── */
+.quot-app-root .client-quot-no-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quot-app-root .client-quot-no-row .form-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.quot-app-root .client-quot-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-family: 'Arimo', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.quot-app-root .client-quot-reset-btn:hover {
+  background: #fef3c7;
+  border-color: #d97706;
+}
+
+.quot-app-root .client-quot-manual-hint {
+  font-size: 10px;
+  color: #d97706;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* ── Billing-only field tag ─────────────────────────────────── */
+.quot-app-root .client-field-tag {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* ── Read-only doc-detail chips row ─────────────────────────── */
+.quot-app-root .info-display-doc-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.quot-app-root .info-doc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--quot-text-muted);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.quot-app-root .info-doc-chip--billing {
+  background: #dbeafe;
+  border-color: #bfdbfe;
+  color: #1e40af;
+}
+
+/* ── Form Elements (scoped) ─────────────────────────────────── */
+.quot-app-root .quotation-details-section {
+  background: #ffffff;
+  border: 1px solid var(--quot-border);
+  border-radius: var(--quot-radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--quot-shadow);
 }
 
 .quot-app-root .quotation-grid {
@@ -147,44 +447,18 @@
   gap: 24px;
 }
 
-.quot-app-root .section-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.quot-app-root .card-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 24px 24px 0;
-  height: 81px;
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.quot-app-root .card-content {
-  flex: 1;
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
 .quot-app-root .input-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .quot-app-root .input-group label {
   font-family: 'Arimo', sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   color: #364153;
-  line-height: 14px;
+  line-height: 1;
 }
 
 .quot-app-root .form-input,
@@ -194,9 +468,9 @@
   padding: 4px 12px;
   background: #f2f2f7;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 8px;
   font-family: 'Arimo', sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 400;
   color: #1d1d1f;
   line-height: 20px;
@@ -208,12 +482,13 @@
 .quot-app-root .form-textarea:focus {
   outline: none;
   border-color: #155dfc;
+  background: #ffffff;
   box-shadow: 0 0 0 3px rgba(21, 93, 252, 0.1);
 }
 
 .quot-app-root .form-textarea {
   height: auto;
-  min-height: 80px;
+  min-height: 72px;
   resize: vertical;
   padding: 8px 12px;
   line-height: 1.5;
@@ -227,51 +502,201 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 16px;
-  height: 16px;
   color: #9ca3af;
 }
 
 .quot-app-root .address-inputs {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* ── Computation section ────────────────────────────────────── */
 .quot-app-root .computation-section {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--quot-bg-card);
+  border: 1px solid var(--quot-border);
+  border-radius: var(--quot-radius-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 269px;
+  box-shadow: var(--quot-shadow);
+  margin-top: 4px;
+  min-height: 480px;
+  flex-shrink: 0;
+}
+
+/* ── Signature section (now uses section-card like other cards) ────── */
+.quot-app-root .signature-section {
+  background: var(--quot-bg-card);
+  border: 1px solid var(--quot-border);
+  border-radius: var(--quot-radius-lg);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--quot-shadow);
+  margin-top: 4px;
+}
+
+/* Signature read-only display ───────────────────────────── */
+.quot-app-root .sig-display-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.quot-app-root .sig-display-divider {
+  width: 1px;
+  background: var(--quot-border);
+  align-self: stretch;
+  flex-shrink: 0;
+  margin: 0 20px;
+}
+
+.quot-app-root .sig-person-display {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.quot-app-root .sig-person-role {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--quot-text-muted);
+  margin-bottom: 2px;
+}
+
+.quot-app-root .sig-person-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--quot-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quot-app-root .sig-person-title {
+  font-size: 11px;
+  color: var(--quot-text-muted);
+  font-style: italic;
+}
+
+.quot-app-root .sig-person-empty {
+  color: #cbd5e1;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* QuotationDetailsCard display ─────────────────────────── */
+.quot-app-root .qdcard-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.quot-app-root .qdcard-display {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quot-app-root .qdcard-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 20px;
+}
+
+.quot-app-root .qdcard-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--quot-text-muted);
+  min-width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quot-app-root .qdcard-value {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--quot-text-main);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quot-app-root .qdcard-value--mono {
+  font-family: 'Arimo', monospace;
+  font-weight: 700;
+}
+
+.quot-app-root .qdcard-manual-tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-style: normal;
+  font-family: 'Arimo', sans-serif;
+}
+
+/* Collapse badges in header */
+.quot-app-root .qdcard-badges {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.quot-app-root .qdcard-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--quot-text-muted);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .quot-app-root .computation-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px;
-  height: 81px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 10px 14px;
+  min-height: 48px;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-.quot-app-root .computation-buttons { display: flex; gap: 12px; }
+.quot-app-root .computation-buttons { display: flex; gap: 8px; align-items: center; }
 
 .quot-app-root .add-button {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
+  gap: 6px;
+  height: 30px;
   padding: 0 10px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   font-family: 'Arimo', sans-serif;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -279,28 +704,69 @@
 .quot-app-root .add-button.primary:hover { background: #1348d6; }
 .quot-app-root .add-button.secondary { background: #ffffff; color: #1d1d1f; border: 1px solid #d1d1d6; }
 .quot-app-root .add-button.secondary:hover { background: #f9fafb; }
+.quot-app-root .add-button.rate-settings-btn {
+  background: #ffffff;
+  color: var(--quot-text-muted);
+  border: 1px solid var(--quot-border);
+}
+.quot-app-root .add-button.rate-settings-btn:hover {
+  background: #f8fafc;
+  color: var(--quot-text-main);
+  border-color: #94a3b8;
+}
 .quot-app-root .add-button:disabled { background: #f9fafb; color: #9ca3af; border-color: #e5e7eb; cursor: not-allowed; }
 .quot-app-root .add-icon { width: 16px; height: 16px; }
 
+.quot-app-root .tasks-table-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+  background: #ffffff;
+}
+
+/* ── Empty table state ──────────────────────────────────────── */
+.quot-app-root .empty-table-row td {
+  text-align: center;
+  padding: 40px 16px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.quot-app-root .empty-table-hint {
+  font-size: 13px;
+}
+
 /* ── Grand Total ────────────────────────────────────────────── */
 .quot-app-root .grand-total-section {
-  background: #009966;
-  height: 65px;
+  background: var(--quot-primary);
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 17px 24px 0;
-  border-top: 1px solid #e5e7eb;
+  padding: 0 24px;
+  border-top: 2px solid var(--quot-primary-deep);
 }
-.quot-app-root .grand-total-label { font-family: 'Arimo', sans-serif; font-size: 18px; font-weight: 700; color: #ffffff; line-height: 28px; }
-.quot-app-root .grand-total-value { font-family: 'Arimo', sans-serif; font-size: 24px; font-weight: 700; color: #ffffff; line-height: 32px; }
+.quot-app-root .grand-total-label { font-family: 'Arimo', sans-serif; font-size: 18px; font-weight: 700; color: #ffffff; }
+.quot-app-root .grand-total-value { font-family: 'Arimo', sans-serif; font-size: 24px; font-weight: 700; color: #ffffff; }
 
 /* ── Task Table Row Styles ──────────────────────────────────── */
-.quot-app-root .main-task-row { background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-left: 4px solid #10b981; font-weight: 600; }
-.quot-app-root .main-task-row:hover { background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%) !important; }
-.quot-app-root .selected-main-task { background: linear-gradient(135deg, #a7f3d0 0%, #6ee7b7 100%) !important; border-left: 4px solid #059669; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2); }
-.quot-app-root .sub-task-row { background: #ffffff; border-left: 4px solid #e5e7eb; }
-.quot-app-root .sub-task-row:hover { background: #f9fafb !important; border-left-color: #d1d5db; }
+.quot-app-root .main-task-row {
+  background: #f8fafc;
+  border-left: 3px solid var(--quot-accent);
+  font-weight: 500;
+}
+.quot-app-root .main-task-row:hover { background: #f1f5f9 !important; }
+.quot-app-root .selected-main-task {
+  background: #f1f5f9 !important;
+  border-left: 3px solid var(--quot-primary);
+  box-shadow: inset 2px 0 0 var(--quot-primary);
+}
+.quot-app-root .sub-task-row {
+  background: #ffffff;
+  border-left: 3px solid var(--quot-border);
+}
+.quot-app-root .sub-task-row:hover { background: #fdfdfd !important; border-left-color: #cbd5e1; }
 .quot-app-root .value-basis-row { background: #f9fafb; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
 
 .quot-app-root .main-task-row td,
@@ -308,29 +774,29 @@
 .quot-app-root .value-basis-row td { text-align: center; }
 
 /* ── Signature Sections ─────────────────────────────────────── */
-.quot-app-root .signature-section {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-}
-
 .quot-app-root .signature-header {
-  padding: 24px 24px 0;
-  height: 81px;
+  padding: 16px 20px 0;
+  min-height: 56px;
   border-bottom: 1px solid #f3f4f6;
 }
 
-.quot-app-root .signature-content { flex: 1; padding: 24px; }
+.quot-app-root .signature-content { flex: 1; padding: 20px; }
 
 .quot-app-root .signature-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 32px;
+  gap: 24px;
 }
 
-.quot-app-root .signature-column { display: flex; flex-direction: column; gap: 24px; }
+.quot-app-root .signature-column { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Signature Cards Side-by-Side Layout ────────────────────── */
+.quot-app-root .sig-cards-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
 
 /* ── Edit / Remove buttons ──────────────────────────────────── */
 .quot-app-root .action-buttons-container { display: flex; gap: 4px; align-items: center; justify-content: center; }
@@ -350,18 +816,24 @@
 .quot-app-root .table-input {
   width: 100%;
   max-width: 100%;
-  padding: 4px 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
+  padding: 2px 6px;
+  border: 1px solid var(--quot-border);
+  border-radius: var(--quot-radius-sm);
   background: #ffffff;
   font-family: 'Arimo', sans-serif;
-  font-size: 12px;
-  color: #1d1d1f;
-  transition: all 0.2s ease;
+  font-size: 11px;
+  color: var(--quot-text-main);
+  transition: all 0.15s ease;
   text-align: center;
 }
-.quot-app-root .table-input:focus { outline: none; border-color: #155dfc; box-shadow: 0 0 0 2px rgba(21, 93, 252, 0.1); }
-.quot-app-root .edit-calculated-input { background: #fff3cd !important; border-color: #f59e0b !important; font-weight: 600; }
+.quot-app-root .table-input:focus { outline: none; border-color: var(--quot-primary); box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1); }
+.quot-app-root .edit-calculated-input { background: #fffcf0 !important; border-color: #f59e0b !important; font-weight: 600; }
+
+.quot-app-root .calculated-cell { font-weight: 500; font-variant-numeric: tabular-nums; }
+.quot-app-root .time-charge-bg { background: #f8fafc; }
+.quot-app-root .overtime-bg { background: #f1f5f9; }
+.quot-app-root .overhead-bg { background: #f8fafc; }
+.quot-app-root .software-total { color: var(--quot-accent); font-weight: 500; }
 
 /* ── Drag indicator ─────────────────────────────────────────── */
 .quot-app-root .dragging { opacity: 0.5; }
@@ -372,3 +844,281 @@
 .quot-body::-webkit-scrollbar-track { background: transparent; }
 .quot-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
 .quot-body::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+/* ============================================================
+   BASE RATES PANEL (Phase 3) — slide-over drawer
+   Positioned fixed relative to .quot-app-root context.
+   z-index below QuickEditModal (10000) and PrintPreviewModal (9999).
+   ============================================================ */
+
+/* Transparent backdrop — closes panel on outside click */
+.brp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: transparent;
+}
+
+/* Slide-over panel */
+.brp-panel {
+  position: fixed;
+  top: 15%;
+  right: 0;
+  bottom: 15%;
+  z-index: 501;
+  width: 300px;
+  height: 70%;
+  background: #ffffff;
+  border: 1px solid var(--quot-border);
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Arimo', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  animation: brp-slide-in 0.22s ease-out;
+  overflow: hidden;
+}
+
+@keyframes brp-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* Header */
+.brp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 52px;
+  border-bottom: 1px solid var(--quot-border);
+  flex-shrink: 0;
+}
+
+.brp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brp-icon {
+  width: 28px;
+  height: 28px;
+  background: #f1f5f9;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--quot-primary);
+}
+
+.brp-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--quot-text-main);
+  margin: 0;
+}
+
+.brp-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--quot-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--quot-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.brp-close-btn:hover { background: #fef2f2; border-color: #ef4444; color: #ef4444; }
+
+/* Body */
+.brp-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.brp-body::-webkit-scrollbar { width: 5px; }
+.brp-body::-webkit-scrollbar-track { background: transparent; }
+.brp-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+
+.brp-section {
+  padding: 14px 0;
+}
+
+.brp-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--quot-text-muted);
+  margin-bottom: 10px;
+}
+
+.brp-divider {
+  height: 1px;
+  background: var(--quot-border);
+  margin: 0;
+}
+
+.brp-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.brp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.brp-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #364153;
+}
+
+.brp-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #f2f2f7;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.brp-input-wrap:focus-within {
+  border-color: #155dfc;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(21, 93, 252, 0.1);
+}
+
+.brp-currency,
+.brp-suffix {
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--quot-text-muted);
+  flex-shrink: 0;
+  background: transparent;
+  line-height: 1;
+}
+
+.brp-input {
+  flex: 1;
+  height: 34px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  font-family: 'Arimo', sans-serif;
+  font-size: 13px;
+  color: var(--quot-text-main);
+  text-align: right;
+  min-width: 0;
+}
+.brp-input:focus { outline: none; }
+
+/* Remove number input spinners */
+.brp-input::-webkit-outer-spin-button,
+.brp-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.brp-input[type=number] { -moz-appearance: textfield; }
+
+/* Read-only computed field */
+.brp-input-wrap--readonly {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0 !important;
+  cursor: default;
+}
+.brp-input-wrap--readonly:focus-within {
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
+}
+.brp-computed-value {
+  flex: 1;
+  height: 34px;
+  padding: 4px 8px;
+  font-family: 'Arimo', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--quot-primary);
+  text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.brp-hint {
+  font-size: 10px;
+  color: #94a3b8;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* Live summary section */
+.brp-summary {
+  background: #f8fafc;
+  border: 1px solid var(--quot-border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 14px;
+}
+
+.brp-summary-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--quot-text-muted);
+  margin-bottom: 8px;
+}
+
+.brp-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--quot-text-muted);
+  padding: 3px 0;
+}
+
+.brp-summary-value {
+  font-family: 'Arimo', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--quot-text-main);
+}
+
+/* Footer */
+.brp-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--quot-border);
+  flex-shrink: 0;
+}
+
+.brp-done-btn {
+  width: 100%;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--quot-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Arimo', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.brp-done-btn:hover { background: var(--quot-primary-deep); }
