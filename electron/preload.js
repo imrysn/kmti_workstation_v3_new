@@ -32,6 +32,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onUpdateProgress: (cb) => ipcRenderer.on('update-download-progress', (_, progress) => cb(progress)),
   onUpdateError: (cb) => ipcRenderer.on('update-error', (_, msg) => cb(msg)),
 
+  // --- System / File Operations ---
+  print: (options) => ipcRenderer.invoke('print-window', options),
+  printToPDF: (options) => ipcRenderer.invoke('print-to-pdf', options),
+  showSaveDialog: (options) => ipcRenderer.invoke('show-save-dialog', options),
+  writeFile: (filePath, data) => ipcRenderer.invoke('write-file', filePath, data),
+
   // Cleanup
   removeUpdateListeners: () => {
     ipcRenderer.removeAllListeners('update-available')

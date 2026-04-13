@@ -6,7 +6,8 @@
   background: white;
   font-family: Arial, sans-serif;
   color: black;
-  padding: 8mm; /* Reduced padding to match print layout */
+  padding: 8mm;
+  /* Reduced padding to match print layout */
   box-sizing: border-box;
   position: relative;
   margin: 0;
@@ -31,12 +32,14 @@
 
 /* Row 11: First expansion - minimal compression */
 .quotation-visual-exact.task-count-11 .terms-visual {
-  margin-top: 28px !important; /* Slight reduction from 30px */
+  margin-top: 28px !important;
+  /* Slight reduction from 30px */
   margin-bottom: 28px !important;
 }
 
 .quotation-visual-exact.task-count-11 .footer-visual {
-  margin-top: 30px !important; /* Slight reduction from 50px */
+  margin-top: 30px !important;
+  /* Slight reduction from 50px */
 }
 
 /* Row 12: More compression */
@@ -46,7 +49,8 @@
 }
 
 .quotation-visual-exact.task-count-12 .signatures-visual {
-  margin-bottom: 18px !important; /* Slight reduction from 20px */
+  margin-bottom: 18px !important;
+  /* Slight reduction from 20px */
 }
 
 .quotation-visual-exact.task-count-12 .footer-visual {
@@ -64,8 +68,10 @@
 }
 
 .quotation-visual-exact.task-count-13 .signature-row-visual {
-  margin-bottom: 10px !important; /* Slight reduction from 20px */
-  min-height: 75px !important; /* Slight reduction from 80px */
+  margin-bottom: 10px !important;
+  /* Slight reduction from 20px */
+  min-height: 75px !important;
+  /* Slight reduction from 80px */
 }
 
 .quotation-visual-exact.task-count-13 .footer-visual {
@@ -74,35 +80,42 @@
 
 /* Row 14: Content stays fixed, table compression begins */
 .quotation-visual-exact.task-count-14 .terms-visual {
-  margin-top: 20px !important; /* Same as row 13 - stays fixed */
+  margin-top: 20px !important;
+  /* Same as row 13 - stays fixed */
   margin-bottom: 15px !important;
 }
 
 .quotation-visual-exact.task-count-14 .signatures-visual {
-  margin-bottom: 15px !important; /* Same as row 13 - stays fixed */
+  margin-bottom: 15px !important;
+  /* Same as row 13 - stays fixed */
 }
 
 .quotation-visual-exact.task-count-14 .signature-row-visual {
-  margin-bottom: 15px !important; /* Same as row 13 - stays fixed */
+  margin-bottom: 15px !important;
+  /* Same as row 13 - stays fixed */
   min-height: 75px !important;
 }
 
 .quotation-visual-exact.task-count-14 .footer-visual {
-  margin-top: 10px !important; /* Same as row 13 - stays fixed */
+  margin-top: 10px !important;
+  /* Same as row 13 - stays fixed */
 }
 
 .quotation-visual-exact.task-count-14 .table-visual {
-  font-size: 10.5px; /* Start table compression */
+  font-size: 10.5px;
+  /* Start table compression */
 }
 
 .quotation-visual-exact.task-count-14 .table-visual th,
 .quotation-visual-exact.task-count-14 .table-visual td {
-  padding: 4px 2px; /* Slight reduction from 5px 3px */
+  padding: 4px 2px;
+  /* Slight reduction from 5px 3px */
 }
 
 /* Row 15: More table compression */
 .quotation-visual-exact.task-count-15 .terms-visual {
-  margin-top: 20px !important; /* Content stays fixed */
+  margin-top: 20px !important;
+  /* Content stays fixed */
   margin-bottom: 15px !important;
 }
 
@@ -134,7 +147,8 @@
 
 /* Row 16: Increased table compression */
 .quotation-visual-exact.task-count-16 .terms-visual {
-  margin-top: 20px !important; /* Content stays fixed */
+  margin-top: 20px !important;
+  /* Content stays fixed */
   margin-bottom: 20px !important;
 }
 
@@ -166,7 +180,8 @@
 
 /* Row 17: More compression */
 .quotation-visual-exact.task-count-17 .terms-visual {
-  margin-top: 20px !important; /* Content stays fixed */
+  margin-top: 20px !important;
+  /* Content stays fixed */
   margin-bottom: 20px !important;
 }
 
@@ -198,7 +213,8 @@
 
 /* Row 18: Aggressive compression */
 .quotation-visual-exact.task-count-18 .terms-visual {
-  margin-top: 20px !important; /* Content stays fixed */
+  margin-top: 20px !important;
+  /* Content stays fixed */
   margin-bottom: 20px !important;
 }
 
@@ -230,7 +246,8 @@
 
 /* Row 19: Near maximum compression */
 .quotation-visual-exact.task-count-19 .terms-visual {
-  margin-top: 20px !important; /* Content stays fixed */
+  margin-top: 20px !important;
+  /* Content stays fixed */
   margin-bottom: 10px !important;
 }
 
@@ -262,7 +279,8 @@
 
 /* Row 20: Maximum compression */
 .quotation-visual-exact.task-count-20 .terms-visual {
-  margin-top: 20px !important; /* Content stays fixed */
+  margin-top: 20px !important;
+  /* Content stays fixed */
   margin-bottom: 15px !important;
 }
 
@@ -305,7 +323,8 @@
 .logo-visual {
   position: absolute;
   left: 0;
-  top: 5px;
+  top: 0;
+  /* Aligned to top */
   width: 125px;
   height: 140px;
 }
@@ -319,26 +338,36 @@
 /* Original center text for quotation */
 .center-text-visual {
   position: absolute;
-  left: 40%;
-  top: 60%;
-  transform: translate(-50%, -50%);
+  left: 50%;
+  /* Pure horizontal center */
+  top: 0;
+  /* Aligned to top */
+  transform: translateX(-50%);
+  /* Removed vertical translate centering */
   text-align: center;
-  white-space: nowrap;
+  white-space: pre-line;
   z-index: 2;
+  width: 100%;
+  max-width: 380px;
+  /* Constrained to avoid side-text collision */
 }
 
 .company-name-visual {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: bold;
   margin-bottom: 10px;
   line-height: 1.1;
-  white-space: pre-line; /* Allow BR tags for quotation */
+  white-space: pre-line;
+  max-width: 400px;
+  /* Prevent overlap with right details */
+  /* Allow BR tags for quotation */
 }
 
 .quotation-title-visual {
   font-size: 26px;
   font-weight: bold;
   margin-top: 45px;
+  /* Spaced below the company name */
   white-space: nowrap;
 }
 
@@ -346,8 +375,8 @@
 .right-details-visual {
   position: absolute;
   right: 0;
-  top: 19px;
-  width: 280px;
+  top: 0;
+  width: 270px; /* Restored width to prevent text wrapping */
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -368,18 +397,24 @@
 
 .billing-header .logo-visual {
   position: absolute;
-  left: 50px;        /* 50px from left edge */
-  top: 10px;         /* 10px from top */
-  width: 100px;      /* Logo width */
-  height: 100px;     /* Logo height */
+  left: 50px;
+  /* 50px from left edge */
+  top: 10px;
+  /* 10px from top */
+  width: 100px;
+  /* Logo width */
+  height: 100px;
+  /* Logo height */
 }
 
 .billing-header .center-text-visual {
   position: static;
   text-align: center;
   transform: none;
-  margin-top: 10px;          /* 10px from top */
-  margin-left: 25px;         /* 25px left adjustment for logo space */
+  margin-top: 10px;
+  /* 10px from top */
+  margin-left: 25px;
+  /* 25px left adjustment for logo space */
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -387,33 +422,42 @@
 }
 
 .billing-header .company-name-visual {
-  font-size: 20px;           /* Company name font size */
+  font-size: 20px;
+  /* Company name font size */
   font-weight: bold;
-  margin-bottom: 8px;        /* 8px space below company name */
+  margin-bottom: 8px;
+  /* 8px space below company name */
   line-height: 1.2;
   color: #000;
-  white-space: nowrap;       /* Single line */
+  white-space: nowrap;
+  /* Single line */
 }
 
 .billing-header .company-address-visual {
-  font-size: 13px;           /* Address font size - larger */
+  font-size: 13px;
+  /* Address font size - larger */
   line-height: 1.4;
   color: #000;
-  margin-bottom: 15px;       /* 15px space below address */
+  margin-bottom: 15px;
+  /* 15px space below address */
   text-align: center;
-  font-weight: normal;       /* Not bold */
-  max-width: 400px;          /* Maximum width for address block */
+  font-weight: normal;
+  /* Not bold */
+  max-width: 400px;
+  /* Maximum width for address block */
 }
 
 .billing-header .quotation-title-visual {
-  font-size: 18px;           /* "BILLING STATEMENT" font size */
-  font-weight: normal;       /* Not bold */
+  font-size: 18px;
+  /* "BILLING STATEMENT" font size */
+  font-weight: normal;
+  /* Not bold */
   margin-top: 0;
   color: #000;
 }
 
 /* Billing Details Positioning - constrain to page margins */
-.billing-header + .quotation-details-visual {
+.billing-header+.quotation-details-visual {
   position: absolute;
   right: 8mm;
   top: 190px;
@@ -422,7 +466,7 @@
 }
 
 .company-info-visual {
-  font-size: 12px;
+  font-size: 12px; /* Restored font size */
   text-align: right;
   margin-bottom: 25px;
   line-height: 1.4;
@@ -445,7 +489,7 @@
   position: absolute;
   top: 190px;
   right: 0;
-  width: 280px;
+  width: 300px;
 }
 
 .detail-row-visual {
@@ -460,6 +504,9 @@
 .detail-label-visual {
   font-weight: bold;
   font-size: 12px;
+  width: 140px;
+  /* Adjust width to fit the longest label and align starts */
+  text-align: left;
 }
 
 .detail-value-visual {
@@ -480,24 +527,32 @@
 
 /* Contact Section */
 .contact-section-visual {
-  margin-bottom: 35px; /* Increased spacing to match image */
+  margin-bottom: 35px;
+  /* Increased spacing to match image */
   margin-top: 0px;
-  min-height: 90px; /* ✅ FIXED: Reserve consistent space for client info */
+  min-height: 90px;
+  /* ✅ FIXED: Reserve consistent space for client info */
 }
 
 
 
 .quotation-to-visual {
-  font-size: 16px; /* Increased font size */
+  font-size: 16px;
+  /* Increased font size */
   font-weight: bold;
-  margin-bottom: 10px; /* Adjusted spacing */
-  min-height: 22px; /* ✅ FIXED: Consistent label height */
+  margin-bottom: 10px;
+  /* Adjusted spacing */
+  min-height: 22px;
+  /* ✅ FIXED: Consistent label height */
 }
 
 .client-details-visual {
-  font-size: 12px; /* Increased font size */
-  line-height: 1.5; /* Better line spacing */
-  min-height: 60px; /* ✅ FIXED: Reserve space for client details */
+  font-size: 12px;
+  /* Increased font size */
+  line-height: 1.5;
+  /* Better line spacing */
+  min-height: 60px;
+  /* ✅ FIXED: Reserve space for client details */
 }
 
 .client-company-name {
@@ -516,7 +571,8 @@
   border-collapse: collapse;
   margin-bottom: 20px;
   font-size: 11px;
-  border: 2px solid #000; /* THICK OUTER BORDER */
+  border: 2px solid #000;
+  /* THICK OUTER BORDER */
 }
 
 /* All cells - reset borders first */
@@ -525,45 +581,71 @@
   padding: 5px 3px;
   text-align: center;
   vertical-align: middle;
-  border: none; /* Reset all borders */
+  border: none;
+  /* Reset all borders */
 }
 
 /* ===== VERTICAL LINES (Left/Right borders) ===== */
 /* Add right border to all cells except last column */
 .table-visual th:not(:last-child),
 .table-visual td:not(:last-child) {
-  border-right: 1px solid #000; /* THIN VERTICAL LINES */
+  border-right: 1px solid #000;
+  /* THIN VERTICAL LINES */
 }
 
 /* ===== HORIZONTAL LINES (Top/Bottom borders) ===== */
 /* Header row - thick bottom border */
 .table-visual thead th {
   font-weight: bold;
-  background-color: transparent; /* NO BACKGROUND */
+  background-color: transparent;
+  /* NO BACKGROUND */
   font-size: 12px;
-  border-bottom: 2px solid #000; /* THICK HEADER BOTTOM */
+  border-bottom: 2px solid #000;
+  /* THICK HEADER BOTTOM */
 }
 
 /* Data rows - thin borders between rows */
 .table-visual tbody tr:not(:last-child) td {
-  border-bottom: 1px solid #ccc; /* THIN DATA ROW BORDERS */
+  border-bottom: 1px solid #ccc;
+  /* THIN DATA ROW BORDERS */
 }
 
 /* Total row (last row) - thick top border, no bottom border needed */
 .table-visual tbody tr:last-child td {
-  border-top: 2px solid #000; /* THICK TOTAL TOP */
-  background-color: transparent; /* NO BACKGROUND */
+  border-top: 2px solid #000;
+  /* THICK TOTAL TOP */
+  background-color: transparent;
+  /* NO BACKGROUND */
   font-weight: bold;
   font-size: 14px;
 }
 
 /* Table column widths - Updated layout with UNIT PAGE column */
-.table-visual .col-no { width: 4%; }
-.table-visual .col-reference { width: 18%; }
-.table-visual .col-description { width: 30%; text-align: center; }
-.table-visual .col-unitpage { width: 8%; }
-.table-visual .col-type { width: 6%; }
-.table-visual .col-price { width: 26%; text-align: center; }
+.table-visual .col-no {
+  width: 4%;
+}
+
+.table-visual .col-reference {
+  width: 18%;
+}
+
+.table-visual .col-description {
+  width: 30%;
+  text-align: center;
+}
+
+.table-visual .col-unitpage {
+  width: 8%;
+}
+
+.table-visual .col-type {
+  width: 6%;
+}
+
+.table-visual .col-price {
+  width: 26%;
+  text-align: center;
+}
 
 .table-visual .description-cell {
   text-align: left;
@@ -595,14 +677,16 @@
 /* Signatures Section */
 .signatures-visual {
   margin-bottom: 20px;
-  position: relative; /* Add relative positioning for absolute children */
+  position: relative;
+  /* Add relative positioning for absolute children */
 }
 
 .signature-row-visual {
   display: flex;
   margin-bottom: 20px;
   position: relative;
-  min-height: 80px; /* Ensure enough height for absolute positioned elements */
+  min-height: 80px;
+  /* Ensure enough height for absolute positioned elements */
 }
 
 .signature-left-visual {
@@ -611,21 +695,26 @@
 }
 
 .signature-right-visual {
-  position: absolute; /* Use absolute positioning */
-  right: 0; /* Stick to right margin */
+  position: absolute;
+  /* Use absolute positioning */
+  right: 0;
+  /* Stick to right margin */
   top: 0;
-  width: 250px; /* Fixed width for right section */
+  width: 250px;
+  /* Fixed width for right section */
 }
 
 .sig-label-visual {
   font-size: 13px;
   margin-bottom: 15px;
-  text-align: left; /* Left-align all labels including 'Received by' */
+  text-align: left;
+  /* Left-align all labels including 'Received by' */
 }
 
 .sig-line-visual {
   border-bottom: 1px solid black;
-  width: 250px; /* Make signature lines longer */
+  width: 250px;
+  /* Make signature lines longer */
   height: 30px;
   margin-bottom: 5px;
 }
@@ -634,13 +723,15 @@
   font-weight: bold;
   font-size: 14px;
   text-align: center;
-  width: 250px; /* Match longer line width */
+  width: 250px;
+  /* Match longer line width */
 }
 
 .sig-title-visual {
   font-size: 11px;
   text-align: center;
-  width: 250px; /* Match longer line width */
+  width: 250px;
+  /* Match longer line width */
   font-style: italic;
 }
 
@@ -650,7 +741,7 @@
   justify-content: space-between;
   font-size: 10px;
   font-style: italic;
-  color: #666;
+  color: #575757a2;
   margin-top: 50px;
 }
 
@@ -728,7 +819,8 @@
 
 /* Second page header adjustments */
 .quotation-visual-exact:has([style*="pageBreakBefore"]) .header-visual {
-  margin-bottom: 20px; /* Reduced margin for second page */
+  margin-bottom: 20px;
+  /* Reduced margin for second page */
 }
 
 /* Second page row limit logic:
@@ -749,13 +841,13 @@
     size: A4 portrait;
     margin: 0;
   }
-  
+
   body {
     margin: 0;
     padding: 0;
     background-color: white !important;
   }
-  
+
   .quotation-visual-exact {
     transform: none !important;
     margin: 0 !important;
@@ -768,45 +860,51 @@
     max-height: none !important;
     background-color: white !important;
   }
-  
+
   /* Force page breaks in print mode */
   .quotation-visual-exact[style*="pageBreakBefore"] {
     page-break-before: always !important;
     break-before: page !important;
     margin-top: 0 !important;
   }
-  
+
   /* Ensure first page doesn't break */
   .quotation-visual-exact:not([style*="pageBreakBefore"]) {
     page-break-after: auto;
   }
-  
+
   /* Print-specific table borders - clean structure */
   .table-visual {
-    border: 2px solid #000 !important; /* THICK OUTER BORDER */
-    background-color: white !important; /* Force white background */
+    border: 2px solid #000 !important;
+    /* THICK OUTER BORDER */
+    background-color: white !important;
+    /* Force white background */
   }
-  
+
   .table-visual thead,
   .table-visual tbody,
   .table-visual tr,
   .table-visual td,
   .table-visual th {
-    background-color: transparent !important; /* All table elements transparent by default */
+    background-color: transparent !important;
+    /* All table elements transparent by default */
   }
-  
+
   .table-visual thead th {
-    border-bottom: 2px solid #000 !important; /* THICK HEADER BOTTOM */
+    border-bottom: 2px solid #000 !important;
+    /* THICK HEADER BOTTOM */
   }
-  
+
   .table-visual tbody tr:not(:last-child) td {
-    border-bottom: 1px solid #ccc !important; /* THIN DATA ROW BORDERS */
+    border-bottom: 1px solid #ccc !important;
+    /* THIN DATA ROW BORDERS */
   }
-  
+
   .table-visual tbody tr:last-child td {
-    border-top: 2px solid #000 !important; /* THICK TOTAL TOP */
+    border-top: 2px solid #000 !important;
+    /* THICK TOTAL TOP */
   }
-  
+
   /* Hide continuation note in print */
   .continuation-note {
     display: none !important;
@@ -817,17 +915,17 @@
     border: none !important;
     visibility: hidden !important;
   }
-  
+
   /* Ensure empty rows don't show gray backgrounds in print */
   .table-visual tbody tr td:empty {
     background-color: transparent !important;
   }
-  
+
   /* Force white background on entire document */
   .quotation-visual-exact {
     background-color: white !important;
   }
-  
+
   /* Hide page separator in print */
   .page-separator {
     display: none !important;
@@ -835,14 +933,14 @@
 }
 
 /* Billing Mode - Bottom alignment for details sections */
-.billing-header ~ .contact-section-visual {
+.billing-header~.contact-section-visual {
   min-height: 110px !important;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
 }
 
-.billing-header ~ * .quotation-details-visual {
+.billing-header~* .quotation-details-visual {
   height: 110px !important;
   display: flex;
   flex-direction: column;
@@ -857,24 +955,30 @@
 /* Bank Details Section Styling for Billing Statement - DEFAULT MAXIMUM COMPRESSION */
 .bank-details-section {
   margin-bottom: 10px;
-  font-size: 8px !important; /* Maximum compression as default */
+  font-size: 8px !important;
+  /* Maximum compression as default */
   color: #000;
   border: 2px solid #000;
-  padding: 5px !important; /* Tightest padding */
-  margin-top: 15px; /* Adjusted for maximum compression */
+  padding: 5px !important;
+  /* Tightest padding */
+  margin-top: 15px;
+  /* Adjusted for maximum compression */
 }
 
 .bank-details-title {
   font-weight: bold;
-  margin-bottom: 3px !important; /* Tightest margin */
-  font-size: 8px !important; /* Maximum compression as default */
+  margin-bottom: 3px !important;
+  /* Tightest margin */
+  font-size: 8px !important;
+  /* Maximum compression as default */
   color: #000;
 }
 
 .bank-details-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1px !important; /* Tightest gap */
+  gap: 1px !important;
+  /* Tightest gap */
 }
 
 .bank-detail-row {
@@ -887,13 +991,15 @@
 .bank-label {
   font-weight: normal;
   min-width: 200px;
-  font-size: 8px !important; /* Maximum compression as default */
+  font-size: 8px !important;
+  /* Maximum compression as default */
   flex-shrink: 0;
 }
 
 .bank-value {
   font-weight: normal;
-  font-size: 8px !important; /* Maximum compression as default */
+  font-size: 8px !important;
+  /* Maximum compression as default */
   flex: 1;
   word-wrap: break-word;
   line-height: 1.3;
@@ -904,12 +1010,14 @@
 
 /* Row 11: First compression - billing statement */
 .quotation-visual-exact:has(.billing-header).task-count-11 .signatures-visual {
-  margin-bottom: 18px; /* Reduced from 20px */
+  margin-bottom: 18px;
+  /* Reduced from 20px */
 }
 
 /* Row 12: More compression - billing statement */
 .quotation-visual-exact:has(.billing-header).task-count-12 .signatures-visual {
-  margin-bottom: 15px; /* Further reduced */
+  margin-bottom: 15px;
+  /* Further reduced */
 }
 
 /* Row 13: Maximum content compression - billing statement */
@@ -924,7 +1032,8 @@
 
 /* Row 14: Content stays fixed, table compression begins - billing statement */
 .quotation-visual-exact:has(.billing-header).task-count-14 .signatures-visual {
-  margin-bottom: 10px; /* Fixed position */
+  margin-bottom: 10px;
+  /* Fixed position */
 }
 
 .quotation-visual-exact:has(.billing-header).task-count-14 .signature-row-visual {

@@ -270,6 +270,44 @@ app.whenReady().then(() => {
     } catch (err) { return null }
   })
 
+  // --- Printing & PDF Handlers ---
+  ipcMain.handle('print-window', async (event, options = {}) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return { success: false, error: 'Window not found' }
+    return new Promise((resolve) => {
+      win.webContents.print(options, (success, failureReason) => {
+        resolve({ success, error: failureReason })
+      })
+    })
+  })
+
+  ipcMain.handle('print-to-pdf', async (event, options = {}) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return { success: false, error: 'Window not found' }
+    try {
+      const data = await win.webContents.printToPDF(options)
+      return { success: true, data }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  ipcMain.handle('show-save-dialog', async (event, options = {}) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    return await dialog.showSaveDialog(win, options)
+  })
+
+  ipcMain.handle('write-file', async (_, filePath, data) => {
+    try {
+      // Data might be a Buffer (from printToPDF) or string
+      const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data)
+      fs.writeFileSync(filePath, buffer)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  })
+
   // --- Stopwatch File System Handlers ---
   const { exec } = require('child_process')
   const XLSX = require('xlsx')

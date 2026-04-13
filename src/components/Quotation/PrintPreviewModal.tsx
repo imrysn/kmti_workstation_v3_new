@@ -28,15 +28,15 @@ const PrintPreviewModal = memo(({
   companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures,
   manualOverrides = {}, onUpdateTasks, onUpdateManualOverrides
 }: Props) => {
-  const [isProcessing, setIsProcessing]   = useState(false)
-  const [printMode, setPrintMode]         = useState<'quotation' | 'billing'>('quotation')
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [printMode, setPrintMode] = useState<'quotation' | 'billing'>('quotation')
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false)
-  const [localTasks, setLocalTasks]       = useState<Task[]>(tasks)
+  const [localTasks, setLocalTasks] = useState<Task[]>(tasks)
   const [localManualOverrides, setLocalManualOverrides] = useState<ManualOverrides>(manualOverrides)
-  const [scale, setScale]                 = useState(1)
+  const [scale, setScale] = useState(1)
 
-  const previewRef       = useRef<HTMLDivElement>(null)
-  const containerRef     = useRef<HTMLDivElement>(null)
+  const previewRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Sync state when parent changes
   useEffect(() => { setLocalTasks(tasks) }, [tasks])
@@ -49,7 +49,7 @@ const PrintPreviewModal = memo(({
     if (!el) return
 
     const measure = () => {
-      const availW = el.clientWidth  - 64   // 32px padding each side
+      const availW = el.clientWidth - 64   // 32px padding each side
       const availH = el.clientHeight - 64
       const scaleW = availW / A4_W_PX
       const scaleH = availH / A4_H_PX
@@ -80,22 +80,22 @@ const PrintPreviewModal = memo(({
   const calculateTaskTotal = useCallback((task: Task): number => {
     const subTasks = localTasks.filter(t => t.parentId === task.id)
     const rate = task.type === '2D' ? baseRates.timeChargeRate2D : baseRates.timeChargeRate3D
-    let hours    = (task.hours || 0) + (task.minutes || 0) / 60
+    let hours = (task.hours || 0) + (task.minutes || 0) / 60
     let overtime = task.overtimeHours
     let software = task.softwareUnits || 0
     subTasks.forEach(sub => {
-      hours    += (sub.hours || 0) + (sub.minutes || 0) / 60
+      hours += (sub.hours || 0) + (sub.minutes || 0) / 60
       overtime += sub.overtimeHours
       software += sub.softwareUnits || 0
     })
     let basicLabor = hours * rate
-    let ot         = overtime * baseRates.overtimeRate
-    let sw         = software * baseRates.softwareRate
+    let ot = overtime * baseRates.overtimeRate
+    let sw = software * baseRates.softwareRate
     const ov = localManualOverrides[task.id]
     if (ov) {
       basicLabor = ov.basicLabor !== undefined ? ov.basicLabor : basicLabor
-      ot         = ov.overtime   !== undefined ? ov.overtime   : ot
-      sw         = ov.software   !== undefined ? ov.software   : sw
+      ot = ov.overtime !== undefined ? ov.overtime : ot
+      sw = ov.software !== undefined ? ov.software : sw
       if (ov.total !== undefined) return ov.total
     }
     return basicLabor + ot + sw
@@ -108,26 +108,26 @@ const PrintPreviewModal = memo(({
     grandTotal, overheadTotal, actualTaskCount, maxRows,
     totalPages, secondPageEmptyRows
   } = useMemo(() => {
-    const mainTasks       = localTasks.filter(t => t.isMainTask).slice(0, 27)
-    const count           = mainTasks.length
+    const mainTasks = localTasks.filter(t => t.isMainTask).slice(0, 27)
+    const count = mainTasks.length
     const needsPagination = count >= 16
-    const useCompression  = count >= 9 && count <= 15 && !needsPagination
+    const useCompression = count >= 9 && count <= 15 && !needsPagination
 
-    const firstPageTasks  = needsPagination ? mainTasks.slice(0, 15) : mainTasks
-    const secondPageTasks = needsPagination ? mainTasks.slice(15)    : []
+    const firstPageTasks = needsPagination ? mainTasks.slice(0, 15) : mainTasks
+    const secondPageTasks = needsPagination ? mainTasks.slice(15) : []
 
     const secondPageEmptyRows = needsPagination && secondPageTasks.length <= 7 ? 5 : 0
 
-    const firstPageTotals  = firstPageTasks.map(calculateTaskTotal)
+    const firstPageTotals = firstPageTasks.map(calculateTaskTotal)
     const secondPageTotals = secondPageTasks.map(calculateTaskTotal)
 
-    const subtotal   = [...firstPageTotals, ...secondPageTotals].reduce((s, t) => s + t, 0)
-    const overhead   = subtotal * (baseRates.overheadPercentage / 100)
-    const grand      = subtotal + overhead
-    const taskCount  = count + (baseRates.overheadPercentage > 0 ? 1 : 0) + 1
-    const rows       = needsPagination ? 15
-                     : useCompression ? taskCount
-                     : taskCount > 10 ? Math.min(taskCount, 20) : 10
+    const subtotal = [...firstPageTotals, ...secondPageTotals].reduce((s, t) => s + t, 0)
+    const overhead = subtotal * (baseRates.overheadPercentage / 100)
+    const grand = subtotal + overhead
+    const taskCount = count + (baseRates.overheadPercentage > 0 ? 1 : 0) + 1
+    const rows = needsPagination ? 15
+      : useCompression ? taskCount
+        : taskCount > 10 ? Math.min(taskCount, 20) : 10
 
     return {
       firstPageTasks, secondPageTasks, needsPagination,
@@ -152,11 +152,16 @@ const PrintPreviewModal = memo(({
     try {
       const el = (window as any).electronAPI
       if (el?.print) {
-        await el.print({
-          silent: false, printBackground: true, color: true,
+        // Native Electron Print
+        const result = await el.print({
+          silent: false,
+          printBackground: true,
+          color: true,
+          pageSize: 'A4',
           margins: { marginType: 'custom', top: 5, bottom: 5, left: 5, right: 5 },
-          pageSize: 'A4', landscape: false
+          landscape: false
         })
+        if (result?.error) console.error('Print error:', result.error)
       } else {
         window.print()
       }
@@ -171,31 +176,52 @@ const PrintPreviewModal = memo(({
     setIsProcessing(true)
     try {
       const el = (window as any).electronAPI
+      if (!el || !el.printToPDF || !el.showSaveDialog || !el.writeFile) {
+        window.print()
+        return
+      }
+
       const docType = printMode === 'billing' ? 'BillingStatement' : 'Quotation'
-      const docNo   = printMode === 'billing'
+      const docNo = printMode === 'billing'
         ? (quotationDetails.invoiceNo || quotationDetails.quotationNo || 'Draft')
         : (quotationDetails.quotationNo || 'Draft')
+      const defaultName = `KMTI_${docType}_${docNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
 
-      if (el?.printToPDF) {
-        const tmp = document.createElement('div')
-        tmp.id   = 'electron-pdf-capture'
-        tmp.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:white;'
-        if (previewRef.current) tmp.innerHTML = previewRef.current.innerHTML
-        document.body.appendChild(tmp)
-        await new Promise(r => setTimeout(r, 200))
-        await el.printToPDF({
-          margins: { marginType: 'custom', top: 5, bottom: 5, left: 5, right: 5 },
-          pageSize: 'A4', landscape: false, printBackground: true,
-          filename: `KMTI_${docType}_${docNo}.pdf`
-        })
-        document.body.removeChild(tmp)
-      } else {
-        window.print()
+      // Give UI state a moment to settle (Generating... text)
+      await new Promise(r => setTimeout(r, 500))
+
+      // 1. Generate PDF Buffer
+      const pdfResult = await el.printToPDF({
+        printBackground: true,
+        preferCSSPageSize: true,
+        pageSize: 'A4',
+        landscape: false,
+        margins: { marginType: 'none' }
+      })
+
+      if (!pdfResult.success || !pdfResult.data) {
+        throw new Error(pdfResult.error || 'Failed to generate PDF')
       }
-    } catch (err) {
-      console.error('PDF generation failed:', err)
-      const fb = document.getElementById('electron-pdf-capture')
-      if (fb) document.body.removeChild(fb)
+
+      // 2. Show Save Dialog
+      const saveResult = await el.showSaveDialog({
+        title: `Save ${docType}`,
+        defaultPath: defaultName,
+        filters: [{ name: 'PDF Document', extensions: ['pdf'] }]
+      })
+
+      if (saveResult.canceled || !saveResult.filePath) return
+
+      // 3. Write File
+      const writeResult = await el.writeFile(saveResult.filePath, pdfResult.data)
+      if (!writeResult.success) {
+        throw new Error(writeResult.error || 'Failed to write file')
+      }
+
+      // Success! Maybe show a toast if available
+    } catch (err: any) {
+      console.error('PDF Download failed:', err)
+      alert(`Error generating PDF: ${err.message}`)
     } finally {
       setIsProcessing(false)
     }
@@ -236,15 +262,15 @@ const PrintPreviewModal = memo(({
           {!isSecondPage && (
             <div className="quotation-details-visual">
               <div className="detail-row-visual">
-                <span className="detail-label-visual">Quotation No.:</span>
+                <span className="detail-label-visual">Quotation NO.:</span>
                 <span className="detail-value-visual">{quotationDetails.quotationNo || ''}</span>
               </div>
               <div className="detail-row-visual">
-                <span className="detail-label-visual">Reference No.:</span>
+                <span className="detail-label-visual">REFERENCE NO.:</span>
                 <span className="detail-value-visual">{quotationDetails.referenceNo || ''}</span>
               </div>
               <div className="detail-row-visual">
-                <span className="detail-label-visual">Date:</span>
+                <span className="detail-label-visual">DATE:</span>
                 <span className="detail-value-visual">{quotationDetails.date || ''}</span>
               </div>
             </div>
@@ -264,8 +290,8 @@ const PrintPreviewModal = memo(({
     const isLastPage = !needsPagination || startIndex > 0
     const emptyCount = isLastPage
       ? (startIndex === 0
-          ? Math.max(0, maxRows - pageTasks.length - (baseRates.overheadPercentage > 0 ? 1 : 0) - 1)
-          : secondPageEmptyRows)
+        ? Math.max(0, maxRows - pageTasks.length - (baseRates.overheadPercentage > 0 ? 1 : 0) - 1)
+        : secondPageEmptyRows)
       : 0
 
     return (
@@ -275,7 +301,7 @@ const PrintPreviewModal = memo(({
             <th className="col-no">NO.</th>
             <th className="col-reference">REFERENCE NO.</th>
             <th className="col-description">DESCRIPTION</th>
-            <th className="col-unitpage">UNIT PAGE</th>
+            <th className="col-unitpage">Qty PAGE</th>
             <th className="col-type">TYPE</th>
             <th className="col-price">PRICE</th>
           </tr>
@@ -307,8 +333,8 @@ const PrintPreviewModal = memo(({
             <>
               {baseRates.overheadPercentage > 0 && (
                 <tr>
-                  <td /><td>Administrative overhead</td>
-                  <td className="description-cell" />
+                  <td /><td />
+                  <td className="description-cell">Administrative overhead</td>
                   <td /><td />
                   <td className="price-cell">{fmt(overheadTotal)}</td>
                 </tr>
@@ -354,7 +380,6 @@ const PrintPreviewModal = memo(({
       <div className="signature-row-visual">
         <div className="signature-left-visual" />
         <div className="signature-right-visual">
-          <div className="sig-label-visual">Final Approver:</div>
           <div className="sig-line-visual" />
           <div className="sig-name-visual">{signatures.billing.finalApprover.name || 'MR. YUICHIRO MAENO'}</div>
           <div className="sig-title-visual">{signatures.billing.finalApprover.title || 'President'}</div>
@@ -491,9 +516,9 @@ const PrintPreviewModal = memo(({
         <div className="ppm-header">
           <div className="ppm-title">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="6 9 6 2 18 2 18 9"/>
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-              <rect x="6" y="14" width="12" height="8"/>
+              <polyline points="6 9 6 2 18 2 18 9" />
+              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+              <rect x="6" y="14" width="12" height="8" />
             </svg>
             <h2>Print Preview — {printMode === 'billing' ? 'Billing Statement' : 'Quotation'}</h2>
           </div>
@@ -507,10 +532,10 @@ const PrintPreviewModal = memo(({
                 onClick={() => setPrintMode('quotation')}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
                 </svg>
-                Print Quotation
+                Quotation Preview
               </button>
               <button
                 id="ppm-btn-billing"
@@ -518,10 +543,10 @@ const PrintPreviewModal = memo(({
                 onClick={() => setPrintMode('billing')}
               >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
                 </svg>
-                Print Billing Statement
+                Billing Statement Preview
               </button>
             </div>
 
@@ -535,8 +560,8 @@ const PrintPreviewModal = memo(({
               disabled={isProcessing}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
               </svg>
               Quick Edit
             </button>
@@ -549,9 +574,9 @@ const PrintPreviewModal = memo(({
               disabled={isProcessing}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9"/>
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                <rect x="6" y="14" width="12" height="8"/>
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
               </svg>
               {isProcessing ? 'Processing…' : 'Print'}
             </button>
@@ -564,9 +589,9 @@ const PrintPreviewModal = memo(({
               disabled={isProcessing}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
               {isProcessing ? 'Generating…' : 'Download PDF'}
             </button>
@@ -574,8 +599,8 @@ const PrintPreviewModal = memo(({
             {/* Close */}
             <button id="ppm-btn-close" className="ppm-close-btn" onClick={onClose}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
@@ -588,7 +613,7 @@ const PrintPreviewModal = memo(({
             <div
               className="ppm-a4-scaler"
               style={{
-                width:  `${A4_W_PX * scale}px`,
+                width: `${A4_W_PX * scale}px`,
                 height: `${A4_H_PX * (needsPagination ? 2 : 1) * scale + (needsPagination ? 80 * scale : 0)}px`,
               }}
             >
@@ -596,7 +621,7 @@ const PrintPreviewModal = memo(({
                 style={{
                   transform: `scale(${scale})`,
                   transformOrigin: 'top left',
-                  width:  `${A4_W_PX}px`,
+                  width: `${A4_W_PX}px`,
                 }}
               >
                 <div ref={previewRef} className="preview-content">
@@ -612,8 +637,8 @@ const PrintPreviewModal = memo(({
         <div className="ppm-footer-bar">
           <span>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
             </svg>
             Page {totalPages > 1 ? `1–${totalPages}` : '1'} of {totalPages} · A4 Portrait
           </span>
