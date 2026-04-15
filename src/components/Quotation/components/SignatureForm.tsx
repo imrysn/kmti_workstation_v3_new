@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react'
-import type { Signatures } from '../../hooks/quotation'
+import type { Signatures } from '../../../hooks/quotation'
 
 interface Props {
   signatures: Signatures

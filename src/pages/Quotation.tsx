@@ -8,8 +8,8 @@ import {
   TasksTable,
   SignatureForm,
   PrintPreviewModal,
+  BaseRatesPanel
 } from '../components/Quotation'
-import BaseRatesPanel from '../components/Quotation/BaseRatesPanel'
 import './quotation/QuotationApp.css'
 import './Quotation.css'
 

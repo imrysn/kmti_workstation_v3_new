@@ -30,80 +30,81 @@
   /* Default baseline - no adjustments */
 }
 
-/* Row 11: First expansion - minimal compression */
-.quotation-visual-exact.task-count-11 .terms-visual {
+/* Row 11: First expansion - minimal compression - Billing mode only */
+.quotation-visual-exact.mode-billing.task-count-11 .terms-visual {
   margin-top: 28px !important;
-  /* Slight reduction from 30px */
   margin-bottom: 28px !important;
 }
 
-.quotation-visual-exact.task-count-11 .footer-visual {
+.quotation-visual-exact.mode-billing.task-count-11 .footer-visual {
   margin-top: 30px !important;
-  /* Slight reduction from 50px */
 }
 
-/* Row 12: More compression */
-.quotation-visual-exact.task-count-12 .terms-visual {
+/* Row 12: More compression - Billing mode only */
+.quotation-visual-exact.mode-billing.task-count-12 .terms-visual {
   margin-top: 20px !important;
   margin-bottom: 20px !important;
 }
 
-.quotation-visual-exact.task-count-12 .signatures-visual {
+.quotation-visual-exact.mode-billing.task-count-12 .signatures-visual {
   margin-bottom: 18px !important;
-  /* Slight reduction from 20px */
 }
 
-.quotation-visual-exact.task-count-12 .footer-visual {
+.quotation-visual-exact.mode-billing.task-count-12 .footer-visual {
   margin-top: 20px !important;
 }
 
-/* Row 13: Maximum content compression before table compression starts */
-.quotation-visual-exact.task-count-13 .terms-visual {
+/* Row 13: Maximum content compression - Billing mode only */
+.quotation-visual-exact.mode-billing.task-count-13 .terms-visual {
   margin-top: 20px !important;
   margin-bottom: 12px !important;
 }
 
-.quotation-visual-exact.task-count-13 .signatures-visual {
+.quotation-visual-exact.mode-billing.task-count-13 .signatures-visual {
   margin-bottom: 10px !important;
 }
 
-.quotation-visual-exact.task-count-13 .signature-row-visual {
+.quotation-visual-exact.mode-billing.task-count-13 .signature-row-visual {
   margin-bottom: 10px !important;
-  /* Slight reduction from 20px */
   min-height: 75px !important;
-  /* Slight reduction from 80px */
 }
 
-.quotation-visual-exact.task-count-13 .footer-visual {
+.quotation-visual-exact.mode-billing.task-count-13 .footer-visual {
   margin-top: 5px !important;
 }
 
-/* Row 14: Content stays fixed, table compression begins */
-.quotation-visual-exact.task-count-14 .terms-visual {
-  margin-top: 20px !important;
-  /* Same as row 13 - stays fixed */
+.quotation-visual-exact.mode-billing.task-count-14 .terms-visual {
+  margin-top: 15px !important;
+  margin-bottom: 10px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .signatures-visual {
   margin-bottom: 15px !important;
 }
 
-.quotation-visual-exact.task-count-14 .signatures-visual {
+.quotation-visual-exact.mode-billing.task-count-14 .signature-row-visual {
   margin-bottom: 15px !important;
-  /* Same as row 13 - stays fixed */
+  min-height: 80px !important;
 }
 
-.quotation-visual-exact.task-count-14 .signature-row-visual {
+.quotation-visual-exact.mode-billing.task-count-14 .sig-label-visual {
   margin-bottom: 15px !important;
-  /* Same as row 13 - stays fixed */
-  min-height: 75px !important;
 }
 
-.quotation-visual-exact.task-count-14 .footer-visual {
+.quotation-visual-exact.mode-billing.task-count-14 .sig-line-visual {
+  height: 30px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .sig-name-visual {
+  font-size: 14px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .footer-visual {
   margin-top: 10px !important;
-  /* Same as row 13 - stays fixed */
 }
 
-.quotation-visual-exact.task-count-14 .table-visual {
+.quotation-visual-exact.mode-billing.task-count-14 .table-visual {
   font-size: 10.5px;
-  /* Start table compression */
 }
 
 .quotation-visual-exact.task-count-14 .table-visual th,
@@ -112,28 +113,146 @@
   /* Slight reduction from 5px 3px */
 }
 
-/* Row 15: More table compression */
-.quotation-visual-exact.task-count-15 .terms-visual {
+.quotation-visual-exact.mode-billing.task-count-19 .terms-visual {
+  margin-top: 5px !important;
+  margin-bottom: 3px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .signatures-visual {
+  margin-bottom: 6px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .signature-row-visual {
+  margin-bottom: 6px !important;
+  min-height: 70px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .sig-label-visual {
+  margin-bottom: 6px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .sig-line-visual {
+  height: 20px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .sig-name-visual {
+  font-size: 12px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .footer-visual {
+  margin-top: -5px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-15 .table-visual {
+  font-size: 10px;
+}
+
+/* QUOTATION MODE - Compression to fit 14+ tasks - RELAXED */
+.quotation-visual-exact.mode-quotation.task-count-14 .terms-visual {
+  margin-top: 25px !important;
+  margin-bottom: 20px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .signature-row-visual {
+  min-height: 75px !important;
+  margin-bottom: 12px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .sig-line-visual {
+  height: 28px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .table-visual {
+  font-size: 11px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-14 .table-visual td {
+  padding: 5px 2px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-15 .terms-visual {
   margin-top: 20px !important;
-  /* Content stays fixed */
   margin-bottom: 15px !important;
 }
 
-.quotation-visual-exact.task-count-15 .signatures-visual {
+.quotation-visual-exact.mode-quotation.task-count-15 .signature-row-visual {
+  min-height: 70px !important;
   margin-bottom: 10px !important;
 }
 
-.quotation-visual-exact.task-count-15 .signature-row-visual {
+.quotation-visual-exact.mode-quotation.task-count-15 .sig-line-visual {
+  height: 25px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-15 .table-visual {
+  font-size: 10.5px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-15 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-15 .table-visual td {
+  padding: 4.5px 2px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-16 .terms-visual {
+  margin-top: 15px !important;
+  margin-bottom: 12px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-16 .signature-row-visual {
+  min-height: 70px !important;
+  margin-bottom: 8px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-16 .table-visual {
+  font-size: 10px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-16 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-16 .table-visual td {
+  padding: 4px 2px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-17 .terms-visual,
+.quotation-visual-exact.mode-quotation.task-count-18 .terms-visual,
+.quotation-visual-exact.mode-quotation.task-count-19 .terms-visual,
+.quotation-visual-exact.mode-quotation.task-count-20 .terms-visual {
+  margin-top: 12px !important;
   margin-bottom: 10px !important;
-  min-height: 75px !important;
+  font-size: 12.5px !important;
 }
 
-.quotation-visual-exact.task-count-15 .footer-visual {
-  margin-top: 10px !important;
+.quotation-visual-exact.mode-quotation.task-count-17 .signature-row-visual,
+.quotation-visual-exact.mode-quotation.task-count-18 .signature-row-visual,
+.quotation-visual-exact.mode-quotation.task-count-19 .signature-row-visual,
+.quotation-visual-exact.mode-quotation.task-count-20 .signature-row-visual {
+  min-height: 65px !important;
+  margin-bottom: 6px !important;
 }
 
-.quotation-visual-exact.task-count-15 .table-visual {
-  font-size: 10px;
+.quotation-visual-exact.mode-quotation.task-count-17 .sig-line-visual,
+.quotation-visual-exact.mode-quotation.task-count-18 .sig-line-visual,
+.quotation-visual-exact.mode-quotation.task-count-19 .sig-line-visual,
+.quotation-visual-exact.mode-quotation.task-count-20 .sig-line-visual {
+  height: 22px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-17 .table-visual,
+.quotation-visual-exact.mode-quotation.task-count-18 .table-visual,
+.quotation-visual-exact.mode-quotation.task-count-19 .table-visual,
+.quotation-visual-exact.mode-quotation.task-count-20 .table-visual {
+  font-size: 9px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-17 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-17 .table-visual td,
+.quotation-visual-exact.mode-quotation.task-count-18 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-18 .table-visual td,
+.quotation-visual-exact.mode-quotation.task-count-19 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-19 .table-visual td,
+.quotation-visual-exact.mode-quotation.task-count-20 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-20 .table-visual td {
+  padding: 3px 1.5px !important;
 }
 
 .quotation-visual-exact.task-count-15 .table-visual th {
@@ -145,123 +264,163 @@
   padding: 4px 2px;
 }
 
-/* Row 16: Increased table compression */
-.quotation-visual-exact.task-count-16 .terms-visual {
-  margin-top: 20px !important;
-  /* Content stays fixed */
-  margin-bottom: 20px !important;
+.quotation-visual-exact.mode-billing.task-count-16 .terms-visual {
+  margin-top: 12px !important;
+  margin-bottom: 6px !important;
 }
 
-.quotation-visual-exact.task-count-16 .signatures-visual {
-  margin-bottom: 15px !important;
+.quotation-visual-exact.mode-billing.task-count-16 .signatures-visual {
+  margin-bottom: 10px !important;
 }
 
-.quotation-visual-exact.task-count-16 .signature-row-visual {
-  margin-bottom: 18px !important;
+.quotation-visual-exact.mode-billing.task-count-16 .signature-row-visual {
+  margin-bottom: 10px !important;
   min-height: 75px !important;
 }
 
-.quotation-visual-exact.task-count-16 .footer-visual {
-  margin-top: 30px !important;
+.quotation-visual-exact.mode-billing.task-count-16 .sig-label-visual {
+  margin-bottom: 10px !important;
 }
 
-.quotation-visual-exact.task-count-16 .table-visual {
+.quotation-visual-exact.mode-billing.task-count-16 .sig-line-visual {
+  height: 25px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-16 .sig-name-visual {
+  font-size: 13px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-16 .footer-visual {
+  margin-top: 10px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-16 .table-visual {
   font-size: 9.5px;
 }
 
-.quotation-visual-exact.task-count-16 .table-visual th {
+.quotation-visual-exact.mode-billing.task-count-16 .table-visual th {
   padding: 3px 2px;
   font-size: 10px;
 }
 
-.quotation-visual-exact.task-count-16 .table-visual td {
+.quotation-visual-exact.mode-billing.task-count-16 .table-visual td {
   padding: 3px 2px;
 }
 
-/* Row 17: More compression */
-.quotation-visual-exact.task-count-17 .terms-visual {
-  margin-top: 20px !important;
-  /* Content stays fixed */
-  margin-bottom: 20px !important;
+.quotation-visual-exact.mode-billing.task-count-17 .terms-visual {
+  margin-top: 10px !important;
+  margin-bottom: 5px !important;
 }
 
-.quotation-visual-exact.task-count-17 .signatures-visual {
-  margin-bottom: 15px !important;
+.quotation-visual-exact.mode-billing.task-count-17 .signatures-visual {
+  margin-bottom: 10px !important;
 }
 
-.quotation-visual-exact.task-count-17 .signature-row-visual {
-  margin-bottom: 18px !important;
+.quotation-visual-exact.mode-billing.task-count-17 .signature-row-visual {
+  margin-bottom: 10px !important;
   min-height: 75px !important;
 }
 
-.quotation-visual-exact.task-count-17 .footer-visual {
-  margin-top: 20px !important;
+.quotation-visual-exact.mode-billing.task-count-17 .sig-label-visual {
+  margin-bottom: 8px !important;
 }
 
-.quotation-visual-exact.task-count-17 .table-visual {
+.quotation-visual-exact.mode-billing.task-count-17 .sig-line-visual {
+  height: 22px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-17 .sig-name-visual {
+  font-size: 13px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-17 .footer-visual {
+  margin-top: 5px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-17 .table-visual {
   font-size: 9px;
 }
 
-.quotation-visual-exact.task-count-17 .table-visual th {
+.quotation-visual-exact.mode-billing.task-count-17 .table-visual th {
   padding: 3px 1px;
   font-size: 9.5px;
 }
 
-.quotation-visual-exact.task-count-17 .table-visual td {
+.quotation-visual-exact.mode-billing.task-count-17 .table-visual td {
   padding: 3px 1px;
 }
 
-/* Row 18: Aggressive compression */
-.quotation-visual-exact.task-count-18 .terms-visual {
-  margin-top: 20px !important;
-  /* Content stays fixed */
-  margin-bottom: 20px !important;
+.quotation-visual-exact.mode-billing.task-count-18 .terms-visual {
+  margin-top: 8px !important;
+  margin-bottom: 4px !important;
 }
 
-.quotation-visual-exact.task-count-18 .signatures-visual {
-  margin-bottom: 15px !important;
+.quotation-visual-exact.mode-billing.task-count-18 .signatures-visual {
+  margin-bottom: 10px !important;
 }
 
-.quotation-visual-exact.task-count-18 .signature-row-visual {
-  margin-bottom: 18px !important;
+.quotation-visual-exact.mode-billing.task-count-18 .signature-row-visual {
+  margin-bottom: 10px !important;
   min-height: 75px !important;
 }
 
-.quotation-visual-exact.task-count-18 .footer-visual {
-  margin-top: 15px !important;
+.quotation-visual-exact.mode-billing.task-count-18 .sig-label-visual {
+  margin-bottom: 8px !important;
 }
 
-.quotation-visual-exact.task-count-18 .table-visual {
+.quotation-visual-exact.mode-billing.task-count-18 .sig-line-visual {
+  height: 20px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-18 .sig-name-visual {
+  font-size: 12px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-18 .footer-visual {
+  margin-top: 0px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-18 .table-visual {
   font-size: 8.5px;
 }
 
-.quotation-visual-exact.task-count-18 .table-visual th {
+.quotation-visual-exact.mode-billing.task-count-18 .table-visual th {
   padding: 2px 1px;
   font-size: 9px;
 }
 
-.quotation-visual-exact.task-count-18 .table-visual td {
+.quotation-visual-exact.mode-billing.task-count-18 .table-visual td {
   padding: 3px 1px;
 }
 
-/* Row 19: Near maximum compression */
-.quotation-visual-exact.task-count-19 .terms-visual {
-  margin-top: 20px !important;
-  /* Content stays fixed */
-  margin-bottom: 10px !important;
+.quotation-visual-exact.mode-billing.task-count-19 .terms-visual {
+  margin-top: 5px !important;
+  margin-bottom: 3px !important;
 }
 
-.quotation-visual-exact.task-count-19 .signatures-visual {
-  margin-bottom: 15x !important;
+.quotation-visual-exact.mode-billing.task-count-19 .signatures-visual {
+  margin-bottom: 3px !important;
 }
 
-.quotation-visual-exact.task-count-19 .signature-row-visual {
-  margin-bottom: 5px !important;
-  min-height: 75px !important;
+.quotation-visual-exact.mode-billing.task-count-19 .signature-row-visual {
+  margin-bottom: 3px !important;
+  min-height: 50px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .sig-label-visual {
+  margin-bottom: 2px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-19 .sig-line-visual {
+  height: 10px !important;
+}
+
+.quotation-visual-exact.task-count-19 .sig-name-visual {
+  font-size: 11px !important;
 }
 
 .quotation-visual-exact.task-count-19 .footer-visual {
-  margin-top: -5px !important;
+  margin-top: -15px !important;
 }
 
 .quotation-visual-exact.task-count-19 .table-visual {
@@ -277,36 +436,46 @@
   padding: 3px 1px;
 }
 
-/* Row 20: Maximum compression */
-.quotation-visual-exact.task-count-20 .terms-visual {
-  margin-top: 20px !important;
-  /* Content stays fixed */
-  margin-bottom: 15px !important;
+.quotation-visual-exact.mode-billing.task-count-20 .terms-visual {
+  margin-top: 5px !important;
+  margin-bottom: 2px !important;
 }
 
-.quotation-visual-exact.task-count-20 .signatures-visual {
-  margin-bottom: 15px !important;
+.quotation-visual-exact.mode-billing.task-count-20 .signatures-visual {
+  margin-bottom: 5px !important;
 }
 
-.quotation-visual-exact.task-count-20 .signature-row-visual {
-  margin-bottom: 10px !important;
-  min-height: 75px !important;
+.quotation-visual-exact.mode-billing.task-count-20 .signature-row-visual {
+  margin-bottom: 5px !important;
+  min-height: 60px !important;
 }
 
-.quotation-visual-exact.task-count-20 .footer-visual {
-  margin-top: -5px !important;
+.quotation-visual-exact.mode-billing.task-count-20 .sig-label-visual {
+  margin-bottom: 5px !important;
 }
 
-.quotation-visual-exact.task-count-20 .table-visual {
+.quotation-visual-exact.mode-billing.task-count-20 .sig-line-visual {
+  height: 18px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-20 .sig-name-visual {
+  font-size: 11px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-20 .footer-visual {
+  margin-top: -10px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-20 .table-visual {
   font-size: 7.5px;
 }
 
-.quotation-visual-exact.task-count-20 .table-visual th {
+.quotation-visual-exact.mode-billing.task-count-20 .table-visual th {
   padding: 1px;
   font-size: 8px;
 }
 
-.quotation-visual-exact.task-count-20 .table-visual td {
+.quotation-visual-exact.mode-billing.task-count-20 .table-visual td {
   padding: 3.5px;
 }
 
@@ -744,7 +913,7 @@
   justify-content: space-between;
   font-size: 10px;
   font-style: italic;
-  color: #575757a2;
+  color: #3f3f3f;
   margin-top: 50px;
 }
 
@@ -1008,100 +1177,23 @@
   line-height: 1.3;
 }
 
-/* ===== BILLING STATEMENT RESPONSIVE SPACING (MIRRORS QUOTATION BEHAVIOR) ===== */
-/* These rules make billing statement react to additional rows just like quotation does */
-
-/* Row 11: First compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-11 .signatures-visual {
-  margin-bottom: 18px;
-  /* Reduced from 20px */
+.mode-billing.task-count-14 .q-bottom-content {
+  margin-top: 15px !important;
 }
 
-/* Row 12: More compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-12 .signatures-visual {
-  margin-bottom: 15px;
-  /* Further reduced */
+.mode-billing.task-count-15 .q-bottom-content {
+  margin-top: 10px !important;
 }
 
-/* Row 13: Maximum content compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-13 .signatures-visual {
-  margin-bottom: 12px;
+.mode-billing.task-count-16 .q-bottom-content {
+  margin-top: 5px !important;
 }
 
-.quotation-visual-exact:has(.billing-header).task-count-13 .signature-row-visual {
-  margin-bottom: 10px;
-  min-height: 75px;
-}
-
-/* Row 14: Content stays fixed, table compression begins - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-14 .signatures-visual {
-  margin-bottom: 10px;
-  /* Fixed position */
-}
-
-.quotation-visual-exact:has(.billing-header).task-count-14 .signature-row-visual {
-  margin-bottom: 8px;
-  min-height: 70px;
-}
-
-/* Row 15: More compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-15 .signatures-visual {
-  margin-bottom: 8px;
-}
-
-.quotation-visual-exact:has(.billing-header).task-count-15 .signature-row-visual {
-  margin-bottom: 5px;
-  min-height: 65px;
-}
-
-/* Row 16: Increased compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-16 .signatures-visual {
-  margin-bottom: 5px;
-}
-
-.quotation-visual-exact:has(.billing-header).task-count-16 .signature-row-visual {
-  margin-bottom: 3px;
-  min-height: 60px;
-}
-
-/* Row 17: More compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-17 .signatures-visual {
-  margin-bottom: 3px;
-}
-
-.quotation-visual-exact:has(.billing-header).task-count-17 .signature-row-visual {
-  margin-bottom: 2px;
-  min-height: 55px;
-}
-
-/* Row 18: Aggressive compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-18 .signatures-visual {
-  margin-bottom: 2px;
-}
-
-.quotation-visual-exact:has(.billing-header).task-count-18 .signature-row-visual {
-  margin-bottom: 1px;
-  min-height: 50px;
-}
-
-/* Row 19: Near maximum compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-19 .signatures-visual {
-  margin-bottom: 1px;
-}
-
-.quotation-visual-exact:has(.billing-header).task-count-19 .signature-row-visual {
-  margin-bottom: 1px;
-  min-height: 45px;
-}
-
-/* Row 20: Maximum compression - billing statement */
-.quotation-visual-exact:has(.billing-header).task-count-20 .signatures-visual {
-  margin-bottom: 1px;
-}
-
-.quotation-visual-exact:has(.billing-header).task-count-20 .signature-row-visual {
-  margin-bottom: 1px;
-  min-height: 40px;
+.mode-billing.task-count-17 .q-bottom-content,
+.mode-billing.task-count-18 .q-bottom-content,
+.mode-billing.task-count-19 .q-bottom-content,
+.mode-billing.task-count-20 .q-bottom-content {
+  margin-top: 0px !important;
 }
 
 /* Bank details now use maximum compression by default - no progressive sizing needed */

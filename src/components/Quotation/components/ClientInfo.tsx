@@ -1,5 +1,5 @@
 import { memo, useState } from 'react'
-import type { ClientInfo } from '../../hooks/quotation'
+import type { ClientInfo } from '../../../hooks/quotation'
 
 interface Props {
   clientInfo: ClientInfo

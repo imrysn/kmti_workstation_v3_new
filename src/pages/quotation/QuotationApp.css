@@ -5,10 +5,10 @@
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Arimo:wght@400;600;700&display=swap');
-@import './QuotationTable.css';
-@import './PrintPreviewModal.css';
-@import './QuickEditModal.css';
-@import './VisualLayout.css';
+@import '../../components/Quotation/styles/QuotationTable.css';
+@import '../../components/Quotation/styles/PrintPreviewModal.css';
+@import '../../components/Quotation/styles/QuickEditModal.css';
+@import '../../components/Quotation/styles/VisualLayout.css';
 
 /* ── Professional Design System Variables ─────────────────── */
 :root {

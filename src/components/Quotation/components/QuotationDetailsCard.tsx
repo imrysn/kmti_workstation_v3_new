@@ -1,5 +1,5 @@
 import { memo, useState } from 'react'
-import type { QuotationDetails } from '../../hooks/quotation'
+import type { QuotationDetails } from '../../../hooks/quotation'
 
 interface Props {
   quotationDetails: QuotationDetails

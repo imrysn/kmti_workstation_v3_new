@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from 'react'
-import type { BaseRates } from '../../hooks/quotation'
+import type { BaseRates } from '../../../hooks/quotation'
 
 interface Props {
   isOpen: boolean

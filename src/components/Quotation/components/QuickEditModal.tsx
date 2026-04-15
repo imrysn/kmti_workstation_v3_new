@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
-import type { Task, BaseRates, ManualOverrides } from '../../hooks/quotation'
-import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead } from '../../utils/quotation'
+import type { Task, BaseRates, ManualOverrides } from '../../../hooks/quotation'
+import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead } from '../../../utils/quotation'
 
 interface Props {
   isOpen: boolean
