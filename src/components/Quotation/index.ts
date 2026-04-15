@@ -1,4 +1,3 @@
-export { default as QuotationDetails } from './QuotationDetails'
 export { default as QuotationDetailsCard } from './QuotationDetailsCard'
 export { default as CompanyInfo } from './CompanyInfo'
 export { default as ClientInfo } from './ClientInfo'

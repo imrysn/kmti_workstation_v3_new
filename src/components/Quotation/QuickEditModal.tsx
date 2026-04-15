@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { Task, BaseRates, ManualOverrides } from '../../hooks/quotation'
+import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead } from '../../utils/quotation'
 
 interface Props {
   isOpen: boolean
@@ -46,44 +47,21 @@ const QuickEditModal = ({
       setEditedOverrides({ ...manualOverrides })
       setUnitPageOverrides({})
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   const calculateTaskTotal = (task: EditedTask): number => {
-    const mainTask = editedTasks.find(t => t.id === task.id)
-    if (!mainTask) return 0
-    const subTasks = tasks.filter(t => t.parentId === task.id)
-    const mainTotalHours = (mainTask.hours || 0) + (mainTask.minutes || 0) / 60
-    let aggregatedHours = mainTotalHours
-    let aggregatedOvertime = mainTask.overtimeHours || 0
-    let aggregatedSoftware = mainTask.softwareUnits || 0
-    subTasks.forEach(subTask => {
-      aggregatedHours += (subTask.hours || 0) + (subTask.minutes || 0) / 60
-      aggregatedOvertime += subTask.overtimeHours || 0
-      aggregatedSoftware += subTask.softwareUnits || 0
-    })
-    // Mirror TasksTable rate logic — use timeChargeRateOthers for non-2D/3D
-    const getRate = (type: string) => {
-      if (type === '2D') return baseRates.timeChargeRate2D
-      if (type === '3D' || !type) return baseRates.timeChargeRate3D
-      return baseRates.timeChargeRateOthers || 0
+    // Map EditedTask back to a format compatible with the utility
+    const taskAsTask: Task = {
+      ...tasks.find(t => t.id === task.id)!,
+      ...task
     }
-    let basicLabor = aggregatedHours * getRate(mainTask.type)
-    let overtime = aggregatedOvertime * baseRates.overtimeRate
-    let software = aggregatedSoftware * baseRates.softwareRate
-    const override = editedOverrides[task.id]
-    if (override) {
-      basicLabor = override.basicLabor !== undefined ? override.basicLabor : basicLabor
-      overtime = override.overtime !== undefined ? override.overtime : overtime
-      software = override.software !== undefined ? override.software : software
-      if (override.total !== undefined) return override.total
-    }
-    return basicLabor + overtime + software
+    return calculateTaskSubtotal(taskAsTask, tasks, baseRates, editedOverrides).total
   }
 
   const { overhead, grandTotal } = useMemo(() => {
     const sub = editedTasks.reduce((s, t) => s + calculateTaskTotal(t), 0)
-    const over = sub * (baseRates.overheadPercentage / 100)
+    const over = calculateOverhead(sub, baseRates.overheadPercentage)
     return { overhead: over, grandTotal: sub + over }
   }, [editedTasks, editedOverrides, baseRates])
 
@@ -130,6 +108,16 @@ const QuickEditModal = ({
 
   const formatCurrency = (amount: number) => `¥${amount.toLocaleString()}`
 
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   return (
@@ -140,30 +128,30 @@ const QuickEditModal = ({
           <div className="modal-title">
             {/* RefreshCw icon */}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="title-icon">
-              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
             </svg>
             <h2>Quick Edit Quotation Values</h2>
           </div>
           <div className="modal-header-actions">
             <button onClick={handleReset} className="action-button secondary">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
               </svg>
               Reset
             </button>
             <button onClick={handleApply} className="action-button primary">
               {/* Save icon */}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
               </svg>
               Apply Changes
             </button>
             <button onClick={onClose} className="close-button">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           </div>
@@ -205,7 +193,7 @@ const QuickEditModal = ({
                           className="edit-input" />
                       </td>
                       <td>
-                        <input type="number" value={unitPageCount}
+                        <input type="number" value={unitPageCount || ''}
                           onChange={e => updateUnitPage(task.id, e.target.value)}
                           className="edit-input" min="1"
                           style={{ backgroundColor: isUnitPageOverridden ? '#fff3cd' : 'white', textAlign: 'center' }} />
@@ -217,8 +205,9 @@ const QuickEditModal = ({
                         </select>
                       </td>
                       <td>
-                        <input type="number" value={currentPrice}
+                        <input type="number" value={currentPrice || ''}
                           onChange={e => updatePrice(task.id, e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') updatePrice(task.id, (e.target as HTMLInputElement).value) }}
                           className="edit-input price-input" step={1000} />
                       </td>
                       <td className="center">
@@ -229,8 +218,8 @@ const QuickEditModal = ({
                           }}
                           className="reset-price-btn" title="Reset to calculated values">
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
                           </svg>
                         </button>
                       </td>

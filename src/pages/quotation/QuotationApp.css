@@ -826,24 +826,48 @@
 /* ── Grand Total ────────────────────────────────────────────── */
 .quot-app-root .grand-total-section {
   background: var(--quot-primary);
-  height: 52px;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 24px;
+  border-top: 2px solid var(--quot-primary-deep);
+  gap: 2px;
+}
+
+.quot-app-root .grand-total-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  border-top: 2px solid var(--quot-primary-deep);
+  padding: 2px 0;
 }
 
-.quot-app-root .grand-total-label {
+.quot-app-root .grand-total-row .grand-total-label {
   font-family: 'Arimo', sans-serif;
-  font-size: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.quot-app-root .grand-total-row .grand-total-value {
+  font-family: 'Arimo', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.quot-app-root .grand-total-row.grand-total-final {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  margin-top: 4px;
+  padding-top: 6px;
+}
+
+.quot-app-root .grand-total-row.grand-total-final .grand-total-label {
+  font-size: 16px;
   font-weight: 700;
   color: #ffffff;
 }
 
-.quot-app-root .grand-total-value {
-  font-family: 'Arimo', sans-serif;
-  font-size: 24px;
+.quot-app-root .grand-total-row.grand-total-final .grand-total-value {
+  font-size: 22px;
   font-weight: 700;
   color: #ffffff;
 }

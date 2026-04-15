@@ -58,17 +58,17 @@ const BaseRatesPanel = memo(({ isOpen, onClose, baseRates, onUpdate }: Props) =>
           <div className="brp-header-left">
             <div className="brp-icon">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
-                <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+                <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
               </svg>
             </div>
             <h3 className="brp-title">Rate Settings</h3>
           </div>
           <button className="brp-close-btn" onClick={onClose} title="Close">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
@@ -99,7 +99,7 @@ const BaseRatesPanel = memo(({ isOpen, onClose, baseRates, onUpdate }: Props) =>
                   <span className="brp-currency">¥</span>
                   <input
                     type="number"
-                    value={baseRates.timeChargeRate3D}
+                    value={baseRates.timeChargeRate3D || ''}
                     onChange={e => handleUpdate('timeChargeRate3D', e.target.value)}
                     className="brp-input"
                     min="0"
@@ -112,7 +112,7 @@ const BaseRatesPanel = memo(({ isOpen, onClose, baseRates, onUpdate }: Props) =>
                   <span className="brp-currency">¥</span>
                   <input
                     type="number"
-                    value={baseRates.timeChargeRateOthers}
+                    value={baseRates.timeChargeRateOthers || ''}
                     onChange={e => handleUpdate('timeChargeRateOthers', e.target.value)}
                     className="brp-input"
                     min="0"
@@ -132,7 +132,7 @@ const BaseRatesPanel = memo(({ isOpen, onClose, baseRates, onUpdate }: Props) =>
               <div className="brp-input-wrap">
                 <input
                   type="number"
-                  value={baseRates.otHoursMultiplier}
+                  value={baseRates.otHoursMultiplier || ''}
                   onChange={e => handleUpdate('otHoursMultiplier', e.target.value)}
                   className="brp-input"
                   min="0"
@@ -148,13 +148,13 @@ const BaseRatesPanel = memo(({ isOpen, onClose, baseRates, onUpdate }: Props) =>
                 <span className="brp-currency">¥</span>
                 <input
                   type="number"
-                  value={baseRates.overtimeRate}
+                  value={baseRates.overtimeRate || ''}
                   onChange={e => handleUpdate('overtimeRate', e.target.value)}
                   className="brp-input"
                   min="0"
                 />
               </div>
-              <div className="brp-hint">Auto-computed from multiplier × 3D rate — editable</div>
+              <div className="brp-hint">Auto-computed from multiplier × 3D rate</div>
             </div>
           </div>
 
@@ -215,7 +215,7 @@ const BaseRatesPanel = memo(({ isOpen, onClose, baseRates, onUpdate }: Props) =>
         <div className="brp-footer">
           <button className="brp-done-btn" onClick={onClose}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12"/>
+              <polyline points="20 6 9 17 4 12" />
             </svg>
             Done
           </button>

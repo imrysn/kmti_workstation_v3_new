@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useDebounceCallback } from '../useDebounce'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -85,23 +86,12 @@ export type ManualOverrides = Record<number, Partial<{
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
-  let timeout: ReturnType<typeof setTimeout>
-  return function executedFunction(...args: Parameters<T>) {
-    const later = () => {
-      clearTimeout(timeout)
-      func(...args)
-    }
-    clearTimeout(timeout)
-    timeout = setTimeout(later, wait)
-  } as T
-}
-
 // Pattern for auto-generated quotation numbers: KMTE-YYMMDD-NNN
 const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
 
 function generateQuotationNumber(date: string, sequential = '001'): string {
-  const dateObj = new Date(date)
+  // Use T00:00:00 to ensure local date parsing instead of UTC
+  const dateObj = new Date(date + 'T00:00:00')
   const year = dateObj.getFullYear().toString().slice(-2)
   const month = (dateObj.getMonth() + 1).toString().padStart(2, '0')
   const day = dateObj.getDate().toString().padStart(2, '0')
@@ -202,13 +192,10 @@ export function useInvoiceState() {
   const [manualOverrides, setManualOverrides] = useStickyState<ManualOverrides>({}, 'quot_manualOverrides')
   const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'quot_collapsed')
 
-  const debouncedQuotationUpdate = useMemo(
-    () => debounce((date: string) => {
-      const newQuotationNo = generateQuotationNumber(date)
-      setQuotationDetails(prev => ({ ...prev, quotationNo: newQuotationNo }))
-    }, 300),
-    []
-  )
+  const debouncedQuotationUpdate = useDebounceCallback((date: string) => {
+    const newQuotationNo = generateQuotationNumber(date)
+    setQuotationDetails(prev => ({ ...prev, quotationNo: newQuotationNo }))
+  }, 300)
 
   const updateCompanyInfo = useCallback((updates: CompanyInfo) => {
     setCompanyInfo(updates)
@@ -294,7 +281,15 @@ export function useInvoiceState() {
   const updateTask = useCallback((id: number, field: keyof Task, value: any) => {
     setTasks(prev => prev.map(task => task.id !== id ? task : { ...task, [field]: value }))
     setHasUnsavedChanges(true)
-  }, [])
+  }, [setHasUnsavedChanges])
+
+  const updateTaskBatch = useCallback((updates: Array<{ id: number } & Partial<Task>>) => {
+    setTasks(prev => prev.map(task => {
+      const update = updates.find(u => u.id === task.id)
+      return update ? { ...task, ...update } : task
+    }))
+    setHasUnsavedChanges(true)
+  }, [setHasUnsavedChanges])
 
   const reorderTasks = useCallback((draggedTaskId: number, targetTaskId: number) => {
     setTasks(prev => {
@@ -327,6 +322,11 @@ export function useInvoiceState() {
         newRates.overtimeRate = Math.round(newRates.timeChargeRate3D * value)
       } else if (field === 'timeChargeRate3D') {
         newRates.overtimeRate = Math.round(value * newRates.otHoursMultiplier)
+      } else if (field === 'overtimeRate') {
+        // Back-calculate multiplier so the display stays in sync
+        newRates.otHoursMultiplier = newRates.timeChargeRate3D > 0
+          ? Math.round((value / newRates.timeChargeRate3D) * 100) / 100
+          : newRates.otHoursMultiplier
       }
       return newRates
     })
@@ -362,6 +362,11 @@ export function useInvoiceState() {
     setHasUnsavedChanges(false)
   }, [])
 
+  const updateManualOverrides = useCallback((action: React.SetStateAction<ManualOverrides>) => {
+    setManualOverrides(action)
+    setHasUnsavedChanges(true)
+  }, [setManualOverrides, setHasUnsavedChanges])
+
   const loadData = useCallback((data: any, fileName: string) => {
     setCompanyInfo(data.companyInfo || { name: '', address: '', city: '', location: '', phone: '' })
     setClientInfo(data.clientInfo || { company: '', contact: '', address: '', phone: '' })
@@ -394,15 +399,24 @@ export function useInvoiceState() {
     savedAt: new Date().toISOString(),
   }), [companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds])
 
+  const markSaved = useCallback((filePath: string) => {
+    setCurrentFilePath(filePath)
+    setHasUnsavedChanges(false)
+  }, [setCurrentFilePath, setHasUnsavedChanges])
+
+  const markUnsaved = useCallback(() => {
+    setHasUnsavedChanges(true)
+  }, [setHasUnsavedChanges])
+
   return {
     companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures,
     manualOverrides, collapsedTaskIds,
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
     updateCompanyInfo, updateClientInfo, updateQuotationDetails,
-    addTask, addSubTask, removeTask, updateTask, reorderTasks,
+    addTask, addSubTask, removeTask, updateTask, updateTaskBatch, reorderTasks,
     updateBaseRate, updateSignatures, setSelectedMainTaskId,
-    setManualOverrides, setCollapsedTaskIds,
+    updateManualOverrides, setCollapsedTaskIds,
     resetToNew, loadData, getSaveData,
-    setCurrentFilePath, setHasUnsavedChanges,
+    markSaved, markUnsaved,
   }
 }

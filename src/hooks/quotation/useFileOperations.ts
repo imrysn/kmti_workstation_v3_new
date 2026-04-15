@@ -1,4 +1,5 @@
 import { useCallback } from 'react'
+import { useModal } from '../../components/ModalContext'
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning'
 
@@ -9,8 +10,7 @@ interface FileOperationsOptions {
   getQuotationNo: () => string
   loadData: (data: any, fileName: string) => void
   resetToNew: () => void
-  setCurrentFilePath: (path: string | null) => void
-  setHasUnsavedChanges: (v: boolean) => void
+  markSaved: (path: string) => void
   notify?: (message: string, type?: NotificationType) => void
 }
 
@@ -20,23 +20,30 @@ export function useFileOperations({
   getQuotationNo,
   loadData,
   resetToNew,
-  setCurrentFilePath,
-  setHasUnsavedChanges,
+  markSaved,
   notify,
 }: FileOperationsOptions) {
+  const modal = useModal()
+
   const showMessage = useCallback((msg: string, type: NotificationType = 'info') => {
     if (notify) notify(msg, type)
-    else alert(msg)
-  }, [notify])
+    else modal.notify(msg, type)
+  }, [notify, modal])
 
   // New Invoice
   const newInvoice = useCallback(() => {
-    if (
-      hasUnsavedChanges &&
-      !window.confirm('You have unsaved changes. Are you sure you want to create a new invoice?')
-    ) return
-    resetToNew()
-  }, [hasUnsavedChanges, resetToNew])
+    if (hasUnsavedChanges) {
+      modal.confirm(
+        'You have unsaved changes. Are you sure you want to create a new invoice?',
+        resetToNew,
+        undefined,
+        'danger',
+        'Discard Changes?'
+      )
+    } else {
+      resetToNew()
+    }
+  }, [hasUnsavedChanges, resetToNew, modal])
 
   // Save Invoice
   const saveInvoice = useCallback(async () => {
@@ -57,8 +64,7 @@ export function useFileOperations({
         })
         if (canceled || !filePath) return // user cancelled
         await electronAPI.writeFile(filePath, jsonString)
-        setCurrentFilePath(filePath)
-        setHasUnsavedChanges(false)
+        markSaved(filePath)
         showMessage('Quotation saved!', 'success')
         return
       }
@@ -74,20 +80,16 @@ export function useFileOperations({
       link.click()
       document.body.removeChild(link)
       setTimeout(() => URL.revokeObjectURL(url), 100)
-      setHasUnsavedChanges(false)
+      // Browsers don't give us a real path, but we mark as saved to clear the dot
+      markSaved(fileName)
     } catch (error: any) {
       console.error('Save failed:', error)
       showMessage(`Error saving file: ${error.message}`, 'error')
     }
-  }, [getSaveData, getQuotationNo, setCurrentFilePath, setHasUnsavedChanges, showMessage])
+  }, [getSaveData, getQuotationNo, markSaved, showMessage])
 
   // Load Invoice
-  const loadInvoice = useCallback(async () => {
-    if (
-      hasUnsavedChanges &&
-      !window.confirm('You have unsaved changes. Are you sure you want to load another invoice?')
-    ) return
-
+  const performLoad = useCallback(async () => {
     try {
       // Modern File System Access API
       if ('showOpenFilePicker' in window && window.isSecureContext) {
@@ -146,7 +148,21 @@ export function useFileOperations({
       console.error('Load failed:', error)
       showMessage(`Loading failed: ${error.message}`, 'error')
     }
-  }, [hasUnsavedChanges, loadData, showMessage])
+  }, [loadData, showMessage])
+
+  const loadInvoice = useCallback(() => {
+    if (hasUnsavedChanges) {
+      modal.confirm(
+        'You have unsaved changes. Are you sure you want to load another invoice?',
+        performLoad,
+        undefined,
+        'danger',
+        'Discard Changes?'
+      )
+    } else {
+      performLoad()
+    }
+  }, [hasUnsavedChanges, performLoad, modal])
 
   return { newInvoice, saveInvoice, loadInvoice }
 }

@@ -1,4 +1,4 @@
-import { memo, useState, useEffect } from 'react'
+import { memo, useState, useEffect, useRef } from 'react'
 import type { Signatures } from '../../hooks/quotation'
 
 interface Props {
@@ -241,19 +241,29 @@ BillingSignaturesCard.displayName = 'BillingSignaturesCard'
 
 // ── Main export — renders both cards ─────────────────────────────────────────
 const SignatureForm = memo(({ signatures, onUpdate }: Props) => {
-  // Force Electron window refocus when signatures update
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Force Electron window refocus once when an input is focused to ensure interactivity
   useEffect(() => {
-    if ((window as any).electronAPI) {
-      const timer = setTimeout(() => {
-        window.focus()
-        document.body.focus()
+    const isElectron = !!(window as any).electronAPI
+    if (!isElectron) return
+
+    const handleFocus = () => {
+      // Small delay to ensure the event loop processes the focus before we manually refocus
+      setTimeout(() => {
+        if (!document.hasFocus()) {
+          window.focus()
+        }
       }, 50)
-      return () => clearTimeout(timer)
     }
-  }, [signatures])
+
+    window.addEventListener('focusin', handleFocus)
+    return () => window.removeEventListener('focusin', handleFocus)
+  }, [])
 
   // Ensure inputs in signature cards stay interactive inside Electron
   useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
     const handleInputClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' && target.closest('.section-card')) {
@@ -261,12 +271,12 @@ const SignatureForm = memo(({ signatures, onUpdate }: Props) => {
         ;(target as HTMLInputElement).focus()
       }
     }
-    document.addEventListener('click', handleInputClick, true)
-    return () => document.removeEventListener('click', handleInputClick, true)
+    container.addEventListener('click', handleInputClick, true)
+    return () => container.removeEventListener('click', handleInputClick, true)
   }, [])
 
   return (
-    <div className="sig-cards-layout">
+    <div className="sig-cards-layout" ref={containerRef}>
       <QuotationSignaturesCard signatures={signatures} onUpdate={onUpdate} />
       <BillingSignaturesCard signatures={signatures} onUpdate={onUpdate} />
     </div>

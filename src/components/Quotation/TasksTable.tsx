@@ -1,5 +1,6 @@
 import { memo, useMemo, useCallback, useState, useEffect } from 'react'
 import type { Task, BaseRates, ManualOverrides } from '../../hooks/quotation'
+import { calculateTaskTotal, calculateOverhead } from '../../utils/quotation'
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning'
 
@@ -8,7 +9,6 @@ interface TaskSubtotals {
   basicLabor: number
   overtime: number
   software: number
-  overhead: number
   total: number
 }
 
@@ -35,6 +35,7 @@ interface TaskRowProps {
   hasSubTasks?: boolean
   isCollapsed?: boolean
   onToggleCollapse?: (e: React.MouseEvent, id: number) => void
+  onCancelEdit?: () => void
 }
 
 const TaskRow = memo(({
@@ -43,7 +44,8 @@ const TaskRow = memo(({
   isEditing, onEditToggle, onEditValueUpdate,
   isDragging, isDragOver,
   onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
-  hasSubTasks, isCollapsed, onToggleCollapse
+  hasSubTasks, isCollapsed, onToggleCollapse,
+  onCancelEdit
 }: TaskRowProps) => {
   const handleUpdate = useCallback((field: keyof Task, value: any) => onUpdate(task.id, field, value), [task.id, onUpdate])
   const handleRemove = useCallback(() => onRemove(task.id), [task.id, onRemove])
@@ -53,7 +55,8 @@ const TaskRow = memo(({
   }, [task.id, onEditValueUpdate])
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleEditToggle()
-  }, [handleEditToggle])
+    if (e.key === 'Escape') onCancelEdit?.()
+  }, [handleEditToggle, onCancelEdit])
   const handleMainTaskClick = useCallback(() => {
     if (task.isMainTask && onMainTaskSelect) onMainTaskSelect(task.id)
   }, [task.isMainTask, task.id, onMainTaskSelect])
@@ -74,7 +77,7 @@ const TaskRow = memo(({
         <div className="row-number-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
           {task.isMainTask && hasSubTasks && (
             <button className="collapse-toggle-btn" onClick={(e) => onToggleCollapse?.(e, task.id)} title={isCollapsed ? 'Expand parts' : 'Collapse parts'}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" 
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
                 style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
@@ -96,44 +99,40 @@ const TaskRow = memo(({
         </div>
       </td>
       <td>
-        <input type="number" value={task.hours || 0} onChange={e => handleUpdate('hours', parseFloat(e.target.value) || 0)}
+        <input type="number" value={task.hours || ''} onChange={e => handleUpdate('hours', parseFloat(e.target.value) || 0)}
           className="table-input number-input" min="0" step="0.5" />
       </td>
       <td>
-        <input type="number" value={task.minutes || 0} onChange={e => handleUpdate('minutes', parseFloat(e.target.value) || 0)}
+        <input type="number" value={task.minutes || ''} onChange={e => handleUpdate('minutes', parseFloat(e.target.value) || 0)}
           className="table-input number-input" min="0" max="59" step={1} />
       </td>
       <td className="calculated-cell time-charge-bg">
         {isEditing ? (
-          <input type="number" value={subtotals.basicLabor} onChange={e => handleEditValueChange('basicLabor', e.target.value)}
+          <input type="number" value={subtotals.basicLabor || ''} onChange={e => handleEditValueChange('basicLabor', e.target.value)}
             onKeyDown={handleKeyDown} className="table-input number-input edit-calculated-input" min="0" step="0.01" />
         ) : formatCurrency(subtotals.basicLabor)}
       </td>
       <td>
-        <input type="number" value={task.overtimeHours} onChange={e => handleUpdate('overtimeHours', parseFloat(e.target.value) || 0)}
+        <input type="number" value={task.overtimeHours || ''} onChange={e => handleUpdate('overtimeHours', parseFloat(e.target.value) || 0)}
           className="table-input number-input" min="0" step="0.5" />
       </td>
       <td className="calculated-cell overtime-bg">
         {isEditing ? (
-          <input type="number" value={subtotals.overtime} onChange={e => handleEditValueChange('overtime', e.target.value)}
+          <input type="number" value={subtotals.overtime || ''} onChange={e => handleEditValueChange('overtime', e.target.value)}
             onKeyDown={handleKeyDown} className="table-input number-input edit-calculated-input" min="0" step="0.01" />
         ) : formatCurrency(subtotals.overtime)}
       </td>
       <td className="software-cell">
         <div className="software-input-container">
-          <input type="number" value={task.softwareUnits || 0} onChange={e => handleUpdate('softwareUnits', parseFloat(e.target.value) || 0)}
+          <input type="number" value={task.softwareUnits || ''} onChange={e => handleUpdate('softwareUnits', parseFloat(e.target.value) || 0)}
             className="table-input number-input software-units-input" min="0" />
           {isEditing ? (
-            <input type="number" value={subtotals.software} onChange={e => handleEditValueChange('software', e.target.value)}
+            <input type="number" value={subtotals.software || ''} onChange={e => handleEditValueChange('software', e.target.value)}
               onKeyDown={handleKeyDown} className="table-input number-input edit-calculated-input software-edit-input" min="0" step="0.01" />
           ) : (
             <span className="software-total">{formatCurrency(subtotals.software)}</span>
           )}
         </div>
-      </td>
-      <td className="calculated-cell overhead-bg">
-        <input type="number" value={subtotals.overhead} onChange={e => handleEditValueChange('overhead', e.target.value)}
-          onKeyDown={handleKeyDown} className="table-input number-input" min="0" step="0.01" />
       </td>
       <td className="type-cell">
         {task.type === '2D' || task.type === '3D' || !task.type ? (
@@ -163,15 +162,15 @@ const TaskRow = memo(({
           <button onClick={handleEditToggle} className={`edit-task-button ${isEditing ? 'editing' : ''}`}
             title={isEditing ? 'Save changes' : 'Edit values'}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="edit-icon">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
             </svg>
           </button>
           <button onClick={handleRemove} className="remove-task-button" title="Remove task">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="remove-icon">
-              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6"/><path d="M14 11v6"/>
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+              <path d="M10 11v6" /><path d="M14 11v6" />
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
             </svg>
           </button>
         </div>
@@ -195,7 +194,7 @@ interface TasksTableProps {
   onOpenRateSettings?: () => void
   notify?: (message: string, type?: NotificationType) => void
   manualOverrides: ManualOverrides
-  onManualOverridesChange: (overrides: ManualOverrides) => void
+  setManualOverrides: React.Dispatch<React.SetStateAction<ManualOverrides>>
   collapsedTasks?: Set<number>
   onCollapsedTasksChange?: (collapsed: Set<number>) => void
 }
@@ -203,14 +202,21 @@ interface TasksTableProps {
 const TasksTable = memo(({
   tasks, baseRates, selectedMainTaskId,
   onTaskUpdate, onTaskAdd, onSubTaskAdd, onTaskRemove, onTaskReorder,
-  onMainTaskSelect, onBaseRateUpdate, onOpenRateSettings, notify,
-  manualOverrides, onManualOverridesChange, collapsedTasks = new Set(), onCollapsedTasksChange
+  onMainTaskSelect, onBaseRateUpdate: _onBaseRateUpdate, onOpenRateSettings, notify,
+  manualOverrides, setManualOverrides,
+  collapsedTasks = new Set(), onCollapsedTasksChange
 }: TasksTableProps) => {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editedValues, setEditedValues] = useState<Record<number, Partial<TaskSubtotals>>>({})
   const [modifiedFields, setModifiedFields] = useState<Record<number, Record<string, boolean>>>({})
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<number | null>(null)
+  // Edit mode toggles for footer rows
+  const [editingOverhead, setEditingOverhead] = useState(false)
+  const [editingGrandTotal, setEditingGrandTotal] = useState(false)
+  // Local Draft state (raw string while typing)
+  const [overheadDraft, setOverheadDraft] = useState<string>('')
+  const [grandTotalDraft, setGrandTotalDraft] = useState<string>('')
 
   const toggleCollapse = useCallback((e: React.MouseEvent, taskId: number) => {
     e.stopPropagation()
@@ -220,67 +226,94 @@ const TasksTable = memo(({
     onCollapsedTasksChange?.(next)
   }, [collapsedTasks, onCollapsedTasksChange])
 
-  const { taskTotals, grandTotal, mainTaskCount } = useMemo(() => {
+  const { taskTotals, overheadTotal, subtotal, grandTotal, mainTaskCount } = useMemo(() => {
     const mainTaskCount = tasks.filter(t => t.isMainTask).length
 
     const totals: TaskSubtotals[] = tasks.map(task => {
-      const totalHours = (task.hours || 0) + (task.minutes || 0) / 60
-      const timeChargeRate = task.type === '2D' ? baseRates.timeChargeRate2D
-        : task.type === '3D' || !task.type ? baseRates.timeChargeRate3D
-        : baseRates.timeChargeRateOthers || 0
-      const basicLabor = totalHours * timeChargeRate
-      const overtime = task.overtimeHours * baseRates.overtimeRate
-      const software = (task.softwareUnits || 0) * baseRates.softwareRate
+      const { basicLabor, overtime, software, total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides)
 
-      let aggBasicLabor = basicLabor, aggOvertime = overtime, aggSoftware = software
-
-      if (task.isMainTask) {
-        tasks.filter(t => t.parentId === task.id).forEach(sub => {
-          const subHours = (sub.hours || 0) + (sub.minutes || 0) / 60
-          const subRate = sub.type === '2D' ? baseRates.timeChargeRate2D
-            : sub.type === '3D' || !sub.type ? baseRates.timeChargeRate3D
-            : baseRates.timeChargeRateOthers || 0
-          aggBasicLabor += subHours * subRate
-          aggOvertime += sub.overtimeHours * baseRates.overtimeRate
-          aggSoftware += (sub.softwareUnits || 0) * baseRates.softwareRate
-        })
-      }
-
-      const subtotal = aggBasicLabor + aggOvertime + aggSoftware
-      const overhead = subtotal * (baseRates.overheadPercentage / 100)
-      let fBasicLabor = task.isMainTask ? aggBasicLabor : basicLabor
-      let fOvertime = task.isMainTask ? aggOvertime : overtime
-      let fSoftware = task.isMainTask ? aggSoftware : software
-      let fOverhead = task.isMainTask ? overhead : (basicLabor + overtime + software) * (baseRates.overheadPercentage / 100)
-      let fTotal = task.isMainTask
-        ? aggBasicLabor + aggOvertime + aggSoftware + overhead
-        : basicLabor + overtime + software + (basicLabor + overtime + software) * (baseRates.overheadPercentage / 100)
-
-      const override = manualOverrides[task.id]
-      if (override) {
-        fBasicLabor = override.basicLabor !== undefined ? override.basicLabor : fBasicLabor
-        fOvertime = override.overtime !== undefined ? override.overtime : fOvertime
-        fSoftware = override.software !== undefined ? override.software : fSoftware
-        if (override.overhead !== undefined) { fOverhead = override.overhead }
-        else if (override.basicLabor !== undefined || override.overtime !== undefined || override.software !== undefined) {
-          fOverhead = (fBasicLabor + fOvertime + fSoftware) * (baseRates.overheadPercentage / 100)
-        }
-        fTotal = override.total !== undefined ? override.total : fBasicLabor + fOvertime + fSoftware + fOverhead
-      }
-
-      return { 
-        taskId: task.id, 
-        basicLabor: Number(fBasicLabor.toFixed(2)), 
-        overtime: Number(fOvertime.toFixed(2)), 
-        software: Number(fSoftware.toFixed(2)), 
-        overhead: Number(fOverhead.toFixed(2)), 
-        total: Number(fTotal.toFixed(2)) 
+      return {
+        taskId: task.id,
+        basicLabor,
+        overtime,
+        software,
+        total
       }
     })
 
-    const grand = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
-    return { taskTotals: totals, grandTotal: grand, mainTaskCount }
+    const sub = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
+
+    // Check for footer overrides in manualOverrides (using key -1)
+    const footerOverrides = (manualOverrides as any)[-1] || {}
+    const overhead = footerOverrides.overhead !== undefined
+      ? footerOverrides.overhead
+      : calculateOverhead(sub, baseRates.overheadPercentage)
+
+    const grand = footerOverrides.total !== undefined
+      ? footerOverrides.total
+      : sub + overhead
+
+    return {
+      taskTotals: totals,
+      overheadTotal: overhead,
+      subtotal: sub,
+      grandTotal: grand,
+      mainTaskCount
+    }
   }, [tasks, baseRates, manualOverrides])
+
+  // Helper to format values for inputs: hide .00 if integer
+  const formatValue = (val: number): string => {
+    if (val === 0) return ''
+    const str = val.toFixed(2)
+    return str.endsWith('.00') ? Math.round(val).toString() : str
+  }
+
+  const handleOverheadBlur = useCallback((draft: string) => {
+    if (draft.trim() === '') {
+      setManualOverrides((prev: any) => {
+        const next = { ...prev }
+        if (next[-1]) {
+          const { overhead: _, ...rest } = next[-1]
+          if (Object.keys(rest).length === 0) delete next[-1]
+          else next[-1] = rest
+        }
+        return next
+      })
+    } else {
+      const val = parseFloat(draft)
+      if (!isNaN(val) && val >= 0) {
+        setManualOverrides((prev: any) => ({ ...prev, [-1]: { ...(prev[-1] || {}), overhead: val } }))
+      }
+    }
+    setEditingOverhead(false)
+  }, [setManualOverrides])
+
+  const handleGrandTotalBlur = useCallback((draft: string) => {
+    if (draft.trim() === '') {
+      setManualOverrides((prev: any) => {
+        const next = { ...prev }
+        if (next[-1]) {
+          const { total: _, ...rest } = next[-1]
+          if (Object.keys(rest).length === 0) delete next[-1]
+          else next[-1] = rest
+        }
+        return next
+      })
+    } else {
+      const val = parseFloat(draft)
+      if (!isNaN(val) && val >= 0) {
+        setManualOverrides((prev: any) => ({ ...prev, [-1]: { ...(prev[-1] || {}), total: val } }))
+      }
+    }
+    setEditingGrandTotal(false)
+  }, [setManualOverrides])
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingTaskId(null)
+    setEditedValues({})
+    setModifiedFields({})
+  }, [])
 
   const handleEditToggle = useCallback((taskId: number) => {
     if (editingTaskId === taskId) {
@@ -290,35 +323,33 @@ const TasksTable = memo(({
         Object.keys(fieldsToSave).forEach(field => {
           valuesToSave[field] = (editedValues[taskId] as any)?.[field]
         })
-        setManualOverrides(prev => ({ ...prev, [taskId]: { ...prev[taskId], ...valuesToSave } }))
+        setManualOverrides((prev: any) => ({ ...prev, [taskId]: { ...prev[taskId], ...valuesToSave } }))
       }
       setEditingTaskId(null)
       setEditedValues({})
       setModifiedFields({})
     } else {
       setEditingTaskId(taskId)
-      const taskSubtotals = taskTotals.find(t => t.taskId === taskId)
-      if (taskSubtotals) {
-        setEditedValues({ [taskId]: { basicLabor: taskSubtotals.basicLabor, overtime: taskSubtotals.overtime, software: taskSubtotals.software, overhead: taskSubtotals.overhead, total: taskSubtotals.total } })
+      const taskSubtotal = taskTotals.find(t => t.taskId === taskId)
+      if (taskSubtotal) {
+        setEditedValues({ [taskId]: { basicLabor: taskSubtotal.basicLabor, overtime: taskSubtotal.overtime, software: taskSubtotal.software, total: taskSubtotal.total } })
       }
     }
-  }, [editingTaskId, taskTotals, editedValues, modifiedFields])
+  }, [editingTaskId, taskTotals, editedValues, modifiedFields, manualOverrides])
 
   const handleEditValueUpdate = useCallback((taskId: number, field: string, value: number, userModified = false) => {
     setEditedValues(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: value } }))
     if (userModified) {
       setModifiedFields(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: true } }))
-      onManualOverridesChange({ 
-        ...manualOverrides, 
-        [taskId]: { ...manualOverrides[taskId], [field]: parseFloat(String(value)) || 0 } 
-      })
+      // REMOVED: Immediate call to onManualOverridesChange to prevent double-writes and intermediate state persistence.
+      // Changes are now only committed when clicking the "Save" (toggle) button.
     }
-  }, [manualOverrides, onManualOverridesChange])
+  }, [])
 
   const formatCurrency = useCallback((amount: number) => `¥${amount.toLocaleString()}`, [])
 
   const getTaskSubtotals = useCallback((taskId: number): TaskSubtotals => {
-    const calculated = taskTotals.find(t => t.taskId === taskId) || { taskId, basicLabor: 0, overtime: 0, software: 0, overhead: 0, total: 0 }
+    const calculated = taskTotals.find(t => t.taskId === taskId) || { taskId, basicLabor: 0, overtime: 0, software: 0, total: 0 }
     if (editingTaskId === taskId && editedValues[taskId]) {
       return { ...calculated, ...editedValues[taskId] }
     }
@@ -329,18 +360,28 @@ const TasksTable = memo(({
   useEffect(() => {
     let changed = false
     const f: ManualOverrides = {}
-    Object.keys(manualOverrides).forEach(id => { 
-      if (taskIds.has(Number(id))) f[Number(id)] = manualOverrides[Number(id)] 
-      else changed = true
+    Object.keys(manualOverrides).forEach(id => {
+      const numericId = Number(id)
+      // ID -1 is the special key for footer overrides, preserve it.
+      if (numericId === -1 || taskIds.has(numericId)) {
+        f[numericId] = manualOverrides[numericId]
+      } else {
+        changed = true
+      }
     })
-    if (changed) onManualOverridesChange(f)
+    if (changed) setManualOverrides(f)
 
     setModifiedFields(prev => {
       const f: Record<number, Record<string, boolean>> = {}
-      Object.keys(prev).forEach(id => { if (taskIds.has(Number(id))) f[Number(id)] = prev[Number(id)] })
+      Object.keys(prev).forEach(id => {
+        const numericId = Number(id)
+        if (numericId === -1 || taskIds.has(numericId)) {
+          f[numericId] = prev[numericId]
+        }
+      })
       return f
     })
-  }, [taskIds, manualOverrides, onManualOverridesChange])
+  }, [taskIds, manualOverrides, setManualOverrides])
 
   // Drag handlers
   const handleDragStart = useCallback((e: React.DragEvent, taskId: number) => {
@@ -374,11 +415,11 @@ const TasksTable = memo(({
         <div className="section-header" style={{ height: '32px' }}>
           <div className="section-icon computation">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="2" width="16" height="20" rx="2"/>
-              <line x1="8" y1="6" x2="16" y2="6"/>
-              <line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/>
-              <line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/>
-              <line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/><line x1="16" y1="18" x2="16" y2="18"/>
+              <rect x="4" y="2" width="16" height="20" rx="2" />
+              <line x1="8" y1="6" x2="16" y2="6" />
+              <line x1="8" y1="10" x2="8" y2="10" /><line x1="12" y1="10" x2="12" y2="10" /><line x1="16" y1="10" x2="16" y2="10" />
+              <line x1="8" y1="14" x2="8" y2="14" /><line x1="12" y1="14" x2="12" y2="14" /><line x1="16" y1="14" x2="16" y2="14" />
+              <line x1="8" y1="18" x2="8" y2="18" /><line x1="12" y1="18" x2="12" y2="18" /><line x1="16" y1="18" x2="16" y2="18" />
             </svg>
           </div>
           <h2 className="section-title">Computation Table</h2>
@@ -388,8 +429,8 @@ const TasksTable = memo(({
           {onOpenRateSettings && (
             <button className="add-button rate-settings-btn" onClick={onOpenRateSettings} title="Configure base rates">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
               </svg>
               Rate Settings
             </button>
@@ -397,14 +438,14 @@ const TasksTable = memo(({
           <button className="add-button primary" onClick={onTaskAdd}
             disabled={mainTaskCount >= 27} title={mainTaskCount >= 27 ? 'Maximum 27 assembly tasks reached' : 'Add assembly task'}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="add-icon">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Add Assembly
           </button>
           <button className="add-button secondary" onClick={() => onSubTaskAdd(selectedMainTaskId, notify)}
             disabled={!selectedMainTaskId} title={!selectedMainTaskId ? 'Select a main task first' : 'Add sub-task'}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="add-icon">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             Add Parts
           </button>
@@ -416,9 +457,9 @@ const TasksTable = memo(({
           <table className="tasks-table">
             <thead>
               <tr>
-                <th>NO.</th><th>REF NO</th><th>DESCRIPTION</th><th>HOURS</th><th>MINUTES</th>
+                <th>NO.</th><th>REFERENCE NO</th><th>DESCRIPTION</th><th>HOURS</th><th>MINUTES</th>
                 <th>TIME CHARGE</th><th>OT RATE</th><th>OVERTIME</th><th>SOFTWARE</th>
-                <th>OH</th><th>TYPE</th><th>TOTAL</th><th>ACTION</th>
+                <th>TYPE</th><th>TOTAL</th><th>ACTION</th>
               </tr>
             </thead>
           </table>
@@ -453,12 +494,13 @@ const TasksTable = memo(({
                     onDragStart={handleDragStart} onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave} onDrop={handleDrop} onDragEnd={handleDragEnd}
                     hasSubTasks={hasSubTasks} isCollapsed={isCollapsed} onToggleCollapse={toggleCollapse}
+                    onCancelEdit={handleCancelEdit}
                   />
                 )
               })}
               {tasks.length === 0 && (
                 <tr className="empty-table-row">
-                  <td colSpan={13}>
+                  <td colSpan={12}>
                     <span className="empty-table-hint">No tasks yet — click Add Assembly to start</span>
                   </td>
                 </tr>
@@ -469,8 +511,76 @@ const TasksTable = memo(({
       </div>
 
       <div className="grand-total-section">
-        <div className="grand-total-label">Grand Total:</div>
-        <div className="grand-total-value">¥{grandTotal.toLocaleString()}</div>
+        <div className="grand-total-row">
+          <div className="grand-total-label">Total:</div>
+          <div className="grand-total-value">{formatCurrency(subtotal)}</div>
+        </div>
+        <div className="grand-total-row">
+          <div className="grand-total-label">
+            Administrative Overhead:
+          </div>
+          <div className="grand-total-value">
+            {editingOverhead ? (
+              <div className="footer-input-wrapper">
+                <span className="footer-currency-symbol">¥</span>
+                <input
+                  type="number"
+                  value={overheadDraft}
+                  onChange={e => setOverheadDraft(e.target.value)}
+                  onBlur={e => handleOverheadBlur(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleOverheadBlur((e.target as HTMLInputElement).value)
+                    if (e.key === 'Escape') setEditingOverhead(false)
+                  }}
+                  className="footer-input amount-input"
+                  step="0.01"
+                  min="0"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <span
+                className="footer-value-display"
+                onClick={() => { setOverheadDraft(formatValue(overheadTotal)); setEditingOverhead(true) }}
+                title="Click to edit"
+              >
+                {formatCurrency(overheadTotal)}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="grand-total-row grand-total-final">
+          <div className="grand-total-label">Grand Total:</div>
+          <div className="grand-total-value">
+            {editingGrandTotal ? (
+              <div className="footer-input-wrapper final-total">
+                <span className="footer-currency-symbol">¥</span>
+                <input
+                  type="number"
+                  value={grandTotalDraft}
+                  onChange={e => setGrandTotalDraft(e.target.value)}
+                  onBlur={e => handleGrandTotalBlur(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleGrandTotalBlur((e.target as HTMLInputElement).value)
+                    if (e.key === 'Escape') setEditingGrandTotal(false)
+                  }}
+                  className="footer-input amount-input total-input"
+                  step="0.01"
+                  min="0"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <span
+                className="footer-value-display grand-total-display"
+                onClick={() => { setGrandTotalDraft(formatValue(grandTotal)); setEditingGrandTotal(true) }}
+                title="Click to edit"
+              >
+                {formatCurrency(grandTotal)}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

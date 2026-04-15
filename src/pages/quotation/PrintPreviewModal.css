@@ -1766,7 +1766,7 @@
   text-align: center !important;
   font-weight: normal !important;
   /* Not bold */
-  max-width: 400px !important;
+  max-width: 600px !important;
   /* Maximum width for address block */
 }
 
@@ -1784,7 +1784,7 @@
 }
 
 /* Billing Details Positioning - CORRECT SELECTOR using :has() */
-.preview-content .quotation-visual-exact:has(.billing-header) > .quotation-details-visual {
+.preview-content .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
   position: absolute !important;
   right: 8mm !important;
   top: 197px !important;
@@ -2245,6 +2245,7 @@
   .feedback-panel-wrapper,
   .ppm-header,
   .ppm-footer-bar,
+  .ppm-page-break-indicator,
   .ppm-backdrop,
   .ppm-close-btn {
     display: none !important;

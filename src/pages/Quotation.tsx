@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useModal } from '../components/ModalContext'
 import { useInvoiceState, useFileOperations } from '../hooks/quotation'
-import type { ManualOverrides, Task } from '../hooks/quotation'
+import type { Task } from '../hooks/quotation'
 import {
   CompanyInfo,
   ClientInfo,
@@ -24,10 +24,10 @@ export default function Quotation() {
     tasks, baseRates, signatures, manualOverrides, collapsedTaskIds,
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
     updateCompanyInfo, updateClientInfo, updateQuotationDetails,
-    addTask, addSubTask, removeTask, updateTask, reorderTasks,
+    addTask, addSubTask, removeTask, updateTask, updateTaskBatch, reorderTasks,
     updateBaseRate, updateSignatures,
-    setSelectedMainTaskId, setManualOverrides, setCollapsedTaskIds, resetToNew, loadData, getSaveData,
-    setCurrentFilePath, setHasUnsavedChanges,
+    setSelectedMainTaskId, updateManualOverrides, setCollapsedTaskIds, resetToNew, loadData, getSaveData,
+    markSaved,
   } = useInvoiceState()
 
   const getQuotationNo = useCallback(() => quotationDetails.quotationNo, [quotationDetails.quotationNo])
@@ -38,8 +38,7 @@ export default function Quotation() {
     getQuotationNo,
     loadData,
     resetToNew,
-    setCurrentFilePath,
-    setHasUnsavedChanges,
+    markSaved,
     notify,
   })
 
@@ -51,22 +50,17 @@ export default function Quotation() {
     return () => { document.title = 'KMTI Workstation' }
   }, [quotationDetails.quotationNo, hasUnsavedChanges])
 
-  const handleManualOverridesChange = useCallback(
-    (overrides: ManualOverrides) => setManualOverrides(overrides),
-    [setManualOverrides]
-  )
-
   const handleUpdateTasks = useCallback(
     (editedTasks: Partial<Task>[]) => {
-      editedTasks.forEach(edited => {
-        if (edited.id != null) {
-          const fields = Object.keys(edited).filter(k => k !== 'id') as (keyof Task)[]
-          fields.forEach(field => updateTask(edited.id!, field, (edited as any)[field]))
-        }
-      })
+      const updates = editedTasks
+        .filter(t => t.id != null)
+        .map(t => ({ id: t.id!, ...t }))
+      updateTaskBatch(updates)
     },
-    [updateTask]
+    [updateTaskBatch]
   )
+
+  // ... (rest of the file)
 
   // Format date for display in toolbar: "13 Apr 2026"
   const formatToolbarDate = (dateStr: string) => {
@@ -171,7 +165,7 @@ export default function Quotation() {
             onMainTaskSelect={setSelectedMainTaskId}
             onBaseRateUpdate={updateBaseRate}
             manualOverrides={manualOverrides}
-            onManualOverridesChange={handleManualOverridesChange}
+            setManualOverrides={updateManualOverrides}
             collapsedTasks={new Set(collapsedTaskIds)}
             onCollapsedTasksChange={(set) => setCollapsedTaskIds(Array.from(set))}
             onOpenRateSettings={() => setIsBaseRatesPanelOpen(true)}
@@ -207,7 +201,7 @@ export default function Quotation() {
         signatures={signatures}
         manualOverrides={manualOverrides}
         onUpdateTasks={handleUpdateTasks}
-        onUpdateManualOverrides={setManualOverrides}
+        onUpdateManualOverrides={updateManualOverrides}
       />
     </div>
   )

@@ -174,7 +174,9 @@
 .table-input.number-input {
   text-align: center;
   font-variant-numeric: tabular-nums;
+  -webkit-appearance: none;
   -moz-appearance: textfield;
+  appearance: none;
 }
 
 .table-input.number-input::-webkit-outer-spin-button,
@@ -487,4 +489,102 @@
 .collapse-toggle-btn:hover {
   background-color: #f1f5f9;
   color: #0f172a;
+}
+
+/* â”€â”€ Footer Editable Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.footer-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 2px 6px;
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  transition: all 0.2s;
+  field-sizing: content;
+  box-sizing: border-box;
+}
+
+.footer-input:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.footer-input:focus {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.footer-input-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.footer-currency-symbol {
+  font-family: 'Arimo', sans-serif;
+  opacity: 0.7;
+}
+
+.amount-input {
+  min-width: 40px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.total-input {
+  font-size: 1.1em;
+  font-weight: 800;
+  min-width: 120px;
+}
+
+/* Remove arrows from footer number inputs */
+.footer-input::-webkit-outer-spin-button,
+.footer-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.footer-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* „Ÿ„Ÿ Footer Value Display (edit-on-click) „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ
+ */.footer-value-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all 0.18s;
+  opacity: 0.9;
+}
+
+.footer-value-display:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.25);
+  opacity: 1;
+}
+
+.footer-edit-icon {
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.18s;
+}
+
+.footer-value-display:hover .footer-edit-icon {
+  opacity: 0.7;
+}
+
+.grand-total-display {
+  font-size: 1.35em;
+  font-weight: 800;
+  letter-spacing: 0.01em;
 }

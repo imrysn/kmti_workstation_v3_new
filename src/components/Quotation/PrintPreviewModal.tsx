@@ -2,6 +2,7 @@ import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import type {
   Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, ManualOverrides
 } from '../../hooks/quotation'
+import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead } from '../../utils/quotation'
 import QuickEditModal from './QuickEditModal'
 import Logo from '../../assets/kmti_logo.png'
 
@@ -33,7 +34,9 @@ const PrintPreviewModal = memo(({
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false)
   const [localTasks, setLocalTasks] = useState<Task[]>(tasks)
   const [localManualOverrides, setLocalManualOverrides] = useState<ManualOverrides>(manualOverrides)
-  const [scale, setScale] = useState(1)
+  const [baseScale, setBaseScale] = useState(1)
+  const [zoomMode, setZoomMode] = useState<'fit' | number>('fit')
+  const actualScale = zoomMode === 'fit' ? baseScale : zoomMode
 
   const previewRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -53,7 +56,7 @@ const PrintPreviewModal = memo(({
       const availH = el.clientHeight - 64
       const scaleW = availW / A4_W_PX
       const scaleH = availH / A4_H_PX
-      setScale(Math.min(scaleW, scaleH, 1))  // never up-scale
+      setBaseScale(Math.min(scaleW, scaleH, 1))  // never up-scale automatically
     }
 
     measure()
@@ -76,36 +79,10 @@ const PrintPreviewModal = memo(({
     onUpdateManualOverrides?.(editedOverrides)
   }, [onUpdateTasks, onUpdateManualOverrides])
 
-  // ── Task rate helper — mirrors TasksTable logic exactly ──────────────────
-  const getTaskRate = useCallback((type: string): number => {
-    if (type === '2D') return baseRates.timeChargeRate2D
-    if (type === '3D' || !type) return baseRates.timeChargeRate3D
-    return baseRates.timeChargeRateOthers || 0
-  }, [baseRates])
-
   // ── Task total calculation ─────────────────────────────────────────────────
   const calculateTaskTotal = useCallback((task: Task): number => {
-    const subTasks = localTasks.filter(t => t.parentId === task.id)
-    let hours = (task.hours || 0) + (task.minutes || 0) / 60
-    let overtime = task.overtimeHours
-    let software = task.softwareUnits || 0
-    subTasks.forEach(sub => {
-      hours += (sub.hours || 0) + (sub.minutes || 0) / 60
-      overtime += sub.overtimeHours
-      software += sub.softwareUnits || 0
-    })
-    let basicLabor = hours * getTaskRate(task.type)
-    let ot = overtime * baseRates.overtimeRate
-    let sw = software * baseRates.softwareRate
-    const ov = localManualOverrides[task.id]
-    if (ov) {
-      basicLabor = ov.basicLabor !== undefined ? ov.basicLabor : basicLabor
-      ot = ov.overtime !== undefined ? ov.overtime : ot
-      sw = ov.software !== undefined ? ov.software : sw
-      if (ov.total !== undefined) return ov.total
-    }
-    return basicLabor + ot + sw
-  }, [localTasks, baseRates, localManualOverrides, getTaskRate])
+    return calculateTaskSubtotal(task, localTasks, baseRates, localManualOverrides).total
+  }, [localTasks, baseRates, localManualOverrides])
 
   // ── Pagination / layout memo ──────────────────────────────────────────────
   const {
@@ -116,20 +93,31 @@ const PrintPreviewModal = memo(({
   } = useMemo(() => {
     const mainTasks = localTasks.filter(t => t.isMainTask).slice(0, 27)
     const count = mainTasks.length
-    const needsPagination = count >= 16
+    // If overhead is enabled, 15 tasks + overhead row + "nothing follow" + grand total row 
+    // already fills the page. Threshold should be 15 if overhead > 0.
+    const threshold = baseRates.overheadPercentage > 0 ? 15 : 16
+    const needsPagination = count >= threshold
     const useCompression = count >= 9 && count <= 15 && !needsPagination
 
     const firstPageTasks = needsPagination ? mainTasks.slice(0, 15) : mainTasks
     const secondPageTasks = needsPagination ? mainTasks.slice(15) : []
 
-    const secondPageEmptyRows = needsPagination && secondPageTasks.length <= 7 ? 5 : 0
+    const overheadRowCount = baseRates.overheadPercentage > 0 ? 1 : 0
+    const secondPageEmptyRows = needsPagination
+      ? Math.max(0, 10 - secondPageTasks.length - overheadRowCount - 1)
+      : 0
 
     const firstPageTotals = firstPageTasks.map(calculateTaskTotal)
     const secondPageTotals = secondPageTasks.map(calculateTaskTotal)
 
     const subtotal = [...firstPageTotals, ...secondPageTotals].reduce((s, t) => s + t, 0)
-    const overhead = subtotal * (baseRates.overheadPercentage / 100)
-    const grand = subtotal + overhead
+    const footerOverrides = (localManualOverrides as any)[-1] || {}
+    const overhead = footerOverrides.overhead !== undefined
+      ? footerOverrides.overhead
+      : calculateOverhead(subtotal, baseRates.overheadPercentage)
+    const grand = footerOverrides.total !== undefined
+      ? footerOverrides.total
+      : subtotal + overhead
     const taskCount = count + (baseRates.overheadPercentage > 0 ? 1 : 0) + 1
     const rows = needsPagination ? 15
       : useCompression ? taskCount
@@ -302,69 +290,68 @@ const PrintPreviewModal = memo(({
       : 0
 
     return (
-      <table className="table-visual" style={startIndex > 0 ? { marginTop: '40px' } : undefined}>
-        <thead>
-          <tr>
-            <th className="col-no">NO.</th>
-            <th className="col-reference">REFERENCE NO.</th>
-            <th className="col-description">DESCRIPTION</th>
-            <th className="col-unitpage">Qty PAGE</th>
-            <th className="col-type">TYPE</th>
-            <th className="col-price">PRICE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {/* Task rows */}
-          {pageTasks.map((task, i) => (
-            <tr key={task.id}>
-              <td>{startIndex + i + 1}</td>
-              <td>{task.referenceNumber || ''}</td>
-              <td className="description-cell">{task.description}</td>
-              <td>{getUnitPageCount(task)}</td>
-              <td>{task.type || '3D'}</td>
-              <td className="price-cell">{fmt(pageTotals[i])}</td>
+      <>
+        <table className="table-visual">
+          <thead>
+            <tr>
+              <th className="col-no">NO.</th>
+              <th className="col-reference">REFERENCE NO.</th>
+              <th className="col-description">DESCRIPTION</th>
+              <th className="col-unitpage">UNIT PAGE</th>
+              <th className="col-type">TYPE</th>
+              <th className="col-price">PRICE</th>
             </tr>
-          ))}
+          </thead>
+          <tbody>
+            {/* Task rows */}
+            {pageTasks.map((task, i) => (
+              <tr key={task.id}>
+                <td>{startIndex + i + 1}</td>
+                <td>{task.referenceNumber || ''}</td>
+                <td className="description-cell">{task.description}</td>
+                <td>{getUnitPageCount(task)}</td>
+                <td>{task.type || '3D'}</td>
+                <td className="price-cell">{fmt(pageTotals[i])}</td>
+              </tr>
+            ))}
 
-          {/* ── First page, multi-page: show continuation note only ── */}
-          {!isLastPage && (
-            <tr className="continuation-note">
-              <td /><td />
-              <td className="description-cell nothing-follow">--- CONTINUED ON NEXT PAGE ---</td>
-              <td /><td /><td />
-            </tr>
-          )}
-
-          {/* ── Last page (or single page): show overhead + nothing follow + empties + total ── */}
-          {isLastPage && (
-            <>
-              {baseRates.overheadPercentage > 0 && (
+            {/* ── Last page (or single page): show overhead + nothing follow + empties + total ── */}
+            {isLastPage && (
+              <>
+                {baseRates.overheadPercentage > 0 && (
+                  <tr>
+                    <td></td>
+                    <td colSpan={4} style={{ textAlign: 'center' }}>Administrative overhead</td>
+                    <td className="price-cell">{fmt(overheadTotal)}</td>
+                  </tr>
+                )}
                 <tr>
                   <td /><td />
-                  <td className="description-cell">Administrative overhead</td>
-                  <td /><td />
-                  <td className="price-cell">{fmt(overheadTotal)}</td>
+                  <td className="description-cell nothing-follow" style={{ color: '#888' }}>--- NOTHING FOLLOW ---</td>
+                  <td /><td /><td />
                 </tr>
-              )}
-              <tr>
-                <td /><td />
-                <td className="description-cell nothing-follow">--- NOTHING FOLLOW ---</td>
-                <td /><td /><td />
-              </tr>
-              {Array.from({ length: emptyCount }, (_, i) => (
-                <tr key={`empty-${i}`}>
-                  <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
-                  <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                {Array.from({ length: emptyCount }, (_, i) => (
+                  <tr key={`empty-${i}`}>
+                    <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                    <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                  </tr>
+                ))}
+                <tr style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                  <td colSpan={5} style={{ textAlign: 'center' }}>Total Amount</td>
+                  <td className="price-cell">{fmt(grandTotal)}</td>
                 </tr>
-              ))}
-              <tr style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                <td colSpan={5} style={{ textAlign: 'center' }}>Total Amount</td>
-                <td className="price-cell">{fmt(grandTotal)}</td>
-              </tr>
-            </>
-          )}
-        </tbody>
-      </table>
+              </>
+            )}
+            {/* Dummy row to prevent css :last-child from assigning thick top border to the normal row */}
+            {!isLastPage && <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>}
+          </tbody>
+        </table>
+        {!isLastPage && (
+          <div className="nothing-follow" style={{ textAlign: 'center', color: '#888', fontWeight: 'bold', fontStyle: 'italic', padding: '50px 0', letterSpacing: '1px', fontSize: '11px' }}>
+            --- CONTINUED ON NEXT PAGE ---
+          </div>
+        )}
+      </>
     )
   }
 
@@ -449,75 +436,131 @@ const PrintPreviewModal = memo(({
   )
 
   const renderFirstPage = () => (
-    <div className={`quotation-visual-exact${needsPagination ? '' : ` task-count-${actualTaskCount}`}`}>
-      {renderHeader()}
-      {printMode === 'billing' && (
-        <div className="quotation-details-visual">
-          <div className="detail-row-visual">
-            <span className="detail-label-visual">DATE:</span>
-            <span className="detail-value-visual">{quotationDetails.date || ''}</span>
+    <div
+      className={`quotation-visual-exact${needsPagination ? '' : ` task-count-${actualTaskCount}`}`}
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
+      <div className="q-top-content">
+        {renderHeader()}
+        {printMode === 'billing' && (
+          <div className="quotation-details-visual">
+            <div className="detail-row-visual">
+              <span className="detail-label-visual">DATE:</span>
+              <span className="detail-value-visual">{quotationDetails.date || ''}</span>
+            </div>
+            <div className="detail-row-visual">
+              <span className="detail-label-visual">Invoice No.:</span>
+              <span className="detail-value-visual">{quotationDetails.invoiceNo || ''}</span>
+            </div>
+            <div className="detail-row-visual">
+              <span className="detail-label-visual">Quotation No.:</span>
+              <span className="detail-value-visual">{quotationDetails.quotationNo || ''}</span>
+            </div>
+            <div className="detail-row-visual">
+              <span className="detail-label-visual">Job Order No.:</span>
+              <span className="detail-value-visual">{quotationDetails.jobOrderNo || ''}</span>
+            </div>
           </div>
-          <div className="detail-row-visual">
-            <span className="detail-label-visual">Invoice No.:</span>
-            <span className="detail-value-visual">{quotationDetails.invoiceNo || ''}</span>
-          </div>
-          <div className="detail-row-visual">
-            <span className="detail-label-visual">Quotation No.:</span>
-            <span className="detail-value-visual">{quotationDetails.quotationNo || ''}</span>
-          </div>
-          <div className="detail-row-visual">
-            <span className="detail-label-visual">Reference No.:</span>
-            <span className="detail-value-visual">{quotationDetails.referenceNo || ''}</span>
-          </div>
-          <div className="detail-row-visual">
-            <span className="detail-label-visual">Job Order No.:</span>
-            <span className="detail-value-visual">{quotationDetails.jobOrderNo || ''}</span>
+        )}
+        <div className="contact-section-visual">
+          {printMode !== 'billing'
+            ? <div className="quotation-to-visual">Quotation to:</div>
+            : <div className="quotation-to-visual"></div>
+          }
+          <div className="client-details-visual">
+            <div className="client-company-name">{clientInfo.company}</div>
+            <div className="client-person-name">{clientInfo.contact}</div>
+            {clientInfo.address}<br />{clientInfo.phone}
           </div>
         </div>
-      )}
-      <div className="contact-section-visual">
-        {printMode !== 'billing'
-          ? <div className="quotation-to-visual">Quotation to:</div>
-          : <div className="quotation-to-visual"></div>
-        }
-        <div className="client-details-visual">
-          <div className="client-company-name">{clientInfo.company}</div>
-          <div className="client-person-name">{clientInfo.contact}</div>
-          {clientInfo.address}<br />{clientInfo.phone}
-        </div>
-      </div>
 
-      {renderTable(firstPageTasks, firstPageTotals, 0)}
+        {renderTable(firstPageTasks, firstPageTotals, 0)}
 
-      {!needsPagination && (
-        <>
+        {!needsPagination && (
           <div className="terms-visual">
             Upon receipt of this quotation sheet, kindly send us one copy with your signature.<br /><br />
             The price will be changed without prior notice due to frequent changes of conversion rate.
           </div>
+        )}
+      </div>
+
+      {!needsPagination && (
+        <div className="q-bottom-content" style={{ marginTop: 'auto' }}>
           {renderSignatures()}
           {renderFooter()}
-        </>
+        </div>
       )}
     </div>
   )
 
   const renderSecondPage = () => (
     <>
-      {/* Visual page separator — only in preview, not printed */}
       <div className="ppm-page-break-indicator">PAGE 2</div>
-      <div className="quotation-visual-exact" style={{ pageBreakBefore: 'always', marginTop: '0' }}>
-        {renderHeader(true)}
-        {renderTable(secondPageTasks, secondPageTotals, firstPageTasks.length)}
-        <div className="terms-visual">
-          Upon receipt of this quotation sheet, kindly send us one copy with your signature.<br /><br />
-          The price will be changed without prior notice due to frequent changes of conversion rate.
+      <div
+        className="quotation-visual-exact"
+        style={{ pageBreakBefore: 'always', marginTop: '0', display: 'flex', flexDirection: 'column' }}
+      >
+        <div className="q-top-content">
+          {renderHeader(true)}
+          {renderTable(secondPageTasks, secondPageTotals, firstPageTasks.length)}
+          <div className="terms-visual">
+            Upon receipt of this quotation sheet, kindly send us one copy with your signature.<br /><br />
+            The price will be changed without prior notice due to frequent changes of conversion rate.
+          </div>
         </div>
-        {renderSignatures()}
-        {renderFooter()}
+        <div className="q-bottom-content">
+          {renderSignatures()}
+          {renderFooter()}
+        </div>
       </div>
     </>
   )
+
+  const ZOOM_LEVELS = useMemo(() => [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3], [])
+
+  const handleZoomIn = useCallback(() => {
+    const next = ZOOM_LEVELS.find(z => z > (actualScale + 0.01))
+    if (next) setZoomMode(next)
+  }, [actualScale, ZOOM_LEVELS])
+
+  const handleZoomOut = useCallback(() => {
+    for (let i = ZOOM_LEVELS.length - 1; i >= 0; i--) {
+      if (ZOOM_LEVELS[i] < (actualScale - 0.01)) {
+        setZoomMode(ZOOM_LEVELS[i])
+        break
+      }
+    }
+  }, [actualScale, ZOOM_LEVELS])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) {
+        e.preventDefault()
+        if (e.deltaY < 0) {
+          handleZoomIn()
+        } else if (e.deltaY > 0) {
+          handleZoomOut()
+        }
+      }
+    }
+    
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
+  }, [isOpen, handleZoomIn, handleZoomOut])
+
+  // Escape key handler
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
@@ -627,13 +670,13 @@ const PrintPreviewModal = memo(({
             <div
               className="ppm-a4-scaler"
               style={{
-                width: `${A4_W_PX * scale}px`,
-                height: `${A4_H_PX * (needsPagination ? 2 : 1) * scale + (needsPagination ? 80 * scale : 0)}px`,
+                width: `${A4_W_PX * actualScale}px`,
+                height: `${A4_H_PX * (needsPagination ? 2 : 1) * actualScale + (needsPagination ? 80 * actualScale : 0)}px`,
               }}
             >
               <div
                 style={{
-                  transform: `scale(${scale})`,
+                  transform: `scale(${actualScale})`,
                   transformOrigin: 'top left',
                   width: `${A4_W_PX}px`,
                 }}
@@ -656,7 +699,22 @@ const PrintPreviewModal = memo(({
             </svg>
             Page {totalPages > 1 ? `1–${totalPages}` : '1'} of {totalPages} · A4 Portrait
           </span>
-          <span className="ppm-zoom-label">{Math.round(scale * 100)}% zoom</span>
+          <div className="zoom-controls">
+            <button className="zoom-button" onClick={handleZoomOut} disabled={actualScale <= ZOOM_LEVELS[0]} title="Zoom Out">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+            <span
+              className="ppm-zoom-label"
+              onClick={() => setZoomMode('fit')}
+              style={{ cursor: 'pointer', minWidth: '70px', textAlign: 'center' }}
+              title="Fit to Screen"
+            >
+              {zoomMode === 'fit' ? `Fit (${Math.round(actualScale * 100)}%)` : `${Math.round(actualScale * 100)}%`}
+            </span>
+            <button className="zoom-button" onClick={handleZoomIn} disabled={actualScale >= ZOOM_LEVELS[ZOOM_LEVELS.length - 1]} title="Zoom In">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+          </div>
         </div>
       </div>
 
