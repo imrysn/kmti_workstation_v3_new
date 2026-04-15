@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useModal } from '../components/ModalContext'
 import { useInvoiceState, useFileOperations } from '../hooks/quotation'
-import type { Task } from '../hooks/quotation'
 import {
   CompanyInfo,
   ClientInfo,
@@ -24,7 +23,7 @@ export default function Quotation() {
     tasks, baseRates, signatures, manualOverrides, collapsedTaskIds,
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
     updateCompanyInfo, updateClientInfo, updateQuotationDetails,
-    addTask, addSubTask, removeTask, updateTask, updateTaskBatch, reorderTasks,
+    addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures,
     setSelectedMainTaskId, updateManualOverrides, setCollapsedTaskIds, resetToNew, loadData, getSaveData,
     markSaved,
@@ -50,17 +49,6 @@ export default function Quotation() {
     return () => { document.title = 'KMTI Workstation' }
   }, [quotationDetails.quotationNo, hasUnsavedChanges])
 
-  const handleUpdateTasks = useCallback(
-    (editedTasks: Partial<Task>[]) => {
-      const updates = editedTasks
-        .filter(t => t.id != null)
-        .map(t => ({ id: t.id!, ...t }))
-      updateTaskBatch(updates)
-    },
-    [updateTaskBatch]
-  )
-
-  // ... (rest of the file)
 
   // Format date for display in toolbar: "13 Apr 2026"
   const formatToolbarDate = (dateStr: string) => {
@@ -200,8 +188,6 @@ export default function Quotation() {
         baseRates={baseRates}
         signatures={signatures}
         manualOverrides={manualOverrides}
-        onUpdateTasks={handleUpdateTasks}
-        onUpdateManualOverrides={updateManualOverrides}
       />
     </div>
   )

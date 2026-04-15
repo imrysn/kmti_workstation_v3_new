@@ -3,7 +3,6 @@ import type {
   Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, ManualOverrides
 } from '../../hooks/quotation'
 import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead } from '../../utils/quotation'
-import QuickEditModal from './QuickEditModal'
 import Logo from '../../assets/kmti_logo.png'
 
 interface Props {
@@ -16,8 +15,6 @@ interface Props {
   baseRates: BaseRates
   signatures: Signatures
   manualOverrides?: ManualOverrides
-  onUpdateTasks?: (tasks: Partial<Task>[]) => void
-  onUpdateManualOverrides?: (overrides: ManualOverrides) => void
 }
 
 // A4 dimensions in px at 96dpi
@@ -27,23 +24,16 @@ const A4_H_PX = 1123  // 297mm
 const PrintPreviewModal = memo(({
   isOpen, onClose,
   companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures,
-  manualOverrides = {}, onUpdateTasks, onUpdateManualOverrides
+  manualOverrides = {}
 }: Props) => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [printMode, setPrintMode] = useState<'quotation' | 'billing'>('quotation')
-  const [isQuickEditOpen, setIsQuickEditOpen] = useState(false)
-  const [localTasks, setLocalTasks] = useState<Task[]>(tasks)
-  const [localManualOverrides, setLocalManualOverrides] = useState<ManualOverrides>(manualOverrides)
   const [baseScale, setBaseScale] = useState(1)
   const [zoomMode, setZoomMode] = useState<'fit' | number>('fit')
   const actualScale = zoomMode === 'fit' ? baseScale : zoomMode
 
   const previewRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
-
-  // Sync state when parent changes
-  useEffect(() => { setLocalTasks(tasks) }, [tasks])
-  useEffect(() => { setLocalManualOverrides(manualOverrides) }, [manualOverrides])
 
   // Auto-scale A4 sheet to fit the preview container
   useEffect(() => {
@@ -65,24 +55,10 @@ const PrintPreviewModal = memo(({
     return () => ro.disconnect()
   }, [isOpen])
 
-  // ── Quick-edit apply ───────────────────────────────────────────────────────
-  const handleQuickEditApply = useCallback((
-    editedTasks: Partial<Task>[],
-    editedOverrides: ManualOverrides
-  ) => {
-    setLocalTasks(prev => prev.map(task => {
-      const edited = editedTasks.find(t => t.id === task.id)
-      return edited && task.isMainTask ? { ...task, ...edited } : task
-    }))
-    setLocalManualOverrides(editedOverrides)
-    onUpdateTasks?.(editedTasks)
-    onUpdateManualOverrides?.(editedOverrides)
-  }, [onUpdateTasks, onUpdateManualOverrides])
-
   // ── Task total calculation ─────────────────────────────────────────────────
   const calculateTaskTotal = useCallback((task: Task): number => {
-    return calculateTaskSubtotal(task, localTasks, baseRates, localManualOverrides).total
-  }, [localTasks, baseRates, localManualOverrides])
+    return calculateTaskSubtotal(task, tasks, baseRates, manualOverrides).total
+  }, [tasks, baseRates, manualOverrides])
 
   // ── Pagination / layout memo ──────────────────────────────────────────────
   const {
@@ -91,7 +67,7 @@ const PrintPreviewModal = memo(({
     grandTotal, overheadTotal, actualTaskCount, maxRows,
     totalPages, secondPageEmptyRows
   } = useMemo(() => {
-    const mainTasks = localTasks.filter(t => t.isMainTask).slice(0, 27)
+    const mainTasks = tasks.filter(t => t.isMainTask).slice(0, 27)
     const count = mainTasks.length
     // If overhead is enabled, 15 tasks + overhead row + "nothing follow" + grand total row 
     // already fills the page. Threshold should be 15 if overhead > 0.
@@ -111,13 +87,13 @@ const PrintPreviewModal = memo(({
     const secondPageTotals = secondPageTasks.map(calculateTaskTotal)
 
     const subtotal = [...firstPageTotals, ...secondPageTotals].reduce((s, t) => s + t, 0)
-    const footerOverrides = (localManualOverrides as any)[-1] || {}
+    const footerOverrides = (manualOverrides as any)[-1] || {}
     const overhead = footerOverrides.overhead !== undefined
       ? footerOverrides.overhead
       : calculateOverhead(subtotal, baseRates.overheadPercentage)
-    const grand = footerOverrides.total !== undefined
-      ? footerOverrides.total
-      : subtotal + overhead
+
+    // SMART ROUNDING SYNC: Always sum up (Subtotal + Overhead + Adjustment)
+    const grand = subtotal + overhead + (footerOverrides.adjustment || 0)
     const taskCount = count + (baseRates.overheadPercentage > 0 ? 1 : 0) + 1
     const rows = needsPagination ? 15
       : useCompression ? taskCount
@@ -130,15 +106,15 @@ const PrintPreviewModal = memo(({
       actualTaskCount: taskCount, maxRows: rows,
       totalPages: needsPagination ? 2 : 1, secondPageEmptyRows
     }
-  }, [localTasks, baseRates, calculateTaskTotal])
+  }, [tasks, baseRates, calculateTaskTotal])
 
   const fmt = useCallback((n: number) => `¥${n.toLocaleString()}`, [])
 
   const getUnitPageCount = useCallback((task: Task) => {
-    const ov = localManualOverrides[task.id]
+    const ov = manualOverrides[task.id]
     if (ov?.unitPage !== undefined) return ov.unitPage
-    return 1 + localTasks.filter(t => t.parentId === task.id).length
-  }, [localTasks, localManualOverrides])
+    return 1 + tasks.filter(t => t.parentId === task.id).length
+  }, [tasks, manualOverrides])
 
   // ── Print / PDF ───────────────────────────────────────────────────────────
   const handlePrint = useCallback(async () => {
@@ -231,7 +207,7 @@ const PrintPreviewModal = memo(({
         <div className="company-name-visual">
           {printMode === 'billing'
             ? 'KUSAKABE & MAENO TECH., INC'
-            : <><span>KUSAKABE & MAENO</span><br /><span>TECH., INC</span></>}
+            : <><span>KUSAKABE & MAENO</span><br /><span>TECH., INC.</span></>}
         </div>
         {printMode === 'billing' && (
           <div className="company-address-visual">
@@ -297,7 +273,7 @@ const PrintPreviewModal = memo(({
               <th className="col-no">NO.</th>
               <th className="col-reference">REFERENCE NO.</th>
               <th className="col-description">DESCRIPTION</th>
-              <th className="col-unitpage">UNIT PAGE</th>
+              <th className="col-unitpage">UNIT (PAGE)</th>
               <th className="col-type">TYPE</th>
               <th className="col-price">PRICE</th>
             </tr>
@@ -321,7 +297,10 @@ const PrintPreviewModal = memo(({
                 {baseRates.overheadPercentage > 0 && (
                   <tr>
                     <td></td>
-                    <td colSpan={4} style={{ textAlign: 'center' }}>Administrative overhead</td>
+                    <td>Administrative overhead</td>
+                    <td className="description-cell"></td>
+                    <td></td>
+                    <td></td>
                     <td className="price-cell">{fmt(overheadTotal)}</td>
                   </tr>
                 )}
@@ -407,33 +386,37 @@ const PrintPreviewModal = memo(({
     </div>
   )
 
-  const renderFooter = () => printMode === 'billing' ? (
-    <div className="footer-visual">
-      <div className="bank-details-section">
-        <div className="bank-details-title">BANK DETAILS (Yen)</div>
-        <div className="bank-details-grid">
-          {[
-            ['BANK NAME:', 'RIZAL COMMERCIAL BANK CORPORATION'],
-            ['SAVINGS ACCOUNT NAME:', 'KUSAKABE & MAENO TECH INC.'],
-            ['SAVINGS ACCOUNT NUMBER:', '0000000011581337'],
-            ['BANK ADDRESS:', "RCBC DASMARINAS BRANCH RCBS BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE"],
-            ['SWIFT CODE:', 'RCBCPHMM'],
-            ['BRANCH CODE:', '358'],
-          ].map(([label, value]) => (
-            <div key={label} className="bank-detail-row">
-              <span className="bank-label">{label}</span>
-              <span className="bank-value">{value}</span>
-            </div>
-          ))}
+  const renderFooter = (isLastPage = false) => {
+    if (printMode === 'billing' && !isLastPage) return null
+
+    return printMode === 'billing' ? (
+      <div className="footer-visual">
+        <div className="bank-details-section">
+          <div className="bank-details-title">BANK DETAILS (Yen)</div>
+          <div className="bank-details-grid">
+            {[
+              ['BANK NAME:', 'RIZAL COMMERCIAL BANK CORPORATION'],
+              ['SAVINGS ACCOUNT NAME:', 'KUSAKABE & MAENO TECH INC.'],
+              ['SAVINGS ACCOUNT NUMBER:', '0000000011581337'],
+              ['BANK ADDRESS:', "RCBC DASMARINAS BRANCH RCBS BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE"],
+              ['SWIFT CODE:', 'RCBCPHMM'],
+              ['BRANCH CODE:', '358'],
+            ].map(([label, value]) => (
+              <div key={label} className="bank-detail-row">
+                <span className="bank-label">{label}</span>
+                <span className="bank-value">{value}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
-  ) : (
-    <div className="footer-visual">
-      <div>cc: admin/acctg/Engineering</div>
-      <div>Admin Quotation Template v3.0-2025</div>
-    </div>
-  )
+    ) : (
+      <div className="footer-visual">
+        <div>cc: admin/acctg/Engineering</div>
+        <div>Admin Quotation Template v3.0-2026</div>
+      </div>
+    )
+  }
 
   const renderFirstPage = () => (
     <div
@@ -484,12 +467,10 @@ const PrintPreviewModal = memo(({
         )}
       </div>
 
-      {!needsPagination && (
-        <div className="q-bottom-content" style={{ marginTop: 'auto' }}>
-          {renderSignatures()}
-          {renderFooter()}
-        </div>
-      )}
+      <div className="q-bottom-content" style={{ marginTop: 'auto' }}>
+        {!needsPagination && renderSignatures()}
+        {renderFooter(!needsPagination)}
+      </div>
     </div>
   )
 
@@ -508,9 +489,9 @@ const PrintPreviewModal = memo(({
             The price will be changed without prior notice due to frequent changes of conversion rate.
           </div>
         </div>
-        <div className="q-bottom-content">
+        <div className="q-bottom-content" style={{ marginTop: 'auto' }}>
           {renderSignatures()}
-          {renderFooter()}
+          {renderFooter(true)}
         </div>
       </div>
     </>
@@ -547,7 +528,7 @@ const PrintPreviewModal = memo(({
         }
       }
     }
-    
+
     container.addEventListener('wheel', handleWheel, { passive: false })
     return () => container.removeEventListener('wheel', handleWheel)
   }, [isOpen, handleZoomIn, handleZoomOut])
@@ -608,20 +589,6 @@ const PrintPreviewModal = memo(({
             </div>
 
             <div className="ppm-sep" />
-
-            {/* Quick Edit */}
-            <button
-              id="ppm-btn-quickedit"
-              className="ppm-action-btn secondary"
-              onClick={() => setIsQuickEditOpen(true)}
-              disabled={isProcessing}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
-              Quick Edit
-            </button>
 
             {/* Print */}
             <button
@@ -718,15 +685,6 @@ const PrintPreviewModal = memo(({
         </div>
       </div>
 
-      {/* Quick-edit sub-modal */}
-      <QuickEditModal
-        isOpen={isQuickEditOpen}
-        onClose={() => setIsQuickEditOpen(false)}
-        tasks={localTasks}
-        baseRates={baseRates}
-        manualOverrides={localManualOverrides}
-        onApplyChanges={handleQuickEditApply}
-      />
     </div>
   )
 })

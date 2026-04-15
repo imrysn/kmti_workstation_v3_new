@@ -245,17 +245,18 @@ const TasksTable = memo(({
 
     // Check for footer overrides in manualOverrides (using key -1)
     const footerOverrides = (manualOverrides as any)[-1] || {}
-    const overhead = footerOverrides.overhead !== undefined
+
+    const overheadTotal = footerOverrides.overhead !== undefined
       ? footerOverrides.overhead
       : calculateOverhead(sub, baseRates.overheadPercentage)
 
-    const grand = footerOverrides.total !== undefined
-      ? footerOverrides.total
-      : sub + overhead
+    // SMART ROUNDING: Grand Total = Subtotal + Overhead + Manual Adjustment
+    const baseSum = sub + overheadTotal
+    const grand = baseSum + (footerOverrides.adjustment || 0)
 
     return {
       taskTotals: totals,
-      overheadTotal: overhead,
+      overheadTotal,
       subtotal: sub,
       grandTotal: grand,
       mainTaskCount
@@ -283,6 +284,7 @@ const TasksTable = memo(({
     } else {
       const val = parseFloat(draft)
       if (!isNaN(val) && val >= 0) {
+        // SAVING OVERHEAD: This is a direct override of the overhead amount.
         setManualOverrides((prev: any) => ({ ...prev, [-1]: { ...(prev[-1] || {}), overhead: val } }))
       }
     }
@@ -291,10 +293,11 @@ const TasksTable = memo(({
 
   const handleGrandTotalBlur = useCallback((draft: string) => {
     if (draft.trim() === '') {
+      // Clearing the grand total override removes the rounding adjustment
       setManualOverrides((prev: any) => {
         const next = { ...prev }
         if (next[-1]) {
-          const { total: _, ...rest } = next[-1]
+          const { adjustment: _, ...rest } = next[-1]
           if (Object.keys(rest).length === 0) delete next[-1]
           else next[-1] = rest
         }
@@ -303,11 +306,19 @@ const TasksTable = memo(({
     } else {
       const val = parseFloat(draft)
       if (!isNaN(val) && val >= 0) {
-        setManualOverrides((prev: any) => ({ ...prev, [-1]: { ...(prev[-1] || {}), total: val } }))
+        // ROUNDING LOGIC: Calculate the difference between the target total and the base sum.
+        // Adjustment = TargetValue - (Subtotal + CurrentOverhead)
+        const currentBaseSum = subtotal + overheadTotal
+        const roundingAdjustment = val - currentBaseSum
+        
+        setManualOverrides((prev: any) => ({
+          ...prev,
+          [-1]: { ...(prev[-1] || {}), adjustment: roundingAdjustment }
+        }))
       }
     }
     setEditingGrandTotal(false)
-  }, [setManualOverrides])
+  }, [setManualOverrides, subtotal, overheadTotal])
 
   const handleCancelEdit = useCallback(() => {
     setEditingTaskId(null)
@@ -357,6 +368,23 @@ const TasksTable = memo(({
   }, [taskTotals, editingTaskId, editedValues])
 
   const taskIds = useMemo(() => new Set(tasks.map(t => t.id)), [tasks])
+
+  // AUTO-RESET FOOTER: When the subtotal changes (tasks added/edited), 
+  // revert the overhead and grand total to automatic percentage mode.
+  useEffect(() => {
+    setManualOverrides((prev: any) => {
+      if (!prev[-1]) return prev // Nothing to reset
+      
+      const next = { ...prev }
+      if (next[-1]) {
+        const { overhead: _, adjustment: __, ...rest } = next[-1]
+        if (Object.keys(rest).length === 0) delete next[-1]
+        else next[-1] = rest
+      }
+      return next
+    })
+  }, [subtotal, setManualOverrides])
+
   useEffect(() => {
     let changed = false
     const f: ManualOverrides = {}

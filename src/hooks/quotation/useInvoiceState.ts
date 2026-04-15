@@ -130,7 +130,7 @@ const DEFAULT_SIGNATURES: Signatures = {
     receivedBy: { label: '(Signature Over Printed Name)' },
   },
   billing: {
-    preparedBy: { name: 'MS. PAULYN MAURIEL BEJER', title: 'Accounting Staff' },
+    preparedBy: { name: 'MS. PAULYN MURRIEL BEJER', title: 'Accounting Staff' },
     approvedBy: { name: 'MR. MICHAEL PEÑANO', title: 'Engineering Manager' },
     finalApprover: { name: 'MR. YUICHIRO MAENO', title: 'President' },
   },
