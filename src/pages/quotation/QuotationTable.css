@@ -27,7 +27,8 @@
 
 /* Scrollable table body - max 15 rows visible (Higher density) */
 .tasks-table-body {
-  max-height: 580px; /* Approximately 13-14 rows */
+  max-height: 580px;
+  /* Approximately 13-14 rows */
   overflow-y: auto;
   overflow-x: hidden;
   display: block;
@@ -45,7 +46,8 @@
   display: block;
   width: 100%;
   overflow: hidden;
-  padding-right: 8px; /* Match scrollbar gutter width */
+  padding-right: 8px;
+  /* Match scrollbar gutter width */
   box-sizing: border-box;
   position: relative;
   background: white;
@@ -59,7 +61,8 @@
   top: 0;
   width: 8px;
   height: 100%;
-  background: #f9fafb; /* Match header background color */
+  background: #f9fafb;
+  /* Match header background color */
   border-left: 1px solid #e5e7eb;
 }
 
@@ -71,11 +74,13 @@
 /* Custom scrollbar styling */
 .tasks-table-body::-webkit-scrollbar {
   width: 8px;
-  background: #f9fafb; /* Match header background */
+  background: #f9fafb;
+  /* Match header background */
 }
 
 .tasks-table-body::-webkit-scrollbar-track {
-  background: #f9fafb; /* Match header background */
+  background: #f9fafb;
+  /* Match header background */
   border-radius: 0;
   border-left: 1px solid #e5e7eb;
 }
@@ -87,4 +92,399 @@
 
 .tasks-table-body::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* ============================================================ */
+/* Professional Table Styles                                  */
+/* ============================================================ */
+
+/* Reset for isolated tables */
+.tasks-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-family: 'Inter', 'Arimo', sans-serif;
+  color: #0f172a;
+}
+
+/* ── Header Styles ────────────────────────────────────────── */
+.tasks-table th {
+  background-color: #f8fafc;
+  color: #242a31;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 14px 8px;
+  text-align: center;
+  border-bottom: 2px solid #cbd5e1;
+  border-right: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.tasks-table th:first-child {
+  border-left: none;
+}
+
+.tasks-table th:last-child {
+  border-right: none;
+}
+
+/* ── Cell Styles ──────────────────────────────────────────── */
+.tasks-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  vertical-align: middle;
+  height: 48px;
+  box-sizing: border-box;
+}
+
+.tasks-table td:last-child {
+  border-right: none;
+}
+
+/* ── Inputs Inside Table ──────────────────────────────────── */
+.table-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background-color: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1e293b;
+  transition: all 0.2s ease-in-out;
+  box-sizing: border-box;
+}
+
+.table-input:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.table-input:focus {
+  background-color: #ffffff;
+  border-color: #3b82f6;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.table-input.number-input {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.table-input.number-input::-webkit-outer-spin-button,
+.table-input.number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.table-input.reference-input {
+  text-align: center;
+  font-family: 'Arimo', monospace;
+  font-weight: 600;
+  font-size: 12px;
+  color: #334155;
+  text-transform: uppercase;
+}
+
+/* ── Description Alignment ────────────────────────────────── */
+.description-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 6px;
+  padding-left: 4px;
+  position: relative;
+}
+
+.sub-task-description {
+  padding-left: 20px;
+}
+
+.sub-task-indicator {
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 14px;
+  position: absolute;
+  left: 6px;
+}
+
+.description-input {
+  text-align: left;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sub-task-input {
+  font-weight: 500;
+  color: #334155;
+}
+
+/* ── Highlighted Calculated Columns ───────────────────────── */
+.tasks-table .calculated-cell {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0 10px;
+  text-align: right;
+  letter-spacing: 0.02em;
+}
+
+.time-charge-bg {
+  background-color: rgba(245, 158, 11, 0.08);
+  color: #92400e;
+}
+
+.overtime-bg {
+  background-color: rgba(239, 68, 68, 0.06);
+  color: #991b1b;
+}
+
+.overhead-bg {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #065f46;
+}
+
+.total-cell {
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #1e40af;
+  font-weight: 800;
+  font-size: 14px;
+  text-align: right;
+  padding-right: 12px !important;
+}
+
+/* ── Software Column ──────────────────────────────────────── */
+.software-input-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.software-units-input {
+  width: 50px !important;
+  text-align: center;
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+
+.software-total {
+  font-weight: 700;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+  min-width: 60px;
+  text-align: right;
+}
+
+/* ── Type Dropdown ────────────────────────────────────────── */
+.type-select {
+  text-align: center;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  padding-right: 22px;
+  font-weight: 600;
+}
+
+.custom-type-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reset-type-button {
+  background: white;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  color: #64748b;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.reset-type-button:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* ── Action Buttons ───────────────────────────────────────── */
+.action-buttons-container {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-buttons-container button {
+  background: #f8fafc;
+  border: 1px solid transparent;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  transition: all 0.2s;
+}
+
+.edit-task-button:hover {
+  background-color: #e0f2fe;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+
+.edit-task-button.editing {
+  background-color: #0284c7;
+  color: white;
+  border-color: #0369a1;
+}
+
+.remove-task-button:hover {
+  background-color: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+/* ── Visual Overrides for Rows ────────────────────────────── */
+.row-number-cell {
+  font-weight: 700;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.main-task-row .row-number-cell {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.main-task-row td {
+  border-top: 2px solid #e2e8f0;
+}
+
+.edit-calculated-input {
+  background-color: #ffffff;
+  border: 1px solid #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) inset;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+/* ── Fixed Column Widths for Header and Body Synchronization ─ */
+/* Sum of widths = 100% */
+.tasks-table th:nth-child(1),
+.tasks-table td:nth-child(1) {
+  width: 5%;
+}
+
+/* REF NO */
+.tasks-table th:nth-child(2),
+.tasks-table td:nth-child(2) {
+  width: 7%;
+}
+
+/* DESCRIPTION */
+.tasks-table th:nth-child(3),
+.tasks-table td:nth-child(3) {
+  width: 21%;
+}
+
+/* DESCRIPTION */
+.tasks-table th:nth-child(4),
+.tasks-table td:nth-child(4) {
+  width: 5.5%;
+}
+
+/* HOURS */
+.tasks-table th:nth-child(5),
+.tasks-table td:nth-child(5) {
+  width: 5.5%;
+}
+
+/* MINUTES */
+.tasks-table th:nth-child(6),
+.tasks-table td:nth-child(6) {
+  width: 8.5%;
+}
+
+/* TIME CHARGE */
+.tasks-table th:nth-child(7),
+.tasks-table td:nth-child(7) {
+  width: 5.5%;
+}
+
+/* OT RATE */
+.tasks-table th:nth-child(8),
+.tasks-table td:nth-child(8) {
+  width: 8%;
+}
+
+/* OVERTIME */
+.tasks-table th:nth-child(9),
+.tasks-table td:nth-child(9) {
+  width: 10%;
+}
+
+/* SOFTWARE */
+.tasks-table th:nth-child(10),
+.tasks-table td:nth-child(10) {
+  width: 8%;
+}
+
+/* OH */
+.tasks-table th:nth-child(11),
+.tasks-table td:nth-child(11) {
+  width: 6%;
+}
+
+/* TYPE */
+.tasks-table th:nth-child(12),
+.tasks-table td:nth-child(12) {
+  width: 10%;
+}
+
+/* TOTAL */
+.tasks-table th:nth-child(13),
+.tasks-table td:nth-child(13) {
+  width: 5%;
+}
+
+/* ACTION */
+
+/* ── Expand/Collapse ──────────────────────────────────────── */
+.collapse-toggle-btn {
+  background: white;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  color: #64748b;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.collapse-toggle-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
 }

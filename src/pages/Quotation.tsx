@@ -17,17 +17,16 @@ import './Quotation.css'
 export default function Quotation() {
   const { notify } = useModal()
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
-  const [manualOverrides, setManualOverrides] = useState<ManualOverrides>({})
   const [isBaseRatesPanelOpen, setIsBaseRatesPanelOpen] = useState(false)
 
   const {
     companyInfo, clientInfo, quotationDetails,
-    tasks, baseRates, signatures,
+    tasks, baseRates, signatures, manualOverrides, collapsedTaskIds,
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
     updateCompanyInfo, updateClientInfo, updateQuotationDetails,
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures,
-    setSelectedMainTaskId, resetToNew, loadData, getSaveData,
+    setSelectedMainTaskId, setManualOverrides, setCollapsedTaskIds, resetToNew, loadData, getSaveData,
     setCurrentFilePath, setHasUnsavedChanges,
   } = useInvoiceState()
 
@@ -54,7 +53,7 @@ export default function Quotation() {
 
   const handleManualOverridesChange = useCallback(
     (overrides: ManualOverrides) => setManualOverrides(overrides),
-    []
+    [setManualOverrides]
   )
 
   const handleUpdateTasks = useCallback(
@@ -171,7 +170,10 @@ export default function Quotation() {
             onTaskReorder={reorderTasks}
             onMainTaskSelect={setSelectedMainTaskId}
             onBaseRateUpdate={updateBaseRate}
+            manualOverrides={manualOverrides}
             onManualOverridesChange={handleManualOverridesChange}
+            collapsedTasks={new Set(collapsedTaskIds)}
+            onCollapsedTasksChange={(set) => setCollapsedTaskIds(Array.from(set))}
             onOpenRateSettings={() => setIsBaseRatesPanelOpen(true)}
             notify={notify}
           />

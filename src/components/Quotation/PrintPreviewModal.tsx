@@ -374,7 +374,7 @@ const PrintPreviewModal = memo(({
         <div className="signature-left-visual">
           <div className="sig-label-visual">Prepared by:</div>
           <div className="sig-line-visual" />
-          <div className="sig-name-visual">{signatures.billing.preparedBy.name || 'MS. PAULYN MURRILL BEJER'}</div>
+          <div className="sig-name-visual">{signatures.billing.preparedBy.name || 'MS. PAULYN MAURIEL BEJER'}</div>
           <div className="sig-title-visual">{signatures.billing.preparedBy.title || 'Accounting Staff'}</div>
         </div>
         <div className="signature-right-visual">

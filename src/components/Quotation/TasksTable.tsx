@@ -32,6 +32,9 @@ interface TaskRowProps {
   onDragLeave: () => void
   onDrop: (e: React.DragEvent, id: number) => void
   onDragEnd: () => void
+  hasSubTasks?: boolean
+  isCollapsed?: boolean
+  onToggleCollapse?: (e: React.MouseEvent, id: number) => void
 }
 
 const TaskRow = memo(({
@@ -39,7 +42,8 @@ const TaskRow = memo(({
   isSelected, onMainTaskSelect, rowNumber,
   isEditing, onEditToggle, onEditValueUpdate,
   isDragging, isDragOver,
-  onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd
+  onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
+  hasSubTasks, isCollapsed, onToggleCollapse
 }: TaskRowProps) => {
   const handleUpdate = useCallback((field: keyof Task, value: any) => onUpdate(task.id, field, value), [task.id, onUpdate])
   const handleRemove = useCallback(() => onRemove(task.id), [task.id, onRemove])
@@ -66,14 +70,26 @@ const TaskRow = memo(({
       onDrop={e => onDrop(e, task.id)}
       onDragEnd={onDragEnd}
     >
-      <td className="row-number-cell"><span className="row-number">{rowNumber}</span></td>
+      <td className="row-number-cell">
+        <div className="row-number-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+          {task.isMainTask && hasSubTasks && (
+            <button className="collapse-toggle-btn" onClick={(e) => onToggleCollapse?.(e, task.id)} title={isCollapsed ? 'Expand parts' : 'Collapse parts'}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" 
+                style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+          )}
+          <span className="row-number">{rowNumber}</span>
+        </div>
+      </td>
       <td className="reference-cell">
         <input type="text" value={task.referenceNumber || ''} onChange={e => handleUpdate('referenceNumber', e.target.value)}
           className="table-input reference-input" placeholder="Ref No" />
       </td>
       <td className="description-cell">
         <div className={`description-container ${!task.isMainTask ? 'sub-task-description' : ''}`}>
-          {!task.isMainTask && <span className="sub-task-indicator">↳</span>}
+          {!task.isMainTask && <span className="sub-task-indicator" style={{ color: '#9ca3af', fontWeight: 'bold' }}>↳</span>}
           <input type="text" value={task.description} onChange={e => handleUpdate('description', e.target.value)}
             className={`table-input description-input ${!task.isMainTask ? 'sub-task-input' : ''}`}
             placeholder={task.isMainTask ? 'Assembly Name' : "Part's name"} />
@@ -116,10 +132,8 @@ const TaskRow = memo(({
         </div>
       </td>
       <td className="calculated-cell overhead-bg">
-        {isEditing ? (
-          <input type="number" value={subtotals.overhead} onChange={e => handleEditValueChange('overhead', e.target.value)}
-            onKeyDown={handleKeyDown} className="table-input number-input edit-calculated-input" min="0" step="0.01" />
-        ) : formatCurrency(subtotals.overhead)}
+        <input type="number" value={subtotals.overhead} onChange={e => handleEditValueChange('overhead', e.target.value)}
+          onKeyDown={handleKeyDown} className="table-input number-input" min="0" step="0.01" />
       </td>
       <td className="type-cell">
         {task.type === '2D' || task.type === '3D' || !task.type ? (
@@ -178,22 +192,33 @@ interface TasksTableProps {
   onTaskReorder: (draggedId: number, targetId: number) => void
   onMainTaskSelect: (id: number) => void
   onBaseRateUpdate: (field: keyof BaseRates, value: number) => void
-  onManualOverridesChange?: (overrides: ManualOverrides) => void
   onOpenRateSettings?: () => void
   notify?: (message: string, type?: NotificationType) => void
+  manualOverrides: ManualOverrides
+  onManualOverridesChange: (overrides: ManualOverrides) => void
+  collapsedTasks?: Set<number>
+  onCollapsedTasksChange?: (collapsed: Set<number>) => void
 }
 
 const TasksTable = memo(({
   tasks, baseRates, selectedMainTaskId,
   onTaskUpdate, onTaskAdd, onSubTaskAdd, onTaskRemove, onTaskReorder,
-  onMainTaskSelect, onBaseRateUpdate, onManualOverridesChange, onOpenRateSettings, notify
+  onMainTaskSelect, onBaseRateUpdate, onOpenRateSettings, notify,
+  manualOverrides, onManualOverridesChange, collapsedTasks = new Set(), onCollapsedTasksChange
 }: TasksTableProps) => {
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
   const [editedValues, setEditedValues] = useState<Record<number, Partial<TaskSubtotals>>>({})
   const [modifiedFields, setModifiedFields] = useState<Record<number, Record<string, boolean>>>({})
-  const [manualOverrides, setManualOverrides] = useState<ManualOverrides>({})
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<number | null>(null)
+
+  const toggleCollapse = useCallback((e: React.MouseEvent, taskId: number) => {
+    e.stopPropagation()
+    const next = new Set(collapsedTasks)
+    if (next.has(taskId)) next.delete(taskId)
+    else next.add(taskId)
+    onCollapsedTasksChange?.(next)
+  }, [collapsedTasks, onCollapsedTasksChange])
 
   const { taskTotals, grandTotal, mainTaskCount } = useMemo(() => {
     const mainTaskCount = tasks.filter(t => t.isMainTask).length
@@ -243,7 +268,14 @@ const TasksTable = memo(({
         fTotal = override.total !== undefined ? override.total : fBasicLabor + fOvertime + fSoftware + fOverhead
       }
 
-      return { taskId: task.id, basicLabor: fBasicLabor, overtime: fOvertime, software: fSoftware, overhead: fOverhead, total: fTotal }
+      return { 
+        taskId: task.id, 
+        basicLabor: Number(fBasicLabor.toFixed(2)), 
+        overtime: Number(fOvertime.toFixed(2)), 
+        software: Number(fSoftware.toFixed(2)), 
+        overhead: Number(fOverhead.toFixed(2)), 
+        total: Number(fTotal.toFixed(2)) 
+      }
     })
 
     const grand = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
@@ -276,9 +308,12 @@ const TasksTable = memo(({
     setEditedValues(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: value } }))
     if (userModified) {
       setModifiedFields(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: true } }))
-      setManualOverrides(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: parseFloat(String(value)) || 0 } }))
+      onManualOverridesChange({ 
+        ...manualOverrides, 
+        [taskId]: { ...manualOverrides[taskId], [field]: parseFloat(String(value)) || 0 } 
+      })
     }
-  }, [])
+  }, [manualOverrides, onManualOverridesChange])
 
   const formatCurrency = useCallback((amount: number) => `¥${amount.toLocaleString()}`, [])
 
@@ -292,21 +327,20 @@ const TasksTable = memo(({
 
   const taskIds = useMemo(() => new Set(tasks.map(t => t.id)), [tasks])
   useEffect(() => {
-    setManualOverrides(prev => {
-      const f: ManualOverrides = {}
-      Object.keys(prev).forEach(id => { if (taskIds.has(Number(id))) f[Number(id)] = prev[Number(id)] })
-      return f
+    let changed = false
+    const f: ManualOverrides = {}
+    Object.keys(manualOverrides).forEach(id => { 
+      if (taskIds.has(Number(id))) f[Number(id)] = manualOverrides[Number(id)] 
+      else changed = true
     })
+    if (changed) onManualOverridesChange(f)
+
     setModifiedFields(prev => {
       const f: Record<number, Record<string, boolean>> = {}
       Object.keys(prev).forEach(id => { if (taskIds.has(Number(id))) f[Number(id)] = prev[Number(id)] })
       return f
     })
-  }, [taskIds])
-
-  useEffect(() => {
-    if (onManualOverridesChange) onManualOverridesChange(manualOverrides)
-  }, [manualOverrides, onManualOverridesChange])
+  }, [taskIds, manualOverrides, onManualOverridesChange])
 
   // Drag handlers
   const handleDragStart = useCallback((e: React.DragEvent, taskId: number) => {
@@ -400,6 +434,12 @@ const TasksTable = memo(({
                 } else {
                   rowNumber = tasks.slice(0, index).filter(t => t.parentId === task.parentId).length + 1
                 }
+
+                if (!task.isMainTask && collapsedTasks.has(task.parentId!)) return null
+
+                const hasSubTasks = task.isMainTask && tasks.some(t => t.parentId === task.id)
+                const isCollapsed = collapsedTasks.has(task.id)
+
                 return (
                   <TaskRow
                     key={task.id} task={task} subtotals={getTaskSubtotals(task.id)}
@@ -412,6 +452,7 @@ const TasksTable = memo(({
                     isDragging={draggedTaskId === task.id} isDragOver={dragOverTaskId === task.id}
                     onDragStart={handleDragStart} onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave} onDrop={handleDrop} onDragEnd={handleDragEnd}
+                    hasSubTasks={hasSubTasks} isCollapsed={isCollapsed} onToggleCollapse={toggleCollapse}
                   />
                 )
               })}

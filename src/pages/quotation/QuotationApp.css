@@ -51,7 +51,7 @@
   border-bottom: 1px solid var(--quot-border);
   flex-shrink: 0;
   gap: 12px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   z-index: 10;
 }
 
@@ -145,10 +145,26 @@
   color: var(--quot-text-main);
   transition: all 0.15s ease;
 }
-.quot-app-root .btn:hover { background: #f8fafc; border-color: #cbd5e1; }
-.quot-app-root .btn-primary { background: var(--quot-primary); border-color: var(--quot-primary); color: #ffffff; }
-.quot-app-root .btn-primary:hover { background: var(--quot-primary-deep); }
-.quot-app-root .btn-ghost { background: var(--quot-bg-card); border: 1px solid var(--quot-border); }
+
+.quot-app-root .btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.quot-app-root .btn-primary {
+  background: var(--quot-primary);
+  border-color: var(--quot-primary);
+  color: #ffffff;
+}
+
+.quot-app-root .btn-primary:hover {
+  background: var(--quot-primary-deep);
+}
+
+.quot-app-root .btn-ghost {
+  background: var(--quot-bg-card);
+  border: 1px solid var(--quot-border);
+}
 
 /* ── Scrollable body ────────────────────────────────────────── */
 .quot-body {
@@ -221,13 +237,41 @@
   justify-content: center;
   flex-shrink: 0;
 }
-.quot-app-root .section-icon.quotation           { background: var(--quot-primary); color: #ffffff; }
-.quot-app-root .section-icon.company             { background: #f1f5f9; color: var(--quot-primary); }
-.quot-app-root .section-icon.client              { background: #f1f5f9; color: var(--quot-primary); }
-.quot-app-root .section-icon.doc-details         { background: #f1f5f9; color: var(--quot-primary); }
-.quot-app-root .section-icon.computation         { background: #f1f5f9; color: var(--quot-primary); }
-.quot-app-root .section-icon.quotation-signatures{ background: #f1f5f9; color: var(--quot-primary); }
-.quot-app-root .section-icon.billing-signatures  { background: #f1f5f9; color: var(--quot-primary); }
+
+.quot-app-root .section-icon.quotation {
+  background: var(--quot-primary);
+  color: #ffffff;
+}
+
+.quot-app-root .section-icon.company {
+  background: #f1f5f9;
+  color: var(--quot-primary);
+}
+
+.quot-app-root .section-icon.client {
+  background: #f1f5f9;
+  color: var(--quot-primary);
+}
+
+.quot-app-root .section-icon.doc-details {
+  background: #f1f5f9;
+  color: var(--quot-primary);
+}
+
+.quot-app-root .section-icon.computation {
+  background: #f1f5f9;
+  color: var(--quot-primary);
+}
+
+.quot-app-root .section-icon.quotation-signatures {
+  background: #f1f5f9;
+  color: var(--quot-primary);
+}
+
+.quot-app-root .section-icon.billing-signatures {
+  background: #f1f5f9;
+  color: var(--quot-primary);
+}
 
 .quot-app-root .section-title {
   font-family: 'Arimo', sans-serif;
@@ -256,6 +300,7 @@
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
+
 .quot-app-root .info-card-edit-btn:hover {
   background: #f1f5f9;
   border-color: #94a3b8;
@@ -375,6 +420,7 @@
   white-space: nowrap;
   transition: all 0.15s ease;
 }
+
 .quot-app-root .client-quot-reset-btn:hover {
   background: #fef3c7;
   border-color: #d97706;
@@ -494,9 +540,18 @@
   line-height: 1.5;
 }
 
-.quot-app-root .input-with-icon { position: relative; }
-.quot-app-root .input-with-icon .form-input { padding-left: 40px; }
-.quot-app-root .input-with-icon .form-textarea { padding-left: 40px; }
+.quot-app-root .input-with-icon {
+  position: relative;
+}
+
+.quot-app-root .input-with-icon .form-input {
+  padding-left: 40px;
+}
+
+.quot-app-root .input-with-icon .form-textarea {
+  padding-left: 40px;
+}
+
 .quot-app-root .input-with-icon .input-icon {
   position: absolute;
   left: 12px;
@@ -684,7 +739,11 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
-.quot-app-root .computation-buttons { display: flex; gap: 8px; align-items: center; }
+.quot-app-root .computation-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
 
 .quot-app-root .add-button {
   display: flex;
@@ -700,22 +759,49 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.quot-app-root .add-button.primary { background: #155dfc; color: #ffffff; }
-.quot-app-root .add-button.primary:hover { background: #1348d6; }
-.quot-app-root .add-button.secondary { background: #ffffff; color: #1d1d1f; border: 1px solid #d1d1d6; }
-.quot-app-root .add-button.secondary:hover { background: #f9fafb; }
+
+.quot-app-root .add-button.primary {
+  background: #155dfc;
+  color: #ffffff;
+}
+
+.quot-app-root .add-button.primary:hover {
+  background: #1348d6;
+}
+
+.quot-app-root .add-button.secondary {
+  background: #ffffff;
+  color: #1d1d1f;
+  border: 1px solid #d1d1d6;
+}
+
+.quot-app-root .add-button.secondary:hover {
+  background: #f9fafb;
+}
+
 .quot-app-root .add-button.rate-settings-btn {
   background: #ffffff;
   color: var(--quot-text-muted);
   border: 1px solid var(--quot-border);
 }
+
 .quot-app-root .add-button.rate-settings-btn:hover {
   background: #f8fafc;
   color: var(--quot-text-main);
   border-color: #94a3b8;
 }
-.quot-app-root .add-button:disabled { background: #f9fafb; color: #9ca3af; border-color: #e5e7eb; cursor: not-allowed; }
-.quot-app-root .add-icon { width: 16px; height: 16px; }
+
+.quot-app-root .add-button:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+}
+
+.quot-app-root .add-icon {
+  width: 16px;
+  height: 16px;
+}
 
 .quot-app-root .tasks-table-container {
   flex: 1;
@@ -747,31 +833,58 @@
   padding: 0 24px;
   border-top: 2px solid var(--quot-primary-deep);
 }
-.quot-app-root .grand-total-label { font-family: 'Arimo', sans-serif; font-size: 18px; font-weight: 700; color: #ffffff; }
-.quot-app-root .grand-total-value { font-family: 'Arimo', sans-serif; font-size: 24px; font-weight: 700; color: #ffffff; }
+
+.quot-app-root .grand-total-label {
+  font-family: 'Arimo', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.quot-app-root .grand-total-value {
+  font-family: 'Arimo', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+}
 
 /* ── Task Table Row Styles ──────────────────────────────────── */
 .quot-app-root .main-task-row {
-  background: #f8fafc;
+  background: #ffffff;
   border-left: 3px solid var(--quot-accent);
   font-weight: 500;
 }
-.quot-app-root .main-task-row:hover { background: #f1f5f9 !important; }
+
+.quot-app-root .main-task-row:hover {
+  background: #cccccc !important;
+}
+
 .quot-app-root .selected-main-task {
-  background: #f1f5f9 !important;
+  background: #cccccc !important;
   border-left: 3px solid var(--quot-primary);
   box-shadow: inset 2px 0 0 var(--quot-primary);
 }
+
 .quot-app-root .sub-task-row {
-  background: #ffffff;
+  background: #f0f0f0;
   border-left: 3px solid var(--quot-border);
 }
-.quot-app-root .sub-task-row:hover { background: #fdfdfd !important; border-left-color: #cbd5e1; }
-.quot-app-root .value-basis-row { background: #f9fafb; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+
+.quot-app-root .sub-task-row:hover {
+  background: #f0f0f0 !important;
+}
+
+.quot-app-root .value-basis-row {
+  background: #f9fafb;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+}
 
 .quot-app-root .main-task-row td,
 .quot-app-root .sub-task-row td,
-.quot-app-root .value-basis-row td { text-align: center; }
+.quot-app-root .value-basis-row td {
+  text-align: center;
+}
 
 /* ── Signature Sections ─────────────────────────────────────── */
 .quot-app-root .signature-header {
@@ -780,7 +893,10 @@
   border-bottom: 1px solid #f3f4f6;
 }
 
-.quot-app-root .signature-content { flex: 1; padding: 20px; }
+.quot-app-root .signature-content {
+  flex: 1;
+  padding: 20px;
+}
 
 .quot-app-root .signature-grid {
   display: grid;
@@ -788,7 +904,11 @@
   gap: 24px;
 }
 
-.quot-app-root .signature-column { display: flex; flex-direction: column; gap: 20px; }
+.quot-app-root .signature-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
 /* ── Signature Cards Side-by-Side Layout ────────────────────── */
 .quot-app-root .sig-cards-layout {
@@ -799,18 +919,42 @@
 }
 
 /* ── Edit / Remove buttons ──────────────────────────────────── */
-.quot-app-root .action-buttons-container { display: flex; gap: 4px; align-items: center; justify-content: center; }
+.quot-app-root .action-buttons-container {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+
 .quot-app-root .edit-task-button,
 .quot-app-root .remove-task-button {
-  display: flex; align-items: center; justify-content: center;
-  width: 28px; height: 28px;
-  border: none; border-radius: 6px;
-  background: transparent; color: #9ca3af;
-  cursor: pointer; transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
-.quot-app-root .edit-task-button:hover { background: #eff6ff; color: #155dfc; }
-.quot-app-root .edit-task-button.editing { background: #155dfc; color: #ffffff; }
-.quot-app-root .remove-task-button:hover { background: #fef2f2; color: #ef4444; }
+
+.quot-app-root .edit-task-button:hover {
+  background: #eff6ff;
+  color: #155dfc;
+}
+
+.quot-app-root .edit-task-button.editing {
+  background: #155dfc;
+  color: #ffffff;
+}
+
+.quot-app-root .remove-task-button:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
 
 /* ── Table inputs ───────────────────────────────────────────── */
 .quot-app-root .table-input {
@@ -826,24 +970,67 @@
   transition: all 0.15s ease;
   text-align: center;
 }
-.quot-app-root .table-input:focus { outline: none; border-color: var(--quot-primary); box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1); }
-.quot-app-root .edit-calculated-input { background: #fffcf0 !important; border-color: #f59e0b !important; font-weight: 600; }
 
-.quot-app-root .calculated-cell { font-weight: 500; font-variant-numeric: tabular-nums; }
-.quot-app-root .time-charge-bg { background: #f8fafc; }
-.quot-app-root .overtime-bg { background: #f1f5f9; }
-.quot-app-root .overhead-bg { background: #f8fafc; }
-.quot-app-root .software-total { color: var(--quot-accent); font-weight: 500; }
+.quot-app-root .table-input:focus {
+  outline: none;
+  border-color: var(--quot-primary);
+  box-shadow: 0 0 0 2px rgba(51, 65, 85, 0.1);
+}
+
+.quot-app-root .edit-calculated-input {
+  background: #fffcf0 !important;
+  border-color: #f59e0b !important;
+  font-weight: 600;
+}
+
+.quot-app-root .calculated-cell {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.quot-app-root .time-charge-bg {
+  background: #f8fafc;
+}
+
+.quot-app-root .overtime-bg {
+  background: #f1f5f9;
+}
+
+.quot-app-root .overhead-bg {
+  background: #f8fafc;
+}
+
+.quot-app-root .software-total {
+  color: var(--quot-accent);
+  font-weight: 500;
+}
 
 /* ── Drag indicator ─────────────────────────────────────────── */
-.quot-app-root .dragging { opacity: 0.5; }
-.quot-app-root .drag-over { border-top: 2px solid #155dfc !important; }
+.quot-app-root .dragging {
+  opacity: 0.5;
+}
+
+.quot-app-root .drag-over {
+  border-top: 2px solid #155dfc !important;
+}
 
 /* ── Scrollbar ──────────────────────────────────────────────── */
-.quot-body::-webkit-scrollbar { width: 6px; }
-.quot-body::-webkit-scrollbar-track { background: transparent; }
-.quot-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
-.quot-body::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+.quot-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.quot-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.quot-body::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.quot-body::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
 
 /* ============================================================
    BASE RATES PANEL (Phase 3) — slide-over drawer
@@ -881,8 +1068,15 @@
 }
 
 @keyframes brp-slide-in {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);    opacity: 1; }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 /* Header */
@@ -933,7 +1127,12 @@
   cursor: pointer;
   transition: all 0.15s ease;
 }
-.brp-close-btn:hover { background: #fef2f2; border-color: #ef4444; color: #ef4444; }
+
+.brp-close-btn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
 
 /* Body */
 .brp-body {
@@ -945,9 +1144,18 @@
   gap: 0;
 }
 
-.brp-body::-webkit-scrollbar { width: 5px; }
-.brp-body::-webkit-scrollbar-track { background: transparent; }
-.brp-body::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+.brp-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.brp-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.brp-body::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
 
 .brp-section {
   padding: 14px 0;
@@ -996,6 +1204,7 @@
   overflow: hidden;
   transition: all 0.2s ease;
 }
+
 .brp-input-wrap:focus-within {
   border-color: #155dfc;
   background: #ffffff;
@@ -1025,12 +1234,21 @@
   text-align: right;
   min-width: 0;
 }
-.brp-input:focus { outline: none; }
+
+.brp-input:focus {
+  outline: none;
+}
 
 /* Remove number input spinners */
 .brp-input::-webkit-outer-spin-button,
-.brp-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-.brp-input[type=number] { -moz-appearance: textfield; }
+.brp-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.brp-input[type=number] {
+  -moz-appearance: textfield;
+}
 
 /* Read-only computed field */
 .brp-input-wrap--readonly {
@@ -1038,10 +1256,12 @@
   border: 1px solid #e2e8f0 !important;
   cursor: default;
 }
+
 .brp-input-wrap--readonly:focus-within {
   border-color: #e2e8f0 !important;
   box-shadow: none !important;
 }
+
 .brp-computed-value {
   flex: 1;
   height: 34px;
@@ -1121,4 +1341,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.brp-done-btn:hover { background: var(--quot-primary-deep); }
+
+.brp-done-btn:hover {
+  background: var(--quot-primary-deep);
+}

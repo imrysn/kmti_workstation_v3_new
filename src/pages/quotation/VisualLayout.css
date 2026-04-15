@@ -376,7 +376,8 @@
   position: absolute;
   right: 0;
   top: 0;
-  width: 270px; /* Restored width to prevent text wrapping */
+  width: 270px;
+  /* Restored width to prevent text wrapping */
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -459,7 +460,8 @@
 /* Billing Details Positioning - now handled by :has() rule below .quotation-details-visual */
 
 .company-info-visual {
-  font-size: 12px; /* Restored font size */
+  font-size: 12px;
+  /* Restored font size */
   text-align: right;
   margin-bottom: 25px;
   line-height: 1.4;
@@ -663,7 +665,7 @@
   text-align: center !important;
   font-weight: bold;
   font-style: italic;
-  color: #666;
+  color: #6b6b6b;
   letter-spacing: 1px;
 }
 

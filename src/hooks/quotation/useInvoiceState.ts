@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -140,7 +140,7 @@ const DEFAULT_SIGNATURES: Signatures = {
     receivedBy: { label: '(Signature Over Printed Name)' },
   },
   billing: {
-    preparedBy: { name: 'MS. PAULYN MURRILL BEJER', title: 'Accounting Staff' },
+    preparedBy: { name: 'MS. PAULYN MAURIEL BEJER', title: 'Accounting Staff' },
     approvedBy: { name: 'MR. MICHAEL PEÑANO', title: 'Engineering Manager' },
     finalApprover: { name: 'MR. YUICHIRO MAENO', title: 'President' },
   },
@@ -162,26 +162,45 @@ function makeBlankTask(): Task {
   }
 }
 
+// ─── Internal Helper for Session Persistence ───────────────────────────────────
+
+function useStickyState<T>(defaultValue: T | (() => T), key: string): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [value, setValue] = useState<T>(() => {
+    const stickyValue = window.sessionStorage.getItem(key)
+    if (stickyValue !== null) {
+      try { return JSON.parse(stickyValue) } catch (e) { /* ignore */ }
+    }
+    return typeof defaultValue === 'function' ? (defaultValue as any)() : defaultValue
+  })
+  useEffect(() => {
+    window.sessionStorage.setItem(key, JSON.stringify(value))
+  }, [key, value])
+  return [value, setValue]
+}
+
 // ─── Hook ────────────────────────────────────────────────────────────────────
+
 
 export function useInvoiceState() {
   const today = new Date().toISOString().split('T')[0]
 
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(DEFAULT_COMPANY)
-  const [clientInfo, setClientInfo] = useState<ClientInfo>(DEFAULT_CLIENT)
-  const [quotationDetails, setQuotationDetails] = useState<QuotationDetails>(() => ({
+  const [companyInfo, setCompanyInfo] = useStickyState<CompanyInfo>(DEFAULT_COMPANY, 'quot_companyInfo')
+  const [clientInfo, setClientInfo] = useStickyState<ClientInfo>(DEFAULT_CLIENT, 'quot_clientInfo')
+  const [quotationDetails, setQuotationDetails] = useStickyState<QuotationDetails>(() => ({
     quotationNo: generateQuotationNumber(today),
     referenceNo: '',
     date: today,
     invoiceNo: '',
     jobOrderNo: '',
-  }))
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [baseRates, setBaseRates] = useState<BaseRates>(DEFAULT_BASE_RATES)
-  const [currentFilePath, setCurrentFilePath] = useState<string | null>(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  const [selectedMainTaskId, setSelectedMainTaskId] = useState<number | null>(null)
-  const [signatures, setSignatures] = useState<Signatures>(DEFAULT_SIGNATURES)
+  }), 'quot_details')
+  const [tasks, setTasks] = useStickyState<Task[]>([], 'quot_tasks')
+  const [baseRates, setBaseRates] = useStickyState<BaseRates>(DEFAULT_BASE_RATES, 'quot_baseRates')
+  const [currentFilePath, setCurrentFilePath] = useStickyState<string | null>(null, 'quot_filePath')
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useStickyState(false, 'quot_unsaved')
+  const [selectedMainTaskId, setSelectedMainTaskId] = useState<number | null>(null) // Local memory only
+  const [signatures, setSignatures] = useStickyState<Signatures>(DEFAULT_SIGNATURES, 'quot_signatures')
+  const [manualOverrides, setManualOverrides] = useStickyState<ManualOverrides>({}, 'quot_manualOverrides')
+  const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'quot_collapsed')
 
   const debouncedQuotationUpdate = useMemo(
     () => debounce((date: string) => {
@@ -337,6 +356,8 @@ export function useInvoiceState() {
     setSelectedMainTaskId(null)
     setBaseRates(DEFAULT_BASE_RATES)
     setSignatures(DEFAULT_SIGNATURES)
+    setManualOverrides({})
+    setCollapsedTaskIds([])
     setCurrentFilePath(null)
     setHasUnsavedChanges(false)
   }, [])
@@ -355,6 +376,8 @@ export function useInvoiceState() {
     setSelectedMainTaskId(null)
     setBaseRates(data.baseRates || DEFAULT_BASE_RATES)
     setSignatures(data.signatures || DEFAULT_SIGNATURES)
+    setManualOverrides(data.manualOverrides || {})
+    setCollapsedTaskIds(data.collapsedTaskIds || [])
     setCurrentFilePath(fileName)
     setHasUnsavedChanges(false)
   }, [])
@@ -366,15 +389,19 @@ export function useInvoiceState() {
     tasks,
     baseRates,
     signatures,
+    manualOverrides,
+    collapsedTaskIds,
     savedAt: new Date().toISOString(),
-  }), [companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures])
+  }), [companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds])
 
   return {
     companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures,
+    manualOverrides, collapsedTaskIds,
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
     updateCompanyInfo, updateClientInfo, updateQuotationDetails,
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures, setSelectedMainTaskId,
+    setManualOverrides, setCollapsedTaskIds,
     resetToNew, loadData, getSaveData,
     setCurrentFilePath, setHasUnsavedChanges,
   }
