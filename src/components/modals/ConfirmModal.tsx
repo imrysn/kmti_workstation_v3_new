@@ -1,6 +1,5 @@
 import React from 'react';
 import { useModal } from '../ModalContext';
-import { StatusIcon } from '../FileIcons';
 
 export const ConfirmModal: React.FC = () => {
   const { confirmationState, closeConfirmation } = useModal();
@@ -9,16 +8,10 @@ export const ConfirmModal: React.FC = () => {
 
   const isDanger = confirmationState.type === 'danger';
   const modalClass = isDanger ? 'danger' : 'info';
-  const iconType = isDanger ? 'warning' : 'info';
 
   return (
     <div className="modal-overlay" onClick={closeConfirmation}>
       <div className={`modal-container ${modalClass}`} onClick={(e) => e.stopPropagation()}>
-        <div className="modal-icon-header">
-          <div className={`modal-icon-circle ${modalClass}`}>
-            <StatusIcon type={iconType} size={32} />
-          </div>
-        </div>
         
         <div className="modal-header">
           <h3>{confirmationState.title || 'Confirm Action'}</h3>

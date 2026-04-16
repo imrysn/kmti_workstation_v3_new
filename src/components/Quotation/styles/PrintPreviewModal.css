@@ -166,18 +166,14 @@
 }
 
 .ppm-action-btn.primary {
-  background: rgba(255, 255, 255, 0.95);
-  color: #2b579a;
-  /* Word blue text on white button */
-  border-color: rgba(255, 255, 255, 0.6);
-  font-weight: 600;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .ppm-action-btn.primary:hover:not(:disabled) {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.28);
   color: #1e3f73;
-  border-color: #1e3f73;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .ppm-action-btn.export {
@@ -190,7 +186,6 @@
 .ppm-action-btn.export:hover:not(:disabled) {
   background: #fff;
   color: #0a5d2f;
-  border-color: #0a5d2f;
 }
 
 .ppm-action-btn:disabled {

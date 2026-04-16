@@ -114,7 +114,10 @@ export default function HeatTreatment() {
         } catch (err: any) {
           notify(err.response?.data?.detail || "Failed to delete mapping", "error")
         }
-      }
+      },
+      undefined,
+      'danger',
+      'Delete Mapping'
     )
   }
 

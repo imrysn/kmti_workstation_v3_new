@@ -166,7 +166,10 @@ export default function CharacterSearch() {
         } catch (err: any) {
           notify(err.response?.data?.detail || "Failed to delete note", "error")
         }
-      }
+      },
+      undefined,
+      'danger',
+      'Delete Note'
     )
   }
 
