@@ -5,6 +5,7 @@ import {
   CompanyInfo,
   ClientInfo,
   QuotationDetailsCard,
+  BillingDetailsCard,
   TasksTable,
   SignatureForm,
   PrintPreviewModal,
@@ -19,10 +20,10 @@ export default function Quotation() {
   const [isBaseRatesPanelOpen, setIsBaseRatesPanelOpen] = useState(false)
 
   const {
-    companyInfo, clientInfo, quotationDetails,
+    companyInfo, clientInfo, quotationDetails, billingDetails,
     tasks, baseRates, signatures, manualOverrides, collapsedTaskIds,
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
-    updateCompanyInfo, updateClientInfo, updateQuotationDetails,
+    updateCompanyInfo, updateClientInfo, updateQuotationDetails, updateBillingDetails,
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures,
     setSelectedMainTaskId, updateManualOverrides, setCollapsedTaskIds, resetToNew, loadData, getSaveData,
@@ -49,8 +50,6 @@ export default function Quotation() {
     return () => { document.title = 'KMTI Workstation' }
   }, [quotationDetails.quotationNo, hasUnsavedChanges])
 
-
-  // Format date for display in toolbar: "13 Apr 2026"
   const formatToolbarDate = (dateStr: string) => {
     if (!dateStr) return ''
     const d = new Date(dateStr + 'T00:00:00')
@@ -130,10 +129,7 @@ export default function Quotation() {
           {/* Top info row: Company | Client | Document Details */}
           <div className="quot-info-row">
             <CompanyInfo companyInfo={companyInfo} onUpdate={updateCompanyInfo} />
-            <ClientInfo
-              clientInfo={clientInfo}
-              onUpdate={updateClientInfo}
-            />
+            <ClientInfo clientInfo={clientInfo} onUpdate={updateClientInfo} />
             <QuotationDetailsCard
               quotationDetails={quotationDetails}
               onUpdate={updateQuotationDetails}
@@ -165,6 +161,16 @@ export default function Quotation() {
             signatures={signatures}
             onUpdate={updateSignatures}
           />
+          
+          <BillingDetailsCard
+            billingDetails={billingDetails}
+            quotationDetails={quotationDetails}
+            onUpdateBilling={updateBillingDetails}
+            onUpdateQuotation={updateQuotationDetails}
+          />
+
+          {/* Bottom Spacer for breathing room */}
+          <div className="quot-bottom-spacer" style={{ height: '40px', flexShrink: 0 }} />
 
         </div>
       </div>
@@ -184,6 +190,7 @@ export default function Quotation() {
         companyInfo={companyInfo}
         clientInfo={clientInfo}
         quotationDetails={quotationDetails}
+        billingDetails={billingDetails}
         tasks={tasks}
         baseRates={baseRates}
         signatures={signatures}

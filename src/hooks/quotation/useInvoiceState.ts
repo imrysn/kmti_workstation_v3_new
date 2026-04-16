@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useDebounceCallback } from '../useDebounce'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -48,8 +48,17 @@ export interface QuotationDetails {
   quotationNo: string
   referenceNo: string
   date: string
+}
+
+export interface BillingDetails {
   invoiceNo: string
   jobOrderNo: string
+  bankName: string
+  accountName: string
+  accountNumber: string
+  bankAddress: string
+  swiftCode: string
+  branchCode: string
 }
 
 export interface SignaturePerson {
@@ -75,14 +84,28 @@ export interface Signatures {
   }
 }
 
-export type ManualOverrides = Record<number, Partial<{
-  basicLabor: number
-  overtime: number
-  software: number
-  overhead: number
-  total: number
-  unitPage: number
-}>>
+/**
+ * Manual overrides for task-level computed values.
+ * Key -1 is reserved for footer-level overrides (overhead amount, grand total adjustment).
+ * All other keys are task IDs.
+ */
+export interface FooterOverrides {
+  overhead?: number
+  adjustment?: number
+}
+
+export interface TaskOverrides {
+  basicLabor?: number
+  overtime?: number
+  software?: number
+  total?: number
+  unitPage?: number
+}
+
+export interface ManualOverrides {
+  tasks: Record<number, TaskOverrides>
+  footer: FooterOverrides
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -123,6 +146,17 @@ const DEFAULT_BASE_RATES: BaseRates = {
   overheadPercentage: 20,
 }
 
+const DEFAULT_BILLING_DETAILS: BillingDetails = {
+  invoiceNo: '',
+  jobOrderNo: '',
+  bankName: 'RIZAL COMMERCIAL BANK CORPORATION',
+  accountName: 'KUSAKABE & MAENO TECH INC.',
+  accountNumber: '0000000011581337',
+  bankAddress: "RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE",
+  swiftCode: 'RCBCPHMM',
+  branchCode: '358',
+}
+
 const DEFAULT_SIGNATURES: Signatures = {
   quotation: {
     preparedBy: { name: 'MR. MICHAEL PEÑANO', title: 'Engineering Manager' },
@@ -135,6 +169,8 @@ const DEFAULT_SIGNATURES: Signatures = {
     finalApprover: { name: 'MR. YUICHIRO MAENO', title: 'President' },
   },
 }
+
+const EMPTY_MANUAL_OVERRIDES: ManualOverrides = { tasks: {}, footer: {} }
 
 function makeBlankTask(): Task {
   return {
@@ -152,7 +188,7 @@ function makeBlankTask(): Task {
   }
 }
 
-// ─── Internal Helper for Session Persistence ───────────────────────────────────
+// ─── Internal Helper for Session Persistence ─────────────────────────────────
 
 function useStickyState<T>(defaultValue: T | (() => T), key: string): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValue] = useState<T>(() => {
@@ -168,8 +204,33 @@ function useStickyState<T>(defaultValue: T | (() => T), key: string): [T, React.
   return [value, setValue]
 }
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
+// ─── Migrate legacy ManualOverrides format ────────────────────────────────────
+// Old format used Record<number, ...> with key -1 for footer. New format uses { tasks, footer }.
+function migrateLegacyOverrides(raw: any): ManualOverrides {
+  if (!raw || typeof raw !== 'object') return EMPTY_MANUAL_OVERRIDES
+  // Already in new format - but ensure properties are present and valid
+  if (raw && typeof raw === 'object' && ('tasks' in raw || 'footer' in raw)) {
+    return {
+      tasks: raw.tasks || {},
+      footer: raw.footer || {}
+    } as ManualOverrides
+  }
+  // Legacy flat Record format
+  const tasks: Record<number, TaskOverrides> = {}
+  let footer: FooterOverrides = {}
+  for (const key of Object.keys(raw)) {
+    const numKey = Number(key)
+    if (numKey === -1) {
+      const { overhead, adjustment } = raw[key] || {}
+      footer = { overhead, adjustment }
+    } else {
+      tasks[numKey] = raw[key] || {}
+    }
+  }
+  return { tasks, footer }
+}
 
+// ─── Hook ────────────────────────────────────────────────────────────────────
 
 export function useInvoiceState() {
   const today = new Date().toISOString().split('T')[0]
@@ -180,16 +241,28 @@ export function useInvoiceState() {
     quotationNo: generateQuotationNumber(today),
     referenceNo: '',
     date: today,
-    invoiceNo: '',
-    jobOrderNo: '',
   }), 'quot_details')
+  const [billingDetails, setBillingDetails] = useStickyState<BillingDetails>(DEFAULT_BILLING_DETAILS, 'quot_billingDetails')
   const [tasks, setTasks] = useStickyState<Task[]>([], 'quot_tasks')
   const [baseRates, setBaseRates] = useStickyState<BaseRates>(DEFAULT_BASE_RATES, 'quot_baseRates')
   const [currentFilePath, setCurrentFilePath] = useStickyState<string | null>(null, 'quot_filePath')
   const [hasUnsavedChanges, setHasUnsavedChanges] = useStickyState(false, 'quot_unsaved')
-  const [selectedMainTaskId, setSelectedMainTaskId] = useState<number | null>(null) // Local memory only
+  const [selectedMainTaskId, setSelectedMainTaskId] = useState<number | null>(null)
   const [signatures, setSignatures] = useStickyState<Signatures>(DEFAULT_SIGNATURES, 'quot_signatures')
-  const [manualOverrides, setManualOverrides] = useStickyState<ManualOverrides>({}, 'quot_manualOverrides')
+  const [manualOverrides, setManualOverrides] = useStickyState<ManualOverrides>(
+    () => {
+      // Migrate from legacy format if needed
+      const raw = window.sessionStorage.getItem('quot_manualOverrides')
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw)
+          return migrateLegacyOverrides(parsed)
+        } catch { /* ignore */ }
+      }
+      return EMPTY_MANUAL_OVERRIDES
+    },
+    'quot_manualOverrides'
+  )
   const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'quot_collapsed')
 
   const debouncedQuotationUpdate = useDebounceCallback((date: string) => {
@@ -210,10 +283,6 @@ export function useInvoiceState() {
   const updateQuotationDetails = useCallback((updates: Partial<QuotationDetails>) => {
     setQuotationDetails(prev => {
       const newDetails = { ...prev, ...updates }
-      // Only auto-regenerate quotation number if:
-      //   1. The date changed, AND
-      //   2. The current quotation number matches the auto-generated pattern
-      //      (meaning the user hasn't manually customised it)
       if (updates.date && updates.date !== prev.date) {
         if (GENERATED_QUOT_PATTERN.test(prev.quotationNo)) {
           debouncedQuotationUpdate(updates.date)
@@ -223,6 +292,11 @@ export function useInvoiceState() {
     })
     setHasUnsavedChanges(true)
   }, [debouncedQuotationUpdate])
+
+  const updateBillingDetails = useCallback((updates: Partial<BillingDetails>) => {
+    setBillingDetails(prev => ({ ...prev, ...updates }))
+    setHasUnsavedChanges(true)
+  }, [])
 
   const addTask = useCallback(() => {
     setTasks(prev => [...prev, makeBlankTask()])
@@ -283,14 +357,6 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [setHasUnsavedChanges])
 
-  const updateTaskBatch = useCallback((updates: Array<{ id: number } & Partial<Task>>) => {
-    setTasks(prev => prev.map(task => {
-      const update = updates.find(u => u.id === task.id)
-      return update ? { ...task, ...update } : task
-    }))
-    setHasUnsavedChanges(true)
-  }, [setHasUnsavedChanges])
-
   const reorderTasks = useCallback((draggedTaskId: number, targetTaskId: number) => {
     setTasks(prev => {
       const newTasks = [...prev]
@@ -323,7 +389,6 @@ export function useInvoiceState() {
       } else if (field === 'timeChargeRate3D') {
         newRates.overtimeRate = Math.round(value * newRates.otHoursMultiplier)
       } else if (field === 'overtimeRate') {
-        // Back-calculate multiplier so the display stays in sync
         newRates.otHoursMultiplier = newRates.timeChargeRate3D > 0
           ? Math.round((value / newRates.timeChargeRate3D) * 100) / 100
           : newRates.otHoursMultiplier
@@ -341,6 +406,11 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [])
 
+  const updateManualOverrides = useCallback((updater: (prev: ManualOverrides) => ManualOverrides) => {
+    setManualOverrides(prev => updater(prev))
+    setHasUnsavedChanges(true)
+  }, [setManualOverrides, setHasUnsavedChanges])
+
   const resetToNew = useCallback(() => {
     const newToday = new Date().toISOString().split('T')[0]
     setCompanyInfo(DEFAULT_COMPANY)
@@ -349,39 +419,43 @@ export function useInvoiceState() {
       quotationNo: generateQuotationNumber(newToday),
       referenceNo: '',
       date: newToday,
-      invoiceNo: '',
-      jobOrderNo: '',
     })
+    setBillingDetails(DEFAULT_BILLING_DETAILS)
     setTasks([makeBlankTask()])
     setSelectedMainTaskId(null)
     setBaseRates(DEFAULT_BASE_RATES)
     setSignatures(DEFAULT_SIGNATURES)
-    setManualOverrides({})
+    setManualOverrides(EMPTY_MANUAL_OVERRIDES)
     setCollapsedTaskIds([])
     setCurrentFilePath(null)
     setHasUnsavedChanges(false)
   }, [])
 
-  const updateManualOverrides = useCallback((action: React.SetStateAction<ManualOverrides>) => {
-    setManualOverrides(action)
-    setHasUnsavedChanges(true)
-  }, [setManualOverrides, setHasUnsavedChanges])
-
   const loadData = useCallback((data: any, fileName: string) => {
     setCompanyInfo(data.companyInfo || { name: '', address: '', city: '', location: '', phone: '' })
     setClientInfo(data.clientInfo || { company: '', contact: '', address: '', phone: '' })
-    setQuotationDetails(data.quotationDetails || {
-      quotationNo: '',
-      referenceNo: '',
-      date: new Date().toISOString().split('T')[0],
-      invoiceNo: '',
-      jobOrderNo: '',
+
+    // Support loading legacy files that had invoiceNo/jobOrderNo in quotationDetails
+    const qd = data.quotationDetails || {}
+    setQuotationDetails({
+      quotationNo: qd.quotationNo || '',
+      referenceNo: qd.referenceNo || '',
+      date: qd.date || new Date().toISOString().split('T')[0],
     })
+
+    // Merge billing details: prefer new field, fall back to legacy quotationDetails fields
+    setBillingDetails({
+      ...DEFAULT_BILLING_DETAILS,
+      ...(data.billingDetails || {}),
+      invoiceNo: data.billingDetails?.invoiceNo ?? qd.invoiceNo ?? '',
+      jobOrderNo: data.billingDetails?.jobOrderNo ?? qd.jobOrderNo ?? '',
+    })
+
     setTasks(data.tasks || [makeBlankTask()])
     setSelectedMainTaskId(null)
     setBaseRates(data.baseRates || DEFAULT_BASE_RATES)
     setSignatures(data.signatures || DEFAULT_SIGNATURES)
-    setManualOverrides(data.manualOverrides || {})
+    setManualOverrides(migrateLegacyOverrides(data.manualOverrides))
     setCollapsedTaskIds(data.collapsedTaskIds || [])
     setCurrentFilePath(fileName)
     setHasUnsavedChanges(false)
@@ -391,32 +465,28 @@ export function useInvoiceState() {
     companyInfo,
     clientInfo,
     quotationDetails,
+    billingDetails,
     tasks,
     baseRates,
     signatures,
     manualOverrides,
     collapsedTaskIds,
     savedAt: new Date().toISOString(),
-  }), [companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds])
+  }), [companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds])
 
   const markSaved = useCallback((filePath: string) => {
     setCurrentFilePath(filePath)
     setHasUnsavedChanges(false)
   }, [setCurrentFilePath, setHasUnsavedChanges])
 
-  const markUnsaved = useCallback(() => {
-    setHasUnsavedChanges(true)
-  }, [setHasUnsavedChanges])
-
   return {
-    companyInfo, clientInfo, quotationDetails, tasks, baseRates, signatures,
+    companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
     manualOverrides, collapsedTaskIds,
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
-    updateCompanyInfo, updateClientInfo, updateQuotationDetails,
-    addTask, addSubTask, removeTask, updateTask, updateTaskBatch, reorderTasks,
+    updateCompanyInfo, updateClientInfo, updateQuotationDetails, updateBillingDetails,
+    addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures, setSelectedMainTaskId,
     updateManualOverrides, setCollapsedTaskIds,
-    resetToNew, loadData, getSaveData,
-    markSaved, markUnsaved,
+    resetToNew, loadData, getSaveData, markSaved,
   }
 }

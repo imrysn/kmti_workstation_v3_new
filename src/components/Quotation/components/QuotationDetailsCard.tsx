@@ -50,7 +50,6 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
         </div>
         <h2 className="section-title">Document Details</h2>
 
-        {/* Quick-read badges when collapsed */}
         {!isEditing && (
           <div className="qdcard-badges">
             {quotationDetails.date && (
@@ -92,9 +91,7 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
 
       <div className="card-content">
         {isEditing ? (
-          /* ── Edit mode ── */
           <div className="qdcard-grid">
-            {/* Date */}
             <div className="input-group">
               <label>Date</label>
               <input
@@ -106,7 +103,6 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
               />
             </div>
 
-            {/* Quotation No. */}
             <div className="input-group">
               <label>Quotation No.</label>
               <div className="client-quot-no-row">
@@ -138,7 +134,6 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
               )}
             </div>
 
-            {/* Reference Number */}
             <div className="input-group">
               <label>Reference Number</label>
               <input
@@ -149,39 +144,8 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
                 placeholder="e.g. NE-2026-04"
               />
             </div>
-
-            {/* Invoice No. */}
-            <div className="input-group">
-              <label>
-                Invoice No.
-                <span className="client-field-tag">Billing</span>
-              </label>
-              <input
-                type="text"
-                value={quotationDetails.invoiceNo}
-                onChange={e => onUpdate({ invoiceNo: e.target.value })}
-                className="form-input"
-                placeholder="Invoice number"
-              />
-            </div>
-
-            {/* Job Order No. */}
-            <div className="input-group">
-              <label>
-                Job Order No.
-                <span className="client-field-tag">Billing</span>
-              </label>
-              <input
-                type="text"
-                value={quotationDetails.jobOrderNo}
-                onChange={e => onUpdate({ jobOrderNo: e.target.value })}
-                className="form-input"
-                placeholder="Job order number"
-              />
-            </div>
           </div>
         ) : (
-          /* ── Read-only display ── */
           <div className="qdcard-display">
             <div className="qdcard-row">
               <span className="qdcard-label">Date</span>
@@ -197,20 +161,6 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
             <div className="qdcard-row">
               <span className="qdcard-label">Reference No.</span>
               <span className="qdcard-value">{quotationDetails.referenceNo || '—'}</span>
-            </div>
-            <div className="qdcard-row">
-              <span className="qdcard-label">
-                Invoice No.
-                <span className="client-field-tag">Billing</span>
-              </span>
-              <span className="qdcard-value">{quotationDetails.invoiceNo || '—'}</span>
-            </div>
-            <div className="qdcard-row">
-              <span className="qdcard-label">
-                Job Order No.
-                <span className="client-field-tag">Billing</span>
-              </span>
-              <span className="qdcard-value">{quotationDetails.jobOrderNo || '—'}</span>
             </div>
           </div>
         )}

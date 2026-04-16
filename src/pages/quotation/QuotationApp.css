@@ -7,7 +7,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Arimo:wght@400;600;700&display=swap');
 @import '../../components/Quotation/styles/QuotationTable.css';
 @import '../../components/Quotation/styles/PrintPreviewModal.css';
-@import '../../components/Quotation/styles/QuickEditModal.css';
 @import '../../components/Quotation/styles/VisualLayout.css';
 
 /* ── Professional Design System Variables ─────────────────── */
@@ -170,7 +169,6 @@
 .quot-body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
   display: flex;
   justify-content: center;
 }
@@ -181,11 +179,12 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 16px 16px 60px 16px;
 }
 
 .quot-info-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   min-height: auto;
 }
@@ -271,6 +270,11 @@
 .quot-app-root .section-icon.billing-signatures {
   background: #f1f5f9;
   color: var(--quot-primary);
+}
+
+.quot-app-root .section-icon.billing-details {
+  background: #ecfdf5;
+  color: #10b981;
 }
 
 .quot-app-root .section-title {
@@ -706,6 +710,60 @@
   padding: 1px 5px;
   font-style: normal;
   font-family: 'Arimo', sans-serif;
+}
+
+/* Billing card specifics */
+.quot-app-root .billing-card-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 0;
+  color: var(--quot-text-muted);
+}
+
+.quot-app-root .billing-card-section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #f1f5f9;
+}
+
+.quot-app-root .billing-card-section-divider span {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.quot-app-root .billing-card-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-top: 10px;
+  margin-bottom: 2px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Full Width Billing Card Layout */
+.quot-app-root .billing-card-full .qdcard-grid,
+.quot-app-root .billing-card-full .qdcard-display {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 32px;
+}
+
+.quot-app-root .billing-card-full .billing-card-section-divider,
+.quot-app-root .billing-card-full .billing-card-section-label {
+  grid-column: span 2;
+}
+
+/* Ensure consistent alignment in wide view */
+.quot-app-root .billing-card-full .qdcard-label {
+  min-width: 140px;
 }
 
 /* Collapse badges in header */

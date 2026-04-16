@@ -6,8 +6,11 @@ export type {
   CompanyInfo,
   ClientInfo,
   QuotationDetails,
+  BillingDetails,
   Signatures,
   ManualOverrides,
+  TaskOverrides,
+  FooterOverrides,
   SignaturePerson,
   ReceivedBy,
 } from './useInvoiceState'

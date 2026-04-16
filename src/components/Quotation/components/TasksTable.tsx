@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback, useState, useEffect } from 'react'
+import { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import type { Task, BaseRates, ManualOverrides } from '../../../hooks/quotation'
 import { calculateTaskTotal, calculateOverhead } from '../../../utils/quotation'
 
@@ -194,7 +194,7 @@ interface TasksTableProps {
   onOpenRateSettings?: () => void
   notify?: (message: string, type?: NotificationType) => void
   manualOverrides: ManualOverrides
-  setManualOverrides: React.Dispatch<React.SetStateAction<ManualOverrides>>
+  setManualOverrides: (updater: (prev: ManualOverrides) => ManualOverrides) => void
   collapsedTasks?: Set<number>
   onCollapsedTasksChange?: (collapsed: Set<number>) => void
 }
@@ -211,10 +211,8 @@ const TasksTable = memo(({
   const [modifiedFields, setModifiedFields] = useState<Record<number, Record<string, boolean>>>({})
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<number | null>(null)
-  // Edit mode toggles for footer rows
   const [editingOverhead, setEditingOverhead] = useState(false)
   const [editingGrandTotal, setEditingGrandTotal] = useState(false)
-  // Local Draft state (raw string while typing)
   const [overheadDraft, setOverheadDraft] = useState<string>('')
   const [grandTotalDraft, setGrandTotalDraft] = useState<string>('')
 
@@ -231,39 +229,39 @@ const TasksTable = memo(({
 
     const totals: TaskSubtotals[] = tasks.map(task => {
       const { basicLabor, overtime, software, total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides)
-
-      return {
-        taskId: task.id,
-        basicLabor,
-        overtime,
-        software,
-        total
-      }
+      return { taskId: task.id, basicLabor, overtime, software, total }
     })
 
     const sub = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
+    const footer = manualOverrides?.footer || {}
 
-    // Check for footer overrides in manualOverrides (using key -1)
-    const footerOverrides = (manualOverrides as any)[-1] || {}
-
-    const overheadTotal = footerOverrides.overhead !== undefined
-      ? footerOverrides.overhead
+    const overheadTotal = footer.overhead !== undefined
+      ? footer.overhead
       : calculateOverhead(sub, baseRates.overheadPercentage)
 
-    // SMART ROUNDING: Grand Total = Subtotal + Overhead + Manual Adjustment
-    const baseSum = sub + overheadTotal
-    const grand = baseSum + (footerOverrides.adjustment || 0)
+    const grand = sub + overheadTotal + (footer.adjustment || 0)
 
-    return {
-      taskTotals: totals,
-      overheadTotal,
-      subtotal: sub,
-      grandTotal: grand,
-      mainTaskCount
-    }
+    return { taskTotals: totals, overheadTotal, subtotal: sub, grandTotal: grand, mainTaskCount }
   }, [tasks, baseRates, manualOverrides])
 
-  // Helper to format values for inputs: hide .00 if integer
+  // Track previous subtotal with a ref so we only reset footer overrides when the
+  // computed subtotal actually changes numerically — not on every unrelated re-render.
+  const prevSubtotalRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (prevSubtotalRef.current === null) {
+      prevSubtotalRef.current = subtotal
+      return
+    }
+    if (prevSubtotalRef.current === subtotal) return
+    prevSubtotalRef.current = subtotal
+
+    // Subtotal changed — clear footer overrides so overhead/grand total revert to auto
+    setManualOverrides(prev => {
+      if (!prev.footer.overhead && !prev.footer.adjustment) return prev
+      return { ...prev, footer: {} }
+    })
+  }, [subtotal, setManualOverrides])
+
   const formatValue = (val: number): string => {
     if (val === 0) return ''
     const str = val.toFixed(2)
@@ -272,20 +270,11 @@ const TasksTable = memo(({
 
   const handleOverheadBlur = useCallback((draft: string) => {
     if (draft.trim() === '') {
-      setManualOverrides((prev: any) => {
-        const next = { ...prev }
-        if (next[-1]) {
-          const { overhead: _, ...rest } = next[-1]
-          if (Object.keys(rest).length === 0) delete next[-1]
-          else next[-1] = rest
-        }
-        return next
-      })
+      setManualOverrides(prev => ({ ...prev, footer: { ...prev.footer, overhead: undefined } }))
     } else {
       const val = parseFloat(draft)
       if (!isNaN(val) && val >= 0) {
-        // SAVING OVERHEAD: This is a direct override of the overhead amount.
-        setManualOverrides((prev: any) => ({ ...prev, [-1]: { ...(prev[-1] || {}), overhead: val } }))
+        setManualOverrides(prev => ({ ...prev, footer: { ...prev.footer, overhead: val } }))
       }
     }
     setEditingOverhead(false)
@@ -293,28 +282,13 @@ const TasksTable = memo(({
 
   const handleGrandTotalBlur = useCallback((draft: string) => {
     if (draft.trim() === '') {
-      // Clearing the grand total override removes the rounding adjustment
-      setManualOverrides((prev: any) => {
-        const next = { ...prev }
-        if (next[-1]) {
-          const { adjustment: _, ...rest } = next[-1]
-          if (Object.keys(rest).length === 0) delete next[-1]
-          else next[-1] = rest
-        }
-        return next
-      })
+      setManualOverrides(prev => ({ ...prev, footer: { ...prev.footer, adjustment: undefined } }))
     } else {
       const val = parseFloat(draft)
       if (!isNaN(val) && val >= 0) {
-        // ROUNDING LOGIC: Calculate the difference between the target total and the base sum.
-        // Adjustment = TargetValue - (Subtotal + CurrentOverhead)
         const currentBaseSum = subtotal + overheadTotal
         const roundingAdjustment = val - currentBaseSum
-        
-        setManualOverrides((prev: any) => ({
-          ...prev,
-          [-1]: { ...(prev[-1] || {}), adjustment: roundingAdjustment }
-        }))
+        setManualOverrides(prev => ({ ...prev, footer: { ...prev.footer, adjustment: roundingAdjustment } }))
       }
     }
     setEditingGrandTotal(false)
@@ -330,11 +304,15 @@ const TasksTable = memo(({
     if (editingTaskId === taskId) {
       const fieldsToSave = modifiedFields[taskId]
       if (fieldsToSave && Object.keys(fieldsToSave).length > 0) {
-        const valuesToSave: any = {}
+        const valuesToSave: Record<string, number> = {}
         Object.keys(fieldsToSave).forEach(field => {
-          valuesToSave[field] = (editedValues[taskId] as any)?.[field]
+          const val = (editedValues[taskId] as any)?.[field]
+          if (val !== undefined) valuesToSave[field] = val
         })
-        setManualOverrides((prev: any) => ({ ...prev, [taskId]: { ...prev[taskId], ...valuesToSave } }))
+        setManualOverrides(prev => ({
+          ...prev,
+          tasks: { ...prev.tasks, [taskId]: { ...prev.tasks[taskId], ...valuesToSave } },
+        }))
       }
       setEditingTaskId(null)
       setEditedValues({})
@@ -346,14 +324,12 @@ const TasksTable = memo(({
         setEditedValues({ [taskId]: { basicLabor: taskSubtotal.basicLabor, overtime: taskSubtotal.overtime, software: taskSubtotal.software, total: taskSubtotal.total } })
       }
     }
-  }, [editingTaskId, taskTotals, editedValues, modifiedFields, manualOverrides])
+  }, [editingTaskId, taskTotals, editedValues, modifiedFields])
 
   const handleEditValueUpdate = useCallback((taskId: number, field: string, value: number, userModified = false) => {
     setEditedValues(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: value } }))
     if (userModified) {
       setModifiedFields(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: true } }))
-      // REMOVED: Immediate call to onManualOverridesChange to prevent double-writes and intermediate state persistence.
-      // Changes are now only committed when clicking the "Save" (toggle) button.
     }
   }, [])
 
@@ -369,47 +345,25 @@ const TasksTable = memo(({
 
   const taskIds = useMemo(() => new Set(tasks.map(t => t.id)), [tasks])
 
-  // AUTO-RESET FOOTER: When the subtotal changes (tasks added/edited), 
-  // revert the overhead and grand total to automatic percentage mode.
+  // Prune stale task overrides when tasks are removed
   useEffect(() => {
-    setManualOverrides((prev: any) => {
-      if (!prev[-1]) return prev // Nothing to reset
-      
-      const next = { ...prev }
-      if (next[-1]) {
-        const { overhead: _, adjustment: __, ...rest } = next[-1]
-        if (Object.keys(rest).length === 0) delete next[-1]
-        else next[-1] = rest
-      }
-      return next
-    })
-  }, [subtotal, setManualOverrides])
+    const staleIds = Object.keys(manualOverrides?.tasks || {})
+      .map(Number)
+      .filter(id => !taskIds.has(id))
+    if (staleIds.length === 0) return
 
-  useEffect(() => {
-    let changed = false
-    const f: ManualOverrides = {}
-    Object.keys(manualOverrides).forEach(id => {
-      const numericId = Number(id)
-      // ID -1 is the special key for footer overrides, preserve it.
-      if (numericId === -1 || taskIds.has(numericId)) {
-        f[numericId] = manualOverrides[numericId]
-      } else {
-        changed = true
-      }
+    setManualOverrides(prev => {
+      const tasks = { ...prev.tasks }
+      staleIds.forEach(id => delete tasks[id])
+      return { ...prev, tasks }
     })
-    if (changed) setManualOverrides(f)
 
     setModifiedFields(prev => {
-      const f: Record<number, Record<string, boolean>> = {}
-      Object.keys(prev).forEach(id => {
-        const numericId = Number(id)
-        if (numericId === -1 || taskIds.has(numericId)) {
-          f[numericId] = prev[numericId]
-        }
-      })
-      return f
+      const next = { ...prev }
+      staleIds.forEach(id => delete next[id])
+      return next
     })
-  }, [taskIds, manualOverrides, setManualOverrides])
+  }, [taskIds, manualOverrides?.tasks, setManualOverrides])
 
   // Drag handlers
   const handleDragStart = useCallback((e: React.DragEvent, taskId: number) => {
@@ -453,7 +407,6 @@ const TasksTable = memo(({
           <h2 className="section-title">Computation Table</h2>
         </div>
         <div className="computation-buttons">
-          {/* Rate Settings button — opens BaseRatesPanel */}
           {onOpenRateSettings && (
             <button className="add-button rate-settings-btn" onClick={onOpenRateSettings} title="Configure base rates">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -544,9 +497,7 @@ const TasksTable = memo(({
           <div className="grand-total-value">{formatCurrency(subtotal)}</div>
         </div>
         <div className="grand-total-row">
-          <div className="grand-total-label">
-            Administrative Overhead:
-          </div>
+          <div className="grand-total-label">Administrative Overhead:</div>
           <div className="grand-total-value">
             {editingOverhead ? (
               <div className="footer-input-wrapper">

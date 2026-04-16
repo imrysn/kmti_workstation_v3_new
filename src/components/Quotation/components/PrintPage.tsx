@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react'
-import type { Task, CompanyInfo, ClientInfo, QuotationDetails, Signatures, ManualOverrides, BaseRates } from '../../../hooks/quotation'
+import type { Task, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, Signatures, ManualOverrides, BaseRates } from '../../../hooks/quotation'
+import { getUnitPageCount } from '../../../utils/quotation'
 import PrintHeader from './PrintHeader'
 
 interface PrintTask extends Task {
@@ -11,6 +12,7 @@ interface Props {
   companyInfo: CompanyInfo
   clientInfo: ClientInfo
   quotationDetails: QuotationDetails
+  billingDetails: BillingDetails
   pageTasks: PrintTask[]
   pageTotals: number[]
   startIndex: number
@@ -25,8 +27,17 @@ interface Props {
   isSecondPage?: boolean
 }
 
+const BANK_LABEL_MAP: Array<{ key: keyof BillingDetails; label: string }> = [
+  { key: 'bankName',      label: 'BANK NAME:' },
+  { key: 'accountName',   label: 'SAVINGS ACCOUNT NAME:' },
+  { key: 'accountNumber', label: 'SAVINGS ACCOUNT NUMBER:' },
+  { key: 'bankAddress',   label: 'BANK ADDRESS:' },
+  { key: 'swiftCode',     label: 'SWIFT CODE:' },
+  { key: 'branchCode',    label: 'BRANCH CODE:' },
+]
+
 const PrintPage = memo(({
-  printMode, companyInfo, clientInfo, quotationDetails,
+  printMode, companyInfo, clientInfo, quotationDetails, billingDetails,
   pageTasks, pageTotals, startIndex, isLastPage,
   grandTotal, overheadTotal, actualTaskCount, maxRows,
   signatures, manualOverrides, baseRates, isSecondPage = false
@@ -34,10 +45,12 @@ const PrintPage = memo(({
 
   const fmt = useCallback((n: number) => `¥${n.toLocaleString()}`, [])
 
-  const getUnitPageCount = useCallback((task: PrintTask) => {
-    const ov = manualOverrides[task.id] as any
-    if (ov?.unitPage !== undefined) return ov.unitPage
-    return task.unitPage || 1
+  const resolveUnitPage = useCallback((task: PrintTask): number => {
+    // If a manual override for unitPage exists, it takes absolute precedence.
+    // Otherwise, use the unitPage value passed in the PrintTask object.
+    const override = (manualOverrides?.tasks || {})[task.id]
+    if (override?.unitPage !== undefined) return override.unitPage
+    return task.unitPage ?? 1
   }, [manualOverrides])
 
   const renderTable = () => {
@@ -66,7 +79,7 @@ const PrintPage = memo(({
                 <td>{startIndex + i + 1}</td>
                 <td>{task.referenceNumber || ''}</td>
                 <td className="description-cell">{task.description}</td>
-                <td>{getUnitPageCount(task)}</td>
+                <td>{resolveUnitPage(task)}</td>
                 <td>{task.type || '3D'}</td>
                 <td className="price-cell">{fmt(pageTotals[i])}</td>
               </tr>
@@ -173,19 +186,16 @@ const PrintPage = memo(({
         <div className="bank-details-section">
           <div className="bank-details-title">BANK DETAILS (Yen)</div>
           <div className="bank-details-grid">
-            {[
-              ['BANK NAME:', 'RIZAL COMMERCIAL BANK CORPORATION'],
-              ['SAVINGS ACCOUNT NAME:', 'KUSAKABE & MAENO TECH INC.'],
-              ['SAVINGS ACCOUNT NUMBER:', '0000000011581337'],
-              ['BANK ADDRESS:', "RCBC DASMARINAS BRANCH RCBS BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE"],
-              ['SWIFT CODE:', 'RCBCPHMM'],
-              ['BRANCH CODE:', '358'],
-            ].map(([label, value]) => (
-              <div key={label} className="bank-detail-row">
-                <span className="bank-label">{label}</span>
-                <span className="bank-value">{value}</span>
-              </div>
-            ))}
+            {BANK_LABEL_MAP.map(({ key, label }) => {
+              const value = billingDetails[key] as string
+              if (!value) return null
+              return (
+                <div key={key} className="bank-detail-row">
+                  <span className="bank-label">{label}</span>
+                  <span className="bank-value">{value}</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -203,13 +213,13 @@ const PrintPage = memo(({
       style={{ display: 'flex', flexDirection: 'column' }}
     >
       <div className="q-top-content">
-        <PrintHeader 
-          printMode={printMode} 
-          companyInfo={companyInfo} 
-          quotationDetails={quotationDetails} 
-          isSecondPage={isSecondPage} 
+        <PrintHeader
+          printMode={printMode}
+          companyInfo={companyInfo}
+          quotationDetails={quotationDetails}
+          isSecondPage={isSecondPage}
         />
-        
+
         {printMode === 'billing' && !isSecondPage && (
           <div className="quotation-details-visual">
             <div className="detail-row-visual">
@@ -218,7 +228,7 @@ const PrintPage = memo(({
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Invoice No.:</span>
-              <span className="detail-value-visual">{quotationDetails.invoiceNo || ''}</span>
+              <span className="detail-value-visual">{billingDetails.invoiceNo || ''}</span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Quotation No.:</span>
@@ -226,7 +236,7 @@ const PrintPage = memo(({
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Job Order No.:</span>
-              <span className="detail-value-visual">{quotationDetails.jobOrderNo || ''}</span>
+              <span className="detail-value-visual">{billingDetails.jobOrderNo || ''}</span>
             </div>
           </div>
         )}
