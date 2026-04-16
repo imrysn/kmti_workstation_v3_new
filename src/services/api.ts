@@ -148,6 +148,19 @@ export const helpApi = {
     api.get('/help/tickets/unread_count', { params: { workstation } }),
   deleteTicket: (id: number) => api.delete(`/help/tickets/${id}`)
 }
+// --- Telemetry (Heartbeat) ---
+export const telemetryApi = {
+  heartbeat: (formData: FormData) => api.post('/telemetry/heartbeat', formData),
+  getStatuses: () => api.get('/telemetry/status'),
+}
+
+// --- Broadcast Messages ---
+export const broadcastApi = {
+  getActive: () => api.get('/broadcast/active'),
+  create: (formData: FormData) => api.post('/broadcast/', formData),
+  delete: (id: number) => api.delete(`/broadcast/${id}`),
+}
+
 // --- Production Resiliency Interceptor ---
 // Automatically retry transient errors (503, 504) once before giving up.
 api.interceptors.response.use(

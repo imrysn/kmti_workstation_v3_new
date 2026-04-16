@@ -21,8 +21,12 @@ import { ModalContainer } from './components/modals'
 import WhatsNewModal from './components/modals/WhatsNewModal'
 import DateTimeOverlay from './components/DateTimeOverlay'
 import FeedbackWidget from './components/FeedbackWidget'
+import BroadcastOverlay from './components/BroadcastOverlay'
+import BroadcastFAB from './components/BroadcastFAB'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
+import { ThemeProvider } from './context/ThemeContext'
+import { useHeartbeat } from './hooks/useHeartbeat'
 import { setApiToken, onUnauthorized } from './services/api'
 import './styles/App.css'
 
@@ -64,6 +68,10 @@ function ModuleGuard({
 function WorkstationShell() {
   const { hasRole, isLoggingOut } = useAuth()
   const { flags } = useFlags()
+  
+  // Activate real-time telemetry heartbeat
+  useHeartbeat()
+  
   const shellClass = `app-shell${isLoggingOut ? ' exiting' : ''}`
 
   // Global Maintenance Mode (Affects everyone except IT/Admin)
@@ -199,6 +207,8 @@ function WorkstationShell() {
       <DateTimeOverlay />
       <SessionExpiredModal />
       <FeedbackWidget />
+      <BroadcastOverlay />
+      <BroadcastFAB />
     </div>
   )
 }
@@ -233,13 +243,15 @@ function AppContent() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <ModalProvider>
-          <HashRouter>
-            <AppContent />
-          </HashRouter>
-        </ModalProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ModalProvider>
+            <HashRouter>
+              <AppContent />
+            </HashRouter>
+          </ModalProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }

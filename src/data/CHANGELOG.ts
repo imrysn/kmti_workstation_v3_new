@@ -22,6 +22,16 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.6.8',
+    date: 'April 16, 2026',
+    entries: [
+      { type: 'new', text: 'Broadcast Center — A high-priority communication hub for Admin and IT roles to send global workstation alerts.' },
+      { type: 'new', text: 'Dynamic Island Overlay — Premium, severity-themed (Info/Warning/Danger) glass pills with fluid "bloom" animations.' },
+      { type: 'improvement', text: 'Smart Quadrant Logic — The broadcaster panel now intelligently expands toward screen center based on its drag position.' },
+      { type: 'improvement', text: 'Intelligent Persistence — Messages auto-hide after 15 seconds and use "show-once" logic to avoid repetitive interruptions.' },
+    ],
+  },
+  {
     version: '3.6.7',
     date: 'April 16, 2026',
     entries: [

@@ -216,9 +216,9 @@
 
 /* Shared Utilities */
 .search-highlight {
-  background: #fde68a; /* Amber-200 */
-  color: #92400e;      /* Amber-800 */
-  padding: 0 2px;
+  background: var(--warning);
+  color: #fff;
+  padding: 0 4px;
   border-radius: 2px;
   font-weight: 700;
 }

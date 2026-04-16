@@ -1,38 +1,44 @@
 /* === KMTI Workstation v3 — Global Styles === */
 
 :root {
-  --bg-primary: #f1f5f9;
-  /* Slate-50: Technical light background */
-  --bg-secondary: #ffffff;
-  /* Pure white for working surfaces */
-  --bg-surface: #f8fafc;
-  /* Slate-50: headers and subtle areas */
-  --bg-surface-hover: #e2e8f0;
-  /* Slate-200: active selections */
-  --border: #cbd5e1;
-  /* Slate-300: crisp structural lines */
-  --text-primary: #0f172a;
-  /* Slate-900: near black for extreme legibility */
-  --text-secondary: #475569;
-  /* Slate-600 */
-  --text-muted: #64748b;
-  /* Slate-500 */
-  --accent: #0284c7;
-  /* Sky-600: Blueprint CAD selection blue */
+  --bg-primary: #f1f5f9; /* Slate-50: Technical light background */
+  --bg-secondary: #ffffff; /* Pure white for working surfaces */
+  --bg-surface: #f8fafc; /* Slate-50: headers and subtle areas */
+  --bg-surface-hover: #e2e8f0; /* Slate-200: active selections */
+  --border: #cbd5e1; /* Slate-300: crisp structural lines */
+  --text-primary: #0f172a; /* Slate-900: near black for extreme legibility */
+  --text-secondary: #475569; /* Slate-600 */
+  --text-muted: #64748b; /* Slate-500 */
+  --accent: #0284c7; /* Sky-600: Blueprint CAD selection blue */
   --accent-hover: #0369a1;
   --accent-subtle: rgba(2, 132, 199, 0.1);
-  --success: #059669;
-  /* Emerald-600: precision success green */
+  --success: #059669; /* Emerald-600: precision success green */
   --warning: #d97706;
   --danger: #dc2626;
-  --radius-sm: 4px;
-  /* Sharper edges for engineering precision */
+  --radius-sm: 4px; /* Sharper edges for engineering precision */
   --radius-md: 6px;
   --radius-lg: 10px;
   --sidebar-width: 220px;
   --titlebar-height: 52px;
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --transition: 150ms ease;
+}
+
+body.dark-theme {
+  --bg-primary: #0f172a; /* Slate-900: Deep technical backgrounds */
+  --bg-secondary: #1e293b; /* Slate-800: Card/Surface backgrounds */
+  --bg-surface: #1e293b;
+  --bg-surface-hover: #334155; /* Slate-700 */
+  --border: #334155; /* Slate-700 */
+  --text-primary: #f8fafc; /* Slate-50: pure legibility in dark */
+  --text-secondary: #94a3b8; /* Slate-400 */
+  --text-muted: #64748b; /* Slate-500 */
+  --accent: #38bdf8; /* Sky-400: Glowing blueprint blue */
+  --accent-hover: #7dd3fc;
+  --accent-subtle: rgba(56, 189, 248, 0.1);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
 }
 
 *,

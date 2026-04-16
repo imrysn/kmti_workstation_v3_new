@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast
 import asyncio
 import time
 import logging
@@ -30,6 +30,7 @@ else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from db.database import engine, Base
+from models import telemetry as telemetry_model, broadcast as broadcast_model # Ensure models are registered for metadata
 try:
     from core.nas_indexer import indexer
 except ImportError:
@@ -121,6 +122,8 @@ app.include_router(feature_flags.router, prefix="/api/flags", tags=["Feature Fla
 app.include_router(parts.router, prefix="/api/parts", tags=["Purchased Parts"])
 app.include_router(characters.router, prefix="/api/chars", tags=["Character Search"])
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
+app.include_router(telemetry.router, prefix="/api/telemetry", tags=["Telemetry"])
+app.include_router(broadcast.router, prefix="/api/broadcast", tags=["Broadcast Messages"])
 
 # Static serving for Help Center screenshots (NAS)
 FEEDBACK_DIR = r"\\KMTI-NAS\Shared\data\storage\feedback"
