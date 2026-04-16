@@ -199,8 +199,8 @@ const PrintPage = memo(({
 
   return (
     <div
-      className={`quotation-visual-exact mode-${printMode}${isLastPage && !isSecondPage ? ` task-count-${actualTaskCount}` : ''}`}
-      style={{ display: 'flex', flexDirection: 'column', ...(isSecondPage ? { pageBreakBefore: 'always', marginTop: '0' } : {}) }}
+      className={`quotation-visual-exact mode-${printMode}${isSecondPage ? ' page-break' : ''}${isLastPage && !isSecondPage ? ` task-count-${actualTaskCount}` : ''}`}
+      style={{ display: 'flex', flexDirection: 'column' }}
     >
       <div className="q-top-content">
         <PrintHeader 

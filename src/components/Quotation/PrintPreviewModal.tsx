@@ -120,16 +120,60 @@ const PrintPreviewModal = memo(({
   // ── Print / PDF ───────────────────────────────────────────────────────────
   const handlePrint = useCallback(async () => {
     setIsProcessing(true)
+    let printStyleEl: HTMLStyleElement | null = null
     try {
       const el = (window as any).electronAPI
+
+      // Inject same override styles for physical print too
+      printStyleEl = document.createElement('style')
+      printStyleEl.id = '__kmti-print-override'
+      printStyleEl.textContent = `
+        .ppm-header, .ppm-footer-bar, .ppm-backdrop,
+        .ppm-page-break-indicator { display: none !important; }
+        .ppm-container, .ppm-body, .ppm-scroll-area {
+          position: static !important; display: block !important;
+          width: 210mm !important; height: auto !important;
+          overflow: visible !important; background: white !important;
+          padding: 0 !important; margin: 0 !important;
+        }
+        .ppm-a4-scaler, .ppm-a4-scaler > div {
+          position: static !important; display: block !important;
+          width: 210mm !important; height: auto !important;
+          transform: none !important; box-shadow: none !important;
+          background: white !important; overflow: visible !important;
+        }
+        .preview-content {
+          display: block !important; width: 210mm !important;
+          height: auto !important; transform: none !important;
+          padding: 0 !important; margin: 0 !important; overflow: visible !important;
+        }
+        .quotation-visual-exact {
+          display: flex !important; flex-direction: column !important;
+          width: 210mm !important; height: 297mm !important;
+          min-height: 297mm !important; max-height: 297mm !important;
+          overflow: hidden !important; box-sizing: border-box !important;
+          padding: 10mm !important; background: white !important;
+          page-break-after: always !important; break-after: page !important;
+          margin: 0 !important;
+        }
+        .quotation-visual-exact:last-of-type {
+          page-break-after: avoid !important; break-after: avoid !important;
+        }
+        .quotation-visual-exact .q-bottom-content {
+          margin-top: auto !important; display: flex !important;
+          flex-direction: column !important; width: 100% !important;
+        }
+      `
+      document.head.appendChild(printStyleEl)
+      await new Promise(r => setTimeout(r, 300))
+
       if (el?.print) {
-        // Native Electron Print
         const result = await el.print({
           silent: false,
           printBackground: true,
           color: true,
           pageSize: 'A4',
-          margins: { marginType: 'custom', top: 5, bottom: 5, left: 5, right: 5 },
+          margins: { marginType: 'none' },
           landscape: false
         })
         if (result?.error) console.error('Print error:', result.error)
@@ -139,12 +183,14 @@ const PrintPreviewModal = memo(({
     } catch (err) {
       console.error('Print failed:', err)
     } finally {
+      if (printStyleEl) { printStyleEl.remove(); printStyleEl = null }
       setIsProcessing(false)
     }
   }, [])
 
   const handleDownloadPDF = useCallback(async () => {
     setIsProcessing(true)
+    let printStyleEl: HTMLStyleElement | null = null
     try {
       const el = (window as any).electronAPI
       if (!el || !el.printToPDF || !el.showSaveDialog || !el.writeFile) {
@@ -158,13 +204,114 @@ const PrintPreviewModal = memo(({
         : (quotationDetails.quotationNo || 'Draft')
       const defaultName = `KMTI_${docType}_${docNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
 
-      // Give UI state a moment to settle (Generating... text)
-      await new Promise(r => setTimeout(r, 500))
+      // ── Inject print-override styles ──────────────────────────────────
+      // printToPDF renders the live DOM, not @media print. We need to:
+      // 1. Hide all modal chrome (header, footer, backdrop, scaler)
+      // 2. Strip the scale() transform so pages render at true A4 size
+      // 3. Force each .quotation-visual-exact to exactly 210mm x 297mm
+      // 4. Insert a hard page break between page 1 and page 2
+      printStyleEl = document.createElement('style')
+      printStyleEl.id = '__kmti-pdf-print-override'
+      printStyleEl.textContent = `
+        /* Hide all modal UI chrome */
+        .ppm-header, .ppm-footer-bar, .ppm-backdrop,
+        .ppm-page-break-indicator { display: none !important; }
+
+        /* Strip the modal container so it doesn't clip or scroll */
+        .ppm-container, .ppm-body, .ppm-scroll-area {
+          position: static !important;
+          display: block !important;
+          width: 210mm !important;
+          height: auto !important;
+          overflow: visible !important;
+          background: white !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          box-shadow: none !important;
+          border: none !important;
+        }
+
+        /* Strip the scale transform wrapper */
+        .ppm-a4-scaler,
+        .ppm-a4-scaler > div {
+          position: static !important;
+          display: block !important;
+          width: 210mm !important;
+          height: auto !important;
+          transform: none !important;
+          box-shadow: none !important;
+          border-radius: 0 !important;
+          background: white !important;
+          overflow: visible !important;
+        }
+
+        /* Strip the preview-content flex wrapper */
+        .preview-content {
+          display: block !important;
+          width: 210mm !important;
+          height: auto !important;
+          transform: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          overflow: visible !important;
+          background: white !important;
+        }
+
+        /* Each page: exact A4, no overflow, page break after */
+        .quotation-visual-exact {
+          display: flex !important;
+          flex-direction: column !important;
+          width: 210mm !important;
+          height: 297mm !important;
+          min-height: 297mm !important;
+          max-height: 297mm !important;
+          overflow: hidden !important;
+          box-sizing: border-box !important;
+          padding: 10mm !important;
+          background: white !important;
+          page-break-after: always !important;
+          break-after: page !important;
+          margin: 0 !important;
+        }
+
+        /* Last page: no trailing break */
+        .quotation-visual-exact:last-of-type {
+          page-break-after: avoid !important;
+          break-after: avoid !important;
+        }
+
+        /* Billing compression */
+        .quotation-visual-exact.task-count-14,
+        .quotation-visual-exact.task-count-15,
+        .quotation-visual-exact.task-count-16 {
+          padding: 5mm !important;
+        }
+
+        /* Force black text, white bg */
+        .quotation-visual-exact * { color: #000 !important; }
+        .quotation-visual-exact .nothing-follow { color: #888 !important; }
+        .quotation-visual-exact .contact-header,
+        .quotation-visual-exact .table-header th,
+        .quotation-visual-exact .total-amount-row { background: #f0f0f0 !important; }
+
+        /* Q-bottom pushed to bottom */
+        .quotation-visual-exact .q-bottom-content {
+          margin-top: auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          width: 100% !important;
+          gap: 5px !important;
+        }
+      `
+      document.head.appendChild(printStyleEl)
+
+      // Give Chromium a frame to apply the injected styles
+      await new Promise(r => setTimeout(r, 300))
 
       // 1. Generate PDF Buffer
       const pdfResult = await el.printToPDF({
         printBackground: true,
-        preferCSSPageSize: true,
+        preferCSSPageSize: false,   // we control exact size via DOM styles above
         pageSize: 'A4',
         landscape: false,
         margins: { marginType: 'none' }
@@ -189,11 +336,16 @@ const PrintPreviewModal = memo(({
         throw new Error(writeResult.error || 'Failed to write file')
       }
 
-      // Success! Maybe show a toast if available
+      // Success!
     } catch (err: any) {
       console.error('PDF Download failed:', err)
       alert(`Error generating PDF: ${err.message}`)
     } finally {
+      // Always clean up injected styles so preview goes back to normal
+      if (printStyleEl) {
+        printStyleEl.remove()
+        printStyleEl = null
+      }
       setIsProcessing(false)
     }
   }, [printMode, quotationDetails])

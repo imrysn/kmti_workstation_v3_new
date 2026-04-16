@@ -116,77 +116,11 @@ export function calculateExcelBatchWeight(
   try {
     if (!materialRaw || !specRaw) return 0;
 
-    // Use normalized versions for logic branching
     const normMat = normalize(materialRaw).toUpperCase();
-    
-    // --- Branch A: Square Symbol (□) ---
-    if (specRaw.includes('□')) {
-      const cleanSpecRaw = specRaw.replace('□', '');
-      const hasDash = cleanSpecRaw.includes('-');
+    const cleanSpec = specRaw.trim();
+    const density = materialLookupData[normMat] || 7.85;
 
-      if (hasDash) {
-        // STRICT LOOKUP ONLY (Like Square Bar catalog)
-        const dashIdx = cleanSpecRaw.lastIndexOf('-');
-        const specPartRaw = cleanSpecRaw.substring(0, dashIdx);
-        const length = parseFloat(cleanSpecRaw.substring(dashIdx + 1));
-        const normSpecPart = 'sq' + specPartRaw; 
-        
-        const wpm = findBestShapeFactor(materialRaw, normSpecPart);
-        if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
-        return 0; // Strict: No fallback for □ with dash
-      } else {
-        // MATH: (Side^2 * Length * Density) * 1e-6
-        const mathSpec = normalize(cleanSpecRaw);
-        const parts = mathSpec.split('x');
-        const side = parseFloat(parts[0]);
-        const length = parseFloat(parts[1]);
-        const density = materialLookupData[normMat] || 7.85;
-
-        if (!isNaN(side) && !isNaN(length)) {
-          return (Math.pow(side, 2) * length * density * 0.000001) * qty;
-        }
-      }
-      return 0;
-    }
-
-    // --- Branch B: Round Symbol (φ / Φ) ---
-    if (specRaw.includes('φ') || specRaw.includes('Φ')) {
-      const cleanSpecRaw = specRaw.replace(/[φΦ]/g, '');
-      const density = materialLookupData[normMat] || 7.85;
-
-      const dashIdx = cleanSpecRaw.lastIndexOf('-');
-      if (dashIdx !== -1) {
-        // 1. Try Lookup (E.g. STKM catalog)
-        const specPart = normalize(cleanSpecRaw.substring(0, dashIdx));
-        const length = parseFloat(cleanSpecRaw.substring(dashIdx + 1));
-        const wpm = findBestShapeFactor(materialRaw, specPart);
-        
-        if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
-
-        // 2. Fallback to Pipe Math: PI/4 * (OD^2 - ID^2) * L * Density * 1e-6
-        const parts = normalize(cleanSpecRaw.substring(0, dashIdx)).split('x');
-        if (parts.length >= 2 && !isNaN(length)) {
-          const od = parseFloat(parts[0]);
-          const wt = parseFloat(parts[1]);
-          const id = od - (2 * wt);
-          const area = (Math.PI / 4) * (Math.pow(od, 2) - Math.pow(id, 2));
-          return (area * length * density * 0.000001) * qty;
-        }
-      } else {
-        // SOLID MATH: PI/4 * D^2 * L * Density * 1e-6
-        const parts = normalize(cleanSpecRaw).split('x');
-        const d = parseFloat(parts[0]);
-        const length = parseFloat(parts[1]);
-
-        if (!isNaN(d) && !isNaN(length)) {
-          const area = (Math.PI / 4) * Math.pow(d, 2);
-          return (area * length * density * 0.000001) * qty;
-        }
-      }
-      return 0;
-    }
-
-    // --- Branch C: Technical Catalog Profiles (H, I, Angle, etc.) ---
+    // --- Branch 1: Profile Materials (H, I, Channel, Angle, STKR, SUS304TP) ---
     const isProfileMat = [
       'SUS304TP', 'Ｈ形鋼', 'Ｈ型鋼', 'H形鋼', 'H型鋼', 
       'Ｉ形鋼', 'Ｉ型鋼', 'I形鋼', 'I型鋼', 
@@ -195,50 +129,122 @@ export function calculateExcelBatchWeight(
     ].some(p => materialRaw.includes(p));
 
     if (isProfileMat) {
-      const dashIdx = specRaw.lastIndexOf('-');
-      if (dashIdx === -1) return 0;
+      const dashIdx = cleanSpec.lastIndexOf('-');
+      if (dashIdx === -1) return 0; // Strict: No dash = 0
       
-      const specPart = normalize(specRaw.substring(0, dashIdx));
-      const length = parseFloat(specRaw.substring(dashIdx + 1));
+      const specPart = normalize(cleanSpec.substring(0, dashIdx));
+      const length = parseFloat(cleanSpec.substring(dashIdx + 1));
 
       if (isNaN(length)) return 0;
 
-      // STRICT LOOKUP ONLY for Profiles
+      // STRICT LOOKUP ONLY
       const wpm = findBestShapeFactor(materialRaw, specPart);
       if (wpm) return (wpm * length * 0.001) * qty;
+      return 0; // Not in Excel = 0
+    }
+
+    // --- Branch 2: Square Symbol (□) ---
+    if (cleanSpec.startsWith('□')) {
+      const hasDash = cleanSpec.includes('-');
+      const specContent = cleanSpec.replace('□', '');
+
+      if (hasDash) {
+        // STRICT LOOKUP
+        const dashIdx = specContent.lastIndexOf('-');
+        const specPartRaw = specContent.substring(0, dashIdx);
+        const length = parseFloat(specContent.substring(dashIdx + 1));
+        const normSpecPart = 'sq' + normalize(specPartRaw);
+        
+        const wpm = findBestShapeFactor(materialRaw, normSpecPart);
+        if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
+        return 0; // Strict: No fallback for □ with dash
+      } else {
+        // MATH: Side^2 * L (Expecting Side x Length)
+        const norm = normalize(specContent);
+        const parts = norm.split('x');
+        if (parts.length === 2) {
+          const side = parseFloat(parts[0]);
+          const length = parseFloat(parts[1]);
+          if (!isNaN(side) && !isNaN(length)) {
+            return (Math.pow(side, 2) * length * density * 0.000001) * qty;
+          }
+        }
+      }
       return 0;
     }
 
-    // --- Branch D: Numeric Start (Block/Plate) ---
-    if (!isNaN(parseInt(specRaw.trim().charAt(0)))) {
-      const density = materialLookupData[normMat] || 7.85;
-      
-      const dashIdx = specRaw.lastIndexOf('-');
-      if (dashIdx !== -1) {
-        const specPart = specRaw.substring(0, dashIdx);
-        const length = parseFloat(specRaw.substring(dashIdx + 1));
-        
-        // 1. Try Lookup
-        const wpm = findBestShapeFactor(materialRaw, specPart);
-        if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
+    // --- Branch 3: Round Symbol (φ / Φ) ---
+    if (cleanSpec.startsWith('φ') || cleanSpec.startsWith('Φ')) {
+      const specContent = cleanSpec.replace(/[φΦ]/g, '');
+      const hasDash = specContent.includes('-');
 
-        // 2. Fallback to Plate Math: (W * T * L * Density) * 1e-6
-        const parts = normalize(specPart).split('x');
-        if (parts.length >= 2 && !isNaN(length)) {
-          const w = parseFloat(parts[0]);
-          const t = parseFloat(parts[1]);
-          return (w * t * length * density * 0.000001) * qty;
+      if (hasDash) {
+        // PIPE MATH: PI/4 * (OD^2 - ID^2) * L
+        const dashIdx = specContent.lastIndexOf('-');
+        const specPartText = normalize(specContent.substring(0, dashIdx));
+        const length = parseFloat(specContent.substring(dashIdx + 1));
+        
+        const parts = specPartText.split('x');
+        if (parts.length === 2 && !isNaN(length)) {
+          const od = parseFloat(parts[0]);
+          const wt = parseFloat(parts[1]);
+          const id = od - (2 * wt);
+          const area = (Math.PI / 4) * (Math.pow(od, 2) - Math.pow(id, 2));
+          return (area * length * density * 0.000001) * qty;
         }
       } else {
-        // MATH: (W * H * L * Density) * 1e-6
-        const normSpec = normalize(specRaw);
-        const parts = normSpec.split('x');
-        const v1 = parseFloat(parts[0]);
-        const v2 = parseFloat(parts[1]);
-        const v3 = parseFloat(parts[2]);
+        // SOLID MATH: PI/4 * D^2 * L (Expecting Diameter x Length)
+        const norm = normalize(specContent);
+        const parts = norm.split('x');
+        if (parts.length === 2) {
+          const d = parseFloat(parts[0]);
+          const length = parseFloat(parts[1]);
+          if (!isNaN(d) && !isNaN(length)) {
+            const area = (Math.PI / 4) * Math.pow(d, 2);
+            return (area * length * density * 0.000001) * qty;
+          }
+        }
+      }
+      return 0;
+    }
 
-        if (!isNaN(v1) && !isNaN(v2) && !isNaN(v3)) {
-          return (v1 * v2 * v3 * density * 0.000001) * qty;
+    // --- Branch 4: Numeric Start (Plates/Blocks) ---
+    const firstChar = cleanSpec.charAt(0);
+    if (!isNaN(parseInt(firstChar))) {
+      const hasDash = cleanSpec.includes('-');
+      
+      if (hasDash) {
+        // MATH: v1 x v2 - L (Strictly 2 parts before dash)
+        const dashIdx = cleanSpec.lastIndexOf('-');
+        if (dashIdx === -1) return 0;
+        
+        const specPartRaw = cleanSpec.substring(0, dashIdx);
+        const lengthStr = cleanSpec.substring(dashIdx + 1);
+        const length = parseFloat(lengthStr);
+        
+        const specNorm = normalize(specPartRaw);
+        const parts = specNorm.split('x');
+        
+        // Excel Logic: Left(v1) * Trim(Mid(v2)) * L. 
+        // If there's an extra 'x' in v2, it errors.
+        if (parts.length === 2 && !isNaN(length)) {
+          const v1 = parseFloat(parts[0]);
+          const v2 = parseFloat(parts[1]);
+          if (!isNaN(v1) && !isNaN(v2)) {
+            return (v1 * v2 * length * density * 0.000001) * qty;
+          }
+        }
+      } else {
+        // MATH: v1 x v2 x v3 (Strictly 3 parts)
+        const norm = normalize(cleanSpec);
+        const parts = norm.split('x');
+        if (parts.length === 3) {
+          const v1 = parseFloat(parts[0]);
+          const v2 = parseFloat(parts[1]);
+          const v3 = parseFloat(parts[2]);
+          if (!isNaN(v1) && !isNaN(v2) && !isNaN(v3)) {
+            return (v1 * v2 * v3 * density * 0.000001) * qty;
+          }
         }
       }
     }
@@ -248,3 +254,4 @@ export function calculateExcelBatchWeight(
     return 0;
   }
 }
+

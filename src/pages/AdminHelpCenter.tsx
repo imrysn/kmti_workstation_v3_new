@@ -10,6 +10,16 @@ import {
 } from 'recharts'
 import './AdminHelpCenter.css'
 
+function dataURLToBlob(dataURL: string): Blob {
+  const [header, base64Data] = dataURL.split(';base64,');
+  const contentType = header.split(':')[1];
+  const binaryString = window.atob(base64Data);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+  return new Blob([bytes], { type: contentType });
+}
+
 export default function AdminHelpCenter() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -22,6 +32,8 @@ export default function AdminHelpCenter() {
   const [isInternal, setIsInternal] = useState(false)
   const [isReplying, setIsReplying] = useState(false)
   const [showResolved, setShowResolved] = useState(false)
+  const [screenshots, setScreenshots] = useState<string[]>([])
+  const [showLimitError, setShowLimitError] = useState(false)
 
   const { confirm, alert, notify } = useModal()
 
@@ -111,6 +123,31 @@ export default function AdminHelpCenter() {
       handleReply();
     }
   }
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        if (screenshots.length >= 3) {
+          setShowLimitError(true);
+          return;
+        }
+        const blob = items[i].getAsFile();
+        if (blob) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const dataUrl = event.target?.result as string;
+            setScreenshots(prev => {
+              const next = [...prev, dataUrl];
+              if (next.length <= 3) setShowLimitError(false);
+              return next;
+            });
+          };
+          reader.readAsDataURL(blob);
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     fetchTickets()
@@ -238,8 +275,18 @@ export default function AdminHelpCenter() {
       formData.append('message', finalMessage)
       formData.append('is_internal', isInternal ? "true" : "false")
 
+      for (const s of screenshots) {
+        try {
+          const blob = dataURLToBlob(s);
+          formData.append('screenshots', blob, 'pasted_image.png');
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       await helpApi.reply(activeId, formData)
       setReplyMessage('')
+      setScreenshots([])
 
       // Reload ticket specifics
       const res = await helpApi.getTicketDetails(activeId)
@@ -434,22 +481,24 @@ export default function AdminHelpCenter() {
                       <div className="ah-sender">
                         {isWhisper && '🤫 '}{msg.sender_name || (isIt ? 'IT Support' : 'User')} • {formatDate(msg.created_at)}
                       </div>
-                      <div className="ah-bubble">
-                        <ReactMarkdown>{msg.message}</ReactMarkdown>
-                        {paths.length > 0 && (
-                          <div className="ah-attachments">
-                            {paths.map(p => (
-                              <img
-                                key={p}
-                                src={`${SERVER_BASE}${p}`}
-                                alt="Attachment"
-                                className="ah-attachment-img"
-                                onClick={() => setPreviewImage(`${SERVER_BASE}${p}`)}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      {msg.message && (
+                        <div className="ah-bubble">
+                          <ReactMarkdown>{msg.message}</ReactMarkdown>
+                        </div>
+                      )}
+                      {paths.length > 0 && (
+                        <div className="ah-attachments">
+                          {paths.map(p => (
+                            <img
+                              key={p}
+                              src={`${SERVER_BASE}${p}`}
+                              alt="Attachment"
+                              className="ah-attachment-img"
+                              onClick={() => setPreviewImage(`${SERVER_BASE}${p}`)}
+                            />
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -481,13 +530,27 @@ export default function AdminHelpCenter() {
                   </label>
                 </div>
                 <div className="ah-composer-row">
-                  <textarea
-                    className={`ah-composer-input ${isInternal ? 'internal-mode' : ''}`}
-                    placeholder={isInternal ? "Type an internal note (Users cannot see this)..." : "Type a reply to the user... (Tip: type / to open command menu)"}
-                    value={replyMessage}
-                    onChange={handleComposerChange}
-                    onKeyDown={handleKeyDown}
-                  />
+                  <div className={`ah-input-container ${isInternal ? 'internal-mode' : ''}`}>
+                    <textarea
+                      className="ah-composer-input"
+                      placeholder={isInternal ? "Type an internal note (Users cannot see this)..." : "Type a reply to the user... (Tip: type / to open command menu)"}
+                      value={replyMessage}
+                      onChange={handleComposerChange}
+                      onKeyDown={handleKeyDown}
+                      onPaste={handlePaste}
+                    />
+                    {screenshots.length > 0 && (
+                      <div className="ah-multi-previews">
+                        {screenshots.map((s, idx) => (
+                          <div key={idx} className="ah-inline-preview">
+                            <img src={s} alt="Attachment" className="ah-pasted-thumb" onClick={() => setPreviewImage(s)} />
+                            <button className="ah-remove-pasted" onClick={() => setScreenshots(prev => prev.filter((_, i) => i !== idx))}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {showLimitError && <div className="ah-error-msg">Maximum of 3 images allowed</div>}
+                  </div>
                   <button
                     className={`ah-send-btn ${isInternal ? 'internal-mode' : ''}`}
                     disabled={!replyMessage.trim() || isReplying}

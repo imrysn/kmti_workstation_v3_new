@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { helpApi } from '../services/api';
+import helpCenterIcon from '../assets/help-center-icon.png';
 import './FeedbackWidget.css';
 
 export interface TicketMsg {
@@ -342,11 +343,7 @@ export default function FeedbackWidget() {
     return (
       <div className="feedback-fab" onClick={() => setIsOpen(true)} title="Help Center">
         {unreadCount > 0 && <span className="feedback-fab-badge">{unreadCount}</span>}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
+        <img src={helpCenterIcon} alt="Help" className="feedback-fab-img" />
       </div>
     );
   }
@@ -368,9 +365,7 @@ export default function FeedbackWidget() {
           <div className="feedback-modal-title">
             {view === 'list' && (
               <>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
+                <img src={helpCenterIcon} alt="Icon" className="feedback-header-img" />
                 Help Center
               </>
             )}
@@ -496,16 +491,18 @@ export default function FeedbackWidget() {
                     {!isMe && <div className="chat-sender-name">{msg.sender_name || 'IT Support'}</div>}
                     {isMe && <div className="chat-sender-name">{msg.sender_name || 'You'}</div>}
                     
-                    <div className="chat-bubble">
-                      {msg.message && <div className="chat-text" style={{whiteSpace: 'pre-wrap'}}>{msg.message}</div>}
-                      {paths.length > 0 && (
-                        <div className="chat-attachments">
-                          {paths.map((p, idx) => (
-                            <img key={idx} src={`${SERVER_BASE}${p}`} alt="Attachment" className="chat-attachment-img" onClick={() => setPreviewImage(`${SERVER_BASE}${p}`)} />
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    {msg.message && (
+                      <div className="chat-bubble">
+                        <div className="chat-text" style={{whiteSpace: 'pre-wrap'}}>{msg.message}</div>
+                      </div>
+                    )}
+                    {paths.length > 0 && (
+                      <div className="chat-attachments">
+                        {paths.map((p, idx) => (
+                          <img key={idx} src={`${SERVER_BASE}${p}`} alt="Attachment" className="chat-attachment-img" onClick={() => setPreviewImage(`${SERVER_BASE}${p}`)} />
+                        ))}
+                      </div>
+                    )}
                     <div className="chat-timestamp">{formatRelative(msg.created_at)}</div>
                   </div>
                 );

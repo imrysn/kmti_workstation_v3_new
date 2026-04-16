@@ -47,4 +47,5 @@ declare global {
   interface Window {
     electronAPI: KMTIElectronAPI;
   }
+  const __APP_VERSION__: string;
 }

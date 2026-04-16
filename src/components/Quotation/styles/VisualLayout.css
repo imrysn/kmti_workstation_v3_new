@@ -974,7 +974,7 @@
 }
 
 /* Page break styles for pagination */
-.quotation-visual-exact[style*="pageBreakBefore"] {
+.quotation-visual-exact.page-break {
   page-break-before: always;
   break-before: page;
 }
@@ -990,7 +990,7 @@
 }
 
 /* Second page header adjustments */
-.quotation-visual-exact:has([style*="pageBreakBefore"]) .header-visual {
+.quotation-visual-exact.page-break .header-visual {
   margin-bottom: 20px;
   /* Reduced margin for second page */
 }
@@ -1021,27 +1021,27 @@
   }
 
   .quotation-visual-exact {
+    box-sizing: border-box !important;
+    display: block !important;
+    min-height: 297mm !important;
+    height: auto !important;
+    background-color: white !important;
     transform: none !important;
     margin: 0 !important;
     padding: 8mm !important;
-    page-break-after: avoid;
-    page-break-inside: avoid;
-    box-sizing: border-box !important;
-    height: auto !important;
-    min-height: 0 !important;
-    max-height: none !important;
-    background-color: white !important;
+    page-break-after: always !important;
+    page-break-inside: avoid !important;
   }
 
   /* Force page breaks in print mode */
-  .quotation-visual-exact[style*="pageBreakBefore"] {
+  .quotation-visual-exact.page-break {
     page-break-before: always !important;
     break-before: page !important;
     margin-top: 0 !important;
   }
 
   /* Ensure first page doesn't break */
-  .quotation-visual-exact:not([style*="pageBreakBefore"]) {
+  .quotation-visual-exact:not(.page-break) {
     page-break-after: auto;
   }
 

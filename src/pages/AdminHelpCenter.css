@@ -550,18 +550,30 @@
 .ah-attachments {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.is-it .ah-attachments {
+  justify-content: flex-end;
+}
+
+.is-user .ah-attachments {
+  justify-content: flex-start;
 }
 
 .ah-attachment-img {
-  width: 120px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 6px;
+  max-width: 280px;
+  max-height: 350px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
   cursor: zoom-in;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
+  background: #f1f5f9;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .ah-attachment-img:hover {
@@ -577,6 +589,78 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Attachment Grid */
+.ah-multi-previews {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding: 0 16px 8px;
+}
+
+.ah-inline-preview {
+  position: relative;
+  width: fit-content;
+  max-width: calc(33.33% - 7px);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #cbd5e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: #f1f5f9;
+  cursor: zoom-in;
+  transition: transform 0.2s;
+}
+
+.ah-inline-preview:hover { 
+  transform: translateY(-2px); 
+  border-color: #0099FF; 
+}
+
+.ah-pasted-thumb {
+  display: block;
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+}
+
+.ah-remove-pasted {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.ah-remove-pasted:hover { 
+  background: #f85149; 
+  border-color: #fff; 
+}
+
+.ah-error-msg { 
+  color: #f85149; 
+  font-size: 12px; 
+  font-weight: 600; 
+  margin-top: 8px; 
+  animation: ahFadeIn 0.3s ease; 
+}
+
+@keyframes ahFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .ah-composer-actions {
@@ -635,36 +719,46 @@
   align-items: flex-end;
 }
 
-.ah-composer-input {
+.ah-input-container {
   flex: 1;
-  min-height: 50px;
-  max-height: 150px;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 14px 16px;
-  font-family: inherit;
-  font-size: 14px;
-  color: #0f172a;
-  resize: vertical;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0; /* Padding handled by internal elements */
   transition: all 0.2s;
+  overflow: hidden;
 }
 
-.ah-composer-input:focus {
-  outline: none;
+.ah-input-container:focus-within {
   background: #ffffff;
   border-color: #0099FF;
   box-shadow: 0 0 0 3px rgba(0, 153, 255, 0.1);
 }
 
-.ah-composer-input.internal-mode {
+.ah-input-container.internal-mode {
   background: #fefce8;
   border-color: #fde047;
 }
 
-.ah-composer-input.internal-mode:focus {
+.ah-input-container.internal-mode:focus-within {
   border-color: #eab308;
   box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.1);
+}
+
+.ah-composer-input {
+  width: 100%;
+  min-height: 50px;
+  max-height: 150px;
+  background: transparent !important;
+  border: none !important;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 14px;
+  color: #0f172a;
+  resize: vertical;
+  outline: none !important;
 }
 
 .ah-send-btn {

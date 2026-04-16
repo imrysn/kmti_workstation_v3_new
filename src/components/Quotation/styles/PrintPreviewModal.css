@@ -2329,6 +2329,12 @@
     page-break-after: avoid !important;
   }
 
+  /* 8b. Force second page to always start on a new page */
+  .quotation-visual-exact.page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
   /* 9. SMART COMPRESSION FOR BILLING STATEMENTS (Multi-row support) */
   .quotation-visual-exact:has(.billing-header) {
     padding-bottom: 11mm !important;
@@ -2365,5 +2371,27 @@
   .quotation-visual-exact:has(.billing-header) .bank-details-section {
     margin-top: 5px !important;
     box-sizing: border-box !important;
+  }
+
+  /* 10. CRITICAL: Flatten Flexbox for Pagination */
+  .preview-panel-full,
+  .preview-container,
+  .preview-page,
+  .preview-content {
+    display: block !important;
+    height: auto !important;
+    width: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    transform: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ensure the background stays white and no scrollbars appear */
+  body, html {
+    background-color: white !important;
+    overflow: visible !important;
+    height: auto !important;
   }
 }
