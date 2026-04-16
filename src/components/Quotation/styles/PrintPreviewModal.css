@@ -8,12 +8,362 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 9999;
+  z-index: 99999;
+  background: #3b3b3b;
+  /* Solid canvas — no transparency bleed */
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MICROSOFT WORD-STYLE PRINT PREVIEW UI
+   Targeting the actual JSX class names: ppm-container, ppm-header,
+   ppm-body, ppm-scroll-area, ppm-a4-scaler, ppm-footer-bar
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Backdrop ───────────────────────────────────────────────── */
+.ppm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: -1;
+}
+
+/* ── Main container: fills the fixed parent overlay ────────── */
+.ppm-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #3b3b3b;
+  /* Word's dark charcoal canvas */
+  overflow: hidden;
+  font-family: 'Inter', 'Segoe UI', -apple-system, system-ui, sans-serif;
+  animation: ppm-fade-in 0.2s ease;
+}
+
+@keyframes ppm-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Remove the backdrop div — parent already covers the screen */
+.ppm-backdrop {
+  display: none;
+}
+
+/* ── Top Toolbar (Word-style blue ribbon) ───────────────────── */
+.ppm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 16px;
+  background: #2b579a;
+  /* Microsoft Word blue */
+  border-bottom: 1px solid #1e3f73;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.ppm-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ppm-title svg {
+  color: rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+}
+
+.ppm-title h2 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+/* ── Header action groups ───────────────────────────────────── */
+.ppm-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+/* Mode toggle pill (Quotation / Billing) */
+.ppm-mode-toggle {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.ppm-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ppm-mode-btn.active {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.ppm-mode-btn:hover:not(.active) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Separator */
+.ppm-sep {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+/* Action buttons (Print / Download PDF) */
+.ppm-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.ppm-action-btn.primary {
+  background: rgba(255, 255, 255, 0.95);
+  color: #2b579a;
+  /* Word blue text on white button */
+  border-color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.ppm-action-btn.primary:hover:not(:disabled) {
+  background: #ffffff;
+  color: #1e3f73;
+  border-color: #1e3f73;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.ppm-action-btn.export {
+  background: #107c41;
+  /* MS Office green */
+  color: #ffffff;
+  border-color: #0a5d2f;
+}
+
+.ppm-action-btn.export:hover:not(:disabled) {
+  background: #fff;
+  color: #0a5d2f;
+  border-color: #0a5d2f;
+}
+
+.ppm-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Close button */
+.ppm-close-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Arimo', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
 }
+
+.ppm-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* ── Body: dark canvas that holds the page(s) ───────────────── */
+.ppm-body {
+  flex: 1;
+  overflow: auto;
+  background: #3b3b3b;
+  /* Word charcoal canvas */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 24px;
+  box-sizing: border-box;
+  /* Smooth custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.ppm-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ppm-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ppm-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.ppm-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+/* The virtual scroll canvas used by the scaler */
+.ppm-scroll-area {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+/* The A4 scaler wrapper */
+.ppm-a4-scaler {
+  position: relative;
+  /* Size is set inline by the React scaling logic */
+}
+
+/* ── The page(s) themselves: white paper with Word drop shadow ── */
+.preview-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  /* Gap between page 1 and page 2 */
+  background: transparent;
+  transform-origin: top left;
+}
+
+/* Each quotation page gets the white paper treatment */
+.preview-content .quotation-visual-exact {
+  background: #ffffff !important;
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.18),
+    0 8px 24px rgba(0, 0, 0, 0.22),
+    0 20px 48px rgba(0, 0, 0, 0.12);
+  display: block;
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* Page break indicator between pages */
+.ppm-page-break-indicator {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 0;
+  text-align: center;
+  user-select: none;
+}
+
+/* ── Footer status bar (Word-style slim bar) ─────────────────── */
+.ppm-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 16px;
+  background: #2b579a;
+  /* Match header */
+  border-top: 1px solid #1e3f73;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 500;
+  gap: 16px;
+}
+
+/* Zoom controls in footer bar */
+.ppm-footer-bar .zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ppm-footer-bar .zoom-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.ppm-footer-bar .zoom-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.ppm-footer-bar .zoom-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.ppm-footer-bar .ppm-zoom-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 64px;
+  text-align: center;
+  padding: 0 4px;
+  border-radius: 3px;
+  transition: background 0.12s;
+}
+
+.ppm-footer-bar .ppm-zoom-label:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
 
 .modal-backdrop {
   position: absolute;
@@ -2389,7 +2739,8 @@
   }
 
   /* Ensure the background stays white and no scrollbars appear */
-  body, html {
+  body,
+  html {
     background-color: white !important;
     overflow: visible !important;
     height: auto !important;
