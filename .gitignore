@@ -55,7 +55,7 @@ pnpm-debug.log*
 *.xlsx
 backend/.preview_cache/
 backend/scripts/diagnostics/
-backend/data/
+# backend/data/
 
 # Temporary CAD/Binary Artifacts
 *.bin
