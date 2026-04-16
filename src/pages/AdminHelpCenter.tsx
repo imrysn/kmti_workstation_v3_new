@@ -274,6 +274,7 @@ export default function AdminHelpCenter() {
       const formData = new FormData()
       formData.append('message', finalMessage)
       formData.append('is_internal', isInternal ? "true" : "false")
+      formData.append('is_support', "true")
 
       for (const s of screenshots) {
         try {

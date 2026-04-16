@@ -81,7 +81,7 @@ async def create_ticket(
     
     first_msg = TicketMessage(
         ticket_id=new_ticket.id,
-        sender_type=current_user.role,
+        sender_type=UserRole.user,  # Context is always 'user' for new tickets
         sender_name=reporter_name or "Workstation User",
         message=message,
         screenshot_paths=paths_str,
@@ -191,10 +191,11 @@ async def reply_to_ticket(
     message: str = Form(...),
     sender_name: str = Form(None),
     is_internal: str = Form("false"),
+    is_support: str = Form("false"),  # New flag to distinguish context
     screenshots: List[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> dict:
     """Add a new message to a ticket thread."""
     result = await db.execute(select(Ticket).where(Ticket.id == ticket_id))
     ticket = result.scalar_one_or_none()
@@ -210,10 +211,16 @@ async def reply_to_ticket(
 
     now = datetime.now()
     b_is_internal = is_internal.lower() == "true"
+    b_is_support = is_support.lower() == "true"
     
+    # Context-aware sender type: 
+    # If sent from Admin Center (is_support=true), use user's actual role.
+    # Otherwise treat as a reporter message (user).
+    final_sender_type = current_user.role if b_is_support else UserRole.user
+
     new_msg = TicketMessage(
         ticket_id=ticket.id,
-        sender_type=current_user.role,
+        sender_type=final_sender_type,
         sender_name=final_sender_name,
         message=message,
         screenshot_paths=paths_str,

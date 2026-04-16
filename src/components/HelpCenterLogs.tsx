@@ -69,6 +69,7 @@ export default function HelpCenterLogs({ onOpenLogsCountChange, isTerminalMode =
     try {
       const formData = new FormData()
       formData.append('message', replyMessage)
+      formData.append('is_support', 'true')
       await helpApi.reply(id, formData)
       setReplyMessage('')
       // Reload thread

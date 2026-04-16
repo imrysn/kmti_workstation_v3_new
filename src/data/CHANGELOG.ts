@@ -22,6 +22,15 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.6.7',
+    date: 'April 16, 2026',
+    entries: [
+      { type: 'fix', text: 'Help Center Thread Alignment — Resolved an issue where messages from Admin/IT users were incorrectly positioned when using the workstation widget.' },
+      { type: 'improvement', text: 'Modern Feedback UI — Redesigned the chat bubbles in the Help Center for better readability and a more premium aesthetic.' },
+      { type: 'improvement', text: 'Context-Aware Messaging — The system now intelligently distinguishes between "Support" replies and "User" feedback, ensuring logical thread flow.' },
+    ],
+  },
+  {
     version: '3.6.6',
     date: 'April 16, 2026',
     entries: [

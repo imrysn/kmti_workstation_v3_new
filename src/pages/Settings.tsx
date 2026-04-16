@@ -147,7 +147,7 @@ export default function Settings() {
           <div className="sett-update-status">
             <strong>Current Version:</strong> 
             <span className="badge-update" style={{ background: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
-              v3.6.6
+              v{__APP_VERSION__}
             </span>
             {updateStatus === 'checking' && <span className="badge-update checking">Checking...</span>}
             {updateStatus === 'available' && <span className="badge-update ready">Update Found</span>}
