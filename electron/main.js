@@ -214,15 +214,18 @@ app.whenReady().then(() => {
     mainWindow.setMinimumSize(1024, 700)
     
     // Set explicit restore down dimensions
+    const winW = 1024, winH = 700
     mainWindow.setBounds({ 
-      x: Math.round(x + (width - 1024) / 2), 
-      y: Math.round(y + (height - 700) / 2), 
-      width: 1024, 
-      height: 700 
+      x: Math.round(x + (width - winW) / 2), 
+      y: Math.round(y + (height - winH) / 2), 
+      width: winW, 
+      height: winH 
     }, false)
     
-    // Always start maximized
-    mainWindow.maximize()
+    // Respect previous state rather than forcing maximize
+    if (windowState.isMaximized) {
+      mainWindow.maximize()
+    }
   })
 
   ipcMain.handle('logout-reset', () => {

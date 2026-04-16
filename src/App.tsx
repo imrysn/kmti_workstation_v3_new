@@ -18,6 +18,7 @@ import Login from './pages/Login'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ModalProvider } from './components/ModalContext'
 import { ModalContainer } from './components/modals'
+import WhatsNewModal from './components/modals/WhatsNewModal'
 import DateTimeOverlay from './components/DateTimeOverlay'
 import FeedbackWidget from './components/FeedbackWidget'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -194,6 +195,7 @@ function WorkstationShell() {
         </main>
       </div>
       <ModalContainer />
+      <WhatsNewModal />
       <DateTimeOverlay />
       <SessionExpiredModal />
       <FeedbackWidget />
