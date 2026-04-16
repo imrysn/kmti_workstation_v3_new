@@ -137,7 +137,7 @@ export default function FeedbackWidget() {
         if (window.electronAPI) {
           try {
             const ws = await window.electronAPI.getWorkstationInfo();
-            wsName = ws.hostname || 'SYSTEM';
+            wsName = ws.computerName || 'SYSTEM';
           } catch (e) {
             wsName = 'SYSTEM';
           }
@@ -191,7 +191,7 @@ export default function FeedbackWidget() {
       try {
         if (window.electronAPI) {
           const ws = await window.electronAPI.getWorkstationInfo();
-          wsName = ws.hostname || 'SYSTEM';
+          wsName = ws.computerName || 'SYSTEM';
           setWorkstation(wsName);
         }
       } catch (e) {

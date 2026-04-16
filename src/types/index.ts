@@ -65,26 +65,4 @@ export interface IApiResponse<T> {
   status: number
 }
 
-// Electron IPC bridge types (injected by preload.js)
-export interface ElectronAPI {
-  openFolder: (path: string) => Promise<void>
-  openFile: (path: string) => Promise<void>
-  minimizeWindow: () => Promise<void>
-  maximizeWindow: () => Promise<void>
-  isWindowMaximized: () => Promise<boolean>
-  onWindowMaximized: (cb: (isMax: boolean) => void) => void
-  removeWindowMaximizedListener: () => void
-  closeWindow: () => Promise<void>
-  selectFolder: () => Promise<string | null>
-  getFileIcon: (filePath: string, isFolder: boolean) => Promise<string | null>
-  loginSuccess: () => Promise<void>
-  logoutReset: () => Promise<void>
-  captureScreenshot: () => Promise<string | null>
-  getWorkstationInfo: () => Promise<{ hostname: string; platform: string; release: string }>
-}
 
-declare global {
-  interface Window {
-    electronAPI?: ElectronAPI
-  }
-}

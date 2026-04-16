@@ -15,7 +15,7 @@ interface AlertState {
   type: 'default' | 'restricted' | 'warning';
 }
 
-type ConfirmationType = 'primary' | 'danger';
+type ConfirmationType = 'primary' | 'danger' | 'info';
 
 interface ConfirmationState {
   isOpen: boolean;

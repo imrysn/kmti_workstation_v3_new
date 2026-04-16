@@ -17,12 +17,81 @@ export default function Settings() {
   const [testResult, setTestResult] = useState<'ok' | 'error' | null>(null)
   const [clearing, setClearing] = useState(false)
   const [cleared, setCleared] = useState(false)
+
+  // Update States
+  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error'>('idle')
+  const [updateInfo, setUpdateInfo] = useState<any>(null)
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const [updateError, setUpdateError] = useState<string | null>(null)
   
   const { confirm, alert, notify } = useModal()
 
   useEffect(() => {
     settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res.data }))
+
+    // --- Auto Updater Listeners ---
+    const api = window.electronAPI
+    if (!api) return
+
+    api.onUpdateAvailable((info: any) => {
+      setUpdateStatus('available')
+      setUpdateInfo(info)
+      notify(`Update Found: v${info.version}`, 'info')
+    })
+
+    api.onUpdateNotAvailable(() => {
+      setUpdateStatus('idle')
+      notify('Software is up to date', 'success')
+    })
+
+    api.onUpdateProgress((progress: any) => {
+      setUpdateStatus('downloading')
+      setDownloadProgress(Math.round(progress.percent))
+    })
+
+    api.onUpdateDownloaded(() => {
+      setUpdateStatus('ready')
+      notify('Update downloaded and ready to install', 'success')
+    })
+
+    api.onUpdateError((err: string) => {
+      setUpdateStatus('error')
+      setUpdateError(err)
+      alert(`Update failed: ${err}`, 'Update Error')
+    })
+
+    return () => {
+      api.removeUpdateListeners()
+    }
   }, [])
+
+  const handleCheck = async () => {
+    setUpdateStatus('checking')
+    setUpdateError(null)
+    try {
+      await window.electronAPI.checkForUpdate()
+    } catch (err: any) {
+      setUpdateStatus('error')
+      setUpdateError(err.message)
+    }
+  }
+
+  const handleDownload = async () => {
+    try {
+      await window.electronAPI.downloadUpdate()
+    } catch (err: any) {
+      alert(err.message, 'Download Error')
+    }
+  }
+
+  const handleInstall = () => {
+    confirm(
+      "The application will close now to install the update. Proceed?",
+      () => window.electronAPI.installAndRestart(),
+      undefined,
+      'info'
+    )
+  }
 
   const handleSave = async () => {
     await settingsApi.save(settings)
@@ -70,6 +139,70 @@ export default function Settings() {
       <div className="page-header">
         <h1 className="page-title">Settings</h1>
         <p className="page-subtitle">Configure database connection and local paths</p>
+      </div>
+
+      <div className="card sett-card">
+        <h2 className="sett-section-title">System & Updates</h2>
+        <div className="sett-update-container">
+          <div className="sett-update-status">
+            <strong>Current Version:</strong> 
+            <span className="badge-update" style={{ background: 'var(--bg-primary)', color: 'var(--text-secondary)' }}>
+              v3.6.6
+            </span>
+            {updateStatus === 'checking' && <span className="badge-update checking">Checking...</span>}
+            {updateStatus === 'available' && <span className="badge-update ready">Update Found</span>}
+            {updateStatus === 'downloading' && <span className="badge-update downloading">Downloading</span>}
+            {updateStatus === 'ready' && <span className="badge-update ready">Ready to Install</span>}
+            {updateStatus === 'error' && <span className="badge-update error">Update Error</span>}
+          </div>
+
+          <div className="sett-info-text">
+            {updateStatus === 'idle' && "Your workstation is running the latest production build."}
+            {updateStatus === 'checking' && "Searching our servers for a newer version..."}
+            {updateStatus === 'available' && `Version ${updateInfo?.version} is available. It includes new features and security fixes.`}
+            {updateStatus === 'downloading' && "Downloading essential files. Please stay connected."}
+            {updateStatus === 'ready' && "All files are ready. Click 'Install & Restart' to upgrade."}
+            {updateStatus === 'error' && `Something went wrong: ${updateError || 'Connection lost'}`}
+          </div>
+
+          {updateStatus === 'downloading' && (
+            <div className="update-progress-container">
+              <div className="update-progress-bar">
+                <div className="update-progress-fill" style={{ width: `${downloadProgress}%` }}></div>
+              </div>
+              <div className="update-progress-info">
+                <span>Downloading assets...</span>
+                <span>{downloadProgress}%</span>
+              </div>
+            </div>
+          )}
+
+          <div className="sett-conn-row" style={{ marginTop: 8 }}>
+            {(updateStatus === 'idle' || updateStatus === 'checking' || updateStatus === 'error') && (
+              <button className="btn btn-ghost" onClick={handleCheck} disabled={updateStatus === 'checking'}>
+                {updateStatus === 'checking' ? 'Please wait...' : 'Check for Updates'}
+              </button>
+            )}
+
+            {updateStatus === 'available' && (
+              <button className="btn btn-primary" onClick={handleDownload}>
+                Download Update (v{updateInfo?.version})
+              </button>
+            )}
+
+            {updateStatus === 'downloading' && (
+              <button className="btn btn-ghost" disabled>
+                Downloading...
+              </button>
+            )}
+
+            {updateStatus === 'ready' && (
+              <button className="btn btn-success" onClick={handleInstall}>
+                Install & Restart Now
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="card sett-card">
@@ -143,3 +276,4 @@ export default function Settings() {
     </div>
   )
 }
+
