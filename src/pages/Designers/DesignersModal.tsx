@@ -56,14 +56,14 @@ export default function DesignersModal({
     try {
       if (editingItem?.id) {
         await designersApi.update(editingItem.id, formData)
-        notify('Designer updated successfully', 'success')
+        notify('Client updated successfully', 'success')
       } else {
         await designersApi.create(formData)
-        notify('Designer added successfully', 'success')
+        notify('Client added successfully', 'success')
       }
       onSaved()
     } catch (err: any) {
-      notify(err.response?.data?.detail || 'Failed to save designer', 'error')
+      notify(err.response?.data?.detail || 'Failed to save client', 'error')
     } finally {
       setLoading(false)
     }
@@ -72,58 +72,55 @@ export default function DesignersModal({
   return (
     <div className="ht-modal-overlay">
       <div className="ht-modal">
-        <h2 className="ht-modal-title">{editingItem ? 'Edit Designer' : 'Add New Designer'}</h2>
+        <h2 className="ht-modal-title">{editingItem ? 'Edit Client' : 'Add New Client'}</h2>
         <form onSubmit={handleSubmit} className="ht-modal-form">
           <div className="ht-form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <label>Category</label>
-              <button 
-                type="button" 
-                className="btn-ghost" 
+              <button
+                type="button"
+                className="btn-ghost"
                 style={{ height: '24px', padding: '0 8px', fontSize: '10px', borderRadius: '4px' }}
                 onClick={() => setIsNewCategory(!isNewCategory)}
               >
                 {isNewCategory ? 'Select Existing' : '+ New Category'}
               </button>
             </div>
-            
+
             {isNewCategory ? (
-              <input 
+              <input
                 type="text"
                 className="input"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value.toUpperCase() })}
                 placeholder="Type new category..."
-                required
                 autoFocus
               />
             ) : (
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                required
                 className="input"
               >
-                <option value="" disabled>Select category...</option>
+                <option value="">Select category...</option>
                 {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
               </select>
             )}
           </div>
 
           <div className="ht-form-group">
-            <label>English Name</label>
+            <label>Client Name</label>
             <input
               type="text"
               value={formData.englishName}
               onChange={(e) => setFormData({ ...formData, englishName: e.target.value })}
               placeholder="Name"
-              required
             />
           </div>
 
           <div className="ht-form-group">
             <label>Email Address</label>
-            <input 
+            <input
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -138,7 +135,6 @@ export default function DesignersModal({
               value={formData.japaneseName}
               onChange={(e) => setFormData({ ...formData, japaneseName: e.target.value })}
               placeholder="日本人デザイナー"
-              required
             />
           </div>
 

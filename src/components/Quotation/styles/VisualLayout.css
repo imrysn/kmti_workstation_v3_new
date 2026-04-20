@@ -1197,3 +1197,51 @@
 }
 
 /* Bank details now use maximum compression by default - no progressive sizing needed */
+/* ===== INLINE UNIT EDITOR ===== */
+.ppm-unit-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  padding: 2px 0;
+  margin: 0;
+  outline: none;
+  cursor: text;
+  transition: background 0.2s, box-shadow 0.2s;
+  border-radius: 3px;
+}
+
+.ppm-unit-input:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.ppm-unit-input:focus {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 0 0 1px #2196f3, 0 2px 4px rgba(0,0,0,0.1);
+  color: #000;
+}
+
+/* Hide spin buttons for Firefox */
+.ppm-unit-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* Hide spin buttons for Chrome, Safari, Edge, Opera */
+.ppm-unit-input::-webkit-outer-spin-button,
+.ppm-unit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+@media print {
+  .ppm-unit-input {
+    background: transparent !important;
+    box-shadow: none !important;
+    cursor: default !important;
+    padding: 0 !important;
+    color: black !important;
+  }
+}

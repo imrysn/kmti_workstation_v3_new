@@ -12,7 +12,7 @@ export default function Designers() {
   const { notify, confirm } = useModal()
   const { hasRole } = useAuth()
   const canManage = hasRole('admin', 'it')
-  
+
   // State
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -68,7 +68,7 @@ export default function Designers() {
       const limit = 50
       const offset = isAppend ? (page + 1) * limit : 0
       const res = await designersApi.list(selectedCategory || undefined, query || undefined, limit, offset)
-      
+
       if (isAppend) {
         setResults(prev => [...prev, ...res.data])
         setPage(p => p + 1)
@@ -77,7 +77,7 @@ export default function Designers() {
         setPage(0)
       }
       setHasMore(res.data.length === limit)
-    } catch { 
+    } catch {
       if (!isAppend) setResults([])
       setHasMore(false)
     } finally {
@@ -104,20 +104,20 @@ export default function Designers() {
   const handleDelete = (item: IDesigner) => {
     if (!item.id) return
     confirm(
-      `Are you sure you want to delete designer "${item.englishName}"?`,
+      `Are you sure you want to delete client "${item.englishName}"?`,
       async () => {
         try {
           await designersApi.delete(item.id as number)
-          notify("Designer deleted successfully", "success")
+          notify("Client deleted successfully", "success")
           loadData(false)
           fetchCategories()
         } catch (err: any) {
-          notify(err.response?.data?.detail || "Failed to delete designer", "error")
+          notify(err.response?.data?.detail || "Failed to delete client", "error")
         }
       },
       undefined,
       'danger',
-      'Delete Designer'
+      'Delete Client'
     )
   }
 
@@ -153,12 +153,12 @@ export default function Designers() {
   return (
     <div className="designers-container">
       <header className="char-search-header" style={{ flexShrink: 0, padding: '24px 0' }}>
-        <h1 className="page-title">Designers</h1>
-        <p className="page-subtitle">Directory of engineering designers and contact details</p>
+        <h1 className="page-title">Clients</h1>
+        <p className="page-subtitle">Directory of engineering clients and contact details</p>
       </header>
 
       <div className="designers-content">
-        <DesignersTable 
+        <DesignersTable
           query={query}
           setQuery={setQuery}
           results={results}
@@ -175,14 +175,14 @@ export default function Designers() {
           onDelete={handleDelete}
         />
 
-        <DesignersSidebar 
+        <DesignersSidebar
           categories={categories}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
         />
       </div>
 
-      <DesignersModal 
+      <DesignersModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
         onSaved={onSaved}

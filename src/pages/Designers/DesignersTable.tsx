@@ -65,7 +65,7 @@ export default function DesignersTable({
           <input
             className="input"
             style={{ paddingLeft: 48, height: 48, borderRadius: 10, fontSize: 15 }}
-            placeholder="Search designers by name or email..."
+            placeholder="Search clients by name or email..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -80,22 +80,22 @@ export default function DesignersTable({
             onClick={onAdd}
           >
             <PlusIcon size={18} />
-            <span>Add Designer</span>
+            <span>Add Client</span>
           </button>
         )}
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <div 
-          className="findr-results-scroll" 
-          ref={tableContainerRef} 
+        <div
+          className="findr-results-scroll"
+          ref={tableContainerRef}
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
           <table className="char-table">
             <thead>
               <tr>
-                <th style={{ width: '30%' }}>English Name</th>
+                <th style={{ width: '30%' }}>Client Name</th>
                 <th style={{ width: '30%' }}>Japanese Name</th>
                 <th style={{ width: '25%' }}>Email Address</th>
                 {canManage && <th style={{ width: '15%', textAlign: 'right' }}>Actions</th>}
@@ -103,8 +103,8 @@ export default function DesignersTable({
             </thead>
             <tbody>
               {results.map((row, idx) => (
-                <tr 
-                  key={row.id || idx} 
+                <tr
+                  key={row.id || idx}
                   className={idx === focusedIndex ? 'focused-row' : ''}
                 >
                   <td onClick={() => handleCopy(row.englishName, `en-${idx}`)}>
@@ -118,17 +118,17 @@ export default function DesignersTable({
                   </td>
                   {canManage && (
                     <td className="actions-cell">
-                      <button 
-                        className="icon-btn edit" 
+                      <button
+                        className="icon-btn edit"
                         onClick={(e) => { e.stopPropagation(); onEdit(row); }}
-                        title="Edit Designer"
+                        title="Edit Client"
                       >
                         <EditIcon size={16} />
                       </button>
-                      <button 
-                        className="icon-btn delete" 
+                      <button
+                        className="icon-btn delete"
                         onClick={(e) => { e.stopPropagation(); onDelete(row); }}
-                        title="Delete Designer"
+                        title="Delete Client"
                       >
                         <TrashIcon size={16} />
                       </button>
@@ -139,7 +139,7 @@ export default function DesignersTable({
               {!loading && results.length === 0 && (
                 <tr>
                   <td colSpan={canManage ? 4 : 3} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-                    No designers found
+                    No clients found
                   </td>
                 </tr>
               )}

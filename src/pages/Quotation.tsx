@@ -183,7 +183,6 @@ export default function Quotation() {
         onUpdate={updateBaseRate}
       />
 
-      {/* ── Print / PDF Preview Modal ─────────────────────────── */}
       <PrintPreviewModal
         isOpen={isPrintPreviewOpen}
         onClose={() => setIsPrintPreviewOpen(false)}
@@ -195,6 +194,7 @@ export default function Quotation() {
         baseRates={baseRates}
         signatures={signatures}
         manualOverrides={manualOverrides}
+        onManualOverrideChange={updateManualOverrides}
       />
     </div>
   )

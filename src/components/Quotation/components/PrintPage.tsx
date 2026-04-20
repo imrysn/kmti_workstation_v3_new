@@ -25,6 +25,7 @@ interface Props {
   manualOverrides: ManualOverrides
   baseRates: BaseRates
   isSecondPage?: boolean
+  onUnitEdit?: (taskId: number, newValue: number) => void
 }
 
 const BANK_LABEL_MAP: Array<{ key: keyof BillingDetails; label: string }> = [
@@ -40,7 +41,8 @@ const PrintPage = memo(({
   printMode, companyInfo, clientInfo, quotationDetails, billingDetails,
   pageTasks, pageTotals, startIndex, isLastPage,
   grandTotal, overheadTotal, actualTaskCount, maxRows,
-  signatures, manualOverrides, baseRates, isSecondPage = false
+  signatures, manualOverrides, baseRates, isSecondPage = false,
+  onUnitEdit
 }: Props) => {
 
   const fmt = useCallback((n: number) => `¥${n.toLocaleString()}`, [])
@@ -79,7 +81,18 @@ const PrintPage = memo(({
                 <td>{startIndex + i + 1}</td>
                 <td>{task.referenceNumber || ''}</td>
                 <td className="description-cell">{task.description}</td>
-                <td>{resolveUnitPage(task)}</td>
+                <td className="col-unitpage">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="ppm-unit-input"
+                    value={resolveUnitPage(task) === 0 ? '' : resolveUnitPage(task)}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value.replace(/\D/g, '')) || 0
+                      onUnitEdit?.(task.id, val)
+                    }}
+                  />
+                </td>
                 <td>{task.type || '3D'}</td>
                 <td className="price-cell">{fmt(pageTotals[i])}</td>
               </tr>

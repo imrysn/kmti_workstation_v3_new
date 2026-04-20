@@ -413,14 +413,16 @@ export function useInvoiceState() {
 
   const resetToNew = useCallback(() => {
     const newToday = new Date().toISOString().split('T')[0]
-    setCompanyInfo(DEFAULT_COMPANY)
-    setClientInfo({ company: '', contact: '', address: '', phone: '' })
     setQuotationDetails({
       quotationNo: generateQuotationNumber(newToday),
       referenceNo: '',
       date: newToday,
     })
-    setBillingDetails(DEFAULT_BILLING_DETAILS)
+    setBillingDetails(prev => ({
+      ...prev,
+      invoiceNo: '',
+      jobOrderNo: '',
+    }))
     setTasks([makeBlankTask()])
     setSelectedMainTaskId(null)
     setBaseRates(DEFAULT_BASE_RATES)

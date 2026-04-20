@@ -20,7 +20,7 @@ export default function DesignersSidebar({
             className={`category-pill all-pill ${selectedCategory === '' ? 'active' : ''}`}
             onClick={() => setSelectedCategory('')}
           >
-            All Designers
+            All CLIENTS
           </button>
           {categories.map((cat) => (
             <button

@@ -20,6 +20,7 @@ interface Props {
   baseRates: BaseRates
   signatures: Signatures
   manualOverrides: ManualOverrides
+  onManualOverrideChange: (updater: (prev: ManualOverrides) => ManualOverrides) => void
 }
 
 const { A4_W_PX, A4_H_PX } = LAYOUT
@@ -27,7 +28,7 @@ const { A4_W_PX, A4_H_PX } = LAYOUT
 const PrintPreviewModal = memo(({
   isOpen, onClose,
   companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
-  manualOverrides
+  manualOverrides, onManualOverrideChange
 }: Props) => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [printMode, setPrintMode] = useState<'quotation' | 'billing'>('quotation')
@@ -108,6 +109,15 @@ const PrintPreviewModal = memo(({
   const resolveUnitPage = useCallback((task: Task) => {
     return getUnitPageCount(task.id, tasks, manualOverrides)
   }, [tasks, manualOverrides])
+
+  const handleUnitEdit = useCallback((taskId: number, newValue: number) => {
+    onManualOverrideChange(prev => {
+      const next = { ...prev }
+      next.tasks = { ...next.tasks }
+      next.tasks[taskId] = { ...(next.tasks[taskId] || {}), unitPage: newValue }
+      return next
+    })
+  }, [onManualOverrideChange])
 
   // ── Print / PDF ───────────────────────────────────────────────────────────
   const handlePrint = useCallback(async () => {
@@ -404,6 +414,7 @@ const PrintPreviewModal = memo(({
                     startIndex={0}
                     isLastPage={!needsPagination}
                     maxRows={maxRows}
+                    onUnitEdit={handleUnitEdit}
                   />
 
                   {needsPagination && (
@@ -417,6 +428,7 @@ const PrintPreviewModal = memo(({
                         startIndex={firstPageTasks.length}
                         isLastPage={true}
                         maxRows={10}
+                        onUnitEdit={handleUnitEdit}
                       />
                     </>
                   )}

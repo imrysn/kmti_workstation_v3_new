@@ -10,10 +10,10 @@ from typing import List, Optional
 router = APIRouter()
 
 class DesignerCreate(BaseModel):
-    category: str
-    englishName: str
+    category: Optional[str] = ""
+    englishName: Optional[str] = ""
     email: Optional[str] = ""
-    japaneseName: str
+    japaneseName: Optional[str] = ""
 
 class DesignerUpdate(BaseModel):
     category: Optional[str] = None
