@@ -39,6 +39,8 @@ export default function Quotation() {
   const [roomPassword, setRoomPassword] = useState<string | undefined>()
   const [roomDisplayName, setRoomDisplayName] = useState<string | undefined>()
   const [recentEdits, setRecentEdits] = useState<Record<string, { color: string; timestamp: number }>>({})
+  const [previewData, setPreviewData] = useState<any | null>(null)
+  const [activePreviewTs, setActivePreviewTs] = useState<string | null>(null)
 
   // ── Document State ─────────────────────────────────────────────
   const {
@@ -155,7 +157,15 @@ export default function Quotation() {
       }
     },
     onAuditEntry: (entry) => {
-      setAuditLogs(prev => [entry, ...prev.slice(0, 49)])
+      setAuditLogs(prev => {
+        const idx = prev.findIndex(item => item.id === entry.id)
+        if (idx >= 0) {
+          const next = [...prev]
+          next[idx] = entry
+          return next
+        }
+        return [entry, ...prev.slice(0, 49)]
+      })
     },
     onError: (msg) => {
       notify?.(msg, 'error')
@@ -264,6 +274,12 @@ export default function Quotation() {
     if (currentFilePath) setIsLobbyOpen(false)
   }, [currentFilePath])
 
+  // Reset preview and logs when switching quotations
+  useEffect(() => {
+    handleExitPreview()
+    setAuditLogs([])
+  }, [quotationDetails.quotationNo])
+
   const formatToolbarDate = useCallback((dateStr: string) => {
     if (!dateStr) return ''
     const d = new Date(dateStr + 'T00:00:00')
@@ -362,6 +378,37 @@ export default function Quotation() {
     }
   }
 
+  const handlePreview = (data: any, ts: string) => {
+    setPreviewData(data)
+    setActivePreviewTs(ts)
+    notify(`Previewing version from ${ts}`, 'info')
+  }
+
+  const handleExitPreview = () => {
+    setPreviewData(null)
+    setActivePreviewTs(null)
+  }
+
+  const handleFinalRestore = () => {
+    if (!previewData) return
+    loadData(previewData, 'version_restore')
+    emitPatch({ path: '__full_restore__', value: previewData }, previewData)
+    setPreviewData(null)
+    setActivePreviewTs(null)
+    notify('Version restored successfully!', 'success')
+  }
+
+  // Calculate effective data for rendering
+  const isPreview = !!previewData
+  const effComp = previewData?.companyInfo || companyInfo
+  const effClient = previewData?.clientInfo || clientInfo
+  const effDetails = previewData?.quotationDetails || quotationDetails
+  const effBilling = previewData?.billingDetails || billingDetails
+  const effTasks = previewData?.tasks || tasks
+  const effBaseRates = previewData?.baseRates || baseRates
+  const effSignatures = previewData?.signatures || signatures
+  const effOverrides = previewData?.manualOverrides || manualOverrides
+
   return (
     <CollaborationProvider value={{ isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch }}>
       <div className="quot-app-root">
@@ -455,57 +502,73 @@ export default function Quotation() {
               emitPatch({ path: '__full_restore__', value: data }, data)
               notify('Version restored successfully!', 'success')
             }}
+            onPreview={handlePreview}
+            previewingTs={activePreviewTs}
             auditLogs={auditLogs}
+            workstationName={myEffectiveName}
           />
 
           {/* Main scrollable content */}
           <div className="quot-main-area">
+            {isPreview && (
+              <div className="history-preview-banner">
+                <div className="history-preview-banner__content">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <span>Reviewing history version from <strong>{activePreviewTs}</strong>. This view is read-only.</span>
+                </div>
+                <div className="history-preview-banner__actions">
+                  <button className="btn btn-outline btn-sm" onClick={handleExitPreview}>Exit Preview</button>
+                  <button className="btn btn-primary btn-sm" onClick={handleFinalRestore}>Restore This Version</button>
+                </div>
+              </div>
+            )}
             <div className="quot-body">
               <div className="quot-content-wrapper">
 
                 {/* Top info row: Company | Client | Document Details */}
                 <div className="quot-info-row">
-                  <CompanyInfo companyInfo={companyInfo} onUpdate={syncCompanyInfo} />
-                  <ClientInfo clientInfo={clientInfo} onUpdate={syncClientInfo} />
+                  <CompanyInfo companyInfo={effComp} onUpdate={isPreview ? undefined : syncCompanyInfo} />
+                  <ClientInfo clientInfo={effClient} onUpdate={isPreview ? undefined : syncClientInfo} />
                   <QuotationDetailsCard
-                    quotationDetails={quotationDetails}
-                    onUpdate={syncQuotationDetails}
+                    quotationDetails={effDetails}
+                    onUpdate={isPreview ? undefined : syncQuotationDetails}
                   />
                 </div>
 
                 {/* Tasks Computation Table */}
                 <TasksTable
-                  tasks={tasks}
-                  baseRates={baseRates}
+                  tasks={effTasks}
+                  baseRates={effBaseRates}
                   selectedMainTaskId={selectedMainTaskId}
-                  onTaskUpdate={syncUpdateTask}
-                  onTaskAdd={syncAddTask}
-                  onSubTaskAdd={syncAddSubTask}
-                  onTaskRemove={syncRemoveTask}
-                  onTaskReorder={syncReorderTasks}
+                  onTaskUpdate={isPreview ? undefined : syncUpdateTask}
+                  onTaskAdd={isPreview ? undefined : syncAddTask}
+                  onSubTaskAdd={isPreview ? undefined : syncAddSubTask}
+                  onTaskRemove={isPreview ? undefined : syncRemoveTask}
+                  onTaskReorder={isPreview ? undefined : syncReorderTasks}
                   onMainTaskSelect={setSelectedMainTaskId}
-                  onBaseRateUpdate={syncBaseRate}
-                  manualOverrides={manualOverrides}
-                  setManualOverrides={updateManualOverrides} // setManualOverrides is used for more complex updates, but footer uses specialized syncUpdateFooter via prop eventually?
-                  // Wait, I should pass syncUpdateFooter to TasksTable if I want it to sync.
-                  onFooterUpdate={syncUpdateFooter}
+                  onBaseRateUpdate={isPreview ? undefined : syncBaseRate}
+                  manualOverrides={effOverrides}
+                  setManualOverrides={isPreview ? undefined : updateManualOverrides} 
+                  onFooterUpdate={isPreview ? undefined : syncUpdateFooter}
                   collapsedTasks={new Set(collapsedTaskIds)}
                   onCollapsedTasksChange={(set) => setCollapsedTaskIds(Array.from(set))}
-                  onOpenRateSettings={() => setIsBaseRatesPanelOpen(true)}
+                  onOpenRateSettings={isPreview ? undefined : () => setIsBaseRatesPanelOpen(true)}
                   notify={notify}
                 />
 
                 {/* Signature Forms */}
                 <SignatureForm
-                  signatures={signatures}
-                  onUpdate={syncSignatures}
+                  signatures={effSignatures}
+                  onUpdate={isPreview ? undefined : syncSignatures}
                 />
 
                 <BillingDetailsCard
-                  billingDetails={billingDetails}
-                  quotationDetails={quotationDetails}
-                  onUpdateBilling={syncBillingDetails}
-                  onUpdateQuotation={syncQuotationDetails}
+                  billingDetails={effBilling}
+                  quotationDetails={effDetails}
+                  onUpdateBilling={isPreview ? undefined : syncBillingDetails}
+                  onUpdateQuotation={isPreview ? undefined : syncQuotationDetails}
                 />
 
                 {/* Bottom Spacer */}

@@ -1,7 +1,32 @@
+/**
+ * PrintPage.tsx
+ * ─────────────────────────────────────────────────────────────────
+ * Renders one A4 page of a quotation or billing statement.
+ *
+ * PAGINATION MODEL (v3.1)
+ * ───────────────────────
+ * PrintPreviewModal splits the full task list into chunks of
+ * LAYOUT.TASKS_PER_PAGE and renders one <PrintPage> per chunk.
+ * There is no longer a hard 2-page cap — pages are generated
+ * dynamically from the actual task count.
+ *
+ * Props:
+ *  pageIndex  — 0-based page number. Page 0 shows the full header
+ *               (company info, client block, quotation details).
+ *               Later pages show a compact continuation header.
+ *  isLastPage — controls whether the grand-total footer / signature
+ *               block and "NOTHING FOLLOW" row are rendered.
+ */
+
 import { memo, useCallback } from 'react'
-import type { Task, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, Signatures, ManualOverrides, BaseRates } from '../../../hooks/quotation'
-import { getUnitPageCount } from '../../../utils/quotation'
+import type {
+  Task, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails,
+  Signatures, ManualOverrides, BaseRates,
+} from '../../../hooks/quotation'
+import { LAYOUT } from '../constants'
 import PrintHeader from './PrintHeader'
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 interface PrintTask extends Task {
   unitPage?: number
@@ -17,14 +42,12 @@ interface Props {
   pageTotals: number[]
   startIndex: number
   isLastPage: boolean
+  pageIndex: number
   grandTotal: number
   overheadTotal: number
-  actualTaskCount: number
-  maxRows: number
   signatures: Signatures
   manualOverrides: ManualOverrides
   baseRates: BaseRates
-  isSecondPage?: boolean
   onUnitEdit?: (taskId: number, newValue: number) => void
 }
 
@@ -37,163 +60,181 @@ const BANK_LABEL_MAP: Array<{ key: keyof BillingDetails; label: string }> = [
   { key: 'branchCode',    label: 'BRANCH CODE:' },
 ]
 
+// ── Component ──────────────────────────────────────────────────────────────
+
 const PrintPage = memo(({
   printMode, companyInfo, clientInfo, quotationDetails, billingDetails,
-  pageTasks, pageTotals, startIndex, isLastPage,
-  grandTotal, overheadTotal, actualTaskCount, maxRows,
-  signatures, manualOverrides, baseRates, isSecondPage = false,
-  onUnitEdit
+  pageTasks, pageTotals, startIndex, isLastPage, pageIndex,
+  grandTotal, overheadTotal,
+  signatures, manualOverrides, baseRates,
+  onUnitEdit,
 }: Props) => {
+  const isFirstPage = pageIndex === 0
+  const isContinuation = !isFirstPage
 
   const fmt = useCallback((n: number) => `¥${n.toLocaleString()}`, [])
 
   const resolveUnitPage = useCallback((task: PrintTask): number => {
-    // If a manual override for unitPage exists, it takes absolute precedence.
-    // Otherwise, use the unitPage value passed in the PrintTask object.
     const override = (manualOverrides?.tasks || {})[task.id]
     if (override?.unitPage !== undefined) return override.unitPage
     return task.unitPage ?? 1
   }, [manualOverrides])
 
-  const renderTable = () => {
-    const emptyCount = isLastPage
-      ? (startIndex === 0
-        ? Math.max(0, maxRows - pageTasks.length - (baseRates.overheadPercentage > 0 ? 1 : 0) - 1)
-        : 10 - pageTasks.length - (baseRates.overheadPercentage > 0 ? 1 : 0) - 1)
-      : 0
+  // How many blank filler rows to add below the task list on the last page
+  const fillerRowCount = isLastPage
+    ? Math.max(
+        LAYOUT.MIN_EMPTY_ROWS,
+        LAYOUT.TASKS_PER_PAGE - pageTasks.length - (baseRates.overheadPercentage > 0 ? 1 : 0) - 1,
+      )
+    : 0
 
-    return (
-      <>
-        <table className="table-visual">
-          <thead>
-            <tr>
-              <th className="col-no">NO.</th>
-              <th className="col-reference">REFERENCE NO.</th>
-              <th className="col-description">DESCRIPTION</th>
-              <th className="col-unitpage">UNIT (PAGE)</th>
-              <th className="col-type">TYPE</th>
-              <th className="col-price">PRICE</th>
+  // Apply compressed margins when page is nearly full
+  const isCompressed = pageTasks.length >= LAYOUT.COMPRESSION_THRESHOLD
+
+  // ── Render helpers ─────────────────────────────────────────────
+
+  const renderTable = () => (
+    <>
+      <table className="table-visual">
+        <thead>
+          <tr>
+            <th className="col-no">NO.</th>
+            <th className="col-reference">REFERENCE NO.</th>
+            <th className="col-description">DESCRIPTION</th>
+            <th className="col-unitpage">UNIT (PAGE)</th>
+            <th className="col-type">TYPE</th>
+            <th className="col-price">PRICE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pageTasks.map((task, i) => (
+            <tr key={task.id}>
+              <td>{startIndex + i + 1}</td>
+              <td>{task.referenceNumber || ''}</td>
+              <td className="description-cell">{task.description}</td>
+              <td className="col-unitpage">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  className="ppm-unit-input"
+                  value={resolveUnitPage(task) === 0 ? '' : resolveUnitPage(task)}
+                  onChange={e => {
+                    const val = parseInt(e.target.value.replace(/\D/g, '')) || 0
+                    onUnitEdit?.(task.id, val)
+                  }}
+                />
+              </td>
+              <td>{task.type || '3D'}</td>
+              <td className="price-cell">{fmt(pageTotals[i])}</td>
             </tr>
-          </thead>
-          <tbody>
-            {pageTasks.map((task, i) => (
-              <tr key={task.id}>
-                <td>{startIndex + i + 1}</td>
-                <td>{task.referenceNumber || ''}</td>
-                <td className="description-cell">{task.description}</td>
-                <td className="col-unitpage">
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    className="ppm-unit-input"
-                    value={resolveUnitPage(task) === 0 ? '' : resolveUnitPage(task)}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value.replace(/\D/g, '')) || 0
-                      onUnitEdit?.(task.id, val)
-                    }}
-                  />
-                </td>
-                <td>{task.type || '3D'}</td>
-                <td className="price-cell">{fmt(pageTotals[i])}</td>
-              </tr>
-            ))}
+          ))}
 
-            {isLastPage && (
-              <>
-                {baseRates.overheadPercentage > 0 && (
-                  <tr>
-                    <td></td>
-                    <td>Administrative overhead</td>
-                    <td className="description-cell"></td>
-                    <td></td>
-                    <td></td>
-                    <td className="price-cell">{fmt(overheadTotal)}</td>
-                  </tr>
-                )}
+          {isLastPage && (
+            <>
+              {baseRates.overheadPercentage > 0 && (
                 <tr>
+                  <td />
+                  <td>Administrative overhead</td>
+                  <td className="description-cell" />
                   <td /><td />
-                  <td className="description-cell nothing-follow" style={{ color: '#888' }}>--- NOTHING FOLLOW ---</td>
-                  <td /><td /><td />
+                  <td className="price-cell">{fmt(overheadTotal)}</td>
                 </tr>
-                {Array.from({ length: Math.max(0, emptyCount) }, (_, i) => (
-                  <tr key={`empty-${i}`}>
-                    <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
-                    <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
-                  </tr>
-                ))}
-                <tr style={{ fontWeight: 'bold', fontSize: '14px' }}>
-                  <td colSpan={5} style={{ textAlign: 'center' }}>Total Amount</td>
-                  <td className="price-cell">{fmt(grandTotal)}</td>
+              )}
+              <tr>
+                <td /><td />
+                <td className="description-cell nothing-follow" style={{ color: '#888' }}>
+                  --- NOTHING FOLLOW ---
+                </td>
+                <td /><td /><td />
+              </tr>
+              {Array.from({ length: Math.max(0, fillerRowCount) }, (_, i) => (
+                <tr key={`empty-${i}`}>
+                  <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
+                  <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
                 </tr>
-              </>
-            )}
-            {!isLastPage && <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>}
-          </tbody>
-        </table>
-        {!isLastPage && (
-          <div className="nothing-follow" style={{ textAlign: 'center', color: '#888', fontWeight: 'bold', fontStyle: 'italic', padding: '50px 0', letterSpacing: '1px', fontSize: '11px' }}>
-            --- CONTINUED ON NEXT PAGE ---
+              ))}
+              <tr style={{ fontWeight: 'bold', fontSize: '14px' }}>
+                <td colSpan={5} style={{ textAlign: 'center' }}>Total Amount</td>
+                <td className="price-cell">{fmt(grandTotal)}</td>
+              </tr>
+            </>
+          )}
+
+          {/* Continuation indicator on non-final pages */}
+          {!isLastPage && (
+            <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>
+          )}
+        </tbody>
+      </table>
+
+      {!isLastPage && (
+        <div className="nothing-follow" style={{
+          textAlign: 'center', color: '#888', fontWeight: 'bold',
+          fontStyle: 'italic', padding: '50px 0', letterSpacing: '1px', fontSize: '11px',
+        }}>
+          --- CONTINUED ON NEXT PAGE ---
+        </div>
+      )}
+    </>
+  )
+
+  const renderSignatures = () => {
+    if (!isLastPage) return null
+    return printMode === 'billing' ? (
+      <div className="signatures-visual">
+        <div className="signature-row-visual">
+          <div className="signature-left-visual">
+            <div className="sig-label-visual">Prepared by:</div>
+            <div className="sig-line-visual" />
+            <div className="sig-name-visual">{signatures.billing.preparedBy.name}</div>
+            <div className="sig-title-visual">{signatures.billing.preparedBy.title}</div>
           </div>
-        )}
-      </>
+          <div className="signature-right-visual">
+            <div className="sig-label-visual">Approved by:</div>
+            <div className="sig-line-visual" />
+            <div className="sig-name-visual">{signatures.billing.approvedBy.name}</div>
+            <div className="sig-title-visual">{signatures.billing.approvedBy.title}</div>
+          </div>
+        </div>
+        <div className="signature-row-visual">
+          <div className="signature-left-visual" />
+          <div className="signature-right-visual">
+            <div className="sig-line-visual" />
+            <div className="sig-name-visual">{signatures.billing.finalApprover.name}</div>
+            <div className="sig-title-visual">{signatures.billing.finalApprover.title}</div>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <div className="signatures-visual">
+        <div className="signature-row-visual">
+          <div className="signature-left-visual">
+            <div className="sig-label-visual">Prepared by:</div>
+            <div className="sig-line-visual" />
+            <div className="sig-name-visual">{signatures.quotation.preparedBy.name}</div>
+            <div className="sig-title-visual">{signatures.quotation.preparedBy.title}</div>
+          </div>
+          <div className="signature-right-visual" />
+        </div>
+        <div className="signature-row-visual">
+          <div className="signature-left-visual">
+            <div className="sig-label-visual">Approved by:</div>
+            <div className="sig-line-visual" />
+            <div className="sig-name-visual">{signatures.quotation.approvedBy.name}</div>
+            <div className="sig-title-visual">{signatures.quotation.approvedBy.title}</div>
+          </div>
+          <div className="signature-right-visual">
+            <div className="sig-label-visual">Received by:</div>
+            <div className="sig-line-visual" />
+            <div className="sig-name-visual">{signatures.quotation.receivedBy.label}</div>
+          </div>
+        </div>
+      </div>
     )
   }
 
-  const renderSignatures = () => printMode === 'billing' ? (
-    <div className="signatures-visual">
-      <div className="signature-row-visual">
-        <div className="signature-left-visual">
-          <div className="sig-label-visual">Prepared by:</div>
-          <div className="sig-line-visual" />
-          <div className="sig-name-visual">{signatures.billing.preparedBy.name}</div>
-          <div className="sig-title-visual">{signatures.billing.preparedBy.title}</div>
-        </div>
-        <div className="signature-right-visual">
-          <div className="sig-label-visual">Approved by:</div>
-          <div className="sig-line-visual" />
-          <div className="sig-name-visual">{signatures.billing.approvedBy.name}</div>
-          <div className="sig-title-visual">{signatures.billing.approvedBy.title}</div>
-        </div>
-      </div>
-      <div className="signature-row-visual">
-        <div className="signature-left-visual" />
-        <div className="signature-right-visual">
-          <div className="sig-line-visual" />
-          <div className="sig-name-visual">{signatures.billing.finalApprover.name}</div>
-          <div className="sig-title-visual">{signatures.billing.finalApprover.title}</div>
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div className="signatures-visual">
-      <div className="signature-row-visual">
-        <div className="signature-left-visual">
-          <div className="sig-label-visual">Prepared by:</div>
-          <div className="sig-line-visual" />
-          <div className="sig-name-visual">{signatures.quotation.preparedBy.name}</div>
-          <div className="sig-title-visual">{signatures.quotation.preparedBy.title}</div>
-        </div>
-        <div className="signature-right-visual" />
-      </div>
-      <div className="signature-row-visual">
-        <div className="signature-left-visual">
-          <div className="sig-label-visual">Approved by:</div>
-          <div className="sig-line-visual" />
-          <div className="sig-name-visual">{signatures.quotation.approvedBy.name}</div>
-          <div className="sig-title-visual">{signatures.quotation.approvedBy.title}</div>
-        </div>
-        <div className="signature-right-visual">
-          <div className="sig-label-visual">Received by:</div>
-          <div className="sig-line-visual" />
-          <div className="sig-name-visual">{signatures.quotation.receivedBy.label}</div>
-        </div>
-      </div>
-    </div>
-  )
-
   const renderFooter = () => {
     if (printMode === 'billing' && !isLastPage) return null
-
     return printMode === 'billing' ? (
       <div className="footer-visual">
         <div className="bank-details-section">
@@ -220,9 +261,15 @@ const PrintPage = memo(({
     )
   }
 
+  // ── Render ─────────────────────────────────────────────────────
   return (
     <div
-      className={`quotation-visual-exact mode-${printMode}${isSecondPage ? ' page-break' : ''}${isLastPage && !isSecondPage ? ` task-count-${actualTaskCount}` : ''}`}
+      className={[
+        'quotation-visual-exact',
+        `mode-${printMode}`,
+        isContinuation ? 'page-break' : '',
+        isCompressed   ? 'compressed' : '',
+      ].filter(Boolean).join(' ')}
       style={{ display: 'flex', flexDirection: 'column' }}
     >
       <div className="q-top-content">
@@ -230,10 +277,11 @@ const PrintPage = memo(({
           printMode={printMode}
           companyInfo={companyInfo}
           quotationDetails={quotationDetails}
-          isSecondPage={isSecondPage}
+          isSecondPage={isContinuation}
         />
 
-        {printMode === 'billing' && !isSecondPage && (
+        {/* Billing details block — first page only */}
+        {printMode === 'billing' && isFirstPage && (
           <div className="quotation-details-visual">
             <div className="detail-row-visual">
               <span className="detail-label-visual">DATE:</span>
@@ -254,11 +302,12 @@ const PrintPage = memo(({
           </div>
         )}
 
-        {!isSecondPage && (
+        {/* Client contact block — first page only */}
+        {isFirstPage && (
           <div className="contact-section-visual">
             {printMode !== 'billing'
               ? <div className="quotation-to-visual">Quotation to:</div>
-              : <div className="quotation-to-visual"></div>
+              : <div className="quotation-to-visual" />
             }
             <div className="client-details-visual">
               <div className="client-company-name">{clientInfo.company}</div>
@@ -279,7 +328,7 @@ const PrintPage = memo(({
       </div>
 
       <div className="q-bottom-content" style={{ marginTop: 'auto' }}>
-        {isLastPage && renderSignatures()}
+        {renderSignatures()}
         {renderFooter()}
       </div>
     </div>

@@ -68,6 +68,20 @@
   }
 }
 
+/* Soft lock: field is being edited by a remote user */
+.collab-field-locked {
+  cursor: not-allowed;
+}
+
+.collab-field-locked input,
+.collab-field-locked select,
+.collab-field-locked textarea {
+  pointer-events: none;
+  opacity: 0.65;
+  background-color: rgba(0, 0, 0, 0.06) !important;
+  cursor: not-allowed;
+}
+
 /* Print — hide all collaboration UI */
 @media print {
   .collab-field-wrapper.collab-field-active {

@@ -128,7 +128,7 @@ const BroadcastFAB: React.FC = () => {
               setIsPanelOpen(true)
             }
           }}
-          title="Broadcast Message (Admin/IT)"
+          title="Broadcast Message"
         >
           <div className="broadcast-fab-inner">
             <img src={megaphoneIcon} alt="Broadcast" className="broadcast-fab-img" />

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useDebounceCallback } from '../useDebounce'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -190,17 +190,26 @@ export function makeBlankTask(): Task {
 
 // ─── Internal Helper for Session Persistence ─────────────────────────────────
 
-function useStickyState<T>(defaultValue: T | (() => T), key: string): [T, React.Dispatch<React.SetStateAction<T>>] {
+/**
+ * Persists state to sessionStorage under a namespaced key.
+ * The key is prefixed with `ns` so multiple open tabs or quotations
+ * don't stomp on each other's draft data.
+ *
+ * Key format: `quot:{ns}:{key}` — e.g. `quot:KMTE-250420-001:tasks`
+ * Falls back to `quot:default:{key}` before quotNo is known.
+ */
+function useStickyState<T>(defaultValue: T | (() => T), key: string, ns: string): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const nsKey = `quot:${ns}:${key}`
   const [value, setValue] = useState<T>(() => {
-    const stickyValue = window.sessionStorage.getItem(key)
+    const stickyValue = window.sessionStorage.getItem(nsKey)
     if (stickyValue !== null) {
       try { return JSON.parse(stickyValue) } catch (e) { /* ignore */ }
     }
     return typeof defaultValue === 'function' ? (defaultValue as any)() : defaultValue
   })
   useEffect(() => {
-    window.sessionStorage.setItem(key, JSON.stringify(value))
-  }, [key, value])
+    window.sessionStorage.setItem(nsKey, JSON.stringify(value))
+  }, [nsKey, value])
   return [value, setValue]
 }
 
@@ -235,35 +244,51 @@ function migrateLegacyOverrides(raw: any): ManualOverrides {
 export function useInvoiceState() {
   const today = new Date().toISOString().split('T')[0]
 
-  const [companyInfo, setCompanyInfo] = useStickyState<CompanyInfo>(DEFAULT_COMPANY, 'quot_companyInfo')
-  const [clientInfo, setClientInfo] = useStickyState<ClientInfo>(DEFAULT_CLIENT, 'quot_clientInfo')
+  // ─ Namespace derivation ───────────────────────────────────────────────
+  // Each document gets its own sessionStorage bucket keyed by quotationNo.
+  // We bootstrap the namespace from a single stable key (quot:bootstrap) so
+  // a page reload restores the same document. When a new document is opened
+  // or created, callers invoke setNs() to redirect writes to a new bucket.
+  //
+  // NOTE: useStickyState reads its key at mount time. Changing ns after
+  // mount doesn’t re-read storage — it just redirects future writes.
+  // loadData / resetToNew fully replace state anyway, so this is correct.
+  const initNs = (() => {
+    try { return window.sessionStorage.getItem('quot:bootstrap') || 'default' } catch { return 'default' }
+  })()
+  const nsRef = useRef<string>(initNs)
+  const setNs = useCallback((quotNo: string) => {
+    const safe = quotNo.replace(/[^a-zA-Z0-9_-]/g, '_') || 'default'
+    nsRef.current = safe
+    try { window.sessionStorage.setItem('quot:bootstrap', safe) } catch { /* ignore */ }
+  }, [])
+
+  const [companyInfo, setCompanyInfo] = useStickyState<CompanyInfo>(DEFAULT_COMPANY, 'companyInfo', nsRef.current)
+  const [clientInfo, setClientInfo] = useStickyState<ClientInfo>(DEFAULT_CLIENT, 'clientInfo', nsRef.current)
   const [quotationDetails, setQuotationDetails] = useStickyState<QuotationDetails>(() => ({
     quotationNo: generateQuotationNumber(today),
     referenceNo: '',
     date: today,
-  }), 'quot_details')
-  const [billingDetails, setBillingDetails] = useStickyState<BillingDetails>(DEFAULT_BILLING_DETAILS, 'quot_billingDetails')
-  const [tasks, setTasks] = useStickyState<Task[]>([], 'quot_tasks')
-  const [baseRates, setBaseRates] = useStickyState<BaseRates>(DEFAULT_BASE_RATES, 'quot_baseRates')
-  const [currentFilePath, setCurrentFilePath] = useStickyState<string | null>(null, 'quot_filePath')
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useStickyState(false, 'quot_unsaved')
+  }), 'details', nsRef.current)
+  const [billingDetails, setBillingDetails] = useStickyState<BillingDetails>(DEFAULT_BILLING_DETAILS, 'billingDetails', nsRef.current)
+  const [tasks, setTasks] = useStickyState<Task[]>([], 'tasks', nsRef.current)
+  const [baseRates, setBaseRates] = useStickyState<BaseRates>(DEFAULT_BASE_RATES, 'baseRates', nsRef.current)
+  const [currentFilePath, setCurrentFilePath] = useStickyState<string | null>(null, 'filePath', nsRef.current)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useStickyState(false, 'unsaved', nsRef.current)
   const [selectedMainTaskId, setSelectedMainTaskId] = useState<number | null>(null)
-  const [signatures, setSignatures] = useStickyState<Signatures>(DEFAULT_SIGNATURES, 'quot_signatures')
+  const [signatures, setSignatures] = useStickyState<Signatures>(DEFAULT_SIGNATURES, 'signatures', nsRef.current)
   const [manualOverrides, setManualOverrides] = useStickyState<ManualOverrides>(
     () => {
-      // Migrate from legacy format if needed
-      const raw = window.sessionStorage.getItem('quot_manualOverrides')
+      const raw = window.sessionStorage.getItem(`quot:${nsRef.current}:manualOverrides`)
       if (raw) {
-        try {
-          const parsed = JSON.parse(raw)
-          return migrateLegacyOverrides(parsed)
-        } catch { /* ignore */ }
+        try { return migrateLegacyOverrides(JSON.parse(raw)) } catch { /* ignore */ }
       }
       return EMPTY_MANUAL_OVERRIDES
     },
-    'quot_manualOverrides'
+    'manualOverrides',
+    nsRef.current
   )
-  const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'quot_collapsed')
+  const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'collapsed', nsRef.current)
 
   const debouncedQuotationUpdate = useDebounceCallback((date: string) => {
     const newQuotationNo = generateQuotationNumber(date)
@@ -416,8 +441,10 @@ export function useInvoiceState() {
 
   const resetToNew = useCallback((forcedQuotNo?: string) => {
     const newToday = new Date().toISOString().split('T')[0]
+    const newQuotNo = forcedQuotNo || generateQuotationNumber(newToday)
+    setNs(newQuotNo)
     setQuotationDetails({
-      quotationNo: forcedQuotNo || generateQuotationNumber(newToday),
+      quotationNo: newQuotNo,
       referenceNo: '',
       date: newToday,
     })
@@ -442,6 +469,10 @@ export function useInvoiceState() {
 
     // Support loading legacy files that had invoiceNo/jobOrderNo in quotationDetails
     const qd = data.quotationDetails || {}
+
+    // Update the namespace to match the loaded document’s quotation number so
+    // future writes go to the correct isolated sessionStorage bucket.
+    if (qd.quotationNo) setNs(qd.quotationNo)
     setQuotationDetails({
       quotationNo: qd.quotationNo || '',
       referenceNo: qd.referenceNo || '',

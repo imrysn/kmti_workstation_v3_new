@@ -1,31 +1,45 @@
 /**
  * Quotation Print Layout Constants
  * Standard A4 dimensions and layout thresholds for consistent rendering.
+ *
+ * PAGINATION MODEL
+ * ────────────────
+ * Each page holds up to TASKS_PER_PAGE main tasks.  The engine in
+ * PrintPreviewModal splits the task list into chunks of this size and
+ * renders one PrintPage per chunk.  There is no longer a hard 2-page cap.
+ *
+ * Compression (tighter row height / margins) kicks in automatically when
+ * a single page holds more than COMPRESSION_THRESHOLD tasks, giving a
+ * little extra breathing room before spilling onto the next page.
  */
 
 export const LAYOUT = {
   // A4 Dimensions
   A4_WIDTH_MM: 210,
   A4_HEIGHT_MM: 297,
-  
+
   // A4 Dimensions in PX at 96 DPI (Standard Browser Zoom)
   A4_W_PX: 794,
   A4_H_PX: 1123,
-  
+
   // Margins
   STANDARD_MARGIN_MM: 10,
   COMPRESSED_MARGIN_MM: 5,
-  
-  // Thresholds
-  COMPRESSION_THRESHOLD: 14, // Switch to 5mm margin if tasks >= 14
-  PAGINATION_THRESHOLD_OVERHEAD: 15, // Threshold when overhead is present
-  PAGINATION_THRESHOLD_NO_OVERHEAD: 16, // Threshold when no overhead
-  
-  // Table Limits
-  MAX_FIRST_PAGE_TASKS: 15,
-  MIN_EMPTY_ROWS: 10,
-  
+
+  // How many main tasks fit comfortably on a single A4 page.
+  // Pages beyond the first don't carry the client-info / contact header
+  // block, so they can hold slightly more — but we use a single constant
+  // for simplicity and safety.
+  TASKS_PER_PAGE: 15,
+
+  // Switch to 5mm margin when a page carries >= this many tasks.
+  COMPRESSION_THRESHOLD: 14,
+
+  // Minimum empty rows shown below the task list on the final page,
+  // so the "NOTHING FOLLOW" row and grand total don't float awkwardly.
+  MIN_EMPTY_ROWS: 3,
+
   // Colors (Sync with CSS)
   COLOR_DIM_TEXT: '#888',
   COLOR_BORDER_THIN: '#000',
-};
+} as const

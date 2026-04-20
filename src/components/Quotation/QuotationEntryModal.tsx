@@ -75,19 +75,10 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onBrowse, onC
           {onClose && (
             <button className="quot-entry-close" onClick={onClose} title="Back to editor">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
             </button>
           )}
-          <div className="quot-entry-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
-          </div>
           <h2>Quotation Workspace</h2>
           <p>Collaborate in real-time or start a new project</p>
         </header>
@@ -121,10 +112,6 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onBrowse, onC
                 ← Back to lobby
               </button>
               <form onSubmit={handleCreateSubmit} className="quot-entry-form">
-                <h3>New Quotation</h3>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px' }}>
-                  A unique quotation number is auto-generated. The room name is just a label for the session list.
-                </p>
                 <div className="form-group">
                   <label>Room Name <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional label)</span></label>
                   <input
@@ -167,17 +154,17 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onBrowse, onC
                           {s.hasPassword && (
                             <span className="quot-session-lock" title="Password Protected">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                               </svg>
                             </span>
                           )}
                         </div>
                         <div className="quot-session-avatars">
                           {s.users.map((u, i) => (
-                            <div 
-                              key={i} 
-                              className="quot-session-avatar" 
+                            <div
+                              key={i}
+                              className="quot-session-avatar"
                               style={{ backgroundColor: u.color }}
                               title={u.name}
                             >

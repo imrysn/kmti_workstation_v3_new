@@ -1,7 +1,9 @@
 .quot-entry-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(var(--bg-primary-rgb, 15, 20, 30), 0.97);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   backdrop-filter: blur(8px);
   z-index: 1000;
   display: flex;
@@ -22,8 +24,15 @@
 }
 
 @keyframes modalEnter {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .quot-entry-header {
@@ -165,7 +174,10 @@
 .quot-entry-divider::before {
   content: '';
   position: absolute;
-  top: 50%; left: 0; right: 0; height: 1px;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
   background: var(--border);
 }
 
@@ -214,8 +226,15 @@
   margin-bottom: 12px;
 }
 
-.quot-action-icon.create { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
-.quot-action-icon.browse { background: rgba(234, 179, 8, 0.1); color: #eab308; }
+.quot-action-icon.create {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+}
+
+.quot-action-icon.browse {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+}
 
 .quot-action-text strong {
   display: block;
@@ -236,8 +255,13 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .quot-entry-back {
@@ -291,9 +315,11 @@
 }
 
 .btn-block {
-  width: 100%;
-  padding: 12px !important;
+  width: 26%;
   margin-top: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-left: 37%;
 }
 
 .quot-session-title-row {

@@ -58,39 +58,67 @@ def _random_color() -> str:
     return random.choice(colors)
 
 
-def _get_audit_label(path: str) -> str:
-    """Map a technical JSON path to a human-readable field name."""
+def _get_audit_label(path: str, full_state: dict = None) -> str:
+    """Map a technical JSON path to a human-readable field name, using state for context if possible."""
     if not path: return "Document"
     p = path.lower()
-    if "companyinfo" in p: return f"Company {p.split('.')[-1].title()}"
-    if "clientinfo" in p: return f"Client {p.split('.')[-1].title()}"
-    if "quotationdetails" in p: return f"Quotation {p.split('.')[-1].replace('no', '#').title()}"
-    if "billingdetails" in p: return f"Billing {p.split('.')[-1].title()}"
+    
+    # Extract field name (last part of path)
+    field = path.split('.')[-1].replace('_', ' ').title()
+    
+    if "companyinfo" in p: return f"Company {field}"
+    if "clientinfo" in p: return f"Client {field}"
+    if "quotationdetails" in p: return f"Quotation {field.replace('No', '#')}"
+    if "billingdetails" in p: return f"Billing {field}"
+    
     if "task" in p:
         parts = path.split('.')
-        if len(parts) >= 2: return f"Task #{parts[1]} {parts[-1].title()}"
+        if len(parts) >= 2:
+            task_id_str = parts[1]
+            assembly_name = f"Task #{task_id_str}"
+            
+            # Try to resolve Assembly Name from state
+            if full_state and "tasks" in full_state:
+                try:
+                    target_id = int(task_id_str)
+                    for t in full_state["tasks"]:
+                        if t.get("id") == target_id:
+                            assembly_name = f"'{t.get('description', 'Unnamed Task')}'"
+                            break
+                except: pass
+            
+            return f"{assembly_name}'s {field}"
         return "Tasks"
+        
     if "signatures" in p: return "Signatures"
-    if "footer" in p: return f"Footer {p.split('.')[-1].title()}"
+    if "footer" in p: return f"Footer {field}"
     return path
 
 
-async def _log_audit(quot_no: str, user_name: str, color: str, path: str):
-    """Save an audit entry to the NAS and broadcast it."""
+async def _log_audit(quot_no: str, user_name: str, color: str, path: str, value: Any = None, full_state: dict = None):
+    """Save an audit entry to the NAS and broadcast it. Collapses recent edits by same user on same path."""
     try:
-        label = _get_audit_label(path)
+        label = _get_audit_label(path, full_state)
+        val_str = str(value) if value is not None else ""
+        if len(val_str) > 50: val_str = val_str[:47] + "..."
+        
+        action = f"updated {label}"
+        if value is not None:
+            action += f" to '{val_str}'"
+
+        now = datetime.now()
+        timestamp_str = now.isoformat()
+        
         entry = {
-            "id": datetime.now().strftime("%Y%m%d%H%M%S%f"),
+            "id": now.strftime("%Y%m%d%H%M%S%f"),
             "userName": user_name,
             "userColor": color,
-            "action": f"Updated {label}",
-            "timestamp": datetime.now().isoformat()
+            "path": path, # Store path for debouncing
+            "action": action,
+            "timestamp": timestamp_str
         }
         
-        # Broadcast to room
-        await sio.emit("audit_entry", entry, room=quot_no)
-        
-        # Persist to NAS
+        # Persist and optional debounce
         safe_name = quot_no.replace("/", "_").replace("\\", "_")
         log_path = NAS_LOG_DIR / f"{safe_name}.json"
         
@@ -100,9 +128,30 @@ async def _log_audit(quot_no: str, user_name: str, color: str, path: str):
                 logs = json.loads(log_path.read_text(encoding="utf-8"))
             except: logs = []
             
-        logs.insert(0, entry)
-        logs = logs[:100] # Keep last 100
+        # DEBOUNCING / COLLAPSING LOGIC
+        # If the most recent log is by the same user on the same path within 15 seconds, just update it.
+        is_collapsed = False
+        if logs:
+            last = logs[0]
+            try:
+                last_time = datetime.fromisoformat(last["timestamp"])
+                diff = (now - last_time).total_seconds()
+                
+                if last.get("userName") == user_name and last.get("path") == path and diff < 15:
+                    last["action"] = action
+                    last["timestamp"] = timestamp_str
+                    is_collapsed = True
+            except: pass
+
+        if not is_collapsed:
+            logs.insert(0, entry)
+            logs = logs[:100] # Keep last 100
+            
         log_path.write_text(json.dumps(logs, indent=2, ensure_ascii=False), encoding="utf-8")
+        
+        # Broadcast the update (or the new entry)
+        # For simplicity, we just broadcast the latest log state or the top entry
+        await sio.emit("audit_entry", logs[0], room=quot_no)
         
     except Exception as e:
         print(f"[quotations] Audit log failed: {e}")
@@ -226,13 +275,22 @@ async def update_field(sid: str, data: dict):
     # Audit log (Debounced by client-side or we could add logic here; for now, simple log)
     user_info = _rooms.get(quot_no, {}).get(sid, {})
     if user_info:
-        asyncio.create_task(_log_audit(quot_no, user_info["name"], user_info["color"], patch.get("path", "")))
+        # Improved audit log with path, value, and full_state for context
+        asyncio.create_task(_log_audit(
+            quot_no, 
+            user_info["name"], 
+            user_info["color"], 
+            patch.get("path", ""),
+            patch.get("value"),
+            data.get("full_state")
+        ))
 
-    # Async auto-save to NAS
-    asyncio.create_task(_autosave(quot_no, data.get("full_state")))
+    # Async auto-save to NAS — now passing the workstation name (author)
+    author_name = user_info.get("name", "Unknown Workstation")
+    asyncio.create_task(_autosave(quot_no, data.get("full_state"), author_name))
 
 
-async def _autosave(quot_no: str, full_state: Any):
+async def _autosave(quot_no: str, full_state: Any, author_name: str = "System"):
     """Write the latest full state to the NAS file and snapshot history."""
     if not full_state or not quot_no:
         return
@@ -255,7 +313,17 @@ async def _autosave(quot_no: str, full_state: Any):
             snap_dir.mkdir(parents=True, exist_ok=True)
             ts = datetime.now().strftime("%Y%m%d_%H%M%S")
             snap_path = snap_dir / f"{ts}.json"
-            snap_path.write_text(content, encoding="utf-8")
+            
+            # Inject metadata into the snapshot for history tracking
+            snap_data = {
+                "__metadata__": {
+                    "author": author_name,
+                    "timestamp": ts,
+                    "description": f"{author_name} updated this file"
+                },
+                "data": full_state
+            }
+            snap_path.write_text(json.dumps(snap_data, ensure_ascii=False, indent=2), encoding="utf-8")
             
             _last_snapshot_times[quot_no] = now
             print(f"[quotations] History snapshot created for {quot_no}")
@@ -345,14 +413,32 @@ async def get_history(quot_no: str):
     if not snap_dir.exists():
         return {"history": []}
     try:
-        snapshots = [
-            {
-                "timestamp": f.stem,
-                "label": datetime.strptime(f.stem, "%Y%m%d_%H%M%S").strftime("%b %d, %Y — %H:%M:%S"),
-            }
-            for f in sorted(snap_dir.glob("*.json"), reverse=True)
-            if f.is_file()
-        ]
+        snapshots = []
+        for f in sorted(snap_dir.glob("*.json"), reverse=True):
+            if not f.is_file(): continue
+            try:
+                # We do a light read of the JSON to get metadata if possible
+                # In production with thousands of snapshots, we might want a separate index.json
+                with open(f, "r", encoding="utf-8") as jf:
+                    # Just read the first 500 chars to check for metadata without loading whole file
+                    head = jf.read(500)
+                    desc = None
+                    if "__metadata__" in head:
+                        # Full load if metadata exists (metadata usually at top)
+                        jf.seek(0)
+                        data = json.load(jf)
+                        desc = data.get("__metadata__", {}).get("description")
+                
+                snapshots.append({
+                    "timestamp": f.stem,
+                    "label": datetime.strptime(f.stem, "%Y%m%d_%H%M%S").strftime("%b %d, %Y — %H:%M:%S"),
+                    "description": desc
+                })
+            except:
+                snapshots.append({
+                    "timestamp": f.stem,
+                    "label": datetime.strptime(f.stem, "%Y%m%d_%H%M%S").strftime("%b %d, %Y — %H:%M:%S"),
+                })
         return {"history": snapshots}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"History read error: {e}")
@@ -366,7 +452,11 @@ async def restore_snapshot(quot_no: str, timestamp: str):
     if not snap_path.exists():
         raise HTTPException(status_code=404, detail="Snapshot not found.")
     try:
-        return json.loads(snap_path.read_text(encoding="utf-8"))
+        raw_data = json.loads(snap_path.read_text(encoding="utf-8"))
+        # Handle both new (with metadata) and legacy snapshot formats
+        if isinstance(raw_data, dict) and "__metadata__" in raw_data:
+            return raw_data["data"]
+        return raw_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Snapshot read error: {e}")
 

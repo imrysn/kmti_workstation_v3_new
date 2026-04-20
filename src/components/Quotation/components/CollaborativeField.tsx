@@ -3,6 +3,10 @@
  * ─────────────────────────────────────────────────────────────────
  * A wrapper around any input-like element that shows colored borders
  * and floating name tags when a remote user is focused on the same field.
+ *
+ * Soft Locks: when a remote user is actively focused on a field, the local
+ * input is disabled to prevent simultaneous edits. A tooltip on the locked
+ * field shows who is editing.
  */
 
 import React from 'react'
@@ -48,6 +52,11 @@ export function CollaborativeField({
   }, [remoteUsers, fieldKey])
 
   const hasFocus = focused.length > 0
+  // Soft lock: field is locked if any remote user is currently focused on it.
+  // We still allow the local user to see/copy the value but not modify it.
+  const isLocked = hasFocus
+  const lockOwner = isLocked ? focused[0] : null
+  const lockTitle = lockOwner ? `${lockOwner.name} is editing this field` : undefined
 
   // Activity Glow: highlight if recently edited
   const recentEdit = recentEdits[fieldKey]
@@ -82,7 +91,7 @@ export function CollaborativeField({
 
   return (
     <div
-      className={`collab-field-wrapper ${hasFocus ? 'collab-field-active' : ''} ${hasActivity ? 'collab-field-activity' : ''} ${className}`}
+      className={`collab-field-wrapper ${hasFocus ? 'collab-field-active' : ''} ${hasActivity ? 'collab-field-activity' : ''} ${isLocked ? 'collab-field-locked' : ''} ${className}`}
       style={{ 
         ...style,
         boxShadow: activityShadow,
@@ -90,13 +99,16 @@ export function CollaborativeField({
       } as React.CSSProperties}
       onFocus={handleFocus}
       onBlur={handleBlur}
+      title={lockTitle}
     >
       {/* 
-        Inject ref and selection listeners into the child input. 
+        Inject ref, selection listeners, and soft-lock props into the child input.
         Using cloneElement is the cleanest way to support arbitrary children without extra wrappers.
       */}
       {React.cloneElement(children as React.ReactElement, {
         ref: childRef,
+        disabled: isLocked || (children as React.ReactElement).props.disabled,
+        title: lockTitle ?? (children as React.ReactElement).props.title,
         onSelect: (e: React.SyntheticEvent<HTMLInputElement>) => {
           const target = e.target as HTMLInputElement
           emitSelection(fieldKey, target.selectionStart || 0, target.selectionEnd || 0)
