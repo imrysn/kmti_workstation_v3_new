@@ -1427,7 +1427,7 @@
 .brp-done-btn:hover {
   background: var(--quot-primary-deep);
 }
-/* „Ÿ„Ÿ Collaboration Layout „Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ„Ÿ */
+/*  Collaboration Layout  */
 .quot-layout {
   display: flex;
   flex: 1;

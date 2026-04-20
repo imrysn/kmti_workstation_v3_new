@@ -132,10 +132,11 @@ async def disconnect(sid: str):
 
 @sio.event
 async def join_doc(sid: str, data: dict):
-    """Join a shared quotation room. data = { quot_no, user_name, password? }"""
-    quot_no   = data.get("quot_no")
-    user_name = data.get("user_name", "Unknown")
-    password  = data.get("password")
+    """Join a shared quotation room. data = { quot_no, user_name, password?, display_name? }"""
+    quot_no      = data.get("quot_no")
+    user_name    = data.get("user_name", "Unknown")
+    password     = data.get("password")
+    display_name = data.get("display_name")  # Human-readable room label
     if not quot_no:
         return
 
@@ -151,7 +152,10 @@ async def join_doc(sid: str, data: dict):
     await sio.enter_room(sid, quot_no)
 
     if quot_no not in _rooms:
-        _rooms[quot_no] = {"__info__": {"password": password}}
+        _rooms[quot_no] = {"__info__": {"password": password, "display_name": display_name}}
+    elif display_name and not _rooms[quot_no].get("__info__", {}).get("display_name"):
+        # First joiner to provide a display_name wins
+        _rooms[quot_no].setdefault("__info__", {})["display_name"] = display_name
     
     _rooms[quot_no][sid] = {"name": user_name, "color": color}
 
@@ -293,13 +297,15 @@ async def list_active_sessions():
         if not users:
             continue
             
+        real_users = {k: v for k, v in users.items() if k != "__info__"}
         sessions.append({
             "quotNo": quot_no,
-            "userCount": len(users),
+            "userCount": len(real_users),
             "hasPassword": bool(users.get("__info__", {}).get("password")),
+            "displayName": users.get("__info__", {}).get("display_name") or quot_no,
             "users": [
-                {"name": u["name"], "color": u["color"]} 
-                for sid, u in users.items() if sid != "__info__"
+                {"name": u["name"], "color": u["color"]}
+                for u in real_users.values()
             ]
         })
     return {"sessions": sessions}

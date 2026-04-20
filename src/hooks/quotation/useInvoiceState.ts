@@ -172,7 +172,7 @@ const DEFAULT_SIGNATURES: Signatures = {
 
 const EMPTY_MANUAL_OVERRIDES: ManualOverrides = { tasks: {}, footer: {} }
 
-function makeBlankTask(): Task {
+export function makeBlankTask(): Task {
   return {
     id: Date.now(),
     description: '',
@@ -298,19 +298,22 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [])
 
-  const addTask = useCallback(() => {
-    setTasks(prev => [...prev, makeBlankTask()])
+  const addTask = useCallback((manualTask?: Task) => {
+    setTasks(prev => [...prev, manualTask || makeBlankTask()])
     setHasUnsavedChanges(true)
   }, [])
 
-  const addSubTask = useCallback((mainTaskId: number | null, notify?: (msg: string, type?: NotificationType) => void) => {
-    if (!mainTaskId) {
+  const addSubTask = useCallback((mainTaskId: number | null, notify?: (msg: string, type?: NotificationType) => void, manualTask?: Task) => {
+    if (!mainTaskId && !manualTask) {
       if (notify) notify('Please select a main task first to add a sub-task.', 'warning')
       else alert('Please select a main task first to add a sub-task.')
       return
     }
 
-    const newSubTask: Task = {
+    const effectiveParentId = manualTask ? manualTask.parentId : mainTaskId;
+    if (!effectiveParentId && manualTask) return; // Should not happen
+
+    const newSubTask: Task = manualTask || {
       id: Date.now(),
       description: '',
       referenceNumber: '',
@@ -321,16 +324,16 @@ export function useInvoiceState() {
       type: '3D',
       unitType: 'JD',
       isMainTask: false,
-      parentId: mainTaskId,
+      parentId: effectiveParentId,
     }
 
     setTasks(prev => {
-      const parentIndex = prev.findIndex(task => task.id === mainTaskId)
+      const parentIndex = prev.findIndex(task => task.id === effectiveParentId)
       if (parentIndex === -1) return prev
 
       let insertIndex = parentIndex + 1
       for (let i = parentIndex + 1; i < prev.length; i++) {
-        if (prev[i].parentId === mainTaskId) insertIndex = i + 1
+        if (prev[i].parentId === effectiveParentId) insertIndex = i + 1
         else break
       }
 
@@ -456,7 +459,13 @@ export function useInvoiceState() {
     setTasks(data.tasks || [makeBlankTask()])
     setSelectedMainTaskId(null)
     setBaseRates(data.baseRates || DEFAULT_BASE_RATES)
-    setSignatures(data.signatures || DEFAULT_SIGNATURES)
+    // Deep-merge with DEFAULT_SIGNATURES so legacy files missing 'billing'
+    // or any sub-key don't crash components that expect the full shape.
+    const loadedSig = data.signatures || {}
+    setSignatures({
+      quotation: { ...DEFAULT_SIGNATURES.quotation, ...loadedSig.quotation },
+      billing:   { ...DEFAULT_SIGNATURES.billing,   ...loadedSig.billing   },
+    })
     setManualOverrides(migrateLegacyOverrides(data.manualOverrides))
     setCollapsedTaskIds(data.collapsedTaskIds || [])
     setCurrentFilePath(fileName)

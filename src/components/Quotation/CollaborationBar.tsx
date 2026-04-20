@@ -22,16 +22,8 @@ export function CollaborationBar({ isConnected, remoteUsers, myColor, userName, 
   const others = Object.values(remoteUsers)
 
   return (
-    <div className={`collab-bar ${isConnected ? 'collab-bar--connected' : 'collab-bar--offline'}`}>
-      {/* Connection status */}
-      <div className="collab-bar__status">
-        <span className={`collab-bar__dot ${isConnected ? 'collab-bar__dot--on' : 'collab-bar__dot--off'}`} />
-        <span className="collab-bar__label">
-          {isConnected ? 'Live · Auto-saving' : 'Offline'}
-        </span>
-      </div>
-
-      {/* Active user avatars */}
+    <div className="collab-bar-mini">
+      {/* Active user avatars only */}
       <div className="collab-bar__users">
         {/* Me */}
         <div
@@ -53,12 +45,6 @@ export function CollaborationBar({ isConnected, remoteUsers, myColor, userName, 
             {u.name.charAt(0).toUpperCase()}
           </div>
         ))}
-
-        {others.length > 0 && (
-          <span className="collab-bar__count">
-            +{others.length} editing
-          </span>
-        )}
       </div>
     </div>
   )

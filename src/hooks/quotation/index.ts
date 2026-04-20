@@ -1,4 +1,4 @@
-export { useInvoiceState, generateQuotationNumber } from './useInvoiceState'
+export { useInvoiceState, generateQuotationNumber, makeBlankTask } from './useInvoiceState'
 export { useFileOperations } from './useFileOperations'
 export { useCollaboration } from './useCollaboration'
 export type {

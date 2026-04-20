@@ -6,6 +6,7 @@ interface ActiveSession {
   quotNo: string
   userCount: number
   hasPassword?: boolean
+  displayName: string
   users: { name: string; color: string }[]
 }
 
@@ -49,8 +50,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onBrowse, onC
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newRoom.name.trim()) return
-    onCreateNew(newRoom.name, newRoom.password)
+    onCreateNew(newRoom.name.trim(), newRoom.password)
   }
 
   const handleJoinClick = (s: ActiveSession) => {
@@ -121,21 +121,23 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onBrowse, onC
                 ← Back to lobby
               </button>
               <form onSubmit={handleCreateSubmit} className="quot-entry-form">
-                <h3>Create New Room</h3>
+                <h3>New Quotation</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '16px' }}>
+                  A unique quotation number is auto-generated. The room name is just a label for the session list.
+                </p>
                 <div className="form-group">
-                  <label>Room Name</label>
+                  <label>Room Name <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional label)</span></label>
                   <input
                     type="text"
                     placeholder="e.g. Project Tiger"
                     value={newRoom.name}
                     onChange={e => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
                     autoFocus
-                    required
                     className="form-input"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Room Password (Optional)</label>
+                  <label>Room Password <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
                   <input
                     type="password"
                     placeholder="Leave blank for public"
@@ -144,7 +146,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onBrowse, onC
                     className="form-input"
                   />
                 </div>
-                <button type="submit" className="btn btn-primary btn-block">Create Collaborative Session</button>
+                <button type="submit" className="btn btn-primary btn-block">Create Workspace</button>
               </form>
             </div>
           ) : (
@@ -158,7 +160,10 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onBrowse, onC
                     <div key={s.quotNo} className="quot-session-item" onClick={() => handleJoinClick(s)}>
                       <div className="quot-session-info">
                         <div className="quot-session-title-row">
-                          <span className="quot-session-no">{s.quotNo}</span>
+                          <span className="quot-session-no">{s.displayName}</span>
+                          {s.displayName !== s.quotNo && (
+                            <span className="quot-session-subno" title={s.quotNo}>{s.quotNo}</span>
+                          )}
                           {s.hasPassword && (
                             <span className="quot-session-lock" title="Password Protected">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

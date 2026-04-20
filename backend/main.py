@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations
 import asyncio
 import time
 import logging
@@ -126,6 +126,13 @@ app.include_router(telemetry.router, prefix="/api/telemetry", tags=["Telemetry"]
 app.include_router(broadcast.router, prefix="/api/broadcast", tags=["Broadcast Messages"])
 app.include_router(librarian.router, prefix="/api/librarian", tags=["Technical Librarian"])
 app.include_router(designers.router, prefix="/api/designers", tags=["Designers"])
+app.include_router(quotations.router, prefix="/api/quotations", tags=["Shared Quotations"])
+
+# Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
+# socketio.ASGIApp intercepts /socket.io/* WebSocket traffic and passes all other
+# HTTP requests through to the FastAPI app underneath.
+import socketio as _sio_module
+combined_app = _sio_module.ASGIApp(quotations.sio, app)
 
 # Static serving for Help Center screenshots (NAS)
 FEEDBACK_DIR = r"\\KMTI-NAS\Shared\data\storage\feedback"
@@ -148,8 +155,8 @@ if __name__ == "__main__":
     try:
         from gui import KMTIServerGUI
         logger.info("Launching KMTI Server Control Panel...")
-        gui = KMTIServerGUI(app)
+        gui = KMTIServerGUI(combined_app)  # Pass combined Socket.IO + FastAPI app
         gui.mainloop()
     except Exception as e:
         logger.error(f"Failed to launch GUI: {e}. Falling back to console.")
-        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+        uvicorn.run(combined_app, host="0.0.0.0", port=8000)

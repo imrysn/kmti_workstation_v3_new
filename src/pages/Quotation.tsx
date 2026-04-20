@@ -1,6 +1,13 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useModal } from '../components/ModalContext'
-import { useInvoiceState, useFileOperations } from '../hooks/quotation'
+import { 
+  useInvoiceState, 
+  useFileOperations,
+  makeBlankTask,
+  Task, 
+  CompanyInfo as CompanyInfoType, 
+  ClientInfo as ClientInfoType 
+} from '../hooks/quotation'
 import { useCollaboration } from '../hooks/quotation/useCollaboration'
 import { useAuth } from '../context/AuthContext'
 import { CollaborationProvider } from '../context/CollaborationContext'
@@ -22,14 +29,15 @@ import './quotation/QuotationApp.css'
 import './Quotation.css'
 
 export default function Quotation() {
-  const { notify } = useModal()
+  const { notify, alert } = useModal()
   const { user } = useAuth()
-  
+
   // ── UI States ──────────────────────────────────────────────────
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
   const [isBaseRatesPanelOpen, setIsBaseRatesPanelOpen] = useState(false)
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [roomPassword, setRoomPassword] = useState<string | undefined>()
+  const [roomDisplayName, setRoomDisplayName] = useState<string | undefined>()
   const [recentEdits, setRecentEdits] = useState<Record<string, { color: string; timestamp: number }>>({})
 
   // ── Document State ─────────────────────────────────────────────
@@ -78,10 +86,23 @@ export default function Quotation() {
     return () => clearInterval(timer)
   }, [])
 
-  const { isConnected, remoteUsers, myColor, emitFocus, emitBlur, emitSelection, emitPatch } = useCollaboration({
+  const {
+    isConnected,
+    remoteUsers,
+    myEffectiveName,
+    myColor,
+    mySessionId,
+    emitFocus,
+    emitBlur,
+    emitSelection,
+    emitPatch
+  } = useCollaboration({
     quotNo: quotationDetails.quotationNo || null,
     password: roomPassword,
+    displayName: roomDisplayName,
     userName: user?.username || 'User',
+    onUserJoined: (u) => notify(`${u.name} joined the session`, 'success'),
+    onUserLeft: (u) => notify(`${u.name} left the session`, 'info'),
     onRemotePatch: (patch, sid) => {
       // Find the user's color for the highlight
       const userColor = remoteUsers[sid]?.color || '#4A90D9'
@@ -115,11 +136,22 @@ export default function Quotation() {
         const field = parts[2] as any
         updateTask(taskId, field, patch.value)
       } else if (patch.path.startsWith('footer.')) {
-        const key = patch.path.split('.')[1]
+        const footerKey = patch.path.split('.')[1]
         updateManualOverrides(prev => ({
           ...prev,
-          footer: { ...prev.footer, [key]: patch.value }
+          footer: { ...prev.footer, [footerKey]: patch.value }
         }))
+      } else if (patch.path.startsWith('baseRates.')) {
+        const key = patch.path.split('.')[1] as keyof typeof baseRates
+        updateBaseRate(key, patch.value)
+      } else if (patch.path === 'tasks.add') {
+        addTask(patch.value)
+      } else if (patch.path === 'tasks.add_sub') {
+        addSubTask(patch.value.parentId, undefined, patch.value)
+      } else if (patch.path === 'tasks.remove') {
+        removeTask(patch.value)
+      } else if (patch.path === 'tasks.reorder') {
+        reorderTasks(patch.value.draggedId, patch.value.targetId)
       }
     },
     onAuditEntry: (entry) => {
@@ -174,6 +206,38 @@ export default function Quotation() {
     emitPatch({ path: `task.${id}.${field}`, value }, getSaveData())
   }, [updateTask, emitPatch, getSaveData])
 
+  const syncAddTask = useCallback(() => {
+    const newTask = makeBlankTask()
+    addTask(newTask)
+    emitPatch({ path: 'tasks.add', value: newTask }, getSaveData())
+  }, [addTask, emitPatch, getSaveData])
+
+  const syncAddSubTask = useCallback((mainTaskId: number | null) => {
+    // We let useInvoiceState do its thing but we need to know the task it made
+    // Actually it's easier to make it here so we have the ID to sync
+    if (!mainTaskId) {
+      notify?.('Please select a main task first to add a sub-task.', 'warning')
+      return;
+    }
+    const newSubTask = {
+      ...makeBlankTask(),
+      isMainTask: false,
+      parentId: mainTaskId
+    }
+    addSubTask(mainTaskId, notify, newSubTask)
+    emitPatch({ path: 'tasks.add_sub', value: newSubTask }, getSaveData())
+  }, [addSubTask, emitPatch, getSaveData, notify])
+
+  const syncRemoveTask = useCallback((id: number) => {
+    removeTask(id)
+    emitPatch({ path: 'tasks.remove', value: id }, getSaveData())
+  }, [removeTask, emitPatch, getSaveData])
+
+  const syncReorderTasks = useCallback((draggedId: number, targetId: number) => {
+    reorderTasks(draggedId, targetId)
+    emitPatch({ path: 'tasks.reorder', value: { draggedId, targetId } }, getSaveData())
+  }, [reorderTasks, emitPatch, getSaveData])
+
   const syncUpdateFooter = useCallback((key: string, value: any) => {
     updateManualOverrides(prev => ({
       ...prev,
@@ -181,6 +245,11 @@ export default function Quotation() {
     }))
     emitPatch({ path: `footer.${key}`, value }, getSaveData())
   }, [updateManualOverrides, emitPatch, getSaveData])
+
+  const syncBaseRate = useCallback((field: keyof typeof baseRates, value: number) => {
+    updateBaseRate(field, value)
+    emitPatch({ path: `baseRates.${field}`, value }, getSaveData())
+  }, [updateBaseRate, emitPatch, getSaveData])
 
   // Sync window title with document identity + unsaved state
   useEffect(() => {
@@ -215,23 +284,72 @@ export default function Quotation() {
   }
 
   const handleCreateNew = async (roomName: string, password?: string) => {
-    setRoomPassword(password)
-    
-    // Clean name for unique ID
-    const cleanName = roomName.trim().replace(/\s+/g, '-')
-    const randId = Math.random().toString(36).substring(7).toUpperCase()
-    const uniqueNo = `${cleanName}-${randId}`
-    
-    resetToNew(uniqueNo)
-    setIsLobbyOpen(false)
+    setRoomPassword(undefined)
+    setRoomDisplayName(roomName || undefined)
+
+    resetToNew()  // generates KMTE-YYMMDD-NNN
+
+    setTimeout(() => {
+      setRoomPassword(password)
+      setIsLobbyOpen(false)
+    }, 0)
   }
 
   const handleBrowse = async () => {
-    await loadInvoice()
-    // We don't necessarily close the lobby if loadInvoice was cancelled, 
-    // but usually loadInvoice handles its own modals. 
-    // Assuming success, we close:
-    setIsLobbyOpen(false)
+    // Wrap performLoad so we can detect success vs cancellation.
+    // loadInvoice() is void — we check currentFilePath after a tick instead.
+    const prevFilePath = currentFilePath
+
+    // Perform the load — this mutates state directly via loadData()
+    // We need to hook into the result, so we duplicate the electron/file logic
+    // here at the Quotation level to also generate a new workspace ID.
+    try {
+      const electronAPI = (window as any).electronAPI
+      const defaultNASPath = '\\\\KMTI-NAS\\Shared\\data\\template'
+
+      let data: any = null
+      let fileName = ''
+
+      if (electronAPI?.showOpenDialog && electronAPI?.readFile) {
+        const { filePath, canceled } = await electronAPI.showOpenDialog({
+          title: 'Browse Quotation Templates on NAS',
+          defaultPath: defaultNASPath,
+          filters: [{ name: 'KMTI Quotations', extensions: ['json'] }],
+          properties: ['openFile']
+        })
+        if (canceled || !filePath) return  // user cancelled — keep lobby open
+        const contents = await electronAPI.readFile(filePath)
+        if (!contents) throw new Error('File is empty or could not be read')
+        data = JSON.parse(contents)
+        fileName = filePath.split(/[\\/]/).pop() || 'Quotation'
+        markSaved(filePath)
+      } else {
+        // Web fallback via File System Access API
+        const [fileHandle] = await (window as any).showOpenFilePicker({
+          types: [{ description: 'KMTI Quotation files', accept: { 'application/json': ['.json'] } }],
+        })
+        const file = await fileHandle.getFile()
+        const contents = await file.text()
+        data = JSON.parse(contents)
+        fileName = fileHandle.name
+      }
+
+      if (!data) return
+
+      // Generate a fresh workspace ID from the filename so this opens
+      // as a new independent room, not the original file's room
+      const baseName = fileName.replace(/\.json$/i, '').replace(/[^a-zA-Z0-9_-]/g, '-')
+      const randId = Math.random().toString(36).substring(7).toUpperCase()
+      const newWorkspaceId = `${baseName}-${randId}`
+
+      setRoomPassword(undefined)  // disconnect from any existing room
+      loadData({ ...data, quotationDetails: { ...data.quotationDetails, quotationNo: newWorkspaceId } }, fileName)
+      notify?.(`Loaded: ${fileName} — new workspace ${newWorkspaceId}`, 'success')
+      setIsLobbyOpen(false)
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return  // cancelled
+      notify?.(`Failed to load file: ${err?.message}`, 'error')
+    }
   }
 
   const handleSaveAndReveal = async () => {
@@ -254,8 +372,8 @@ export default function Quotation() {
           <div className="quot-toolbar-identity">
             <div className="quot-doc-icon">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
               </svg>
             </div>
             <div className="quot-doc-meta">
@@ -280,51 +398,50 @@ export default function Quotation() {
 
           {/* Right: Actions */}
           <div className="quot-toolbar-actions">
+            <CollaborationBar
+              isConnected={isConnected}
+              remoteUsers={remoteUsers}
+              myColor={myColor}
+              userName={myEffectiveName}
+              quotNo={quotationDetails.quotationNo || null}
+            />
             <button id="quot-btn-new" className="btn btn-ghost" onClick={newInvoice}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
               </svg>
               New
             </button>
             <button id="quot-btn-save" className="btn btn-ghost" onClick={handleSaveAndReveal}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
               </svg>
               Save
             </button>
             <button id="quot-btn-load" className="btn btn-ghost" onClick={loadInvoice}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
               Load
             </button>
             <button className="btn btn-ghost" onClick={() => setIsLobbyOpen(true)} title="Join room or start new">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
               Workspace
             </button>
             <button id="quot-btn-print" className="btn btn-primary" onClick={() => setIsPrintPreviewOpen(true)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9"/>
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                <rect x="6" y="14" width="12" height="8"/>
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
               </svg>
               Print / PDF
             </button>
           </div>
         </div>
 
-        {/* ── Collaboration Bar ──────────────────────────────────── */}
-        <CollaborationBar
-          isConnected={isConnected}
-          remoteUsers={remoteUsers}
-          myColor={myColor}
-          userName={user?.username || 'User'}
-          quotNo={quotationDetails.quotationNo || null}
-        />
 
         {/* ── Sidebar + Main Area ──────────────────────────────── */}
         <div className="quot-layout">
@@ -362,12 +479,12 @@ export default function Quotation() {
                   baseRates={baseRates}
                   selectedMainTaskId={selectedMainTaskId}
                   onTaskUpdate={syncUpdateTask}
-                  onTaskAdd={addTask}
-                  onSubTaskAdd={addSubTask}
-                  onTaskRemove={removeTask}
-                  onTaskReorder={reorderTasks}
+                  onTaskAdd={syncAddTask}
+                  onSubTaskAdd={syncAddSubTask}
+                  onTaskRemove={syncRemoveTask}
+                  onTaskReorder={syncReorderTasks}
                   onMainTaskSelect={setSelectedMainTaskId}
-                  onBaseRateUpdate={updateBaseRate}
+                  onBaseRateUpdate={syncBaseRate}
                   manualOverrides={manualOverrides}
                   setManualOverrides={updateManualOverrides} // setManualOverrides is used for more complex updates, but footer uses specialized syncUpdateFooter via prop eventually?
                   // Wait, I should pass syncUpdateFooter to TasksTable if I want it to sync.
@@ -383,7 +500,7 @@ export default function Quotation() {
                   signatures={signatures}
                   onUpdate={syncSignatures}
                 />
-                
+
                 <BillingDetailsCard
                   billingDetails={billingDetails}
                   quotationDetails={quotationDetails}
@@ -404,7 +521,7 @@ export default function Quotation() {
           isOpen={isBaseRatesPanelOpen}
           onClose={() => setIsBaseRatesPanelOpen(false)}
           baseRates={baseRates}
-          onUpdate={updateBaseRate}
+          onUpdate={syncBaseRate}
         />
 
         <PrintPreviewModal
@@ -422,7 +539,7 @@ export default function Quotation() {
         />
 
         {isLobbyOpen && (
-          <QuotationEntryModal 
+          <QuotationEntryModal
             onJoin={handleJoinSession}
             onCreateNew={handleCreateNew}
             onBrowse={handleBrowse}

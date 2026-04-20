@@ -18,6 +18,7 @@ interface Props {
   onBlur?: () => void
   children: React.ReactNode
   className?: string
+  style?: React.CSSProperties
 }
 
 export function CollaborativeField({
@@ -27,6 +28,7 @@ export function CollaborativeField({
   onBlur,
   children,
   className = '',
+  style = {},
 }: Props) {
   const { recentEdits, emitSelection } = useCollaborationContext()
   const [remoteSelectionRects, setRemoteSelectionRects] = React.useState<Record<string, TextRangeRect[]>>({})
@@ -82,6 +84,7 @@ export function CollaborativeField({
     <div
       className={`collab-field-wrapper ${hasFocus ? 'collab-field-active' : ''} ${hasActivity ? 'collab-field-activity' : ''} ${className}`}
       style={{ 
+        ...style,
         boxShadow: activityShadow,
         zIndex: hasFocus ? 50 : (hasActivity ? 40 : 'auto')
       } as React.CSSProperties}

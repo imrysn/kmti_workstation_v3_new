@@ -327,8 +327,25 @@ const BillingSignaturesCard = memo(({
 
 BillingSignaturesCard.displayName = 'BillingSignaturesCard'
 
+// ── Safe signatures merge — prevents crashes from legacy/partial data ──────────
+function safeSignatures(signatures: Signatures): Signatures {
+  return {
+    quotation: {
+      preparedBy: { name: '', title: '', ...signatures?.quotation?.preparedBy },
+      approvedBy: { name: '', title: '', ...signatures?.quotation?.approvedBy },
+      receivedBy: { label: '', title: '', ...signatures?.quotation?.receivedBy },
+    },
+    billing: {
+      preparedBy:    { name: '', title: '', ...signatures?.billing?.preparedBy },
+      approvedBy:    { name: '', title: '', ...signatures?.billing?.approvedBy },
+      finalApprover: { name: '', title: '', ...signatures?.billing?.finalApprover },
+    },
+  }
+}
+
 // ── Main export — renders both cards ─────────────────────────────────────────
 const SignatureForm = memo(({ signatures, onUpdate }: Props) => {
+  const safe = safeSignatures(signatures)
   const containerRef = useRef<HTMLDivElement>(null)
   // Force Electron window refocus once when an input is focused to ensure interactivity
   useEffect(() => {
@@ -365,8 +382,8 @@ const SignatureForm = memo(({ signatures, onUpdate }: Props) => {
 
   return (
     <div className="sig-cards-layout" ref={containerRef}>
-      <QuotationSignaturesCard signatures={signatures} onUpdate={onUpdate} />
-      <BillingSignaturesCard signatures={signatures} onUpdate={onUpdate} />
+      <QuotationSignaturesCard signatures={safe} onUpdate={onUpdate} />
+      <BillingSignaturesCard signatures={safe} onUpdate={onUpdate} />
     </div>
   )
 })

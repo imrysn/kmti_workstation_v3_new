@@ -20,6 +20,7 @@ export interface RemoteUser {
 export interface CollaborationState {
   isConnected: boolean
   remoteUsers: Record<string, RemoteUser>
+  myEffectiveName: string
   myColor: string
   mySessionId: string
 }
@@ -27,18 +28,24 @@ export interface CollaborationState {
 interface UseCollaborationOptions {
   quotNo: string | null
   password?: string
+  displayName?: string   // Human-readable label shown in the sessions list
   userName?: string // Fallback, but computer name takes priority
   onRemotePatch?: (patch: { path: string; value: any }, sid: string) => void
   onAuditEntry?: (entry: any) => void
+  onUserJoined?: (user: RemoteUser) => void
+  onUserLeft?: (user: RemoteUser) => void
   onError?: (message: string) => void
 }
 
 export function useCollaboration({
   quotNo,
   password,
+  displayName,
   userName,
   onRemotePatch,
   onAuditEntry,
+  onUserJoined,
+  onUserLeft,
   onError,
 }: UseCollaborationOptions): CollaborationState & {
   emitFocus: (fieldKey: string) => void
@@ -49,6 +56,7 @@ export function useCollaboration({
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [remoteUsers, setRemoteUsers] = useState<Record<string, RemoteUser>>({})
+  const [myEffectiveName, setMyEffectiveName] = useState(userName || 'User')
   const [myColor, setMyColor] = useState('#4A90D9')
   const [mySessionId, setMySessionId] = useState('')
   const currentQuotRef = useRef<string | null>(null)
@@ -61,6 +69,13 @@ export function useCollaboration({
     auditHandlerRef.current = onAuditEntry
   }, [onRemotePatch, onAuditEntry])
 
+  const joinHandlerRef = useRef(onUserJoined)
+  const leftHandlerRef = useRef(onUserLeft)
+  useEffect(() => {
+    joinHandlerRef.current = onUserJoined
+    leftHandlerRef.current = onUserLeft
+  }, [onUserJoined, onUserLeft])
+
   const errorHandlerRef = useRef(onError)
   useEffect(() => {
     errorHandlerRef.current = onError
@@ -68,6 +83,10 @@ export function useCollaboration({
 
   useEffect(() => {
     if (!quotNo) return
+
+    // Clear stale presence from previous room immediately — don't wait for server
+    setRemoteUsers({})
+    setIsConnected(false)
 
     // Create or reuse socket — connect to SERVER_BASE with the custom mount path
     if (!socketRef.current) {
@@ -79,22 +98,35 @@ export function useCollaboration({
     }
     const socket = socketRef.current
 
-    socket.on('connect', async () => {
-      setIsConnected(true)
-      setMySessionId(socket.id || '')
-      
-      // Determine effective user name (Workstation Name > username)
-      let effectiveName = userName || 'Unknown'
+    // If already connected (room switch), emit join immediately without waiting for 'connect'
+    const doJoin = async () => {
+      let finalName = userName || 'Unknown'
       try {
         const info = await (window as any).electronAPI?.getWorkstationInfo?.()
-        if (info?.computerName) effectiveName = info.computerName
+        if (info?.computerName) finalName = info.computerName
       } catch (e) {
         console.warn('[collaboration] Failed to fetch workstation info:', e)
       }
-
-      socket.emit('join_doc', { quot_no: quotNo, user_name: effectiveName, password })
+      setMyEffectiveName(finalName)
+      socket.emit('join_doc', { quot_no: quotNo, user_name: finalName, password, display_name: displayName || null })
       currentQuotRef.current = quotNo
+    }
+
+    socket.on('connect', async () => {
+      setIsConnected(true)
+      setMySessionId(socket.id || '')
+      await doJoin()
     })
+
+    // Socket already connected from a previous room — switch rooms immediately
+    if (socket.connected) {
+      setIsConnected(true)
+      setMySessionId(socket.id || '')
+      if (currentQuotRef.current && currentQuotRef.current !== quotNo) {
+        socket.emit('leave_doc', { quot_no: currentQuotRef.current })
+      }
+      doJoin()
+    }
 
     socket.on('disconnect', () => {
       setIsConnected(false)
@@ -110,14 +142,19 @@ export function useCollaboration({
     })
 
     socket.on('user_joined', (data: { sid: string; name: string; color: string; users: Record<string, RemoteUser> }) => {
+      const newUser = { sid: data.sid, name: data.name, color: data.color }
       setRemoteUsers(prev => ({
         ...prev,
-        [data.sid]: { sid: data.sid, name: data.name, color: data.color },
+        [data.sid]: newUser,
       }))
+      joinHandlerRef.current?.(newUser)
     })
 
     socket.on('user_left', (data: { sid: string }) => {
       setRemoteUsers(prev => {
+        if (prev[data.sid]) {
+          leftHandlerRef.current?.(prev[data.sid])
+        }
         const next = { ...prev }
         delete next[data.sid]
         return next
@@ -213,5 +250,5 @@ export function useCollaboration({
     })
   }, [])
 
-  return { isConnected, remoteUsers, myColor, mySessionId, emitFocus, emitBlur, emitSelection, emitPatch }
+  return { isConnected, remoteUsers, myEffectiveName, myColor, mySessionId, emitFocus, emitBlur, emitSelection, emitPatch }
 }

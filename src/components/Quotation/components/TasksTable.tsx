@@ -124,8 +124,8 @@ const TaskRow = memo(({
           onFocus={() => emitFocus(`task.${task.id}.hours`)}
           onBlur={() => emitBlur(`task.${task.id}.hours`)}
         >
-          <input type="number" value={task.hours || ''} onChange={e => handleUpdate('hours', parseFloat(e.target.value) || 0)}
-            className="table-input number-input" min="0" step="0.5" />
+          <input type="number" value={task.hours || ''} onChange={e => handleUpdate('hours', Math.min(24, Math.max(0, parseFloat(e.target.value) || 0)))}
+            className="table-input number-input" min="0" max="24" step="0.5" />
         </CollaborativeField>
       </td>
       <td>
@@ -135,7 +135,7 @@ const TaskRow = memo(({
           onFocus={() => emitFocus(`task.${task.id}.minutes`)}
           onBlur={() => emitBlur(`task.${task.id}.minutes`)}
         >
-          <input type="number" value={task.minutes || ''} onChange={e => handleUpdate('minutes', parseFloat(e.target.value) || 0)}
+          <input type="number" value={task.minutes || ''} onChange={e => handleUpdate('minutes', Math.min(59, Math.max(0, parseFloat(e.target.value) || 0)))}
             className="table-input number-input" min="0" max="59" step={1} />
         </CollaborativeField>
       </td>
