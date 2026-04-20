@@ -56,3 +56,14 @@ class HeatTreatment(Base):
     category = Column(String(255))
     eng_char = Column(String(255))
     jp_char = Column(String(255))
+
+
+class Designer(Base):
+    """Maps to `designers` table — Directory of engineering designers."""
+    __tablename__ = "designers"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    category = Column(String(255), index=True)
+    english_name = Column(String(255), index=True)
+    email = Column(String(255), nullable=True)
+    japanese_name = Column(String(255), index=True)

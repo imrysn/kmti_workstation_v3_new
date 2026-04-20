@@ -49,6 +49,14 @@ export interface IHeatTreatment {
   japaneseChar: string
 }
 
+export interface IDesigner {
+  id?: number
+  category?: string
+  englishName: string
+  email: string
+  japaneseName: string
+}
+
 export interface IAppSettings {
   dbSource: string
   dbName: string

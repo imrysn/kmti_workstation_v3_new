@@ -1,0 +1,687 @@
+.librarian-pane {
+    --accent-rgb: 59, 130, 246;
+    --border-rgb: 226, 232, 240;
+    --bg-secondary-rgb: 248, 250, 252;
+    display: flex;
+    height: 100%;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s ease;
+}
+
+/* Custom Scrollbar */
+.librarian-pane ::-webkit-scrollbar {
+    width: 6px;
+}
+
+.librarian-pane ::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.librarian-pane ::-webkit-scrollbar-thumb {
+    background: rgba(var(--accent-rgb), 0.3);
+    /* Increased for much better contrast */
+    border-radius: 10px;
+}
+
+.librarian-pane ::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--accent-rgb), 0.5);
+}
+
+/* --- SIDEBAR --- */
+.lib-sidebar {
+    width: 280px;
+    background: #f1f5f9;
+    /* Slightly darker background for better structural contrast */
+    display: flex;
+    flex-direction: column;
+    border-right: 1.5px solid var(--border);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    z-index: 20;
+}
+
+.lib-sidebar-header {
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lib-new-chat-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, var(--accent) 0%, #1d4ed8 100%);
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px var(--accent-subtle);
+}
+
+.lib-new-chat-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+}
+
+.lib-sidebar-sessions {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.lib-history-label {
+    padding: 0 12px 12px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.lib-session-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-primary);
+    margin: 0 4px;
+}
+
+.lib-session-item:hover {
+    background: rgba(var(--accent-rgb), 0.05);
+    transform: translateX(4px);
+}
+
+.lib-session-item.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 4px 12px var(--accent-subtle);
+}
+
+.lib-session-item.active .lib-session-title {
+    color: #fff;
+}
+
+.lib-session-item.active .lib-session-delete {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.lib-session-title {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.lib-session-delete {
+    opacity: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+}
+
+.lib-session-item:hover .lib-session-delete {
+    opacity: 1;
+}
+
+.lib-session-delete:hover {
+    background: rgba(220, 38, 38, 0.12);
+    color: var(--danger);
+}
+
+/* --- MAIN CHAT AREA --- */
+.lib-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background: var(--bg-primary);
+    max-width: 100%;
+}
+
+/* Top Navigation Bar */
+.lib-top-nav {
+    height: 64px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    backdrop-filter: blur(12px);
+    border-bottom: 1.5px solid var(--border);
+    z-index: 15;
+    position: sticky;
+    top: 0;
+}
+
+.lib-branding {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lib-ai-glow {
+    width: 24px;
+    height: 24px;
+    background: #fff;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 900;
+    box-shadow: 0 0 10px var(--accent-subtle);
+}
+
+.lib-header-text {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+/* Message List */
+.lib-content-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    scroll-behavior: smooth;
+    position: relative;
+}
+
+.lib-chat-container {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    flex: 1;
+}
+
+.lib-welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 60px 20px;
+    position: relative;
+    min-height: 400px;
+}
+
+.lib-welcome::before {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: url('../assets/kmti_logo.png') no-repeat center;
+    background-size: contain;
+    opacity: 0.05;
+    /* Increased opacity slightly for better visibility against deepened background */
+    filter: grayscale(1);
+    z-index: -1;
+    animation: gearRotate 60s linear infinite;
+}
+
+@keyframes gearRotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.lib-welcome h1 {
+    font-size: 56px;
+    font-weight: 900;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--accent) 0%, #2dd4bf 50%, #3b82f6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.05em;
+    animation: welcomeFade 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes welcomeFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.lib-welcome p {
+    font-size: 18px;
+    color: var(--text-primary);
+    font-weight: 500;
+    max-width: 480px;
+    line-height: 1.6;
+    opacity: 0.7;
+}
+
+
+/* Messages */
+.lib-msg {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    align-items: flex-end;
+    animation: messageIn 0.3s ease-out forwards;
+}
+
+.lib-msg.user {
+    justify-content: flex-end;
+}
+
+@keyframes messageIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.lib-msg-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 800;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.lib-msg.user .lib-msg-avatar {
+    display: none;
+}
+
+.lib-msg-body {
+    max-width: 80%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.lib-msg.user .lib-msg-body {
+    align-items: flex-end;
+}
+
+.lib-msg.assistant .lib-msg-body {
+    align-items: flex-start;
+}
+
+.lib-msg-text {
+    line-height: 1.5;
+    font-size: 14px;
+    padding: 12px 18px;
+    border-radius: 18px;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+.lib-msg.assistant .lib-msg-text {
+    background: #fff;
+    color: var(--text-primary);
+    border-bottom-left-radius: 2px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+}
+
+.lib-msg.user .lib-msg-text {
+    background: var(--accent);
+    color: #fff;
+    border-bottom-right-radius: 2px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+/* Markdown Specifics */
+.lib-msg-text p {
+    margin-bottom: 0.8em;
+}
+
+.lib-msg-text p:last-child {
+    margin-bottom: 0;
+}
+
+.lib-msg-text pre {
+    background: var(--bg-surface-hover);
+    padding: 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+}
+
+.lib-msg-text code {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 12px;
+}
+
+.lib-msg.user .lib-msg-text {
+    background: var(--accent);
+    color: #fff;
+    padding: 16px;
+    border-radius: 12px;
+    border-top-right-radius: 2px;
+    box-shadow: 0 4px 12px var(--accent-subtle);
+}
+
+/* Redefine body to wrap the text and info together for the bubble effect if preferred, 
+   but user wants "bottom of text right" so info should follow text inside bubble? 
+   No, let's put info INSIDE the bubble padding if possible or just below.
+   Moving it INSIDE looks best. 
+*/
+
+/* Redefine messages to remove duplicate background declarations */
+.lib-msg.assistant .lib-msg-body,
+.lib-msg.user .lib-msg-body {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+}
+
+.lib-input-wrapper {
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 24px 32px;
+    position: sticky;
+    bottom: 0;
+}
+
+.lib-input-container {
+    background: #fff;
+    backdrop-filter: blur(16px);
+    border-radius: 24px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    border: 1.5px solid var(--border);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+.lib-input-container:focus-within {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 10px 50px var(--accent-subtle);
+    transform: translateY(-2px);
+}
+
+.lib-input-container textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 4px;
+    resize: none;
+    max-height: 150px;
+    outline: none;
+}
+
+.lib-send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 2px;
+}
+
+.lib-send-btn:hover:not(:disabled) {
+    background: var(--bg-surface-hover);
+    color: var(--accent);
+}
+
+.lib-send-btn.active {
+    color: var(--accent);
+}
+
+.lib-send-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+/* Tags in content - Premium Navigation Chips */
+.lib-pane-tag {
+    display: inline-flex;
+    align-items: center;
+    color: #1e40af;
+    /* Deeper high-contrast blue */
+    background: #dbeafe;
+    /* Slightly more opaque background */
+    padding: 4px 12px;
+    margin: 4px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 12.5px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1.5px solid rgba(30, 64, 175, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    vertical-align: middle;
+    white-space: nowrap;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.lib-pane-tag::before {
+    content: '🔗';
+    margin-right: 6px;
+    font-size: 10px;
+    filter: grayscale(1) opacity(0.5);
+}
+
+.lib-pane-tag:hover {
+    background: var(--accent);
+    color: #fff;
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px var(--accent-subtle);
+    border-color: var(--accent);
+}
+
+.lib-pane-tag:hover::before {
+    filter: none;
+    opacity: 1;
+}
+
+/* Compact Sidebar Adjustments */
+.librarian-pane.compact {
+    border-radius: 0;
+}
+
+.librarian-pane.compact .lib-sidebar {
+    display: none;
+}
+
+.librarian-pane.compact .lib-chat-container {
+    padding: 0 16px;
+    gap: 24px;
+}
+
+.librarian-pane.compact .lib-welcome h1 {
+    font-size: 28px;
+}
+
+.librarian-pane.compact .lib-welcome p {
+    font-size: 13px;
+}
+
+.librarian-pane.compact .lib-msg-text {
+    font-size: 13.5px;
+}
+
+/* Compact Navigation Actions */
+.lib-compact-actions {
+    position: relative;
+    display: flex;
+    gap: 8px;
+}
+
+.lib-compact-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.lib-compact-btn:hover {
+    background: var(--bg-surface-hover);
+    color: var(--accent);
+}
+
+.lib-compact-history-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 240px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    padding: 8px 0;
+    max-height: 300px;
+    overflow-y: auto;
+    animation: dropdownFadeIn 0.2s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.lib-compact-history-dropdown .lib-history-label {
+    padding: 8px 16px;
+}
+
+.lib-compact-history-dropdown .lib-session-item {
+    padding: 8px 16px;
+    border-radius: 0;
+}
+
+.lib-compact-history-dropdown .lib-session-item.active {
+    background: var(--accent-subtle);
+}
+
+.lib-no-history {
+    padding: 20px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Thinking Animation */
+.lib-thinking {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+}
+
+.lib-thinking span {
+    width: 6px;
+    height: 6px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    animation: thinkingDot 1.4s infinite ease-in-out;
+    opacity: 0.6;
+}
+
+.lib-thinking span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.lib-thinking span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes thinkingDot {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.4;
+    }
+
+    50% {
+        transform: scale(1.3);
+        opacity: 0.8;
+        background: var(--accent);
+    }
+}

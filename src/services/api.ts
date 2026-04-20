@@ -110,6 +110,18 @@ export const charsApi = {
   deleteHeatTreatment: (id: number) => api.delete(`/chars/heat-treatment/${id}`),
 }
 
+// --- Designers ---
+export const designersApi = {
+  getCategories: () => api.get('/designers/categories'),
+  list: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
+    api.get('/designers', { params: { category, q, limit, offset } }),
+  create: (data: { category: string; englishName: string; email: string; japaneseName: string }) =>
+    api.post('/designers', data),
+  update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
+    api.patch(`/designers/${id}`, data),
+  delete: (id: number) => api.delete(`/designers/${id}`),
+}
+
 // --- Settings ---
 export const settingsApi = {
   get: () => api.get('/settings/'),
@@ -159,6 +171,17 @@ export const broadcastApi = {
   getActive: () => api.get('/broadcast/active'),
   create: (formData: FormData) => api.post('/broadcast/', formData),
   delete: (id: number) => api.delete(`/broadcast/${id}`),
+}
+
+// --- Librarian AI Assistant ---
+export const librarianApi = {
+  getSessions: () => api.get('/librarian/sessions'),
+  createSession: (title?: string) => api.post('/librarian/sessions', { title }),
+  deleteSession: (id: number) => api.delete(`/librarian/sessions/${id}`),
+  getHistory: (sessionId?: number) => api.get('/librarian/history', { params: { session_id: sessionId } }),
+  clearHistory: () => api.delete('/librarian/history'),
+  submitFeedback: (data: { message_id: number; is_helpful: boolean; query: string; response: string }) => 
+    api.post('/librarian/feedback', data),
 }
 
 // --- Production Resiliency Interceptor ---

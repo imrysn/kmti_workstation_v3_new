@@ -24,12 +24,14 @@ export interface FeatureFlags {
   heat_treatment_enabled: boolean
   calculator_enabled: boolean
   quotation_enabled: boolean
+  designers_enabled: boolean
 
   purchased_parts_maintenance: boolean
   character_search_maintenance: boolean
   heat_treatment_maintenance: boolean
   calculator_maintenance: boolean
   quotation_maintenance: boolean
+  designers_maintenance: boolean
 
   [key: string]: boolean
 }
@@ -50,12 +52,14 @@ const DEFAULT_FLAGS: FeatureFlags = {
   heat_treatment_enabled: true,
   calculator_enabled: true,
   quotation_enabled: false,
+  designers_enabled: true,
 
   purchased_parts_maintenance: false,
   character_search_maintenance: false,
   heat_treatment_maintenance: false,
   calculator_maintenance: false,
   quotation_maintenance: false,
+  designers_maintenance: false,
 }
 
 const FlagsContext = createContext<FlagsContextValue | null>(null)

@@ -6,6 +6,7 @@ import Breadcrumbs from '../../components/Breadcrumbs'
 import { IPurchasedPart, IProject } from '../../types'
 import { formatFileSize } from './utils'
 import { Skeleton, ResultSkeleton } from '../../components/Skeleton'
+import LibrarianPane from '../../components/LibrarianPane'
 
 const { FixedSizeList } = ReactWindow as any;
 const AutoSizer = (AutoSizerModule as any).default || (AutoSizerModule as any).AutoSizer;
@@ -38,7 +39,7 @@ interface ResultsContentProps {
   handleOpen: (part: IPurchasedPart) => void
   selectedResult: IPurchasedPart | null
   setSelectedResult: (part: IPurchasedPart | null) => void
-  onLoadMore?: () => void
+  onLoadMore?: () => void | Promise<void>
 }
 
 // --- Lazy Thumbnail Result Row ---

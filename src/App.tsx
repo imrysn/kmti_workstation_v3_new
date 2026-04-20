@@ -6,6 +6,7 @@ import SessionExpiredModal from './components/SessionExpiredModal'
 import PurchasedParts from './pages/PurchasedParts'
 import CharacterSearch from './pages/CharacterSearch'
 import HeatTreatment from './pages/HeatTreatment'
+import Designers from './pages/Designers'
 import MaterialCalculator from './pages/MaterialCalculator'
 import Settings from './pages/Settings'
 import Users from './pages/Users'
@@ -23,6 +24,7 @@ import DateTimeOverlay from './components/DateTimeOverlay'
 import FeedbackWidget from './components/FeedbackWidget'
 import BroadcastOverlay from './components/BroadcastOverlay'
 import BroadcastFAB from './components/BroadcastFAB'
+
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -43,35 +45,35 @@ import './styles/App.css'
  * 4. Module Maintenance (Nominal/Locked)
  * IT/Admin roles bypass visibility and maintenance checks.
  */
-function ModuleGuard({ 
-  children, 
-  visibleKey, 
-  maintKey 
-}: { 
-  children: React.ReactNode, 
-  visibleKey: keyof FeatureFlags, 
-  maintKey: keyof FeatureFlags 
+function ModuleGuard({
+  children,
+  visibleKey,
+  maintKey
+}: {
+  children: React.ReactNode,
+  visibleKey: keyof FeatureFlags,
+  maintKey: keyof FeatureFlags
 }) {
   const { flags } = useFlags()
   const { hasRole } = useAuth()
-  
+
   // IT/Admin bypass all guards EXCEPT global lockdown if it should be absolute
   // For now, let's say IT/Admin bypass everything for management purposes.
   if (hasRole('it', 'admin')) return <>{children}</>
-  
+
   if (flags[maintKey as string]) return <Maintenance />
   if (!flags[visibleKey as string]) return <FeatureClosed />
-  
+
   return <>{children}</>
 }
 
 function WorkstationShell() {
   const { hasRole, isLoggingOut } = useAuth()
   const { flags } = useFlags()
-  
+
   // Activate real-time telemetry heartbeat
   useHeartbeat()
-  
+
   const shellClass = `app-shell${isLoggingOut ? ' exiting' : ''}`
 
   // Global Maintenance Mode (Affects everyone except IT/Admin)
@@ -142,6 +144,16 @@ function WorkstationShell() {
               }
             />
             <Route
+              path="/designers"
+              element={
+                <ProtectedRoute>
+                  <ModuleGuard visibleKey="designers_enabled" maintKey="designers_maintenance">
+                    <Designers />
+                  </ModuleGuard>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/calculator"
               element={
                 <ProtectedRoute>
@@ -151,7 +163,6 @@ function WorkstationShell() {
                 </ProtectedRoute>
               }
             />
-
             <Route
               path="/quotation"
               element={

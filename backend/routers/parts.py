@@ -331,6 +331,20 @@ async def list_parts(
             # INSTANT BROWSING: find only immediate children using index
             # This is O(1) with the new parent_path column
             query = query.where(CadFileIndex.parent_path == norm_fp)
+    elif project_id:
+        # PROJECT ROOT SCOPE: If no folder is selected but we have a project,
+        # default to showing only the top-level items of that project.
+        proj = await db.get(Project, project_id)
+        if proj:
+            root_norm = normalize_path(proj.root_path)
+            # Check if we are searching (which usually implies recursive)
+            is_searching = bool(search and search.strip())
+            effective_recursive = recursive if is_searching else False
+            
+            if not effective_recursive:
+                # Only show items where parent_path is the project root
+                query = query.where(CadFileIndex.parent_path == root_norm)
+            # (If recursive, we don't add the parent_path filter, showing all items)
             
     # 3. CAD Only Filter
     cad_exts = {'.icd', '.dwg', '.dxf', '.sldprt', '.slddrw', '.sldasm', '.step', '.stp', '.iges', '.igs'}

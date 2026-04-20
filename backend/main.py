@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers
 import asyncio
 import time
 import logging
@@ -124,6 +124,8 @@ app.include_router(characters.router, prefix="/api/chars", tags=["Character Sear
 app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
 app.include_router(telemetry.router, prefix="/api/telemetry", tags=["Telemetry"])
 app.include_router(broadcast.router, prefix="/api/broadcast", tags=["Broadcast Messages"])
+app.include_router(librarian.router, prefix="/api/librarian", tags=["Technical Librarian"])
+app.include_router(designers.router, prefix="/api/designers", tags=["Designers"])
 
 # Static serving for Help Center screenshots (NAS)
 FEEDBACK_DIR = r"\\KMTI-NAS\Shared\data\storage\feedback"

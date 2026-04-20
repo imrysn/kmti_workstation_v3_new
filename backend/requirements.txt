@@ -10,3 +10,4 @@ python-jose[cryptography]
 bcrypt
 pyinstaller
 pymupdf
+groq

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useModal } from '../components/ModalContext'
 import { fileService } from '../services/fileService'
 import type { IPurchasedPart } from '../types'
@@ -24,6 +25,8 @@ export default function PurchasedParts() {
 
   const [selectedResult, setSelectedResult] = useState<IPurchasedPart | null>(null)
   const [focusedIndex, setFocusedIndex] = useState(-1)
+  const [rightSidebarTab, setRightSidebarTab] = useState<'details' | 'ai'>('details')
+  const location = useLocation()
 
   // -- Refs --
   const resultsListRef = React.useRef<HTMLDivElement>(null)
@@ -103,6 +106,40 @@ export default function PurchasedParts() {
     }
   }
 
+  // -- AI Librarian Navigation Bridge --
+  useEffect(() => {
+    const handleLibrarianNav = (e: any) => {
+      const { type, value } = e.detail
+      if (type === 'project') {
+        const found = treeConfig.projects.find(p => p.name.toUpperCase() === value.toUpperCase())
+        if (found) {
+          treeConfig.setSelectedProject(found)
+          notify(`Librarian navigated to ${found.name}`, 'success')
+        } else {
+          notify(`Could not find project: ${value}`, 'warning')
+        }
+      } else if (type === 'path') {
+        const normValue = value.replace(/\\/g, '/')
+        const foundProj = treeConfig.projects.find(p => normValue.toLowerCase().startsWith(p.rootPath.replace(/\\/g, '/').toLowerCase()))
+        if (foundProj) {
+          treeConfig.setSelectedProject(foundProj)
+          
+          // Extract parent directory to load the correct results list
+          const parentFolder = normValue.substring(0, normValue.lastIndexOf('/'))
+          searchConfig.setFolderFilter(parentFolder)
+          
+          treeConfig.setPendingSelectPath(normValue)
+          notify(`Librarian opening: ${normValue.split('/').pop()}`, 'success')
+        } else {
+          notify(`Path outside indexed projects: ${value}`, 'warning')
+        }
+      }
+    }
+
+    window.addEventListener('librarian-navigate', handleLibrarianNav)
+    return () => window.removeEventListener('librarian-navigate', handleLibrarianNav)
+  }, [treeConfig.projects, treeConfig.setSelectedProject, treeConfig.setPendingSelectPath, notify])
+
   // Initial Switcher Click-Outside
   useEffect(() => {
     const click = (e: MouseEvent) => {
@@ -110,6 +147,18 @@ export default function PurchasedParts() {
     }
     document.addEventListener('mousedown', click)
     return () => document.removeEventListener('mousedown', click)
+  }, [])
+
+  // Sync mode with External Triggers (TitleBar / URL)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('mode') === 'ai') setRightSidebarTab('ai')
+  }, [location.search])
+
+  useEffect(() => {
+    const handleToggle = () => setRightSidebarTab(prev => prev === 'details' ? 'ai' : 'details')
+    window.addEventListener('toggle-librarian-mode', handleToggle)
+    return () => window.removeEventListener('toggle-librarian-mode', handleToggle)
   }, [])
 
   const sortedProjects = React.useMemo(() => [...treeConfig.projects].sort((a,b) => a.name.localeCompare(b.name)), [treeConfig.projects])
@@ -181,6 +230,8 @@ export default function PurchasedParts() {
         />
 
         <FileDetails 
+          activeTab={rightSidebarTab}
+          setActiveTab={setRightSidebarTab}
           selectedResult={selectedResult}
           handleOpen={handleOpen}
           handleOpenLocation={handleOpenLocation}
