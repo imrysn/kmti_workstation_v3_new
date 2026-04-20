@@ -1,0 +1,111 @@
+/* CollaborativeField.css */
+
+.collab-field-wrapper {
+  position: relative;
+  border-radius: 4px;
+  transition: box-shadow 0.15s ease;
+}
+
+/* The Overlay Layer - sits on top but transparent to clicks */
+.collab-highlight-overlay {
+  position: absolute;
+  /* Safe Zone: move the overlay OUTSIDE the input boundary so 
+     browser focus rings don't cover it. */
+  inset: -4px;
+  pointer-events: none;
+  z-index: 999;
+  display: block;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s ease;
+}
+
+/* The selection rect highlights remote text ranges with a professional multiply blend */
+.collab-selection-rect {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 2px;
+  mix-blend-mode: multiply;
+  z-index: 10;
+  transition: all 0.1s ease;
+}
+
+/* Floating name tag(s) */
+.collab-presence-tags {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  display: flex;
+  gap: 4px;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.collab-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px 12px 12px 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  animation: collab-tag-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes collab-tag-in {
+  from {
+    transform: translateY(5px) scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Print — hide all collaboration UI */
+@media print {
+  .collab-field-wrapper.collab-field-active {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .collab-presence-tags {
+    display: none !important;
+  }
+}
+
+/* Hardening for table contexts */
+.tasks-table tr:focus-within,
+.tasks-table tr.collab-row-active {
+  z-index: 10;
+  position: relative;
+}
+
+.tasks-table td:focus-within,
+.tasks-table td:has(.collab-highlight-overlay) {
+  overflow: visible !important;
+  /* Increase z-index even more when focused to ensure rings don't clip */
+  z-index: 9999;
+  position: relative;
+}
+
+.full-width-collab {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.software-collab-wrapper {
+  flex: 0 0 50px;
+}
+
+.type-collab-wrapper {
+  width: 100%;
+  height: 100%;
+}

@@ -1,0 +1,84 @@
+/* CollaborationBar.css */
+
+.collab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 14px;
+  font-size: 11.5px;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  height: 30px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.collab-bar--connected {
+  background: rgba(39, 174, 96, 0.07);
+  color: #91c99b;
+}
+
+.collab-bar--offline {
+  background: rgba(255, 100, 100, 0.06);
+  color: #c97a7a;
+}
+
+/* Status dot */
+.collab-bar__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.collab-bar__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.collab-bar__dot--on {
+  background: #27AE60;
+  box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.25);
+  animation: collab-pulse 2s infinite;
+}
+
+.collab-bar__dot--off {
+  background: #c0392b;
+}
+
+@keyframes collab-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.25); }
+  50%       { box-shadow: 0 0 0 4px rgba(39, 174, 96, 0.10); }
+}
+
+/* User avatars */
+.collab-bar__users {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.collab-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  border: 2px solid rgba(255,255,255,0.15);
+  cursor: default;
+  transition: transform 0.15s;
+}
+
+.collab-avatar:hover { transform: scale(1.15); }
+.collab-avatar--me { border-color: rgba(255,255,255,0.5); }
+
+.collab-bar__count {
+  font-size: 10.5px;
+  opacity: 0.75;
+  margin-left: 3px;
+}

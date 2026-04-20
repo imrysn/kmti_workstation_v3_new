@@ -1,5 +1,6 @@
-export { useInvoiceState } from './useInvoiceState'
+export { useInvoiceState, generateQuotationNumber } from './useInvoiceState'
 export { useFileOperations } from './useFileOperations'
+export { useCollaboration } from './useCollaboration'
 export type {
   Task,
   BaseRates,

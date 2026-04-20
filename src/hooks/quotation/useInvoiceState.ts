@@ -112,7 +112,7 @@ export interface ManualOverrides {
 // Pattern for auto-generated quotation numbers: KMTE-YYMMDD-NNN
 const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
 
-function generateQuotationNumber(date: string, sequential = '001'): string {
+export function generateQuotationNumber(date: string, sequential = '001'): string {
   // Use T00:00:00 to ensure local date parsing instead of UTC
   const dateObj = new Date(date + 'T00:00:00')
   const year = dateObj.getFullYear().toString().slice(-2)
@@ -270,20 +270,20 @@ export function useInvoiceState() {
     setQuotationDetails(prev => ({ ...prev, quotationNo: newQuotationNo }))
   }, 300)
 
-  const updateCompanyInfo = useCallback((updates: CompanyInfo) => {
-    setCompanyInfo(updates)
+  const updateCompanyInfo = useCallback((updates: CompanyInfo | ((prev: CompanyInfo) => CompanyInfo)) => {
+    setCompanyInfo(prev => typeof updates === 'function' ? updates(prev) : updates)
     setHasUnsavedChanges(true)
   }, [])
 
-  const updateClientInfo = useCallback((updates: ClientInfo) => {
-    setClientInfo(updates)
+  const updateClientInfo = useCallback((updates: ClientInfo | ((prev: ClientInfo) => ClientInfo)) => {
+    setClientInfo(prev => typeof updates === 'function' ? updates(prev) : updates)
     setHasUnsavedChanges(true)
   }, [])
 
-  const updateQuotationDetails = useCallback((updates: Partial<QuotationDetails>) => {
+  const updateQuotationDetails = useCallback((updates: Partial<QuotationDetails> | ((prev: QuotationDetails) => QuotationDetails)) => {
     setQuotationDetails(prev => {
-      const newDetails = { ...prev, ...updates }
-      if (updates.date && updates.date !== prev.date) {
+      const newDetails = typeof updates === 'function' ? updates(prev) : { ...prev, ...updates }
+      if (typeof updates === 'object' && updates.date && updates.date !== prev.date) {
         if (GENERATED_QUOT_PATTERN.test(prev.quotationNo)) {
           debouncedQuotationUpdate(updates.date)
         }
@@ -293,8 +293,8 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [debouncedQuotationUpdate])
 
-  const updateBillingDetails = useCallback((updates: Partial<BillingDetails>) => {
-    setBillingDetails(prev => ({ ...prev, ...updates }))
+  const updateBillingDetails = useCallback((updates: Partial<BillingDetails> | ((prev: BillingDetails) => BillingDetails)) => {
+    setBillingDetails(prev => typeof updates === 'function' ? updates(prev) : { ...prev, ...updates })
     setHasUnsavedChanges(true)
   }, [])
 
@@ -401,7 +401,7 @@ export function useInvoiceState() {
   const updateSignatures = useCallback((type: keyof Signatures, field: string, value: any) => {
     setSignatures(prev => ({
       ...prev,
-      [type]: { ...prev[type], [field]: value },
+      [type]: { ...(prev[type] as any), [field]: value },
     }))
     setHasUnsavedChanges(true)
   }, [])
@@ -411,10 +411,10 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [setManualOverrides, setHasUnsavedChanges])
 
-  const resetToNew = useCallback(() => {
+  const resetToNew = useCallback((forcedQuotNo?: string) => {
     const newToday = new Date().toISOString().split('T')[0]
     setQuotationDetails({
-      quotationNo: generateQuotationNumber(newToday),
+      quotationNo: forcedQuotNo || generateQuotationNumber(newToday),
       referenceNo: '',
       date: newToday,
     })

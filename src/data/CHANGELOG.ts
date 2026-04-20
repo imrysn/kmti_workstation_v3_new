@@ -22,6 +22,18 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.6.9',
+    date: 'April 20, 2026',
+    entries: [
+      { type: 'new', text: 'AI Tech Assistant — You can now ask questions about finding files and folders on the indexed data. (Limited to 3 per day due to API free tier)' },
+      { type: 'new', text: 'Clients Directory — A dedicated module for managing engineering clients and contacts with category filtering.' },
+      { type: 'new', text: 'Inline Preview Editing — You can now edit the "UNIT (PAGE)" column directly in the Print Preview for quick document adjustments.' },
+      { type: 'improvement', text: 'Smarter "New" Action — Persist company and client details while resetting the computation table for faster repetitive workflows.' },
+      { type: 'improvement', text: 'Ultra-Responsive TitleBar — Hardened navigation layout to ensure accessibility even at very narrow window widths.' },
+      { type: 'improvement', text: 'Partial Data Entry — Clients can now be saved with optional fields, allowing you to fill in details as you go.' },
+    ],
+  },
+  {
     version: '3.6.8',
     date: 'April 16, 2026',
     entries: [

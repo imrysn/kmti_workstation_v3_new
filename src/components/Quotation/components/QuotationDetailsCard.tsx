@@ -1,5 +1,7 @@
 import { memo, useState } from 'react'
 import type { QuotationDetails } from '../../../hooks/quotation'
+import { useCollaborationContext } from '../../../context/CollaborationContext'
+import { CollaborativeField } from './CollaborativeField'
 
 interface Props {
   quotationDetails: QuotationDetails
@@ -10,6 +12,7 @@ interface Props {
 const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
 
 const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
+  const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
   const [quotNoManual, setQuotNoManual] = useState(
     !GENERATED_QUOT_PATTERN.test(quotationDetails.quotationNo)
@@ -94,25 +97,40 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
           <div className="qdcard-grid">
             <div className="input-group">
               <label>Date</label>
-              <input
-                type="date"
-                value={quotationDetails.date}
-                onChange={e => onUpdate({ date: e.target.value })}
-                className="form-input"
-                autoFocus
-              />
+              <CollaborativeField
+                fieldKey="quotationDetails.date"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('quotationDetails.date')}
+                onBlur={() => emitBlur('quotationDetails.date')}
+              >
+                <input
+                  type="date"
+                  value={quotationDetails.date}
+                  onChange={e => onUpdate({ date: e.target.value })}
+                  className="form-input"
+                  autoFocus
+                />
+              </CollaborativeField>
             </div>
 
             <div className="input-group">
               <label>Quotation No.</label>
               <div className="client-quot-no-row">
-                <input
-                  type="text"
-                  value={quotationDetails.quotationNo}
-                  onChange={e => handleQuotNoChange(e.target.value)}
-                  className="form-input"
-                  placeholder="e.g. KMTE-260413-001"
-                />
+                <CollaborativeField
+                  fieldKey="quotationDetails.quotationNo"
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus('quotationDetails.quotationNo')}
+                  onBlur={() => emitBlur('quotationDetails.quotationNo')}
+                  style={{ flex: 1 }}
+                >
+                  <input
+                    type="text"
+                    value={quotationDetails.quotationNo}
+                    onChange={e => handleQuotNoChange(e.target.value)}
+                    className="form-input"
+                    placeholder="e.g. KMTE-260413-001"
+                  />
+                </CollaborativeField>
                 {quotNoManual && (
                   <button
                     type="button"
@@ -136,13 +154,20 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
 
             <div className="input-group">
               <label>Reference Number</label>
-              <input
-                type="text"
-                value={quotationDetails.referenceNo}
-                onChange={e => onUpdate({ referenceNo: e.target.value })}
-                className="form-input"
-                placeholder="e.g. NE-2026-04"
-              />
+              <CollaborativeField
+                fieldKey="quotationDetails.referenceNo"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('quotationDetails.referenceNo')}
+                onBlur={() => emitBlur('quotationDetails.referenceNo')}
+              >
+                <input
+                  type="text"
+                  value={quotationDetails.referenceNo}
+                  onChange={e => onUpdate({ referenceNo: e.target.value })}
+                  className="form-input"
+                  placeholder="e.g. NE-2026-04"
+                />
+              </CollaborativeField>
             </div>
           </div>
         ) : (

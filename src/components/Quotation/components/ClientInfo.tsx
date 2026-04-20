@@ -1,5 +1,7 @@
 import { memo, useState } from 'react'
 import type { ClientInfo } from '../../../hooks/quotation'
+import { useCollaborationContext } from '../../../context/CollaborationContext'
+import { CollaborativeField } from './CollaborativeField'
 
 interface Props {
   clientInfo: ClientInfo
@@ -7,6 +9,7 @@ interface Props {
 }
 
 const ClientInfoForm = memo(({ clientInfo, onUpdate }: Props) => {
+  const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 
   const handleChange = (field: keyof ClientInfo, value: string) => {
@@ -56,44 +59,72 @@ const ClientInfoForm = memo(({ clientInfo, onUpdate }: Props) => {
           <>
             <div className="input-group">
               <label>Client Company</label>
-              <input
-                type="text"
-                value={clientInfo.company}
-                onChange={e => handleChange('company', e.target.value)}
-                className="form-input"
-                placeholder="Company name"
-                autoFocus
-              />
+              <CollaborativeField
+                fieldKey="clientInfo.company"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('clientInfo.company')}
+                onBlur={() => emitBlur('clientInfo.company')}
+              >
+                <input
+                  type="text"
+                  value={clientInfo.company}
+                  onChange={e => handleChange('company', e.target.value)}
+                  className="form-input"
+                  placeholder="Company name"
+                  autoFocus
+                />
+              </CollaborativeField>
             </div>
             <div className="input-group">
               <label>Contact Person</label>
-              <input
-                type="text"
-                value={clientInfo.contact}
-                onChange={e => handleChange('contact', e.target.value)}
-                className="form-input"
-                placeholder="Mr. / Ms. ..."
-              />
+              <CollaborativeField
+                fieldKey="clientInfo.contact"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('clientInfo.contact')}
+                onBlur={() => emitBlur('clientInfo.contact')}
+              >
+                <input
+                  type="text"
+                  value={clientInfo.contact}
+                  onChange={e => handleChange('contact', e.target.value)}
+                  className="form-input"
+                  placeholder="Mr. / Ms. ..."
+                />
+              </CollaborativeField>
             </div>
             <div className="input-group">
               <label>Address</label>
-              <textarea
-                value={clientInfo.address}
-                onChange={e => handleChange('address', e.target.value)}
-                className="form-textarea"
-                rows={3}
-                placeholder="Full address"
-              />
+              <CollaborativeField
+                fieldKey="clientInfo.address"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('clientInfo.address')}
+                onBlur={() => emitBlur('clientInfo.address')}
+              >
+                <textarea
+                  value={clientInfo.address}
+                  onChange={e => handleChange('address', e.target.value)}
+                  className="form-textarea"
+                  rows={3}
+                  placeholder="Full address"
+                />
+              </CollaborativeField>
             </div>
             <div className="input-group">
               <label>Phone</label>
-              <input
-                type="text"
-                value={clientInfo.phone}
-                onChange={e => handleChange('phone', e.target.value)}
-                className="form-input"
-                placeholder="TEL: ..."
-              />
+              <CollaborativeField
+                fieldKey="clientInfo.phone"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('clientInfo.phone')}
+                onBlur={() => emitBlur('clientInfo.phone')}
+              >
+                <input
+                  type="text"
+                  value={clientInfo.phone}
+                  onChange={e => handleChange('phone', e.target.value)}
+                  className="form-input"
+                  placeholder="TEL: ..."
+                />
+              </CollaborativeField>
             </div>
           </>
         ) : (

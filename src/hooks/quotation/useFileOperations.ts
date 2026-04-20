@@ -91,7 +91,33 @@ export function useFileOperations({
   // Load Invoice
   const performLoad = useCallback(async () => {
     try {
-      // Modern File System Access API
+      const electronAPI = (window as any).electronAPI
+      const defaultNASPath = '\\\\KMTI-NAS\\Shared\\data\\template'
+
+      // 1. Electron: use native open dialog with NAS default path
+      if (electronAPI?.showOpenDialog && electronAPI?.readFile) {
+        const { filePath, canceled } = await electronAPI.showOpenDialog({
+          title: 'Browse Quotation Templetes on NAS',
+          defaultPath: defaultNASPath,
+          filters: [{ name: 'KMTI Quotations', extensions: ['json'] }],
+          properties: ['openFile']
+        })
+        
+        if (canceled || !filePath) return
+
+        const contents = await electronAPI.readFile(filePath)
+        if (!contents) throw new Error('File is empty or could not be read')
+        
+        const data = JSON.parse(contents)
+        const fileName = filePath.split(/[\\/]/).pop() || 'Quotation'
+        
+        loadData(data, fileName)
+        markSaved(filePath)
+        showMessage(`Loaded: ${fileName}`, 'success')
+        return
+      }
+
+      // 2. Modern File System Access API (Fallback for web/debug)
       if ('showOpenFilePicker' in window && window.isSecureContext) {
         try {
           const [fileHandle] = await (window as any).showOpenFilePicker({

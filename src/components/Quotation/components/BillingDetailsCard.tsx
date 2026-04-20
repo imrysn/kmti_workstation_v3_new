@@ -1,5 +1,7 @@
 import { memo, useState } from 'react'
 import type { BillingDetails, QuotationDetails } from '../../../hooks/quotation'
+import { useCollaborationContext } from '../../../context/CollaborationContext'
+import { CollaborativeField } from './CollaborativeField'
 
 interface Props {
   billingDetails: BillingDetails
@@ -18,6 +20,7 @@ const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder
 ]
 
 const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBilling, onUpdateQuotation }: Props) => {
+  const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 
   return (
@@ -72,24 +75,38 @@ const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBil
             {/* Invoice & Job Order */}
             <div className="input-group">
               <label>Invoice No.</label>
-              <input
-                type="text"
-                value={billingDetails.invoiceNo}
-                onChange={e => onUpdateBilling({ invoiceNo: e.target.value })}
-                className="form-input"
-                placeholder="Invoice number"
-                autoFocus
-              />
+              <CollaborativeField
+                fieldKey="billingDetails.invoiceNo"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('billingDetails.invoiceNo')}
+                onBlur={() => emitBlur('billingDetails.invoiceNo')}
+              >
+                <input
+                  type="text"
+                  value={billingDetails.invoiceNo}
+                  onChange={e => onUpdateBilling({ invoiceNo: e.target.value })}
+                  className="form-input"
+                  placeholder="Invoice number"
+                  autoFocus
+                />
+              </CollaborativeField>
             </div>
             <div className="input-group">
               <label>Job Order No.</label>
-              <input
-                type="text"
-                value={billingDetails.jobOrderNo}
-                onChange={e => onUpdateBilling({ jobOrderNo: e.target.value })}
-                className="form-input"
-                placeholder="Job order number"
-              />
+              <CollaborativeField
+                fieldKey="billingDetails.jobOrderNo"
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus('billingDetails.jobOrderNo')}
+                onBlur={() => emitBlur('billingDetails.jobOrderNo')}
+              >
+                <input
+                  type="text"
+                  value={billingDetails.jobOrderNo}
+                  onChange={e => onUpdateBilling({ jobOrderNo: e.target.value })}
+                  className="form-input"
+                  placeholder="Job order number"
+                />
+              </CollaborativeField>
             </div>
 
             {/* Divider */}
@@ -101,13 +118,20 @@ const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBil
             {BANK_FIELDS.map(({ key, label, placeholder }) => (
               <div className="input-group" key={key}>
                 <label>{label}</label>
-                <input
-                  type="text"
-                  value={billingDetails[key] as string}
-                  onChange={e => onUpdateBilling({ [key]: e.target.value })}
-                  className="form-input"
-                  placeholder={placeholder}
-                />
+                <CollaborativeField
+                  fieldKey={`billingDetails.${key}`}
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus(`billingDetails.${key}`)}
+                  onBlur={() => emitBlur(`billingDetails.${key}`)}
+                >
+                  <input
+                    type="text"
+                    value={billingDetails[key] as string}
+                    onChange={e => onUpdateBilling({ [key]: e.target.value })}
+                    className="form-input"
+                    placeholder={placeholder}
+                  />
+                </CollaborativeField>
               </div>
             ))}
           </div>
