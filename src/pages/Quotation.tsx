@@ -11,7 +11,7 @@
  * chosen, eliminating ghost-room creation on the backend.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useModal } from '../components/ModalContext'
 import QuotationEntryModal from '../components/Quotation/QuotationEntryModal'
@@ -29,7 +29,19 @@ export default function Quotation() {
     password?: string
     displayName?: string
     mode: 'join' | 'create'
-  } | null>(null)
+  } | null>(() => {
+    const saved = sessionStorage.getItem('kmti_quot_current_session')
+    return saved ? JSON.parse(saved) : null
+  })
+
+  // ── Persistence Effect ───────────────────────────────────────
+  useEffect(() => {
+    if (activeSession) {
+      sessionStorage.setItem('kmti_quot_current_session', JSON.stringify(activeSession))
+    } else {
+      sessionStorage.removeItem('kmti_quot_current_session')
+    }
+  }, [activeSession])
 
   // ── Lobby action handlers ──────────────────────────────────────
 

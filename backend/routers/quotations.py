@@ -227,11 +227,20 @@ async def leave_doc(sid: str, data: dict):
     if not q_id: return
     
     if q_id in _active_users and sid in _active_users[q_id]:
-        del _active_users[q_id][sid]
-        await sio.leave_room(sid, f"quot_{q_id}")
+        user_info = _active_users[q_id].pop(sid)
+        room_name = f"quot_{q_id}"
+        await sio.leave_room(sid, room_name)
         
-        if not _active_users[q_id]:
-            del _active_users[q_id]
+        # Broadcast to others in the room
+        await sio.emit(
+            "user_left",
+            {"sid": sid, "name": user_info.get("name", "Unknown"), "users": _active_users.get(q_id, {})},
+            room=room_name,
+        )
+        
+        if not _active_users.get(q_id):
+            if q_id in _active_users:
+                del _active_users[q_id]
             from db.database import AsyncSessionLocal
             async with AsyncSessionLocal() as session:
                 await session.execute(

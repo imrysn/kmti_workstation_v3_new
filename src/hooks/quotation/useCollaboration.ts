@@ -55,6 +55,7 @@ export function useCollaboration({
   emitSelection: (fieldKey: string, start: number, end: number) => void
   emitPatch: (patch: { path: string; value: any }, fullState?: any) => void
   emitSnapshot: (fullState: any, label?: string) => void
+  leaveRoom: () => void
 } {
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -273,13 +274,23 @@ export function useCollaboration({
     })
 
     return () => {
-      if (currentQuotIdRef.current) {
-        socket.emit('leave_doc', { quot_id: currentQuotIdRef.current })
-      }
+      // We DO NOT emit 'leave_doc' here anymore. 
+      // This allows the user to navigate to other pages in the app 
+      // without being removed from the collaborative workspace.
       socket.removeAllListeners()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quotId, userName])
+
+  const leaveRoom = useCallback(() => {
+    if (socketRef.current && currentQuotIdRef.current) {
+      socketRef.current.emit('leave_doc', { quot_id: currentQuotIdRef.current })
+      // Also clear in-memory state
+      currentQuotIdRef.current = null
+      setRemoteUsers({})
+      setIsConnected(false)
+    }
+  }, [])
 
   const emitFocus = useCallback((fieldKey: string) => {
     if (!socketRef.current || !currentQuotIdRef.current) return
@@ -319,5 +330,17 @@ export function useCollaboration({
     })
   }, [])
 
-  return { isConnected, remoteUsers, myEffectiveName, myColor, mySessionId, emitFocus, emitBlur, emitSelection, emitPatch, emitSnapshot }
+  return { 
+    isConnected, 
+    remoteUsers, 
+    myEffectiveName, 
+    myColor, 
+    mySessionId, 
+    emitFocus, 
+    emitBlur, 
+    emitSelection, 
+    emitPatch, 
+    emitSnapshot,
+    leaveRoom
+  }
 }

@@ -157,15 +157,25 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitBlur,
     emitSelection,
     emitPatch,
-    emitSnapshot
+    emitSnapshot,
+    leaveRoom
   } = useCollaboration({
     quotId,
     quotNo,
     password,
     displayName,
     userName: user?.username || 'User',
-    onUserJoined: (u) => notify(`${u.name} joined the session`, 'success'),
-    onUserLeft: (u) => notify(`${u.name} left the session`, 'info'),
+    onUserJoined: (u) => {
+      // Don't toast for yourself unless it's a truly new connection
+      if (u.name !== myEffectiveName) {
+        notify(`${u.name} joined the session`, 'success')
+      }
+    },
+    onUserLeft: (u) => {
+      if (u.name !== myEffectiveName) {
+        notify(`${u.name} left the session`, 'info')
+      }
+    },
     onRemotePatch: (patch: { path: string; value: any }, sid: string) => {
       const userColor = remoteUsers[sid]?.color || '#4A90D9'
       if (patch.path !== '__full_restore__') {
@@ -517,9 +527,14 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                   ? 'You have unsaved changes. Leave the workspace anyway?'
                   : 'Return to the workspace lobby? Your session will remain active for others.'
 
+                const doLeave = () => {
+                  leaveRoom();
+                  onLeave();
+                };
+
                 showConfirm(
                   message,
-                  () => onLeave(),
+                  doLeave,
                   undefined,
                   hasUnsavedChanges ? 'danger' : 'primary',
                   'Return to Lobby?',
