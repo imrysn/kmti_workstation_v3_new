@@ -586,6 +586,6 @@ export function useInvoiceState() {
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures, setSelectedMainTaskId,
     updateManualOverrides, setCollapsedTaskIds,
-    resetToNew, loadData, getSaveData, markSaved,
+    resetToNew, loadData, getSaveData, markSaved, setHasUnsavedChanges,
   }
 }

@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react'
-import api from '../../services/api'
+import { useState, useEffect } from 'react'
+import { quotationApi } from '../../services/api'
 import './QuotationEntryModal.css'
 
 interface ActiveSession {
+  id: number
   quotNo: string
-  userCount: number
-  hasPassword?: boolean
   displayName: string
-  users: { name: string; color: string }[]
+  userCount: number
+  users: Array<{ name: string; color: string }>
+  hasPassword?: boolean
 }
 
 interface NewRoomForm {
@@ -16,8 +17,8 @@ interface NewRoomForm {
 }
 
 interface Props {
-  onJoin: (quotNo: string, password?: string) => void
-  onCreateNew: (roomName: string, password?: string) => void
+  onJoin: (id: number, password?: string) => void
+  onCreateNew: (name: string, password?: string) => void
   onClose?: () => void
   mandatory?: boolean
 }
@@ -27,44 +28,49 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
   const [loading, setLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
   const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '' })
-  const [joiningRoom, setJoiningRoom] = useState<ActiveSession | null>(null)
+  const [joiningSession, setJoiningSession] = useState<ActiveSession | null>(null)
   const [joinPassword, setJoinPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
-  const fetchSessions = async () => {
-    setLoading(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  
+  const fetchSessions = async (silent = false) => {
+    if (!silent) setLoading(true)
+    setErrorMessage(null)
     try {
-      const res = await api.get<{ sessions: ActiveSession[] }>('/quotations/sessions')
+      const res = await quotationApi.getSessions()
       setSessions(res.data.sessions || [])
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to fetch active sessions')
+      setErrorMessage('Server connection failed. Is the backend running?')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }
 
   useEffect(() => {
     fetchSessions()
-    const timer = setInterval(fetchSessions, 10000)
+    const timer = setInterval(() => fetchSessions(true), 10000)
     return () => clearInterval(timer)
   }, [])
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    if (!newRoom.name.trim()) return
     onCreateNew(newRoom.name.trim(), newRoom.password)
   }
 
   const handleJoinClick = (s: ActiveSession) => {
     if (s.hasPassword) {
-      setJoiningRoom(s)
+      setJoiningSession(s)
     } else {
-      onJoin(s.quotNo)
+      onJoin(s.id)
     }
   }
 
   const handleJoinSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (joiningRoom) onJoin(joiningRoom.quotNo, joinPassword)
+    if (joiningSession) onJoin(joiningSession.id, joinPassword)
   }
 
   return (
@@ -98,21 +104,21 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
 
         {/* ── Body ───────────────────────────────────────────────── */}
         <div className="quot-entry-body">
-          {joiningRoom ? (
+          {joiningSession ? (
             <div className="quot-entry-form-container">
-              <button className="quot-entry-back" onClick={() => setJoiningRoom(null)}>
+              <button className="quot-entry-back" onClick={() => setJoiningSession(null)}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
                 Back to lobby
               </button>
               <form onSubmit={handleJoinSubmit} className="quot-entry-form">
-                <h3>Password required</h3>
-                <p>This room is protected. Enter the password to join <strong>{joiningRoom.displayName}</strong>.</p>
+                <h3>Password Required</h3>
+                <p>This workspace is protected. Enter the password to join <strong>{joiningSession.displayName}</strong>.</p>
                 <div className="form-group">
                   <input
                     type="password"
-                    placeholder="Room password"
+                    placeholder="Workspace password"
                     value={joinPassword}
                     onChange={e => setJoinPassword(e.target.value)}
                     autoFocus
@@ -120,7 +126,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                     className="form-input"
                   />
                 </div>
-                <button type="submit" className="btn btn-primary btn-block">Join session</button>
+                <button type="submit" className="btn btn-primary btn-block">Unlock & Join</button>
               </form>
             </div>
           ) : isCreating ? (
@@ -132,18 +138,14 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                 Back to lobby
               </button>
               <form onSubmit={handleCreateSubmit} className="quot-entry-form">
-                <h3>New Workspace</h3>
-                <p>Set up a session to start collaborating on a new quotation.</p>
+                <h3>Start New Workspace</h3>
+                <p>Initialize a fresh collaborative session. Choose a name to help others find you.</p>
 
                 <div className="form-group">
-                  <label>
-                    Room name
-                    <span className="label-optional">(optional)</span>
-                  </label>
+                  <label>Workspace Name</label>
                   <div className="input-with-icon">
                     <svg className="input-icon-prefix" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                      <polyline points="9 22 9 12 15 12 15 22" />
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                     </svg>
                     <input
                       type="text"
@@ -151,23 +153,21 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                       value={newRoom.name}
                       onChange={e => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
                       autoFocus
+                      required
                       className="form-input"
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label>
-                    Password
-                    <span className="label-optional">(optional)</span>
-                  </label>
+                  <label>Password (optional)</label>
                   <div className="input-with-icon">
                     <svg className="input-icon-prefix" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
                     </svg>
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Leave blank for public room"
+                      placeholder="Leave blank for public access"
                       value={newRoom.password || ''}
                       onChange={e => setNewRoom(prev => ({ ...prev, password: e.target.value }))}
                       className="form-input"
@@ -176,89 +176,94 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                       type="button"
                       className="password-toggle-btn"
                       onClick={() => setShowPassword(!showPassword)}
-                      title={showPassword ? 'Hide password' : 'Show password'}
                     >
-                      {showPassword ? (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M9.88 9.88 3.5 3.5" /><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" /><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" /><line x1="2" x2="22" y1="2" y2="22" /><circle cx="12" cy="12" r="3" />
-                        </svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
-                        </svg>
-                      )}
+                      {showPassword ? 'Hide' : 'Show'}
                     </button>
                   </div>
                 </div>
 
-                <div className="quot-form-actions">
-                  <button type="submit" className="btn btn-primary">
-                    Create workspace
-                  </button>
-                </div>
+                <button type="submit" className="btn btn-primary btn-block">Initialize Workspace</button>
               </form>
             </div>
           ) : (
             <>
-              <p className="quot-entry-section-label">Active sessions</p>
-              <div className="quot-session-list">
-                {loading && sessions.length === 0 && (
-                  <div className="quot-session-empty">Scanning network…</div>
-                )}
-                {!loading && sessions.length === 0 && (
-                  <div className="quot-session-empty">No active sessions found.</div>
-                )}
-                {sessions.map(s => (
-                  <div key={s.quotNo} className="quot-session-item" onClick={() => handleJoinClick(s)}>
-                    <div className="quot-session-info">
-                      <div className="quot-session-name-row">
-                        <span className="quot-session-no">{s.displayName}</span>
-                        {s.hasPassword && (
-                          <span className="quot-session-lock" title="Password protected">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                            </svg>
-                          </span>
-                        )}
-                      </div>
-                      <div className="quot-session-meta">
-                        <span className="quot-session-subno">{s.quotNo}</span>
-                        <div className="quot-session-avatars">
-                          {s.users.map((u, i) => (
-                            <div
-                              key={i}
-                              className="quot-session-avatar"
-                              style={{ backgroundColor: u.color }}
-                              title={u.name}
-                            >
-                              {u.name.substring(0, 2).toUpperCase()}
+              <div className="quot-entry-sessions">
+              <h3>Active Workspaces</h3>
+              {loading ? (
+                <div className="quot-entry-loading">
+                  <div className="spinner-small" />
+                  <span>Querying sessions...</span>
+                </div>
+              ) : errorMessage ? (
+                <div className="quot-entry-error-msg">
+                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e05c6b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                   </svg>
+                   <span>{errorMessage}</span>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="quot-entry-empty">
+                  <p>No active workspaces found.</p>
+                  <span>Create a new one to start collaborating.</span>
+                </div>
+              ) : (
+                <div className="quot-session-list">
+                  {sessions.map(s => (
+                    <div key={s.id} className="quot-session-item" onClick={() => handleJoinClick(s)}>
+                      <div className="quot-session-info">
+                        <div className="quot-session-name-row">
+                          <span className="quot-session-no">{s.displayName}</span>
+                          {s.hasPassword && (
+                            <div className="quot-session-lock" title="Password required">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
                             </div>
-                          ))}
+                          )}
                         </div>
-                        <span className="quot-session-count">{s.userCount} online</span>
+                        <div className="quot-session-meta">
+                          <span className="quot-session-subno">{s.quotNo}</span>
+                          <div className="quot-session-avatars">
+                            {s.users.map((u, i) => (
+                              <div
+                                key={i}
+                                className="quot-session-avatar"
+                                style={{ backgroundColor: u.color, marginLeft: i === 0 ? 0 : -8 }}
+                                title={u.name}
+                              >
+                                 {(u.name || 'U').charAt(0).toUpperCase()}
+                              </div>
+                            ))}
+                          </div>
+                          <span className="quot-session-count">
+                            {s.userCount} {s.userCount === 1 ? 'user' : 'users'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="quot-session-action">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }}>
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
                       </div>
                     </div>
-                    <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); handleJoinClick(s) }}>Join</button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
 
-        {/* ── Footer ─────────────────────────────────────────────── */}
-        {!isCreating && !joiningRoom && (
-          <div className="quot-entry-footer">
-            <button className="quot-footer-btn" onClick={() => setIsCreating(true)} style={{ width: '100%', justifyContent: 'center' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {!isCreating && !joiningSession && (
+          <footer className="quot-entry-footer">
+            <button className="quot-footer-btn" onClick={() => setIsCreating(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
               </svg>
-              New quotation
+              Start New Workspace
             </button>
-          </div>
+          </footer>
         )}
-
       </div>
     </div>
   )

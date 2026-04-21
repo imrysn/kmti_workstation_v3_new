@@ -30,7 +30,7 @@ const DateTimeOverlay: React.FC = () => {
     overlayRef
   );
 
-  // Sync stopwatch state back to persistence (since useDateTimeSettings only knows about its own state)
+  // Sync stopwatch state back to persistence
   useEffect(() => {
     const data: SettingsV6 = {
       position: settings.position,
@@ -46,6 +46,36 @@ const DateTimeOverlay: React.FC = () => {
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [settings, stopwatch.swRunning, stopwatch.swAccumulated, stopwatch.swStartTime]);
+
+  // Keep overlay in bounds when window is resized
+  useEffect(() => {
+    const handleResize = () => {
+      if (!overlayRef.current) return;
+      
+      const padding = 15;
+      const width = overlayRef.current.offsetWidth;
+      const height = overlayRef.current.offsetHeight;
+
+      settings.setPosition(prev => {
+        const maxX = window.innerWidth - width - padding;
+        const maxY = window.innerHeight - height - padding;
+        
+        let newX = Math.max(padding, Math.min(prev.x, maxX));
+        let newY = Math.max(padding, Math.min(prev.y, maxY));
+        
+        // If nothing changed, return prev to avoid unnecessary re-renders
+        if (newX === prev.x && newY === prev.y) return prev;
+        
+        return { x: newX, y: newY };
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    // Initial check in case it's already out of bounds on mount (e.g. state loaded from larger screen)
+    handleResize();
+    
+    return () => window.removeEventListener('resize', handleResize);
+  }, [settings.setPosition, settings.isExpanded]); // Re-run when expanded/collapsed as dimensions change
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();

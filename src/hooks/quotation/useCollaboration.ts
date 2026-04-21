@@ -26,7 +26,8 @@ export interface CollaborationState {
 }
 
 interface UseCollaborationOptions {
-  quotNo: string | null
+  quotId: number | null
+  quotNo?: string | null
   password?: string
   displayName?: string   // Human-readable label shown in the sessions list
   userName?: string // Fallback, but computer name takes priority
@@ -38,6 +39,7 @@ interface UseCollaborationOptions {
 }
 
 export function useCollaboration({
+  quotId,
   quotNo,
   password,
   displayName,
@@ -60,7 +62,7 @@ export function useCollaboration({
   const [myEffectiveName, setMyEffectiveName] = useState(userName || 'User')
   const [myColor, setMyColor] = useState('#4A90D9')
   const [mySessionId, setMySessionId] = useState('')
-  const currentQuotRef = useRef<string | null>(null)
+  const currentQuotIdRef = useRef<number | null>(null)
   const patchHandlerRef = useRef(onRemotePatch)
   const auditHandlerRef = useRef(onAuditEntry)
 
@@ -83,7 +85,7 @@ export function useCollaboration({
   }, [onError])
 
   useEffect(() => {
-    if (!quotNo) return
+    if (!quotId) return
 
     // Clear stale presence from previous room immediately — don't wait for server
     setRemoteUsers({})
@@ -109,8 +111,14 @@ export function useCollaboration({
         console.warn('[collaboration] Failed to fetch workstation info:', e)
       }
       setMyEffectiveName(finalName)
-      socket.emit('join_doc', { quot_no: quotNo, user_name: finalName, password, display_name: displayName || null })
-      currentQuotRef.current = quotNo
+      socket.emit('join_doc', { 
+        quot_id: quotId, 
+        quot_no: quotNo, // Sent as fallback/metadata
+        user_name: finalName, 
+        password, 
+        display_name: displayName || null 
+      })
+      currentQuotIdRef.current = quotId
     }
 
     socket.on('connect', async () => {
@@ -123,54 +131,94 @@ export function useCollaboration({
     if (socket.connected) {
       setIsConnected(true)
       setMySessionId(socket.id || '')
-      if (currentQuotRef.current && currentQuotRef.current !== quotNo) {
-        socket.emit('leave_doc', { quot_no: currentQuotRef.current })
+      if (currentQuotIdRef.current && currentQuotIdRef.current !== quotId) {
+        socket.emit('leave_doc', { quot_id: currentQuotIdRef.current })
       }
       doJoin()
     }
 
-    socket.on('disconnect', () => {
+    socket.on('connect_error', (err) => {
+      console.error('[collaboration] Connection Error:', err.message, 'URL:', SERVER_BASE)
+      setIsConnected(false)
+    })
+
+    socket.on('reconnect_attempt', (num) => {
+      console.log(`[collaboration] Reconnect attempt #${num}...`)
+    })
+
+    socket.on('disconnect', (reason) => {
+      console.warn('[collaboration] Disconnected:', reason)
       setIsConnected(false)
     })
 
     // Server confirmed we joined and assigned our color
-    socket.on('joined', (data: { sid: string; color: string; users: Record<string, RemoteUser> }) => {
+    socket.on('joined', (data: { sid: string; color: string; users: Record<string, any> }) => {
       setMyColor(data.color)
       setMySessionId(data.sid)
-      const others = { ...data.users }
-      delete others[data.sid]
+      
+      const others: Record<string, RemoteUser> = {}
+      Object.entries(data.users).forEach(([sid, u]) => {
+        if (sid !== data.sid) {
+          others[sid] = { ...u, sid }
+        }
+      })
       setRemoteUsers(others)
     })
 
-    socket.on('user_joined', (data: { sid: string; name: string; color: string; users: Record<string, RemoteUser> }) => {
+    socket.on('user_joined', (data: { sid: string; name: string; color: string; users: Record<string, any> }) => {
       const newUser = { sid: data.sid, name: data.name, color: data.color }
-      setRemoteUsers(prev => ({
-        ...prev,
-        [data.sid]: newUser,
-      }))
+      setRemoteUsers(prev => {
+        const next: Record<string, RemoteUser> = {}
+        Object.entries(data.users).forEach(([sid, u]) => {
+          if (sid !== socket.id) {
+            next[sid] = {
+              ...(prev[sid] || {}), // preserve focusedField, selection, etc.
+              ...u,
+              sid
+            }
+          }
+        })
+        return next
+      })
       joinHandlerRef.current?.(newUser)
     })
 
-    socket.on('user_left', (data: { sid: string }) => {
+    socket.on('user_left', (data: { sid: string; users: Record<string, any> }) => {
       setRemoteUsers(prev => {
         if (prev[data.sid]) {
           leftHandlerRef.current?.(prev[data.sid])
         }
-        const next = { ...prev }
-        delete next[data.sid]
+        const next: Record<string, RemoteUser> = {}
+        // Purge ghosts by only keeping users present in the server's list
+        if (data.users) {
+          Object.entries(data.users).forEach(([sid, u]) => {
+            if (sid !== socket.id) {
+              next[sid] = {
+                ...(prev[sid] || {}),
+                ...u,
+                sid
+              }
+            }
+          })
+        }
         return next
       })
     })
 
     // Field focus/blur presence tracking
     socket.on('remote_focus', (data: { sid: string; field_key: string; name: string; color: string }) => {
-      setRemoteUsers(prev => ({
-        ...prev,
-        [data.sid]: {
-          ...(prev[data.sid] || { sid: data.sid, name: data.name, color: data.color }),
-          focusedField: data.field_key,
-        },
-      }))
+      setRemoteUsers(prev => {
+        const u = prev[data.sid] || { sid: data.sid }
+        return {
+          ...prev,
+          [data.sid]: {
+            ...u,
+            name: data.name || u.name || 'Unknown',
+            color: data.color || u.color || '#4A90D9',
+            focusedField: data.field_key,
+          },
+        }
+      })
     })
 
     socket.on('remote_blur', (data: { sid: string; field_key: string }) => {
@@ -219,34 +267,34 @@ export function useCollaboration({
         const sidebar = document.querySelector('.history-sidebar')
         if (sidebar) {
           // Internal event for HistorySidebar to pick up
-          window.dispatchEvent(new CustomEvent('quot:history-refresh', { detail: { quotNo } }))
+          window.dispatchEvent(new CustomEvent('quot:history-refresh', { detail: { quotId } }))
         }
       }, 500)
     })
 
     return () => {
-      if (currentQuotRef.current) {
-        socket.emit('leave_doc', { quot_no: currentQuotRef.current })
+      if (currentQuotIdRef.current) {
+        socket.emit('leave_doc', { quot_id: currentQuotIdRef.current })
       }
       socket.removeAllListeners()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quotNo, userName])
+  }, [quotId, userName])
 
   const emitFocus = useCallback((fieldKey: string) => {
-    if (!socketRef.current || !currentQuotRef.current) return
-    socketRef.current.emit('focus_field', { quot_no: currentQuotRef.current, field_key: fieldKey })
+    if (!socketRef.current || !currentQuotIdRef.current) return
+    socketRef.current.emit('focus_field', { quot_id: currentQuotIdRef.current, field_key: fieldKey })
   }, [])
 
   const emitBlur = useCallback((fieldKey: string) => {
-    if (!socketRef.current || !currentQuotRef.current) return
-    socketRef.current.emit('blur_field', { quot_no: currentQuotRef.current, field_key: fieldKey })
+    if (!socketRef.current || !currentQuotIdRef.current) return
+    socketRef.current.emit('blur_field', { quot_id: currentQuotIdRef.current, field_key: fieldKey })
   }, [])
 
   const emitSelection = useCallback((fieldKey: string, start: number, end: number) => {
-    if (!socketRef.current || !currentQuotRef.current) return
+    if (!socketRef.current || !currentQuotIdRef.current) return
     socketRef.current.emit('focus_selection', { 
-      quot_no: currentQuotRef.current, 
+      quot_id: currentQuotIdRef.current, 
       field_key: fieldKey,
       start,
       end
@@ -254,18 +302,18 @@ export function useCollaboration({
   }, [])
 
   const emitPatch = useCallback((patch: { path: string; value: any }, fullState?: any) => {
-    if (!socketRef.current || !currentQuotRef.current) return
+    if (!socketRef.current || !currentQuotIdRef.current) return
     socketRef.current.emit('update_field', {
-      quot_no: currentQuotRef.current,
+      quot_id: currentQuotIdRef.current,
       patch,
       full_state: fullState,
     })
   }, [])
 
   const emitSnapshot = useCallback((fullState: any, label?: string) => {
-    if (!socketRef.current || !currentQuotRef.current) return
+    if (!socketRef.current || !currentQuotIdRef.current) return
     socketRef.current.emit('trigger_snapshot', {
-      quot_no: currentQuotRef.current,
+      quot_id: currentQuotIdRef.current,
       full_state: fullState,
       label,
     })

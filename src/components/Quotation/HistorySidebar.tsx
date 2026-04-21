@@ -3,20 +3,15 @@
  * ─────────────────────────────────────────────────────────────────
  * A collapsible left panel showing the version history snapshots
  * of the currently open shared quotation.
- *
- * Behavior:
- * - Collapsed by default (shows only a thin strip with an icon)
- * - Expands to a 220px panel on click
- * - Fetches snapshot list from the backend (/api/quotations/{quotNo}/history)
- * - Lets users restore a previous version
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import api from '../../services/api'
+import { quotationApi } from '../../services/api'
+import { IQuotationHistory } from '../../types'
 import { interpretAudit } from './utils/auditUtils'
 import './HistorySidebar.css'
 
-// Internal Premium Icons (Replaces missing lucide-react dependency)
+// Internal Premium Icons
 const ClockIcon = ({ size = 16, ...props }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <circle cx="12" cy="12" r="10" />
@@ -30,31 +25,11 @@ const RefreshIcon = ({ size = 16, ...props }) => (
   </svg>
 )
 
-interface Snapshot {
-  timestamp: string
-  label: string
-  description?: string // Added for descriptive summaries
-}
-
-
 /**
  * Robust date parser for backend formats
  */
 function safeParseDate(ts: string | undefined): Date {
   if (!ts) return new Date()
-
-  // Format: 20231027_100000 (Custom from backend snapshots)
-  if (ts.includes('_') && ts.length >= 15) {
-    const [datePart, timePart] = ts.split('_')
-    const y = datePart.substring(0, 4)
-    const m = datePart.substring(4, 6)
-    const d = datePart.substring(6, 8)
-    const hh = timePart.substring(0, 2)
-    const mm = timePart.substring(2, 4)
-    const ss = timePart.substring(4, 6)
-    return new Date(`${y}-${m}-${d}T${hh}:${mm}:${ss}`)
-  }
-
   const d = new Date(ts)
   return isNaN(d.getTime()) ? new Date() : d
 }
@@ -104,6 +79,7 @@ function groupItemsByDate<T extends { timestamp: string }>(items: T[]) {
 }
 
 interface Props {
+  quotId: number | undefined
   quotNo: string | null
   onRestore: (data: any) => void
   onPreview?: (data: any, ts: string) => void
@@ -112,23 +88,23 @@ interface Props {
   workstationName?: string
 }
 
-export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, auditLogs, workstationName }: Props) {
+export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewingTs, auditLogs, workstationName }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [activeTab, setActiveTab] = useState<'history' | 'activity'>('history')
-  const [snapshots, setSnapshots] = useState<Snapshot[]>([])
+  const [snapshots, setSnapshots] = useState<IQuotationHistory[]>([])
   const [localLogs, setLocalLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [restoringTs, setRestoringTs] = useState<string | null>(null)
-  const [previewLoadingTs, setPreviewLoadingTs] = useState<string | null>(null)
+  const [restoringId, setRestoringId] = useState<number | null>(null)
+  const [previewLoadingId, setPreviewLoadingId] = useState<number | null>(null)
 
   const fetchHistory = useCallback(async (isSilent = false) => {
-    if (!quotNo) return
+    if (!quotId) return
     if (!isSilent) setLoading(true)
     else setIsRefreshing(true)
 
     try {
-      const res = await api.get<{ history: Snapshot[] }>(`/quotations/${encodeURIComponent(quotNo)}/history`)
+      const res = await quotationApi.getHistory(quotId)
       setSnapshots(res.data.history || [])
     } catch {
       setSnapshots([])
@@ -136,47 +112,34 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
       setLoading(false)
       setIsRefreshing(false)
     }
-  }, [quotNo])
+  }, [quotId])
 
   // Reset local sidebar state when quotNo changes
   useEffect(() => {
     setSnapshots([])
     setLocalLogs([])
-    setPreviewLoadingTs(null)
-  }, [quotNo])
+    setPreviewLoadingId(null)
+  }, [quotId])
 
   // Fetch whenever the sidebar expands or quotNo changes
   useEffect(() => {
-    if (expanded && quotNo) {
+    if (expanded && quotId) {
       if (activeTab === 'history') fetchHistory()
-      else fetchLogs()
+      // else fetchLogs() // Activity logs currently simplified to Socket-only for this version
     }
-  }, [expanded, quotNo, activeTab, fetchHistory])
+  }, [expanded, quotId, activeTab, fetchHistory])
 
   // Listen for background refresh events (triggered by collaboration socket)
   useEffect(() => {
-    if (!quotNo) return
+    if (!quotId) return
     const handleRefresh = (e: any) => {
-      if (e.detail?.quotNo === quotNo && activeTab === 'history') {
+      if (e.detail?.quotId === quotId && activeTab === 'history') {
         fetchHistory(true) // silent refresh
       }
     }
     window.addEventListener('quot:history-refresh' as any, handleRefresh)
     return () => window.removeEventListener('quot:history-refresh' as any, handleRefresh)
-  }, [quotNo, activeTab, fetchHistory])
-
-  const fetchLogs = async () => {
-    if (!quotNo) return
-    setLoading(true)
-    try {
-      const res = await api.get<{ logs: any[] }>(`/quotations/${encodeURIComponent(quotNo)}/logs`)
-      setLocalLogs(res.data.logs || [])
-    } catch {
-      setLocalLogs([])
-    } finally {
-      setLoading(false)
-    }
-  }
+  }, [quotId, activeTab, fetchHistory])
 
   // Merge local logs with live audit logs from prop (Memoized for performance)
   const displayLogs = useMemo(() => {
@@ -185,30 +148,30 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
       .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
   }, [auditLogs, localLogs])
 
-  const handleRestore = async (ts: string) => {
-    if (!quotNo) return
-    setRestoringTs(ts)
+  const handleRestore = async (snap: IQuotationHistory) => {
+    if (!quotId) return
+    setRestoringId(snap.id)
     try {
-      const res = await api.get(`/quotations/${encodeURIComponent(quotNo)}/history/${ts}`)
+      const res = await quotationApi.restoreHistory(quotId, snap.id)
       onRestore(res.data)
     } catch (e) {
       alert('Failed to restore snapshot.')
     } finally {
-      setRestoringTs(null)
+      setRestoringId(null)
     }
   }
 
-  const handlePreview = async (ts: string) => {
-    if (!quotNo || !onPreview) return
-    if (previewingTs === ts) return // already previewing
-    setPreviewLoadingTs(ts)
+  const handlePreview = async (snap: IQuotationHistory) => {
+    if (!quotId || !onPreview) return
+    if (previewingTs === snap.timestamp) return // already previewing
+    setPreviewLoadingId(snap.id)
     try {
-      const res = await api.get(`/quotations/${encodeURIComponent(quotNo)}/history/${ts}`)
-      onPreview(res.data, ts)
+      const res = await quotationApi.restoreHistory(quotId, snap.id)
+      onPreview(res.data, snap.timestamp)
     } catch (e) {
       console.error('Failed to fetch preview:', e)
     } finally {
-      setPreviewLoadingTs(null)
+      setPreviewLoadingId(null)
     }
   }
 
@@ -243,11 +206,11 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
           </div>
 
           <div className="history-sidebar__scroll-area">
-            {!quotNo && (
-              <p className="history-sidebar__empty">Open a shared quotation to see its history.</p>
+            {!quotId && (
+              <p className="history-sidebar__empty">Waiting for database connection...</p>
             )}
 
-            {quotNo && activeTab === 'history' && (
+            {quotId && activeTab === 'history' && (
               <>
                 {loading && snapshots.length === 0 && <p className="history-sidebar__empty">Loading versions…</p>}
                 {!loading && snapshots.length === 0 && <p className="history-sidebar__empty">No snapshots yet.</p>}
@@ -259,13 +222,13 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
                       const snapDt = safeParseDate(snap.timestamp)
                       const timeStr = snapDt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                       const isPreviewing = previewingTs === snap.timestamp
-                      const isPreLoading = previewLoadingTs === snap.timestamp
+                      const isPreLoading = previewLoadingId === snap.id
 
                       return (
                         <div
-                          key={snap.timestamp}
+                          key={snap.id}
                           className={`timeline-item ${isPreviewing ? 'timeline-item--previewing' : ''} ${isPreLoading ? 'timeline-item--loading' : ''}`}
-                          onClick={() => handlePreview(snap.timestamp)}
+                          onClick={() => handlePreview(snap)}
                         >
                           <div className="timeline-node" />
                           <div className="timeline-content">
@@ -275,18 +238,17 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
                                 className="restore-ghost-btn"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  handleRestore(snap.timestamp)
+                                  handleRestore(snap)
                                 }}
-                                disabled={restoringTs === snap.timestamp}
+                                disabled={restoringId === snap.id}
                                 title="Restore this version permanently"
                               >
-                                {restoringTs === snap.timestamp ? '...' : 'Restore'}
+                                {restoringId === snap.id ? '...' : 'Restore'}
                               </button>
                             </div>
                             <div className="timeline-desc">
-                              {snap.description
-                                ? snap.description.replace('{hostname}', workstationName || 'Workstation')
-                                : `${workstationName || 'Workstation'} made some changes`}
+                              {snap.label || 'Modified system snapshot'}
+                              <span className="timeline-author">by {snap.author}</span>
                             </div>
                             <div className="timeline-meta">{formatTimeAgo(snap.timestamp)}</div>
                           </div>
@@ -298,7 +260,7 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
               </>
             )}
 
-            {quotNo && activeTab === 'activity' && (
+            {quotId && activeTab === 'activity' && (
               <>
                 {loading && displayLogs.length === 0 && <p className="history-sidebar__empty">Loading activity…</p>}
                 {!loading && displayLogs.length === 0 && <p className="history-sidebar__empty">No activity yet.</p>}
@@ -332,7 +294,7 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
             )}
           </div>
 
-          {quotNo && activeTab === 'history' && !loading && snapshots.length > 0 && (
+          {quotId && activeTab === 'history' && !loading && snapshots.length > 0 && (
             <button
               className={`history-sidebar__refresh ${isRefreshing ? 'history-sidebar__refresh--active' : ''}`}
               onClick={() => fetchHistory(true)}

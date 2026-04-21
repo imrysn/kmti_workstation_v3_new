@@ -53,7 +53,6 @@ export function useFileOperations({
     try {
       const data = getSaveData()
       const jsonString = JSON.stringify(data, null, 2)
-      
       const quotNo = getQuotationNo().replace(/[^a-zA-Z0-9_\-]/g, '_') || 'Draft'
       const dateStamp = new Date().toISOString().split('T')[0]
       const defaultFileName = `KMTI_Quotation_${quotNo}_${dateStamp}.json`

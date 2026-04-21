@@ -18,7 +18,7 @@ const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder
   { key: 'branchCode',    label: 'Branch Code',         placeholder: 'e.g. 358' },
 ]
 
-const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling, onUpdateQuotation }: Props) => {
+const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 

@@ -29,9 +29,9 @@ export function CollaborationBar({ isConnected, remoteUsers, myColor, userName, 
         <div
           className="collab-avatar collab-avatar--me"
           style={{ background: myColor }}
-          title={`${userName} (You)`}
+          title={`${userName || 'User'} (You)`}
         >
-          {userName.charAt(0).toUpperCase()}
+          {(userName || 'U').charAt(0).toUpperCase()}
         </div>
 
         {/* Other connected users */}
@@ -40,9 +40,9 @@ export function CollaborationBar({ isConnected, remoteUsers, myColor, userName, 
             key={u.sid || `user-${idx}`}
             className="collab-avatar"
             style={{ background: u.color }}
-            title={u.name}
+            title={u.name || 'Unknown User'}
           >
-            {u.name.charAt(0).toUpperCase()}
+            {(u.name || 'U').charAt(0).toUpperCase()}
           </div>
         ))}
       </div>

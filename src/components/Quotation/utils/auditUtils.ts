@@ -106,7 +106,7 @@ export function interpretAudit(path: string, value?: any): string {
   if (path.startsWith('task.')) {
     const parts = path.split('.')
     const field = parts[parts.length - 1]
-    const label = TASK_FIELD_LABELS[field] ?? (field.charAt(0).toUpperCase() + field.slice(1))
+    const label = TASK_FIELD_LABELS[field] ?? ((field?.charAt(0) || '').toUpperCase() + field.slice(1))
     return `Updated assembly ${label}`
   }
 

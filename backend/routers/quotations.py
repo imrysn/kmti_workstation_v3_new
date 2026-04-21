@@ -1,61 +1,41 @@
 r"""
-Quotations Router
+Quotations Router v2 (Database-First)
 ─────────────────────────────────────────────────────────────────
-Handles shared quotation management:
-  - NAS-based JSON storage at \\KMTI-NAS\Shared\data\template\
-  - Version history snapshots at \\KMTI-NAS\Shared\data\template\history\
-  - REST endpoints for listing and fetching shared quotations
-  - WebSocket (Socket.IO) rooms for real-time collaborative editing
+Handles centralized quotation management using MySQL:
+  - Persistent storage in 'quotations' table.
+  - Version history in 'quotation_history' table.
+  - Real-time collaborative editing via Socket.IO.
+  - Automatic session recovery on server restart.
 
-File Persistence Policy (updated):
-  - PRIMARY FILE: Written exclusively by the client via the "Save" button.
-    The server never overwrites the primary .json file based on Room ID.
-    This prevents ghost files when rooms use ephemeral/random IDs (Browse mode).
-  - VERSION HISTORY: Created server-side via trigger_snapshot (manual Save)
-    and the 5-minute auto-save interval (client-driven, emits trigger_snapshot).
+File Persistence Policy:
+  - The database is the primary source of truth.
+  - Backups to NAS can be triggered periodically (configurable).
 """
 
 import os
 import json
-import random
 import asyncio
 from datetime import datetime
-from pathlib import Path
-from typing import Any
+from typing import Any, List, Optional
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update, delete, desc, or_
+from sqlalchemy.orm import selectinload
+
 import socketio
-
-# ─── NAS Storage Paths ───────────────────────────────────────────────────────
-NAS_QUOTATIONS_DIR = Path(r"\\KMTI-NAS\Shared\data\template")
-NAS_HISTORY_DIR    = NAS_QUOTATIONS_DIR / "history"
-NAS_LOG_DIR        = NAS_QUOTATIONS_DIR / "logs"
-
-def _ensure_dirs():
-    try:
-        NAS_QUOTATIONS_DIR.mkdir(parents=True, exist_ok=True)
-        NAS_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-        NAS_LOG_DIR.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        # NAS may be unavailable; log but do not crash
-        print(f"[quotations] WARNING: Could not create NAS directories: {e}")
-
-_ensure_dirs()
+from db.database import get_db
+from models.quotation import Quotation, QuotationHistory
 
 # ─── Socket.IO Server ─────────────────────────────────────────────────────────
-# An async-compatible Socket.IO server mounted under /quotation namespace.
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 socket_app = socketio.ASGIApp(sio)
 
-# Tracks connected users per document room: { quot_no -> { sid -> { name, color } } }
-_rooms: dict[str, dict[str, dict]] = {}
-
-# Tracks the last time a history snapshot was created for each document: { quot_no -> float }
-_last_snapshot_times: dict[str, float] = {}
+# Tracks connected users per document room: { quotation_id -> { sid -> { name, color } } }
+# Room metadata is now persisted in the DB (is_active, password, display_name)
+_active_users: dict[int, dict[str, dict]] = {}
 
 def _random_color() -> str:
-    """Generate a visually distinct hex color for a user session."""
     import random
     colors = [
         "#4A90D9", "#E05C6B", "#27AE60", "#F39C12",
@@ -64,13 +44,10 @@ def _random_color() -> str:
     ]
     return random.choice(colors)
 
-
 def _get_audit_label(path: str, full_state: dict = None) -> str:
-    """Map a technical JSON path to a human-readable field name, using state for context if possible."""
+    """Map a technical JSON path to a human-readable field name."""
     if not path: return "Document"
     p = path.lower()
-    
-    # Extract field name (last part of path)
     field = path.split('.')[-1].replace('_', ' ').title()
     
     if "companyinfo" in p: return f"Company {field}"
@@ -83,8 +60,6 @@ def _get_audit_label(path: str, full_state: dict = None) -> str:
         if len(parts) >= 2:
             task_id_str = parts[1]
             assembly_name = f"Task #{task_id_str}"
-            
-            # Try to resolve Assembly Name from state
             if full_state and "tasks" in full_state:
                 try:
                     target_id = int(task_id_str)
@@ -93,421 +68,381 @@ def _get_audit_label(path: str, full_state: dict = None) -> str:
                             assembly_name = f"'{t.get('description', 'Unnamed Task')}'"
                             break
                 except: pass
-            
             return f"{assembly_name}'s {field}"
         return "Tasks"
-        
     if "signatures" in p: return "Signatures"
     if "footer" in p: return f"Footer {field}"
     return path
 
-
-async def _log_audit(quot_no: str, user_name: str, color: str, path: str, value: Any = None, full_state: dict = None):
-    """Save an audit entry to the NAS and broadcast it. Collapses recent edits by same user on same path."""
-    try:
-        label = _get_audit_label(path, full_state)
-        val_str = str(value) if value is not None else ""
-        if len(val_str) > 50: val_str = val_str[:47] + "..."
-        
-        action = f"updated {label}"
-        if value is not None:
-            action += f" to '{val_str}'"
-
-        now = datetime.now()
-        timestamp_str = now.isoformat()
-        
-        entry = {
-            "id": now.strftime("%Y%m%d%H%M%S%f"),
-            "userName": user_name,
-            "userColor": color,
-            "path": path, # Store path for debouncing
-            "action": action,
-            "timestamp": timestamp_str
-        }
-        
-        # Persist and optional debounce
-        safe_name = quot_no.replace("/", "_").replace("\\", "_")
-        log_path = NAS_LOG_DIR / f"{safe_name}.json"
-        
-        logs = []
-        if log_path.exists():
-            try:
-                logs = json.loads(log_path.read_text(encoding="utf-8"))
-            except: logs = []
-            
-        # DEBOUNCING / COLLAPSING LOGIC
-        # If the most recent log is by the same user on the same path within 15 seconds, just update it.
-        is_collapsed = False
-        if logs:
-            last = logs[0]
-            try:
-                last_time = datetime.fromisoformat(last["timestamp"])
-                diff = (now - last_time).total_seconds()
-                
-                if last.get("userName") == user_name and last.get("path") == path and diff < 15:
-                    last["action"] = action
-                    last["timestamp"] = timestamp_str
-                    is_collapsed = True
-            except: pass
-
-        if not is_collapsed:
-            logs.insert(0, entry)
-            logs = logs[:100] # Keep last 100
-            
-        log_path.write_text(json.dumps(logs, indent=2, ensure_ascii=False), encoding="utf-8")
-        
-        # Broadcast the update (or the new entry)
-        await sio.emit("audit_entry", logs[0], room=quot_no)
-        
-    except Exception as e:
-        print(f"[quotations] Audit log failed: {e}")
-
+# ─── Socket.IO Event Handlers ──────────────────────────────────────────────────
 
 @sio.event
 async def connect(sid: str, environ: dict):
-    print(f"[quotations] Client connected: {sid}")
-
-
-@sio.event
-async def disconnect(sid: str):
-    # Remove from all rooms on disconnect
-    for quot_no, users in list(_rooms.items()):
-        if sid in users:
-            user_info = users.pop(sid)
-            await sio.emit(
-                "user_left",
-                {"sid": sid, "name": user_info.get("name", "Unknown"), "users": {k:v for k,v in users.items() if k != "__info__"}},
-                room=quot_no,
-            )
-            # Remove room if all REAL users are gone (ignoring metadata)
-            if not [k for k in users.keys() if k != "__info__"]:
-                del _rooms[quot_no]
-    print(f"[quotations] Client disconnected: {sid}")
+    print(f"[Socket] Client connected: {sid}")
 
 
 @sio.event
 async def join_doc(sid: str, data: dict):
-    """Join a shared quotation room. data = { quot_no, user_name, password?, display_name? }"""
-    quot_no      = data.get("quot_no")
-    user_name    = data.get("user_name", "Unknown")
-    password     = data.get("password")
-    display_name = data.get("display_name")  # Human-readable room label
-    if not quot_no:
-        return
+    """Join a shared quotation room. data = { quot_id, user_name, password? }"""
+    q_id = data.get("quot_id")
+    user_name = data.get("user_name", "Unknown")
+    password = data.get("password")
+    
+    if not q_id: return
 
-    # Password check
-    if quot_no in _rooms:
-        room_info = _rooms[quot_no].get("__info__", {})
-        required_pw = room_info.get("password")
-        if required_pw and required_pw != password:
-            await sio.emit("join_error", {"message": "Invalid room password."}, to=sid)
+    # Verify ID and password in DB
+    from db.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as session:
+        stmt = select(Quotation).where(Quotation.id == q_id)
+        result = await session.execute(stmt)
+        quot = result.scalar_one_or_none()
+        
+        if not quot:
+            await sio.emit("join_error", {"message": "Quotation not found."}, to=sid)
+            return
+        
+        if quot.password and quot.password != password:
+            await sio.emit("join_error", {"message": "Invalid password."}, to=sid)
             return
 
+        # Explicitly mark as active in DB if first user joins
+        if not quot.is_active:
+            quot.is_active = True
+            await session.commit()
+
     color = _random_color()
-    await sio.enter_room(sid, quot_no)
+    room_name = f"quot_{q_id}"
+    await sio.enter_room(sid, room_name)
 
-    if quot_no not in _rooms:
-        _rooms[quot_no] = {"__info__": {"password": password, "display_name": display_name}}
-    elif display_name and not _rooms[quot_no].get("__info__", {}).get("display_name"):
-        # First joiner to provide a display_name wins
-        _rooms[quot_no].setdefault("__info__", {})["display_name"] = display_name
+    if q_id not in _active_users:
+        _active_users[q_id] = {}
+
+    # Evict any stale entry for the same user name (case-insensitive) before adding the new one.
+    stale_sids = [
+        s for s, u in _active_users[q_id].items()
+        if u.get("name", "").lower() == user_name.lower() and s != sid
+    ]
+    for stale_sid in stale_sids:
+        del _active_users[q_id][stale_sid]
+        # Important: Send the updated users dict so others purge the old sid correctly
+        await sio.emit("user_left", {"sid": stale_sid, "users": _active_users[q_id]}, room=room_name)
+
+    _active_users[q_id][sid] = {"name": user_name, "color": color}
     
-    _rooms[quot_no][sid] = {"name": user_name, "color": color}
-
-    # Prepare public user list (excluding sensitive info)
-    public_users = {k: v for k, v in _rooms[quot_no].items() if k != "__info__"}
-
-    # Tell the joiner their assigned color
-    await sio.emit("joined", {"sid": sid, "color": color, "users": public_users}, to=sid)
-    # Tell the room someone new joined
-    await sio.emit("user_joined", {"sid": sid, "name": user_name, "color": color, "users": public_users}, room=quot_no, skip_sid=sid)
-
-
-@sio.event
-async def leave_doc(sid: str, data: dict):
-    quot_no = data.get("quot_no")
-    if quot_no and quot_no in _rooms and sid in _rooms[quot_no]:
-        user_info = _rooms[quot_no].pop(sid)
-        await sio.leave_room(sid, quot_no)
-        # prepares public list
-        public_users = {k: v for k, v in _rooms[quot_no].items() if k != "__info__"}
-        await sio.emit("user_left", {"sid": sid, "name": user_info["name"], "users": public_users}, room=quot_no)
-        
-        # Cleanup room if empty
-        if not public_users:
-            del _rooms[quot_no]
-
-
-@sio.event
-async def focus_field(sid: str, data: dict):
-    """Broadcast which field a user is currently focused on.
-    data = { quot_no, field_key }
-    """
-    quot_no   = data.get("quot_no")
-    field_key = data.get("field_key")
-    if not quot_no or not field_key:
-        return
-    user_info = _rooms.get(quot_no, {}).get(sid, {})
-    await sio.emit(
-        "remote_focus",
-        {"sid": sid, "field_key": field_key, "name": user_info.get("name", ""), "color": user_info.get("color", "#ccc")},
-        room=quot_no,
-        skip_sid=sid,
-    )
-
-
-@sio.event
-async def blur_field(sid: str, data: dict):
-    """Broadcast that a user left a field."""
-    quot_no   = data.get("quot_no")
-    field_key = data.get("field_key")
-    if not quot_no or not field_key:
-        return
-    await sio.emit("remote_blur", {"sid": sid, "field_key": field_key}, room=quot_no, skip_sid=sid)
-
+    # Broadcast join
+    await sio.emit("joined", {"sid": sid, "color": color, "users": _active_users[q_id]}, to=sid)
+    await sio.emit("user_joined", {"sid": sid, "name": user_name, "color": color, "users": _active_users[q_id]}, room=room_name, skip_sid=sid)
 
 @sio.event
 async def update_field(sid: str, data: dict):
-    """Broadcast a partial state update to all room members.
-    data = { quot_no, patch: { path: string, value: any }, full_state? }
-
-    NOTE: This handler intentionally does NOT persist the full_state to the NAS.
-    Primary file persistence is the client's responsibility (Save button → Electron
-    writeFile). The server only handles Version History via trigger_snapshot.
-    This prevents ghost files when room IDs are ephemeral (e.g. Browse mode).
-    """
-    quot_no = data.get("quot_no")
-    patch   = data.get("patch")
-    if not quot_no or not patch:
-        return
-
-    # Rebroadcast to everyone else in the room
-    await sio.emit("remote_patch", {"sid": sid, "patch": patch}, room=quot_no, skip_sid=sid)
+    """Partial state update. Persists to DB after debounced broadcast."""
+    q_id = data.get("quot_id")
+    patch = data.get("patch")
+    full_state = data.get("full_state") # Optional optimized save
     
-    # Audit log (debounced server-side per user+path within 15 seconds)
-    user_info = _rooms.get(quot_no, {}).get(sid, {})
-    if user_info:
-        asyncio.create_task(_log_audit(
-            quot_no, 
-            user_info["name"], 
-            user_info["color"], 
-            patch.get("path", ""),
-            patch.get("value"),
-            data.get("full_state")
-        ))
-    # NOTE: _autosave() is intentionally NOT called here. See docstring above.
+    if not q_id or not patch: return
+    room_name = f"quot_{q_id}"
 
-
-@sio.event
-async def focus_selection(sid: str, data: dict):
-    """Broadcast text selection within a field.
-    data = { quot_no, field_key, start, end }
-    """
-    quot_no   = data.get("quot_no")
-    field_key = data.get("field_key")
-    start     = data.get("start")
-    end       = data.get("end")
-    if not quot_no or not field_key:
-        return
-    await sio.emit(
-        "remote_selection",
-        {"sid": sid, "field_key": field_key, "start": start, "end": end},
-        room=quot_no,
-        skip_sid=sid,
-    )
-
+    # 1. Immediate Broadcast to other editors
+    await sio.emit("remote_patch", {"sid": sid, "patch": patch}, room=room_name, skip_sid=sid)
+    
+    # 2. Persist to DB (Debounced logic could be added here, but for now direct)
+    if full_state:
+        from db.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            await session.execute(
+                update(Quotation)
+                .where(Quotation.id == q_id)
+                .values(data=json.dumps(full_state, ensure_ascii=False), updated_at=datetime.utcnow())
+            )
+            await session.commit()
 
 @sio.event
 async def trigger_snapshot(sid: str, data: dict):
-    """Explicitly trigger a history snapshot from the client.
-    data = { quot_no, full_state, label? }
-
-    This is the ONLY server-side write to the NAS (version history, not primary file).
-    Called by the client on:
-      - Manual Save (handleSave)
-      - Auto-save timer (every 5 minutes, client-driven)
-      - Version restore
-    """
-    quot_no    = data.get("quot_no")
+    """Explicitly create a history version in DB."""
+    q_id = data.get("quot_id")
     full_state = data.get("full_state")
-    label      = data.get("label")
-    if not quot_no or not full_state: return
+    label = data.get("label")
     
-    user_info = _rooms.get(quot_no, {}).get(sid, {})
-    author = user_info.get("name", "Unknown")
+    if not q_id or not full_state: return
     
-    await _create_history_snapshot(quot_no, full_state, author, label)
-    
-    # Broadcast to the room so sidebars can refresh
-    await sio.emit("history_updated", {"quot_no": quot_no}, room=quot_no)
+    user_info = _active_users.get(q_id, {}).get(sid, {})
+    author = user_info.get("name", "System")
 
+    from db.database import AsyncSessionLocal
+    async with AsyncSessionLocal() as session:
+        history = QuotationHistory(
+            quotation_id=q_id,
+            label=label or "Manual Save",
+            author=author,
+            data=json.dumps(full_state, ensure_ascii=False)
+        )
+        session.add(history)
+        await session.commit()
+    
+    await sio.emit("history_updated", {"quot_id": q_id}, room=f"quot_{q_id}")
 
-async def _create_history_snapshot(quot_no: str, full_state: Any, author_name: str, label: str = None):
-    """Explicitly create a history snapshot file in the history/ directory."""
-    if not full_state or not quot_no: return
-    try:
-        safe_name = quot_no.replace("/", "_").replace("\\", "_")
-        snap_dir = NAS_HISTORY_DIR / safe_name
-        snap_dir.mkdir(parents=True, exist_ok=True)
-        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        snap_path = snap_dir / f"{ts}.json"
+@sio.event
+async def focus_field(sid: str, data: dict):
+    q_id = data.get("quot_id")
+    if not q_id: return
+    user_info = _active_users.get(q_id, {}).get(sid, {})
+    await sio.emit("remote_focus", {
+        **data, 
+        "name": user_info.get("name", "Unknown"),
+        "color": user_info.get("color", "#ccc")
+    }, room=f"quot_{q_id}", skip_sid=sid)
+
+@sio.event
+async def blur_field(sid: str, data: dict):
+    q_id = data.get("quot_id")
+    await sio.emit("remote_blur", data, room=f"quot_{q_id}", skip_sid=sid)
+
+@sio.event
+async def disconnect(sid: str):
+    """Cleanup presence on socket disconnect."""
+    for q_id, users in list(_active_users.items()):
+        if sid in users:
+            user_info = users.pop(sid)
+            room_name = f"quot_{q_id}"
+            
+            # Broadcast to others in the room
+            await sio.emit(
+                "user_left",
+                {"sid": sid, "name": user_info.get("name", "Unknown"), "users": users},
+                room=room_name,
+            )
+            
+            # If last user left, cleanup in-memory presence
+            if not users:
+                if q_id in _active_users:
+                    del _active_users[q_id]
+            break
+    print(f"[Socket] Client disconnected: {sid}")
+
+@sio.event
+async def leave_doc(sid: str, data: dict):
+    """Explicitly leave a room."""
+    q_id = data.get("quot_id")
+    if not q_id: return
+    
+    if q_id in _active_users and sid in _active_users[q_id]:
+        del _active_users[q_id][sid]
+        await sio.leave_room(sid, f"quot_{q_id}")
         
-        description = f"{author_name} updated this file"
-        if label:
-            description = f"{author_name} ({label})"
+        if not _active_users[q_id]:
+            del _active_users[q_id]
+            from db.database import AsyncSessionLocal
+            async with AsyncSessionLocal() as session:
+                await session.execute(
+                    update(Quotation).where(Quotation.id == q_id).values(is_active=False)
+                )
+                await session.commit()
 
-        snap_data = {
-            "__metadata__": {
-                "author": author_name,
-                "timestamp": ts,
-                "description": description
-            },
-            "data": full_state
-        }
-        snap_path.write_text(json.dumps(snap_data, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"[quotations] History snapshot created for {quot_no}: {description}")
-    except Exception as e:
-        print(f"[quotations] History snapshot failed: {e}")
-
+@sio.event
+async def focus_selection(sid: str, data: dict):
+    q_id = data.get("quot_id")
+    await sio.emit("remote_selection", data, room=f"quot_{q_id}", skip_sid=sid)
 
 # ─── REST API ───────────────────────────────────────────────────────────────
 
 router = APIRouter()
 
-
 @router.get("/")
-async def list_quotations():
-    """List all quotation JSON files on the NAS."""
-    try:
-        files = [
+async def list_quotations(
+    q: Optional[str] = None, 
+    designer: Optional[str] = None,
+    limit: int = 100, 
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db)
+):
+    """List quotations from DB with filtering."""
+    stmt = select(Quotation).order_by(desc(Quotation.updated_at))
+    
+    if q:
+        stmt = stmt.where(or_(
+            Quotation.quotation_no.ilike(f"%{q}%"),
+            Quotation.client_name.ilike(f"%{q}%")
+        ))
+    if designer:
+        stmt = stmt.where(Quotation.designer_name.ilike(f"%{designer}%"))
+    
+    stmt = stmt.limit(limit).offset(offset)
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    
+    return {
+        "quotations": [
             {
-                "name": f.stem,
-                "modified": datetime.fromtimestamp(f.stat().st_mtime).isoformat(),
-                "size": f.stat().st_size,
-            }
-            for f in NAS_QUOTATIONS_DIR.glob("*.json")
-            if f.is_file()
+                "id": i.id,
+                "quotationNo": i.quotation_no,
+                "clientName": i.client_name,
+                "designerName": i.designer_name,
+                "date": i.date.strftime("%Y-%m-%d"),
+                "modifiedAt": i.updated_at.isoformat(),
+                "isActive": i.is_active,
+                "hasPassword": bool(i.password),
+                "displayName": i.display_name or i.quotation_no
+            } for i in items
         ]
-        files.sort(key=lambda x: x["modified"], reverse=True)
-        return {"quotations": files}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"NAS read error: {e}")
+    }
 
+@router.get("/sessions")
+async def list_active_sessions(db: AsyncSession = Depends(get_db)):
+    """Returns list of quotations that have at least one connected user.
+    
+    The DB 'is_active' flag can get stale after server restarts (in-memory
+    _active_users is cleared but DB isn't updated). We cross-reference both:
+    only return sessions that appear in _active_users with >= 1 connected user.
+    As a side-effect, stale DB flags are cleaned up.
+    """
+    # Get all IDs that have real connected users right now
+    live_ids = [q_id for q_id, users in _active_users.items() if len(users) > 0]
 
-@ router.get("/sessions")
-async def list_active_sessions():
-    """Returns a list of active collaboration rooms and their users."""
+    if not live_ids:
+        # Clean up any stale is_active flags in DB
+        await db.execute(update(Quotation).values(is_active=False))
+        await db.commit()
+        return {"sessions": []}
+
+    stmt = select(Quotation).where(Quotation.id.in_(live_ids)).order_by(desc(Quotation.updated_at))
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+
+    # Also clean up any stale is_active records not in live_ids
+    await db.execute(
+        update(Quotation)
+        .where(Quotation.is_active == True)
+        .where(~Quotation.id.in_(live_ids))
+        .values(is_active=False)
+    )
+    await db.commit()
+
     sessions = []
-    for quot_no, users in list(_rooms.items()):
-        # Ghost Room Filtering: Skip rooms that somehow stayed in memory with 0 users
-        if not users:
-            continue
-            
-        real_users = {k: v for k, v in users.items() if k != "__info__"}
+    for i in items:
+        users = _active_users.get(i.id, {})
         sessions.append({
-            "quotNo": quot_no,
-            "userCount": len(real_users),
-            "hasPassword": bool(users.get("__info__", {}).get("password")),
-            "displayName": users.get("__info__", {}).get("display_name") or quot_no,
-            "users": [
-                {"name": u["name"], "color": u["color"]}
-                for u in real_users.values()
-            ]
+            "id": i.id,
+            "quotNo": i.quotation_no,
+            "displayName": i.display_name or i.quotation_no,
+            "userCount": len(users),
+            "users": list(users.values()),
+            "hasPassword": bool(i.password)
         })
     return {"sessions": sessions}
 
-
-@router.get("/{quot_no}")
-async def get_quotation(quot_no: str):
-    """Load a specific quotation from the NAS or return a default for new sessions."""
-    safe_name = quot_no.replace("/", "_").replace("\\", "_")
-    doc_path  = NAS_QUOTATIONS_DIR / f"{safe_name}.json"
+@router.post("/")
+async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
+    """Create a new quotation record in the database.
     
-    if not doc_path.exists():
-        # Graceful Join: If the file is missing but the room is active, return a blank template
-        # instead of 404. This allows users to join a "Draft" session that hasn't been saved yet.
-        if quot_no in _rooms:
-            return {
-                "companyInfo": {},
-                "clientInfo": {},
-                "quotationDetails": {"quotationNo": quot_no, "date": datetime.now().strftime("%Y-%m-%d")},
-                "billingDetails": {},
-                "tasks": [],
-                "signatures": {}
-            }
-        raise HTTPException(status_code=404, detail="Quotation not found on NAS.")
-    try:
-        data = json.loads(doc_path.read_text(encoding="utf-8"))
-        return data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"File read error: {e}")
+    Supports two modes:
+      Lightweight:  { quot_no, display_name?, password? }  — workspace-first creation
+      Full:         { quotationDetails, clientInfo, ... }  — save from within editor
+    """
+    # ── Lightweight workspace-first creation ──────────────────────
+    if "quot_no" in data:
+        q_no = data["quot_no"]
+        display = data.get("display_name") or q_no
+        password = data.get("password")
+        
+        # Check for duplicate
+        stmt = select(Quotation).where(Quotation.quotation_no == q_no)
+        res = await db.execute(stmt)
+        if res.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Quotation number already exists")
+        
+        # Create a blank record — document data will be populated on first save
+        new_q = Quotation(
+            quotation_no=q_no,
+            display_name=display,
+            password=password,
+            is_active=True,  # Set to true immediately so it shows in lobby
+            data=json.dumps({}, ensure_ascii=False),  # empty, will be filled on first save
+        )
+        db.add(new_q)
+        await db.commit()
+        await db.refresh(new_q)
+        return {"success": True, "id": new_q.id, "quotNo": q_no, "displayName": display}
 
+    # ── Full document save (from within editor) ───────────────────
+    qd = data.get("quotationDetails", {})
+    ci = data.get("clientInfo", {})
+    sig = data.get("signatures", {}).get("quotation", {}).get("preparedBy", {})
+    
+    q_no = qd.get("quotationNo")
+    if not q_no:
+        raise HTTPException(status_code=400, detail="Quotation number is required")
+        
+    # Check if exists
+    stmt = select(Quotation).where(Quotation.quotation_no == q_no)
+    res = await db.execute(stmt)
+    if res.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Quotation number already exists")
+    
+    new_q = Quotation(
+        quotation_no=q_no,
+        client_name=ci.get("company", ""),
+        designer_name=sig.get("name", ""),
+        data=json.dumps(data, ensure_ascii=False),
+        display_name=q_no
+    )
+    db.add(new_q)
+    await db.commit()
+    await db.refresh(new_q)
+    return {"success": True, "id": new_q.id}
 
-@router.get("/{quot_no}/history")
-async def get_history(quot_no: str):
-    """List version snapshots for a specific quotation."""
-    safe_name = quot_no.replace("/", "_").replace("\\", "_")
-    snap_dir  = NAS_HISTORY_DIR / safe_name
-    if not snap_dir.exists():
-        return {"history": []}
-    try:
-        snapshots = []
-        for f in sorted(snap_dir.glob("*.json"), reverse=True):
-            if not f.is_file(): continue
-            try:
-                # We do a light read of the JSON to get metadata if possible
-                # In production with thousands of snapshots, we might want a separate index.json
-                with open(f, "r", encoding="utf-8") as jf:
-                    # Just read the first 500 chars to check for metadata without loading whole file
-                    head = jf.read(500)
-                    desc = None
-                    if "__metadata__" in head:
-                        # Full load if metadata exists (metadata usually at top)
-                        jf.seek(0)
-                        data = json.load(jf)
-                        desc = data.get("__metadata__", {}).get("description")
-                
-                snapshots.append({
-                    "timestamp": f.stem,
-                    "label": datetime.strptime(f.stem, "%Y%m%d_%H%M%S").strftime("%b %d, %Y — %H:%M:%S"),
-                    "description": desc
-                })
-            except:
-                snapshots.append({
-                    "timestamp": f.stem,
-                    "label": datetime.strptime(f.stem, "%Y%m%d_%H%M%S").strftime("%b %d, %Y — %H:%M:%S"),
-                })
-        return {"history": snapshots}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"History read error: {e}")
+@router.get("/{q_id}")
+async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
+    stmt = select(Quotation).where(Quotation.id == q_id)
+    result = await db.execute(stmt)
+    quot = result.scalar_one_or_none()
+    if not quot:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+    return json.loads(quot.data)
 
+@router.patch("/{q_id}")
+async def update_quotation(q_id: int, data: dict, db: AsyncSession = Depends(get_db)):
+    """Full update of quotation data."""
+    stmt = update(Quotation).where(Quotation.id == q_id).values(
+        data=json.dumps(data, ensure_ascii=False), 
+        updated_at=datetime.utcnow(),
+        # Also sync metadata if it changed in the JSON
+        client_name=data.get("clientInfo", {}).get("company", ""),
+        designer_name=data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
+    )
+    await db.execute(stmt)
+    await db.commit()
+    return {"success": True}
 
-@router.get("/{quot_no}/history/{timestamp}")
-async def restore_snapshot(quot_no: str, timestamp: str):
-    """Restore (load) a specific snapshot version."""
-    safe_name = quot_no.replace("/", "_").replace("\\", "_")
-    snap_path = NAS_HISTORY_DIR / safe_name / f"{timestamp}.json"
-    if not snap_path.exists():
-        raise HTTPException(status_code=404, detail="Snapshot not found.")
-    try:
-        raw_data = json.loads(snap_path.read_text(encoding="utf-8"))
-        # Handle both new (with metadata) and legacy snapshot formats
-        if isinstance(raw_data, dict) and "__metadata__" in raw_data:
-            return raw_data["data"]
-        return raw_data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Snapshot read error: {e}")
+@router.get("/{q_id}/history")
+async def get_history(q_id: int, db: AsyncSession = Depends(get_db)):
+    stmt = select(QuotationHistory).where(QuotationHistory.quotation_id == q_id).order_by(desc(QuotationHistory.created_at))
+    result = await db.execute(stmt)
+    items = result.scalars().all()
+    
+    return {
+        "history": [
+            {
+                "id": h.id,
+                "label": h.created_at.strftime("%b %d, %Y — %H:%M:%S"),
+                "description": h.label,
+                "author": h.author,
+                "timestamp": h.created_at.isoformat()
+            } for h in items
+        ]
+    }
 
+@router.get("/{q_id}/history/{h_id}")
+async def restore_history(q_id: int, h_id: int, db: AsyncSession = Depends(get_db)):
+    stmt = select(QuotationHistory).where(QuotationHistory.id == h_id, QuotationHistory.quotation_id == q_id)
+    result = await db.execute(stmt)
+    history = result.scalar_one_or_none()
+    if not history:
+        raise HTTPException(status_code=404, detail="History entry not found")
+    return json.loads(history.data)
 
-@router.get("/{quot_no}/logs")
-async def get_audit_logs(quot_no: str):
-    """Fetch activity logs for a specific quotation."""
-    safe_name = quot_no.replace("/", "_").replace("\\", "_")
-    log_path = NAS_LOG_DIR / f"{safe_name}.json"
-    if not log_path.exists():
-        return {"logs": []}
-    try:
-        data = json.loads(log_path.read_text(encoding="utf-8"))
-        return {"logs": data}
-    except:
-        return {"logs": []}
+@router.delete("/{q_id}")
+async def delete_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
+    await db.execute(delete(Quotation).where(Quotation.id == q_id))
+    await db.commit()
+    return {"success": True}

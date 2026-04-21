@@ -73,4 +73,22 @@ export interface IApiResponse<T> {
   status: number
 }
 
+export interface IQuotation {
+  id: number
+  quotationNo: string
+  clientName: string
+  designerName: string
+  date: string
+  modifiedAt: string
+  isActive: boolean
+  hasPassword?: boolean
+  displayName?: string
+}
 
+export interface IQuotationHistory {
+  id: number
+  label: string
+  description?: string
+  author: string
+  timestamp: string
+}

@@ -2,7 +2,11 @@
 import axios from 'axios'
 import type { IProject } from '../types'
 
-export const SERVER_BASE = import.meta.env.DEV ? 'http://localhost:8000' : 'http://192.168.200.105:8000'
+export const SERVER_BASE = (() => {
+  const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null
+  if (override) return override
+  return import.meta.env.DEV ? 'http://localhost:8000' : 'http://192.168.200.105:8000'
+})()
 export const API_BASE = `${SERVER_BASE}/api`
 
 const api = axios.create({
@@ -171,6 +175,26 @@ export const broadcastApi = {
   getActive: () => api.get('/broadcast/active'),
   create: (formData: FormData) => api.post('/broadcast/', formData),
   delete: (id: number) => api.delete(`/broadcast/${id}`),
+}
+
+// --- Quotations (Database-First) ---
+export const quotationApi = {
+  list: (params: { q?: string; designer?: string; limit?: number; offset?: number }) =>
+    api.get<{ quotations: IQuotation[] }>('/quotations/', { params }),
+  getSessions: () => 
+    api.get<{ sessions: any[] }>('/quotations/sessions'),
+  get: (id: number) => 
+    api.get<any>(`/quotations/${id}`),
+  create: (data: any) => 
+    api.post<{ success: boolean; id: number }>('/quotations/', data),
+  update: (id: number, data: any) => 
+    api.patch(`/quotations/${id}`, data),
+  delete: (id: number) => 
+    api.delete(`/quotations/${id}`),
+  getHistory: (id: number) => 
+    api.get<{ history: IQuotationHistory[] }>(`/quotations/${id}/history`),
+  restoreHistory: (qId: number, hId: number) => 
+    api.get<any>(`/quotations/${qId}/history/${hId}`),
 }
 
 // --- Librarian AI Assistant ---
