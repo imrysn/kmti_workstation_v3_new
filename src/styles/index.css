@@ -4,8 +4,10 @@
   --bg-primary: #f1f5f9; /* Slate-50: Technical light background */
   --bg-secondary: #ffffff; /* Pure white for working surfaces */
   --bg-surface: #f8fafc; /* Slate-50: headers and subtle areas */
+  --bg-surface-subtle: #f1f5f9;
   --bg-surface-hover: #e2e8f0; /* Slate-200: active selections */
   --border: #cbd5e1; /* Slate-300: crisp structural lines */
+  --border-subtle: #e2e8f0;
   --text-primary: #0f172a; /* Slate-900: near black for extreme legibility */
   --text-secondary: #475569; /* Slate-600 */
   --text-muted: #64748b; /* Slate-500 */
@@ -13,23 +15,33 @@
   --accent-hover: #0369a1;
   --accent-subtle: rgba(2, 132, 199, 0.1);
   --success: #059669; /* Emerald-600: precision success green */
+  --bg-success-subtle: rgba(5, 150, 105, 0.1);
   --warning: #d97706;
+  --bg-warning-subtle: rgba(217, 119, 6, 0.1);
   --danger: #dc2626;
+  --bg-danger-subtle: rgba(220, 38, 38, 0.1);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --radius-sm: 4px; /* Sharper edges for engineering precision */
+
   --radius-md: 6px;
   --radius-lg: 10px;
   --sidebar-width: 220px;
   --titlebar-height: 52px;
   --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --transition: 150ms ease;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
 }
 
 body.dark-theme {
   --bg-primary: #0f172a; /* Slate-900: Deep technical backgrounds */
   --bg-secondary: #1e293b; /* Slate-800: Card/Surface backgrounds */
   --bg-surface: #1e293b;
+  --bg-surface-subtle: #0f172a;
   --bg-surface-hover: #334155; /* Slate-700 */
   --border: #334155; /* Slate-700 */
+  --border-subtle: #1e293b;
   --text-primary: #f8fafc; /* Slate-50: pure legibility in dark */
   --text-secondary: #94a3b8; /* Slate-400 */
   --text-muted: #64748b; /* Slate-500 */
@@ -37,8 +49,14 @@ body.dark-theme {
   --accent-hover: #7dd3fc;
   --accent-subtle: rgba(56, 189, 248, 0.1);
   --success: #10b981;
+  --bg-success-subtle: rgba(16, 185, 129, 0.15);
   --warning: #f59e0b;
+  --bg-warning-subtle: rgba(245, 158, 11, 0.15);
   --danger: #ef4444;
+  --bg-danger-subtle: rgba(239, 68, 68, 0.15);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
 }
 
 *,

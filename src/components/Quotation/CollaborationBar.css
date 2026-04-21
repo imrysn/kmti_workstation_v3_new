@@ -53,13 +53,14 @@
   font-size: 12px;
   font-weight: 700;
   color: #fff;
-  border: 2px solid rgba(255,255,255,0.15);
+  border: 2px solid var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
   cursor: default;
   transition: transform 0.15s;
 }
 
 .collab-avatar:hover { transform: scale(1.15); }
-.collab-avatar--me { border-color: rgba(255,255,255,0.5); }
+.collab-avatar--me { border-color: var(--accent); }
 
 .collab-bar__count {
   font-size: 10.5px;

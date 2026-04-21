@@ -29,97 +29,6 @@
   },
   "tasks": [
     {
-      "id": 1776751079369,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776752127343,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776752631975,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776752702911,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776752704742,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776753406056,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776753439646,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
       "id": 1776753458279,
       "description": "",
       "referenceNumber": "",
@@ -172,33 +81,7 @@
       "parentId": null
     },
     {
-      "id": 1776753568095,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776753614534,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776754860848,
+      "id": 1776755942167,
       "description": "",
       "referenceNumber": "",
       "hours": 0,
@@ -254,5 +137,5 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-21T07:06:00.879Z"
+  "savedAt": "2026-04-21T07:24:46.250Z"
 }

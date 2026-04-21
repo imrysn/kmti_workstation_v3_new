@@ -30,6 +30,10 @@
   transition: all 0.1s ease;
 }
 
+.dark-theme .collab-selection-rect {
+  mix-blend-mode: plus-lighter;
+}
+
 /* Floating name tag(s) */
 .collab-presence-tags {
   position: absolute;
@@ -78,10 +82,10 @@
 .collab-field-locked textarea {
   pointer-events: none;
   opacity: 0.95 !important;
-  background-color: rgba(0, 0, 0, 0.04) !important;
+  background-color: var(--bg-surface-hover) !important;
   cursor: not-allowed;
-  color: #1d1d1f !important;
-  -webkit-text-fill-color: #1d1d1f !important;
+  color: var(--text-secondary) !important;
+  -webkit-text-fill-color: var(--text-secondary) !important;
 }
 
 /* Print — hide all collaboration UI */

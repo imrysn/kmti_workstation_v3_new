@@ -61,9 +61,9 @@
   top: 0;
   width: 8px;
   height: 100%;
-  background: var(--bg-surface);
+  background: #f9fafb;
   /* Match header background color */
-  border-left: 1px solid var(--border-subtle);
+  border-left: 1px solid #e5e7eb;
 }
 
 .tasks-table-header table {
@@ -74,15 +74,15 @@
 /* Custom scrollbar styling */
 .tasks-table-body::-webkit-scrollbar {
   width: 8px;
-  background: var(--bg-surface);
+  background: #f9fafb;
   /* Match header background */
 }
 
 .tasks-table-body::-webkit-scrollbar-track {
-  background: var(--bg-surface);
+  background: #f9fafb;
   /* Match header background */
   border-radius: 0;
-  border-left: 1px solid var(--border-subtle);
+  border-left: 1px solid #e5e7eb;
 }
 
 .tasks-table-body::-webkit-scrollbar-thumb {
@@ -159,17 +159,9 @@
   box-sizing: border-box;
 }
 
-.dark-theme .table-input {
-  color: #ffffff;
-}
-
 .table-input:hover {
-  background-color: var(--bg-surface-hover);
+  background-color: var(--bg-surface);
   border-color: var(--border);
-}
-
-.dark-theme .table-input:hover {
-  border-color: rgba(255, 255, 255, 0.4);
 }
 
 .table-input:focus {
@@ -177,11 +169,6 @@
   border-color: var(--accent);
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-subtle);
-}
-
-.dark-theme .table-input:focus {
-  border-color: #ffffff;
-  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .table-input.number-input {
@@ -203,7 +190,7 @@
   font-family: 'Arimo', monospace;
   font-weight: 600;
   font-size: 12px;
-  color: var(--text-primary);
+  color: #334155;
   text-transform: uppercase;
 }
 
@@ -232,12 +219,12 @@
 .description-input {
   text-align: left;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #0f172a;
 }
 
 .sub-task-input {
   font-weight: 500;
-  color: var(--text-secondary);
+  color: #334155;
 }
 
 /* 笏笏 Highlighted Calculated Columns 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
@@ -250,23 +237,23 @@
 }
 
 .time-charge-bg {
-  background-color: var(--bg-warning-subtle);
-  color: var(--warning);
+  background-color: rgba(245, 158, 11, 0.08);
+  color: #92400e;
 }
 
 .overtime-bg {
-  background-color: var(--bg-danger-subtle);
-  color: var(--danger);
+  background-color: rgba(239, 68, 68, 0.06);
+  color: #991b1b;
 }
 
 .overhead-bg {
-  background-color: var(--bg-success-subtle);
-  color: var(--success);
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #065f46;
 }
 
 .total-cell {
-  background-color: var(--accent-subtle);
-  color: var(--accent);
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #1e40af;
   font-weight: 800;
   font-size: 14px;
   text-align: right;
@@ -284,15 +271,14 @@
 .software-units-input {
   width: 50px !important;
   text-align: center;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+  background-color: #f1f5f9;
+  border: 1px solid #e2e8f0;
   font-weight: 600;
 }
 
 .software-total {
   font-weight: 700;
-  color: var(--text-primary);
+  color: #334155;
   font-variant-numeric: tabular-nums;
   min-width: 60px;
   text-align: right;
@@ -317,10 +303,10 @@
 }
 
 .reset-type-button {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
+  background: white;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
-  color: var(--text-muted);
+  color: #64748b;
   width: 24px;
   height: 24px;
   border-radius: 4px;
@@ -333,8 +319,8 @@
 }
 
 .reset-type-button:hover {
-  background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 /* 笏笏 Action Buttons 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
@@ -346,7 +332,7 @@
 }
 
 .action-buttons-container button {
-  background: var(--bg-surface);
+  background: #f8fafc;
   border: 1px solid transparent;
   cursor: pointer;
   width: 28px;
@@ -355,7 +341,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
+  color: #64748b;
   transition: all 0.2s;
 }
 
@@ -390,21 +376,15 @@
 }
 
 .main-task-row td {
-  border-top: 2px solid var(--border-subtle);
+  border-top: 2px solid #e2e8f0;
 }
 
 .edit-calculated-input {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 0 0 2px var(--accent-subtle) inset;
+  background-color: #ffffff;
+  border: 1px solid #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2) inset;
   font-weight: 700;
-  color: var(--accent);
-}
-
-.dark-theme .edit-calculated-input {
-  background-color: var(--bg-secondary);
-  color: #ffffff;
-  border-color: #ffffff;
+  color: #1e3a8a;
 }
 
 /* 笏笏 Fixed Column Widths for Header and Body Synchronization 笏 */
@@ -490,10 +470,10 @@
 
 /* 笏笏 Expand/Collapse 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
 .collapse-toggle-btn {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
+  background: white;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
-  color: var(--text-muted);
+  color: #64748b;
   width: 20px;
   height: 20px;
   border-radius: 4px;
@@ -507,14 +487,14 @@
 }
 
 .collapse-toggle-btn:hover {
-  background-color: var(--bg-surface-hover);
-  color: var(--text-primary);
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 /* 笏笏 Footer Editable Inputs 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
 .footer-input {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   padding: 2px 6px;
   color: inherit;
@@ -527,8 +507,8 @@
 }
 
 .footer-input:hover {
-  background: var(--bg-surface-hover);
-  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .footer-input:focus {
@@ -537,11 +517,6 @@
   border-color: var(--accent);
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-subtle);
-}
-
-.dark-theme .footer-input:focus {
-  border-color: #ffffff;
-  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .footer-input-wrapper {
@@ -593,8 +568,8 @@
 }
 
 .footer-value-display:hover {
-  background: var(--bg-surface-hover);
-  border-color: var(--border);
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.25);
   opacity: 1;
 }
 
