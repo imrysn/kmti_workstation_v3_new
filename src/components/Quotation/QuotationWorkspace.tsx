@@ -97,6 +97,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     loadData,
     resetToNew,
     markSaved,
+    currentFilePath,
   })
 
   // ── Database Hydration ────────────────────────────────────────────
@@ -160,7 +161,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitSnapshot,
     leaveRoom
   } = useCollaboration({
-    quotId,
+    quotId: quotId ?? null,
     quotNo,
     password,
     displayName,
@@ -606,17 +607,14 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                   <CompanyInfo
                     companyInfo={effComp}
                     onUpdate={isPreview ? undefined : syncCompanyInfo}
-                    highlightPaths={recentEdits}
                   />
                   <ClientInfo
                     clientInfo={effClient}
                     onUpdate={isPreview ? undefined : syncClientInfo}
-                    highlightPaths={recentEdits}
                   />
                   <QuotationDetailsCard
                     quotationDetails={effQuotDetails}
                     onUpdate={isPreview ? undefined : syncQuotationDetails}
-                    highlightPaths={recentEdits}
                   />
                 </div>
 
