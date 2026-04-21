@@ -90,6 +90,7 @@ export default function FeedbackWidget() {
   const [screenshots, setScreenshots] = useState<string[]>([]);
   
   const [showLimitError, setShowLimitError] = useState(false);
+  const [hisashiburiTriggered, setHisashiburiTriggered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -239,7 +240,24 @@ export default function FeedbackWidget() {
     setUrgency('low');
     setScreenshots([]);
     setShowLimitError(false);
+    setHisashiburiTriggered(false);
   };
+
+  // 🥚 Easter egg: type "hisashiburi" as the ticket subject
+  useEffect(() => {
+    if (subject.toLowerCase() === 'hisashiburi' && !hisashiburiTriggered) {
+      setHisashiburiTriggered(true);
+      // Brief glitch flash on the panel
+      if (panelRef.current) {
+        panelRef.current.style.transition = 'filter 0.08s';
+        panelRef.current.style.filter = 'invert(1) hue-rotate(90deg)';
+        setTimeout(() => { if (panelRef.current) panelRef.current.style.filter = ''; }, 120);
+      }
+      // Swap the subject to Japanese, then confetti-shimmer the button
+      setTimeout(() => setSubject('久しぶり！'), 150);
+      setTimeout(() => setCategory('General'), 160);
+    }
+  }, [subject, hisashiburiTriggered]);
 
   const handlePaste = (e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
@@ -384,7 +402,7 @@ export default function FeedbackWidget() {
         {/* LIST VIEW */}
         {view === 'list' && (
           <div className="feedback-list-view">
-            <button className="feedback-btn feedback-btn-primary w-full shadow-md" onClick={() => setView('create')}>
+            <button className={`feedback-btn feedback-btn-primary w-full shadow-md${hisashiburiTriggered ? ' hisashiburi-shimmer' : ''}`} onClick={() => setView('create')}>
               + Create New Ticket
             </button>
             <div className="feedback-tickets-container">

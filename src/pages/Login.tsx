@@ -1,7 +1,14 @@
 import { useState, useEffect, FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { SERVER_BASE } from '../services/api'
+import { CHANGELOG } from '../data/CHANGELOG'
 import './Login.css'
+
+const BADGE_LABEL: Record<string, string> = {
+  new: '✦ New',
+  fix: '✔ Fixed',
+  improvement: '↑ Improved',
+}
 
 export default function Login() {
   const { login, isLoading, loginSucceeded } = useAuth()
@@ -89,6 +96,7 @@ export default function Login() {
 
   // Reactive Specular Highlight
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
+  const [showChangelog, setShowChangelog] = useState(false)
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
     const x = ((e.clientX - rect.left) / rect.width) * 100
@@ -230,7 +238,12 @@ export default function Login() {
 
           <div className="login-footer">
             <div className="footer-main">
-              <span className="version-tag">VER {__APP_VERSION__}</span>
+              <span
+                className="version-tag"
+                onClick={() => setShowChangelog(true)}
+                title="What's new in this version?"
+                style={{ userSelect: 'none' }}
+              >VER {__APP_VERSION__}</span>
               <span className="copyright">© 2026 KMTI</span>
             </div>
             <div className="system-readout">
@@ -240,6 +253,45 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* 🥚 Changelog drawer — triggered by clicking version tag */}
+      {showChangelog && (
+        <div className="login-changelog-overlay" onClick={() => setShowChangelog(false)}>
+          <div className="login-changelog-drawer" onClick={e => e.stopPropagation()}>
+            <div className="login-changelog-header">
+              <div>
+                <h2 className="login-changelog-title">What's New</h2>
+                <p className="login-changelog-sub">Release history for KMTI Workstation</p>
+              </div>
+              <button className="login-changelog-close" onClick={() => setShowChangelog(false)}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="1" y1="1" x2="13" y2="13" /><line x1="13" y1="1" x2="1" y2="13" />
+                </svg>
+              </button>
+            </div>
+            <div className="login-changelog-body">
+              {CHANGELOG.map((release, idx) => (
+                <div key={release.version} className={`login-changelog-section ${idx === 0 ? 'latest' : ''}`}>
+                  <div className="login-changelog-version-row">
+                    <span className="login-changelog-version">v{release.version}</span>
+                    <span className="login-changelog-date">{release.date}</span>
+                  </div>
+                  <ul className="login-changelog-entries">
+                    {release.entries.map((entry, i) => (
+                      <li key={i} className="login-changelog-entry">
+                        <span className={`login-changelog-badge ${entry.type}`}>
+                          {BADGE_LABEL[entry.type] ?? entry.type}
+                        </span>
+                        <span className="login-changelog-text">{entry.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

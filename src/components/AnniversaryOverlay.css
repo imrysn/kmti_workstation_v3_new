@@ -1,0 +1,308 @@
+.ann-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 6, 12, 0.9);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: ann-fade-in 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+@keyframes ann-fade-in {
+  from { opacity: 0; backdrop-filter: blur(0); }
+  to   { opacity: 1; backdrop-filter: blur(18px); }
+}
+
+@keyframes ann-content-slide-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Effects Layer (Confetti & Fireworks) ── */
+.ann-fx-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0.85;
+  filter: saturate(1.6);
+}
+
+.ann-particle {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, top, left;
+}
+
+/* ── Fireworks ── */
+.ann-fw-burst {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ann-fw-particle {
+  position: absolute;
+  width: 3px;
+  height: 10px;
+  background: currentColor;
+  border-radius: 4px;
+  transform-origin: center top;
+  transform: rotate(var(--angle)) translateY(0);
+  animation: ann-fw-launch 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 0 0 15px currentColor;
+}
+
+@keyframes ann-fw-launch {
+  0% {
+    transform: rotate(var(--angle)) translateY(0) scaleY(0.2);
+    opacity: 1;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--angle)) translateY(120px) scaleY(0);
+    opacity: 0;
+  }
+}
+
+/* ── Credits Roll Wrapper ── */
+.ann-credits-wrapper {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100vh;
+  justify-content: flex-start;
+  padding-top: 8vh;
+}
+
+.ann-credits-header {
+  margin-bottom: 4vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: 
+    ann-content-slide-up 1.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+    ann-float 4s ease-in-out infinite;
+}
+
+.ann-logo-container {
+  margin-bottom: 32px;
+}
+
+.ann-logo {
+  height: 80px;
+  width: auto;
+  filter: drop-shadow(0 0 25px rgba(0, 120, 212, 0.5));
+}
+
+@keyframes ann-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.ann-credits-container {
+  width: 100%;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  /* Top and bottom fade out masks for the scrolling text */
+  mask-image: linear-gradient(to bottom, 
+    transparent, 
+    black 10%, 
+    black 90%, 
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(to bottom, 
+    transparent, 
+    black 10%, 
+    black 90%, 
+    transparent
+  );
+}
+
+.ann-credits-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: 120px;
+  padding-top: 30vh;
+  padding-bottom: 70vh;
+  animation: credits-scroll 35s linear infinite;
+}
+
+@keyframes credits-scroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-100%); }
+}
+
+.ann-credits-group {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.ann-credits-category {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0078d4; /* KMTI Blue */
+  text-transform: uppercase;
+  letter-spacing: 0.4em;
+  opacity: 0.9;
+  margin-bottom: 4px;
+  text-shadow: 0 0 20px rgba(0, 120, 212, 0.4);
+}
+
+.ann-credits-item {
+  font-size: 28px;
+  font-weight: 300;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.ann-credits-final {
+  margin-top: 120px;
+  padding-bottom: 40px;
+}
+
+.ann-credits-thanks {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.8);
+  font-style: italic;
+  margin-bottom: 20px;
+}
+
+/* ── Developer Scrolling Signature ── */
+.ann-credits-scroll-signature {
+  margin-top: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.ann-dev-name {
+  font-size: 42px;
+  font-weight: 700;
+  color: #0078d4;
+  margin: 0;
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 30px rgba(0, 120, 212, 0.6);
+}
+
+.ann-dev-label {
+  font-size: 14px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 0.4em;
+  font-weight: 600;
+}
+
+.ann-credits-signature {
+  display: inline-block;
+  padding: 32px 64px;
+  border: 1px solid rgba(255, 204, 0, 0.2);
+  background: rgba(255, 204, 0, 0.05);
+  border-radius: 4px;
+  position: relative;
+}
+
+.ann-credits-dev-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: #ffcc00;
+  margin-bottom: 12px;
+  opacity: 0.7;
+}
+
+.ann-credits-dev-name {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.05em;
+}
+
+.ann-kanji {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.4em;
+  color: #ffcc00;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+  opacity: 0.8;
+}
+
+.ann-heading {
+  font-size: 64px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin: 0;
+  background: linear-gradient(to bottom, #ffffff, #0078d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: ann-heading-bloom 3s ease-in-out infinite;
+}
+
+@keyframes ann-heading-bloom {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(220, 38, 38, 0.3)); }
+  50% { filter: drop-shadow(0 0 25px rgba(220, 38, 38, 0.6)); }
+}
+
+.ann-years {
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin: 16px 0 40px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ann-message-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ann-sub {
+  font-size: 18px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.02em;
+}
+
+.ann-sub-en {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  max-width: 400px;
+}
+
+.ann-continue-hint {
+  position: absolute;
+  bottom: -120px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  animation: ann-hint-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ann-hint-pulse {
+  0%, 100% { opacity: 0.15; transform: translateY(0); }
+  50% { opacity: 0.35; transform: translateY(5px); }
+}

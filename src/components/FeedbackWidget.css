@@ -812,3 +812,17 @@ body.dark-theme .feedback-success-view p {
     opacity: 1;
   }
 }
+
+/* 🥚 Easter egg: hisashiburi shimmer */
+@keyframes hisashiburi-rainbow {
+  0%   { filter: hue-rotate(0deg) saturate(2); }
+  25%  { filter: hue-rotate(90deg) saturate(2.5); }
+  50%  { filter: hue-rotate(180deg) saturate(2); }
+  75%  { filter: hue-rotate(270deg) saturate(2.5); }
+  100% { filter: hue-rotate(360deg) saturate(2); }
+}
+
+.hisashiburi-shimmer {
+  animation: hisashiburi-rainbow 1.8s linear infinite !important;
+  box-shadow: 0 0 12px 3px rgba(139, 92, 246, 0.5) !important;
+}

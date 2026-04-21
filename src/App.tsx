@@ -24,6 +24,7 @@ import DateTimeOverlay from './components/DateTimeOverlay'
 import FeedbackWidget from './components/FeedbackWidget'
 import BroadcastOverlay from './components/BroadcastOverlay'
 import BroadcastFAB from './components/BroadcastFAB'
+import AnniversaryOverlay from './components/AnniversaryOverlay'
 
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
@@ -259,6 +260,7 @@ export default function App() {
           <ModalProvider>
             <HashRouter>
               <AppContent />
+              <AnniversaryOverlay />
             </HashRouter>
           </ModalProvider>
         </AuthProvider>

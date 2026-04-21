@@ -85,7 +85,7 @@ const nav = [
 
 export default function TitleBar() {
   const { user, logout, hasRole } = useAuth()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme, themeLocked } = useTheme()
   const { confirm, notify } = useModal()
   const location = useLocation()
   const navigate = useNavigate()
@@ -238,14 +238,29 @@ export default function TitleBar() {
 
         {user && (
           <button
-            className="titlebar-btn"
+            className={`titlebar-btn${themeLocked ? ' locked' : ''}`}
             onClick={toggleTheme}
-            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-            style={{ color: theme === 'dark' ? '#fbff00ff' : 'inherit' }}
+            disabled={themeLocked}
+            title={
+              themeLocked ? 'Wait...' :
+              theme === 'void' ? 'Escape the Void' :
+              theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'
+            }
+            style={{ 
+              color: theme === 'dark' ? '#fbff00ff' : theme === 'void' ? '#ff0040' : 'inherit',
+              opacity: themeLocked ? 0.4 : 1,
+              cursor: themeLocked ? 'not-allowed' : 'pointer'
+            }}
           >
             {theme === 'light' ? (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            ) : theme === 'void' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9 9h.01M15 9h.01" />
+                <path d="M9.5 15.5c.83.83 2.17 1 3 0" strokeLinecap="round"/>
               </svg>
             ) : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

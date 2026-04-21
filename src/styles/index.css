@@ -59,6 +59,50 @@ body.dark-theme {
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
 }
 
+/* 🥚 VOID THEME — unlocked by rage-clicking the theme toggle 7x in 3s */
+body.void-theme {
+  --bg-primary: #000000;
+  --bg-secondary: #0a0a0a;
+  --bg-surface: #0d0d0d;
+  --bg-surface-subtle: #000000;
+  --bg-surface-hover: #1a0a0a;
+  --border: #2a0a0a;
+  --border-subtle: #150505;
+  --text-primary: #ff2040;
+  --text-secondary: #991020;
+  --text-muted: #550810;
+  --accent: #ff0040;
+  --accent-hover: #ff3060;
+  --accent-subtle: rgba(255, 0, 64, 0.12);
+  --success: #ff0040;
+  --bg-success-subtle: rgba(255, 0, 64, 0.1);
+  --warning: #ff4000;
+  --bg-warning-subtle: rgba(255, 64, 0, 0.1);
+  --danger: #ff0040;
+  --bg-danger-subtle: rgba(255, 0, 64, 0.15);
+  --shadow-sm: 0 1px 4px 0 rgba(255, 0, 64, 0.15);
+  --shadow-md: 0 4px 12px -1px rgba(255, 0, 64, 0.2);
+  --shadow-lg: 0 10px 30px -3px rgba(255, 0, 64, 0.25);
+}
+
+body.void-theme * {
+  scrollbar-color: #2a0a0a #000;
+}
+
+body.void-theme ::-webkit-scrollbar-thumb {
+  background: #3a0a0a;
+}
+
+@keyframes void-pulse {
+  0%, 100% { text-shadow: 0 0 4px rgba(255, 0, 64, 0.4); }
+  50% { text-shadow: 0 0 12px rgba(255, 0, 64, 0.8), 0 0 24px rgba(255, 0, 64, 0.3); }
+}
+
+body.void-theme .sidebar-brand span,
+body.void-theme .titlebar-title {
+  animation: void-pulse 2.5s ease-in-out infinite;
+}
+
 *,
 *::before,
 *::after {

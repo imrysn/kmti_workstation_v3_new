@@ -266,3 +266,13 @@
     padding-left: 10px;
   }
 }
+
+/* 🥚 Void armed: pulses orange before void fires */
+@keyframes void-arm-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.6; transform: scale(1.2); }
+}
+
+.titlebar-btn.void-armed {
+  animation: void-arm-pulse 0.4s ease-in-out infinite;
+}
