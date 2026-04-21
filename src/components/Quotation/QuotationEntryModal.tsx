@@ -19,10 +19,6 @@ interface Props {
   onJoin: (quotNo: string, password?: string) => void
   onCreateNew: (roomName: string, password?: string) => void
   onClose?: () => void
-  /**
-   * When true the lobby is mandatory — closing it without a session
-   * navigates away. The close button shows a ← instead of ✕.
-   */
   mandatory?: boolean
 }
 
@@ -33,6 +29,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
   const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '' })
   const [joiningRoom, setJoiningRoom] = useState<ActiveSession | null>(null)
   const [joinPassword, setJoinPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const fetchSessions = async () => {
     setLoading(true)
@@ -135,34 +132,70 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                 Back to lobby
               </button>
               <form onSubmit={handleCreateSubmit} className="quot-entry-form">
+                <h3>New Workspace</h3>
+                <p>Set up a session to start collaborating on a new quotation.</p>
+
                 <div className="form-group">
                   <label>
                     Room name
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4 }}>(optional)</span>
+                    <span className="label-optional">(optional)</span>
                   </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Project Tiger"
-                    value={newRoom.name}
-                    onChange={e => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
-                    autoFocus
-                    className="form-input"
-                  />
+                  <div className="input-with-icon">
+                    <svg className="input-icon-prefix" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      <polyline points="9 22 9 12 15 12 15 22" />
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="Leave blank to auto-generate"
+                      value={newRoom.name}
+                      onChange={e => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
+                      autoFocus
+                      className="form-input"
+                    />
+                  </div>
                 </div>
+
                 <div className="form-group">
                   <label>
                     Password
-                    <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4 }}>(optional)</span>
+                    <span className="label-optional">(optional)</span>
                   </label>
-                  <input
-                    type="password"
-                    placeholder="Leave blank for public room"
-                    value={newRoom.password || ''}
-                    onChange={e => setNewRoom(prev => ({ ...prev, password: e.target.value }))}
-                    className="form-input"
-                  />
+                  <div className="input-with-icon">
+                    <svg className="input-icon-prefix" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+                    </svg>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Leave blank for public room"
+                      value={newRoom.password || ''}
+                      onChange={e => setNewRoom(prev => ({ ...prev, password: e.target.value }))}
+                      className="form-input"
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9.88 9.88 3.5 3.5" /><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" /><path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" /><line x1="2" x2="22" y1="2" y2="22" /><circle cx="12" cy="12" r="3" />
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <button type="submit" className="btn btn-primary btn-block">Create workspace</button>
+
+                <div className="quot-form-actions">
+                  <button type="submit" className="btn btn-primary">
+                    Create workspace
+                  </button>
+                </div>
               </form>
             </div>
           ) : (
@@ -190,12 +223,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                         )}
                       </div>
                       <div className="quot-session-meta">
-                        {s.displayName !== s.quotNo && (
-                          <>
-                            <span className="quot-session-subno">{s.quotNo}</span>
-                            <span className="quot-session-dot" />
-                          </>
-                        )}
+                        <span className="quot-session-subno">{s.quotNo}</span>
                         <div className="quot-session-avatars">
                           {s.users.map((u, i) => (
                             <div
@@ -211,9 +239,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                         <span className="quot-session-count">{s.userCount} online</span>
                       </div>
                     </div>
-                    <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); handleJoinClick(s) }}>
-                      Join
-                    </button>
+                    <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); handleJoinClick(s) }}>Join</button>
                   </div>
                 ))}
               </div>
@@ -221,7 +247,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
           )}
         </div>
 
-        {/* ── Footer action strip — only on main lobby view ──────── */}
+        {/* ── Footer ─────────────────────────────────────────────── */}
         {!isCreating && !joiningRoom && (
           <div className="quot-entry-footer">
             <button className="quot-footer-btn" onClick={() => setIsCreating(true)} style={{ width: '100%', justifyContent: 'center' }}>
