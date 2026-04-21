@@ -6,6 +6,13 @@ Handles shared quotation management:
   - Version history snapshots at \\KMTI-NAS\Shared\data\template\history\
   - REST endpoints for listing and fetching shared quotations
   - WebSocket (Socket.IO) rooms for real-time collaborative editing
+
+File Persistence Policy (updated):
+  - PRIMARY FILE: Written exclusively by the client via the "Save" button.
+    The server never overwrites the primary .json file based on Room ID.
+    This prevents ghost files when rooms use ephemeral/random IDs (Browse mode).
+  - VERSION HISTORY: Created server-side via trigger_snapshot (manual Save)
+    and the 5-minute auto-save interval (client-driven, emits trigger_snapshot).
 """
 
 import os
@@ -150,7 +157,6 @@ async def _log_audit(quot_no: str, user_name: str, color: str, path: str, value:
         log_path.write_text(json.dumps(logs, indent=2, ensure_ascii=False), encoding="utf-8")
         
         # Broadcast the update (or the new entry)
-        # For simplicity, we just broadcast the latest log state or the top entry
         await sio.emit("audit_entry", logs[0], room=quot_no)
         
     except Exception as e:
@@ -263,19 +269,24 @@ async def blur_field(sid: str, data: dict):
 @sio.event
 async def update_field(sid: str, data: dict):
     """Broadcast a partial state update to all room members.
-    data = { quot_no, patch: { path: string, value: any } }
+    data = { quot_no, patch: { path: string, value: any }, full_state? }
+
+    NOTE: This handler intentionally does NOT persist the full_state to the NAS.
+    Primary file persistence is the client's responsibility (Save button → Electron
+    writeFile). The server only handles Version History via trigger_snapshot.
+    This prevents ghost files when room IDs are ephemeral (e.g. Browse mode).
     """
     quot_no = data.get("quot_no")
     patch   = data.get("patch")
     if not quot_no or not patch:
         return
+
     # Rebroadcast to everyone else in the room
     await sio.emit("remote_patch", {"sid": sid, "patch": patch}, room=quot_no, skip_sid=sid)
     
-    # Audit log (Debounced by client-side or we could add logic here; for now, simple log)
+    # Audit log (debounced server-side per user+path within 15 seconds)
     user_info = _rooms.get(quot_no, {}).get(sid, {})
     if user_info:
-        # Improved audit log with path, value, and full_state for context
         asyncio.create_task(_log_audit(
             quot_no, 
             user_info["name"], 
@@ -284,52 +295,79 @@ async def update_field(sid: str, data: dict):
             patch.get("value"),
             data.get("full_state")
         ))
-
-    # Async auto-save to NAS — now passing the workstation name (author)
-    author_name = user_info.get("name", "Unknown Workstation")
-    asyncio.create_task(_autosave(quot_no, data.get("full_state"), author_name))
+    # NOTE: _autosave() is intentionally NOT called here. See docstring above.
 
 
-async def _autosave(quot_no: str, full_state: Any, author_name: str = "System"):
-    """Write the latest full state to the NAS file and snapshot history."""
-    if not full_state or not quot_no:
+@sio.event
+async def focus_selection(sid: str, data: dict):
+    """Broadcast text selection within a field.
+    data = { quot_no, field_key, start, end }
+    """
+    quot_no   = data.get("quot_no")
+    field_key = data.get("field_key")
+    start     = data.get("start")
+    end       = data.get("end")
+    if not quot_no or not field_key:
         return
+    await sio.emit(
+        "remote_selection",
+        {"sid": sid, "field_key": field_key, "start": start, "end": end},
+        room=quot_no,
+        skip_sid=sid,
+    )
+
+
+@sio.event
+async def trigger_snapshot(sid: str, data: dict):
+    """Explicitly trigger a history snapshot from the client.
+    data = { quot_no, full_state, label? }
+
+    This is the ONLY server-side write to the NAS (version history, not primary file).
+    Called by the client on:
+      - Manual Save (handleSave)
+      - Auto-save timer (every 5 minutes, client-driven)
+      - Version restore
+    """
+    quot_no    = data.get("quot_no")
+    full_state = data.get("full_state")
+    label      = data.get("label")
+    if not quot_no or not full_state: return
+    
+    user_info = _rooms.get(quot_no, {}).get(sid, {})
+    author = user_info.get("name", "Unknown")
+    
+    await _create_history_snapshot(quot_no, full_state, author, label)
+    
+    # Broadcast to the room so sidebars can refresh
+    await sio.emit("history_updated", {"quot_no": quot_no}, room=quot_no)
+
+
+async def _create_history_snapshot(quot_no: str, full_state: Any, author_name: str, label: str = None):
+    """Explicitly create a history snapshot file in the history/ directory."""
+    if not full_state or not quot_no: return
     try:
-        import time
         safe_name = quot_no.replace("/", "_").replace("\\", "_")
-        doc_path  = NAS_QUOTATIONS_DIR / f"{safe_name}.json"
-        content   = json.dumps(full_state, ensure_ascii=False, indent=2)
-
-        # 1. Always update the primary "current" file
-        doc_path.write_text(content, encoding="utf-8")
-
-        # 2. Throttled Snapshotting (History)
-        # We only create a new history snapshot every 5 minutes (300 seconds)
-        now = time.time()
-        last_time = _last_snapshot_times.get(quot_no, 0)
+        snap_dir = NAS_HISTORY_DIR / safe_name
+        snap_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        snap_path = snap_dir / f"{ts}.json"
         
-        if now - last_time > 300:
-            snap_dir = NAS_HISTORY_DIR / safe_name
-            snap_dir.mkdir(parents=True, exist_ok=True)
-            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-            snap_path = snap_dir / f"{ts}.json"
-            
-            # Inject metadata into the snapshot for history tracking
-            snap_data = {
-                "__metadata__": {
-                    "author": author_name,
-                    "timestamp": ts,
-                    "description": f"{author_name} updated this file"
-                },
-                "data": full_state
-            }
-            snap_path.write_text(json.dumps(snap_data, ensure_ascii=False, indent=2), encoding="utf-8")
-            
-            _last_snapshot_times[quot_no] = now
-            print(f"[quotations] History snapshot created for {quot_no}")
-            
+        description = f"{author_name} updated this file"
+        if label:
+            description = f"{author_name} ({label})"
+
+        snap_data = {
+            "__metadata__": {
+                "author": author_name,
+                "timestamp": ts,
+                "description": description
+            },
+            "data": full_state
+        }
+        snap_path.write_text(json.dumps(snap_data, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"[quotations] History snapshot created for {quot_no}: {description}")
     except Exception as e:
-        print(f"[quotations] Auto-save failed for {quot_no}: {e}")
+        print(f"[quotations] History snapshot failed: {e}")
 
 
 # ─── REST API ───────────────────────────────────────────────────────────────

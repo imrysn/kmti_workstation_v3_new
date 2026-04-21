@@ -52,6 +52,7 @@ export function useCollaboration({
   emitBlur: (fieldKey: string) => void
   emitSelection: (fieldKey: string, start: number, end: number) => void
   emitPatch: (patch: { path: string; value: any }, fullState?: any) => void
+  emitSnapshot: (fullState: any, label?: string) => void
 } {
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -212,6 +213,17 @@ export function useCollaboration({
       errorHandlerRef.current?.(err.message)
     })
 
+    socket.on('history_updated', () => {
+      // Small delay to ensure DB is written before sidebar refetches
+      setTimeout(() => {
+        const sidebar = document.querySelector('.history-sidebar')
+        if (sidebar) {
+          // Internal event for HistorySidebar to pick up
+          window.dispatchEvent(new CustomEvent('quot:history-refresh', { detail: { quotNo } }))
+        }
+      }, 500)
+    })
+
     return () => {
       if (currentQuotRef.current) {
         socket.emit('leave_doc', { quot_no: currentQuotRef.current })
@@ -250,5 +262,14 @@ export function useCollaboration({
     })
   }, [])
 
-  return { isConnected, remoteUsers, myEffectiveName, myColor, mySessionId, emitFocus, emitBlur, emitSelection, emitPatch }
+  const emitSnapshot = useCallback((fullState: any, label?: string) => {
+    if (!socketRef.current || !currentQuotRef.current) return
+    socketRef.current.emit('trigger_snapshot', {
+      quot_no: currentQuotRef.current,
+      full_state: fullState,
+      label,
+    })
+  }, [])
+
+  return { isConnected, remoteUsers, myEffectiveName, myColor, mySessionId, emitFocus, emitBlur, emitSelection, emitPatch, emitSnapshot }
 }

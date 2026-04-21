@@ -84,11 +84,6 @@ export interface Signatures {
   }
 }
 
-/**
- * Manual overrides for task-level computed values.
- * Key -1 is reserved for footer-level overrides (overhead amount, grand total adjustment).
- * All other keys are task IDs.
- */
 export interface FooterOverrides {
   overhead?: number
   adjustment?: number
@@ -109,11 +104,9 @@ export interface ManualOverrides {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Pattern for auto-generated quotation numbers: KMTE-YYMMDD-NNN
 const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
 
 export function generateQuotationNumber(date: string, sequential = '001'): string {
-  // Use T00:00:00 to ensure local date parsing instead of UTC
   const dateObj = new Date(date + 'T00:00:00')
   const year = dateObj.getFullYear().toString().slice(-2)
   const month = (dateObj.getMonth() + 1).toString().padStart(2, '0')
@@ -188,43 +181,89 @@ export function makeBlankTask(): Task {
   }
 }
 
-// ─── Internal Helper for Session Persistence ─────────────────────────────────
+// ─── sessionStorage namespace helpers ────────────────────────────────────────
+
+function safeNs(quotNo: string): string {
+  return quotNo.replace(/[^a-zA-Z0-9_-]/g, '_') || 'default'
+}
+
+function nsKey(ns: string, key: string): string {
+  return `quot:${ns}:${key}`
+}
 
 /**
- * Persists state to sessionStorage under a namespaced key.
- * The key is prefixed with `ns` so multiple open tabs or quotations
- * don't stomp on each other's draft data.
- *
- * Key format: `quot:{ns}:{key}` — e.g. `quot:KMTE-250420-001:tasks`
- * Falls back to `quot:default:{key}` before quotNo is known.
+ * Write a full document snapshot into sessionStorage under a given namespace.
+ * Call this BEFORE calling setNs() so that when useStickyState's resync
+ * effect fires it reads pre-populated data, not empty defaults.
  */
-function useStickyState<T>(defaultValue: T | (() => T), key: string, ns: string): [T, React.Dispatch<React.SetStateAction<T>>] {
-  const nsKey = `quot:${ns}:${key}`
-  const [value, setValue] = useState<T>(() => {
-    const stickyValue = window.sessionStorage.getItem(nsKey)
-    if (stickyValue !== null) {
-      try { return JSON.parse(stickyValue) } catch (e) { /* ignore */ }
+function seedNamespace(ns: string, slots: Record<string, any>) {
+  const safe = safeNs(ns)
+  try {
+    for (const [key, value] of Object.entries(slots)) {
+      window.sessionStorage.setItem(nsKey(safe, key), JSON.stringify(value))
     }
-    return typeof defaultValue === 'function' ? (defaultValue as any)() : defaultValue
+    window.sessionStorage.setItem('quot:bootstrap', safe)
+  } catch { /* ignore quota errors */ }
+}
+
+// ─── useStickyState ───────────────────────────────────────────────────────────
+
+/**
+ * useState that is backed by sessionStorage under a namespaced key.
+ *
+ * Key format: `quot:{ns}:{key}`
+ *
+ * When `ns` changes (because loadData switched documents), the resync effect
+ * reads the new bucket and updates React state. loadData pre-seeds that bucket
+ * via seedNamespace() before calling setNs(), so the resync always finds data.
+ *
+ * Write-back: value changes are persisted to the current nsKey automatically.
+ */
+function useStickyState<T>(
+  defaultValue: T | (() => T),
+  key: string,
+  ns: string,
+): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const currentNsKey = nsKey(ns, key)
+
+  const [value, setValueRaw] = useState<T>(() => {
+    const stored = window.sessionStorage.getItem(currentNsKey)
+    if (stored !== null) {
+      try { return JSON.parse(stored) } catch { /* ignore */ }
+    }
+    return typeof defaultValue === 'function' ? (defaultValue as () => T)() : defaultValue
   })
+
+  // Resync when namespace changes. loadData pre-seeds the bucket so this
+  // effect always finds the correct data — never empty defaults.
+  const prevNsKeyRef = useRef<string>(currentNsKey)
   useEffect(() => {
-    window.sessionStorage.setItem(nsKey, JSON.stringify(value))
-  }, [nsKey, value])
-  return [value, setValue]
+    if (prevNsKeyRef.current === currentNsKey) return
+    prevNsKeyRef.current = currentNsKey
+
+    const stored = window.sessionStorage.getItem(currentNsKey)
+    if (stored !== null) {
+      try { setValueRaw(JSON.parse(stored)); return } catch { /* ignore */ }
+    }
+    setValueRaw(typeof defaultValue === 'function' ? (defaultValue as () => T)() : defaultValue)
+  // defaultValue is stable (module-level const), safe to omit
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentNsKey])
+
+  // Write-back
+  useEffect(() => {
+    window.sessionStorage.setItem(currentNsKey, JSON.stringify(value))
+  }, [currentNsKey, value])
+
+  return [value, setValueRaw]
 }
 
 // ─── Migrate legacy ManualOverrides format ────────────────────────────────────
-// Old format used Record<number, ...> with key -1 for footer. New format uses { tasks, footer }.
 function migrateLegacyOverrides(raw: any): ManualOverrides {
   if (!raw || typeof raw !== 'object') return EMPTY_MANUAL_OVERRIDES
-  // Already in new format - but ensure properties are present and valid
-  if (raw && typeof raw === 'object' && ('tasks' in raw || 'footer' in raw)) {
-    return {
-      tasks: raw.tasks || {},
-      footer: raw.footer || {}
-    } as ManualOverrides
+  if ('tasks' in raw || 'footer' in raw) {
+    return { tasks: raw.tasks || {}, footer: raw.footer || {} } as ManualOverrides
   }
-  // Legacy flat Record format
   const tasks: Record<number, TaskOverrides> = {}
   let footer: FooterOverrides = {}
   for (const key of Object.keys(raw)) {
@@ -244,51 +283,38 @@ function migrateLegacyOverrides(raw: any): ManualOverrides {
 export function useInvoiceState() {
   const today = new Date().toISOString().split('T')[0]
 
-  // ─ Namespace derivation ───────────────────────────────────────────────
-  // Each document gets its own sessionStorage bucket keyed by quotationNo.
-  // We bootstrap the namespace from a single stable key (quot:bootstrap) so
-  // a page reload restores the same document. When a new document is opened
-  // or created, callers invoke setNs() to redirect writes to a new bucket.
-  //
-  // NOTE: useStickyState reads its key at mount time. Changing ns after
-  // mount doesn’t re-read storage — it just redirects future writes.
-  // loadData / resetToNew fully replace state anyway, so this is correct.
-  const initNs = (() => {
+  // ns is React state so that setNs() triggers a re-render, causing every
+  // useStickyState to receive the updated namespace and resync from storage.
+  const [ns, setNsState] = useState<string>(() => {
     try { return window.sessionStorage.getItem('quot:bootstrap') || 'default' } catch { return 'default' }
-  })()
-  const nsRef = useRef<string>(initNs)
+  })
+
   const setNs = useCallback((quotNo: string) => {
-    const safe = quotNo.replace(/[^a-zA-Z0-9_-]/g, '_') || 'default'
-    nsRef.current = safe
+    const safe = safeNs(quotNo)
+    setNsState(safe)
     try { window.sessionStorage.setItem('quot:bootstrap', safe) } catch { /* ignore */ }
   }, [])
 
-  const [companyInfo, setCompanyInfo] = useStickyState<CompanyInfo>(DEFAULT_COMPANY, 'companyInfo', nsRef.current)
-  const [clientInfo, setClientInfo] = useStickyState<ClientInfo>(DEFAULT_CLIENT, 'clientInfo', nsRef.current)
+  const [companyInfo, setCompanyInfo] = useStickyState<CompanyInfo>(DEFAULT_COMPANY, 'companyInfo', ns)
+  const [clientInfo, setClientInfo] = useStickyState<ClientInfo>(DEFAULT_CLIENT, 'clientInfo', ns)
   const [quotationDetails, setQuotationDetails] = useStickyState<QuotationDetails>(() => ({
-    quotationNo: generateQuotationNumber(today),
+    quotationNo: '',
     referenceNo: '',
     date: today,
-  }), 'details', nsRef.current)
-  const [billingDetails, setBillingDetails] = useStickyState<BillingDetails>(DEFAULT_BILLING_DETAILS, 'billingDetails', nsRef.current)
-  const [tasks, setTasks] = useStickyState<Task[]>([], 'tasks', nsRef.current)
-  const [baseRates, setBaseRates] = useStickyState<BaseRates>(DEFAULT_BASE_RATES, 'baseRates', nsRef.current)
-  const [currentFilePath, setCurrentFilePath] = useStickyState<string | null>(null, 'filePath', nsRef.current)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useStickyState(false, 'unsaved', nsRef.current)
+  }), 'details', ns)
+  const [billingDetails, setBillingDetails] = useStickyState<BillingDetails>(DEFAULT_BILLING_DETAILS, 'billingDetails', ns)
+  const [tasks, setTasks] = useStickyState<Task[]>([], 'tasks', ns)
+  const [baseRates, setBaseRates] = useStickyState<BaseRates>(DEFAULT_BASE_RATES, 'baseRates', ns)
+  const [currentFilePath, setCurrentFilePath] = useStickyState<string | null>(null, 'filePath', ns)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useStickyState(false, 'unsaved', ns)
   const [selectedMainTaskId, setSelectedMainTaskId] = useState<number | null>(null)
-  const [signatures, setSignatures] = useStickyState<Signatures>(DEFAULT_SIGNATURES, 'signatures', nsRef.current)
+  const [signatures, setSignatures] = useStickyState<Signatures>(DEFAULT_SIGNATURES, 'signatures', ns)
   const [manualOverrides, setManualOverrides] = useStickyState<ManualOverrides>(
-    () => {
-      const raw = window.sessionStorage.getItem(`quot:${nsRef.current}:manualOverrides`)
-      if (raw) {
-        try { return migrateLegacyOverrides(JSON.parse(raw)) } catch { /* ignore */ }
-      }
-      return EMPTY_MANUAL_OVERRIDES
-    },
+    EMPTY_MANUAL_OVERRIDES,
     'manualOverrides',
-    nsRef.current
+    ns,
   )
-  const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'collapsed', nsRef.current)
+  const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'collapsed', ns)
 
   const debouncedQuotationUpdate = useDebounceCallback((date: string) => {
     const newQuotationNo = generateQuotationNumber(date)
@@ -335,8 +361,8 @@ export function useInvoiceState() {
       return
     }
 
-    const effectiveParentId = manualTask ? manualTask.parentId : mainTaskId;
-    if (!effectiveParentId && manualTask) return; // Should not happen
+    const effectiveParentId = manualTask ? manualTask.parentId : mainTaskId
+    if (!effectiveParentId && manualTask) return
 
     const newSubTask: Task = manualTask || {
       id: Date.now(),
@@ -355,13 +381,11 @@ export function useInvoiceState() {
     setTasks(prev => {
       const parentIndex = prev.findIndex(task => task.id === effectiveParentId)
       if (parentIndex === -1) return prev
-
       let insertIndex = parentIndex + 1
       for (let i = parentIndex + 1; i < prev.length; i++) {
         if (prev[i].parentId === effectiveParentId) insertIndex = i + 1
         else break
       }
-
       const newTasks = [...prev]
       newTasks.splice(insertIndex, 0, newSubTask)
       return newTasks
@@ -391,15 +415,12 @@ export function useInvoiceState() {
       const draggedIndex = newTasks.findIndex(t => t.id === draggedTaskId)
       const targetIndex = newTasks.findIndex(t => t.id === targetTaskId)
       if (draggedIndex === -1 || targetIndex === -1) return prev
-
       const draggedTask = newTasks[draggedIndex]
       const targetTask = newTasks[targetIndex]
       if (!draggedTask.isMainTask || !targetTask.isMainTask) return prev
-
       const draggedTaskAndSubs = newTasks.filter(t => t.id === draggedTaskId || t.parentId === draggedTaskId)
       const tasksWithoutDragged = newTasks.filter(t => t.id !== draggedTaskId && t.parentId !== draggedTaskId)
       const newTargetIndex = tasksWithoutDragged.findIndex(t => t.id === targetTaskId)
-
       return [
         ...tasksWithoutDragged.slice(0, newTargetIndex),
         ...draggedTaskAndSubs,
@@ -442,18 +463,30 @@ export function useInvoiceState() {
   const resetToNew = useCallback((forcedQuotNo?: string) => {
     const newToday = new Date().toISOString().split('T')[0]
     const newQuotNo = forcedQuotNo || generateQuotationNumber(newToday)
-    setNs(newQuotNo)
-    setQuotationDetails({
-      quotationNo: newQuotNo,
-      referenceNo: '',
-      date: newToday,
+    const newDetails: QuotationDetails = { quotationNo: newQuotNo, referenceNo: '', date: newToday }
+    const newBilling: BillingDetails = { ...DEFAULT_BILLING_DETAILS, invoiceNo: '', jobOrderNo: '' }
+    const newTasks: Task[] = [makeBlankTask()]
+
+    // Pre-seed the new namespace before switching so useStickyState resync
+    // reads correct values (not empty defaults) when ns changes.
+    seedNamespace(newQuotNo, {
+      companyInfo: DEFAULT_COMPANY,
+      clientInfo: DEFAULT_CLIENT,
+      details: newDetails,
+      billingDetails: newBilling,
+      tasks: newTasks,
+      baseRates: DEFAULT_BASE_RATES,
+      signatures: DEFAULT_SIGNATURES,
+      manualOverrides: EMPTY_MANUAL_OVERRIDES,
+      collapsed: [],
+      filePath: null,
+      unsaved: false,
     })
-    setBillingDetails(prev => ({
-      ...prev,
-      invoiceNo: '',
-      jobOrderNo: '',
-    }))
-    setTasks([makeBlankTask()])
+
+    setNs(newQuotNo)
+    setQuotationDetails(newDetails)
+    setBillingDetails(newBilling)
+    setTasks(newTasks)
     setSelectedMainTaskId(null)
     setBaseRates(DEFAULT_BASE_RATES)
     setSignatures(DEFAULT_SIGNATURES)
@@ -464,41 +497,65 @@ export function useInvoiceState() {
   }, [])
 
   const loadData = useCallback((data: any, fileName: string) => {
-    setCompanyInfo(data.companyInfo || { name: '', address: '', city: '', location: '', phone: '' })
-    setClientInfo(data.clientInfo || { company: '', contact: '', address: '', phone: '' })
-
-    // Support loading legacy files that had invoiceNo/jobOrderNo in quotationDetails
     const qd = data.quotationDetails || {}
+    const targetQuotNo = qd.quotationNo || ''
 
-    // Update the namespace to match the loaded document’s quotation number so
-    // future writes go to the correct isolated sessionStorage bucket.
-    if (qd.quotationNo) setNs(qd.quotationNo)
-    setQuotationDetails({
-      quotationNo: qd.quotationNo || '',
+    const resolvedCompany  = data.companyInfo   || { name: '', address: '', city: '', location: '', phone: '' }
+    const resolvedClient   = data.clientInfo    || { company: '', contact: '', address: '', phone: '' }
+    const resolvedDetails: QuotationDetails = {
+      quotationNo: targetQuotNo,
       referenceNo: qd.referenceNo || '',
       date: qd.date || new Date().toISOString().split('T')[0],
-    })
-
-    // Merge billing details: prefer new field, fall back to legacy quotationDetails fields
-    setBillingDetails({
+    }
+    const resolvedBilling: BillingDetails = {
       ...DEFAULT_BILLING_DETAILS,
       ...(data.billingDetails || {}),
-      invoiceNo: data.billingDetails?.invoiceNo ?? qd.invoiceNo ?? '',
+      invoiceNo:  data.billingDetails?.invoiceNo  ?? qd.invoiceNo  ?? '',
       jobOrderNo: data.billingDetails?.jobOrderNo ?? qd.jobOrderNo ?? '',
-    })
-
-    setTasks(data.tasks || [makeBlankTask()])
-    setSelectedMainTaskId(null)
-    setBaseRates(data.baseRates || DEFAULT_BASE_RATES)
-    // Deep-merge with DEFAULT_SIGNATURES so legacy files missing 'billing'
-    // or any sub-key don't crash components that expect the full shape.
-    const loadedSig = data.signatures || {}
-    setSignatures({
+    }
+    const resolvedTasks    = data.tasks || [makeBlankTask()]
+    const resolvedRates    = data.baseRates || DEFAULT_BASE_RATES
+    const loadedSig        = data.signatures || {}
+    const resolvedSigs: Signatures = {
       quotation: { ...DEFAULT_SIGNATURES.quotation, ...loadedSig.quotation },
       billing:   { ...DEFAULT_SIGNATURES.billing,   ...loadedSig.billing   },
-    })
-    setManualOverrides(migrateLegacyOverrides(data.manualOverrides))
-    setCollapsedTaskIds(data.collapsedTaskIds || [])
+    }
+    const resolvedOverrides = migrateLegacyOverrides(data.manualOverrides)
+    const resolvedCollapsed = data.collapsedTaskIds || []
+
+    // ── Critical: pre-seed sessionStorage under the new namespace BEFORE
+    // calling setNs(). useStickyState's resync useEffect fires on the next
+    // render after setNs(), reads from the new namespace key, and will find
+    // the correct data instead of falling back to defaults.
+    if (targetQuotNo) {
+      seedNamespace(targetQuotNo, {
+        companyInfo:     resolvedCompany,
+        clientInfo:      resolvedClient,
+        details:         resolvedDetails,
+        billingDetails:  resolvedBilling,
+        tasks:           resolvedTasks,
+        baseRates:       resolvedRates,
+        signatures:      resolvedSigs,
+        manualOverrides: resolvedOverrides,
+        collapsed:       resolvedCollapsed,
+        filePath:        fileName,
+        unsaved:         false,
+      })
+      setNs(targetQuotNo)
+    }
+
+    // Also call the React setters so the current render cycle shows correct
+    // values immediately (before the resync effect fires).
+    setCompanyInfo(resolvedCompany)
+    setClientInfo(resolvedClient)
+    setQuotationDetails(resolvedDetails)
+    setBillingDetails(resolvedBilling)
+    setTasks(resolvedTasks)
+    setSelectedMainTaskId(null)
+    setBaseRates(resolvedRates)
+    setSignatures(resolvedSigs)
+    setManualOverrides(resolvedOverrides)
+    setCollapsedTaskIds(resolvedCollapsed)
     setCurrentFilePath(fileName)
     setHasUnsavedChanges(false)
   }, [])

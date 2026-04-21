@@ -38,11 +38,11 @@ export function CollaborativeField({
   const [remoteSelectionRects, setRemoteSelectionRects] = React.useState<Record<string, TextRangeRect[]>>({})
   const childRef = React.useRef<HTMLInputElement | HTMLTextAreaElement>(null)
 
-  const handleFocus = (e: React.FocusEvent) => {
+  const handleFocus = () => {
     onFocus?.()
   }
 
-  const handleBlur = (e: React.FocusEvent) => {
+  const handleBlur = () => {
     onBlur?.()
   }
 

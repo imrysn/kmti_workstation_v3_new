@@ -153,6 +153,18 @@ export function HistorySidebar({ quotNo, onRestore, onPreview, previewingTs, aud
     }
   }, [expanded, quotNo, activeTab, fetchHistory])
 
+  // Listen for background refresh events (triggered by collaboration socket)
+  useEffect(() => {
+    if (!quotNo) return
+    const handleRefresh = (e: any) => {
+      if (e.detail?.quotNo === quotNo && activeTab === 'history') {
+        fetchHistory(true) // silent refresh
+      }
+    }
+    window.addEventListener('quot:history-refresh' as any, handleRefresh)
+    return () => window.removeEventListener('quot:history-refresh' as any, handleRefresh)
+  }, [quotNo, activeTab, fetchHistory])
+
   const fetchLogs = async () => {
     if (!quotNo) return
     setLoading(true)

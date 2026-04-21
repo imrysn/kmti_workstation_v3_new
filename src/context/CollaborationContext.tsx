@@ -17,6 +17,7 @@ interface CollaborationContextValue {
   emitBlur: (fieldKey: string) => void
   emitSelection: (fieldKey: string, start: number, end: number) => void
   emitPatch: (patch: { path: string; value: any }, fullState?: any) => void
+  emitSnapshot: (fullState: any, label?: string) => void
 }
 
 const CollaborationContext = createContext<CollaborationContextValue | null>(null)
@@ -48,6 +49,7 @@ export function useCollaborationContext() {
       emitBlur: () => {},
       emitSelection: () => {},
       emitPatch: () => {},
+      emitSnapshot: () => {},
     }
   }
   return ctx

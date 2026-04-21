@@ -5,7 +5,6 @@ import { CollaborativeField } from './CollaborativeField'
 
 interface Props {
   billingDetails: BillingDetails
-  quotationDetails: QuotationDetails
   onUpdateBilling?: (updates: Partial<BillingDetails>) => void
   onUpdateQuotation?: (updates: Partial<QuotationDetails>) => void
 }
@@ -19,7 +18,7 @@ const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder
   { key: 'branchCode',    label: 'Branch Code',         placeholder: 'e.g. 358' },
 ]
 
-const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBilling, onUpdateQuotation }: Props) => {
+const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling, onUpdateQuotation }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 

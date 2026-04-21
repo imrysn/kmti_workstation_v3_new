@@ -12,6 +12,8 @@ interface FileOperationsOptions {
   resetToNew: () => void
   markSaved: (path: string) => void
   notify?: (message: string, type?: NotificationType) => void
+  /** The currently tracked destination for the document (full path) */
+  currentFilePath: string | null
 }
 
 export function useFileOperations({
@@ -22,6 +24,7 @@ export function useFileOperations({
   resetToNew,
   markSaved,
   notify,
+  currentFilePath,
 }: FileOperationsOptions) {
   const modal = useModal()
 
@@ -46,47 +49,64 @@ export function useFileOperations({
   }, [hasUnsavedChanges, resetToNew, modal])
 
   // Save Invoice
-  const saveInvoice = useCallback(async () => {
+  const saveInvoice = useCallback(async (isAutoSave = false) => {
     try {
       const data = getSaveData()
       const jsonString = JSON.stringify(data, null, 2)
-      // Build filename from quotation number — more meaningful than a plain date stamp
+      
       const quotNo = getQuotationNo().replace(/[^a-zA-Z0-9_\-]/g, '_') || 'Draft'
       const dateStamp = new Date().toISOString().split('T')[0]
-      const fileName = `KMTI_Quotation_${quotNo}_${dateStamp}.json`
+      const defaultFileName = `KMTI_Quotation_${quotNo}_${dateStamp}.json`
 
-      // Electron: use native save dialog
       const electronAPI = (window as any).electronAPI
-      if (electronAPI?.showSaveDialog && electronAPI?.writeFile) {
-        const { filePath, canceled } = await electronAPI.showSaveDialog({
-          defaultPath: fileName,
-          filters: [{ name: 'KMTI Quotation', extensions: ['json'] }],
-        })
-        if (canceled || !filePath) return // user cancelled
-        await electronAPI.writeFile(filePath, jsonString)
-        markSaved(filePath)
-        showMessage('Quotation saved!', 'success')
-        return
+      if (electronAPI?.writeFile) {
+        let targetPath = currentFilePath
+
+        // If no file path exists, we must ask the user for one (unless it's an auto-save)
+        if (!targetPath) {
+          if (isAutoSave) return null // Don't interrupt user with dialogs during auto-save
+          
+          if (electronAPI.showSaveDialog) {
+            const { filePath, canceled } = await electronAPI.showSaveDialog({
+              defaultPath: defaultFileName,
+              filters: [{ name: 'KMTI Quotation', extensions: ['json'] }],
+            })
+            if (canceled || !filePath) return null
+            targetPath = filePath
+          }
+        }
+
+        if (targetPath) {
+          await electronAPI.writeFile(targetPath, jsonString)
+          markSaved(targetPath)
+          if (!isAutoSave) showMessage('Quotation saved!', 'success')
+          return targetPath
+        }
+        return null
       }
 
-      // Fallback: browser download
+      // Fallback: browser download (only for manual save)
+      if (isAutoSave) return null
+      
       const blob = new Blob([jsonString], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = fileName
+      link.download = defaultFileName
       link.style.display = 'none'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       setTimeout(() => URL.revokeObjectURL(url), 100)
-      // Browsers don't give us a real path, but we mark as saved to clear the dot
-      markSaved(fileName)
+      
+      markSaved(defaultFileName)
+      return defaultFileName
     } catch (error: any) {
       console.error('Save failed:', error)
-      showMessage(`Error saving file: ${error.message}`, 'error')
+      if (!isAutoSave) showMessage(`Error saving file: ${error.message}`, 'error')
+      return null
     }
-  }, [getSaveData, getQuotationNo, markSaved, showMessage])
+  }, [getSaveData, getQuotationNo, markSaved, showMessage, currentFilePath])
 
   // Load Invoice
   const performLoad = useCallback(async () => {
