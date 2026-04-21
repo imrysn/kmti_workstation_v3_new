@@ -5,7 +5,7 @@ import { CollaborativeField } from './CollaborativeField'
 
 interface Props {
   signatures: Signatures
-  onUpdate: (type: keyof Signatures, field: string, value: any) => void
+  onUpdate?: (type: keyof Signatures, field: string, value: any) => void
 }
 
 // Shared props to force input interactivity inside Electron
@@ -67,7 +67,7 @@ const QuotationSignaturesCard = memo(({
   onUpdate,
 }: {
   signatures: Signatures
-  onUpdate: (type: keyof Signatures, field: string, value: any) => void
+  onUpdate?: (type: keyof Signatures, field: string, value: any) => void
 }) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
@@ -84,7 +84,7 @@ const QuotationSignaturesCard = memo(({
           </svg>
         </div>
         <h2 className="section-title">Quotation Signatures</h2>
-        <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />
+        {onUpdate && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
       </div>
 
       <div className="card-content">
@@ -101,7 +101,7 @@ const QuotationSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.quotation.preparedBy.name')}
                 >
                   <input type="text" value={sig.preparedBy.name}
-                    onChange={e => onUpdate('quotation', 'preparedBy', { ...sig.preparedBy, name: e.target.value })}
+                    onChange={e => onUpdate?.('quotation', 'preparedBy', { ...sig.preparedBy, name: e.target.value })}
                     className="form-input" placeholder="Enter name" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -114,7 +114,7 @@ const QuotationSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.quotation.preparedBy.title')}
                 >
                   <input type="text" value={sig.preparedBy.title}
-                    onChange={e => onUpdate('quotation', 'preparedBy', { ...sig.preparedBy, title: e.target.value })}
+                    onChange={e => onUpdate?.('quotation', 'preparedBy', { ...sig.preparedBy, title: e.target.value })}
                     className="form-input" placeholder="Enter title" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -130,7 +130,7 @@ const QuotationSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.quotation.approvedBy.name')}
                 >
                   <input type="text" value={sig.approvedBy.name}
-                    onChange={e => onUpdate('quotation', 'approvedBy', { ...sig.approvedBy, name: e.target.value })}
+                    onChange={e => onUpdate?.('quotation', 'approvedBy', { ...sig.approvedBy, name: e.target.value })}
                     className="form-input" placeholder="Enter name" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -143,7 +143,7 @@ const QuotationSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.quotation.approvedBy.title')}
                 >
                   <input type="text" value={sig.approvedBy.title}
-                    onChange={e => onUpdate('quotation', 'approvedBy', { ...sig.approvedBy, title: e.target.value })}
+                    onChange={e => onUpdate?.('quotation', 'approvedBy', { ...sig.approvedBy, title: e.target.value })}
                     className="form-input" placeholder="Enter title" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -159,7 +159,7 @@ const QuotationSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.quotation.receivedBy.label')}
                 >
                   <input type="text" value={sig.receivedBy.label}
-                    onChange={e => onUpdate('quotation', 'receivedBy', { ...sig.receivedBy, label: e.target.value })}
+                    onChange={e => onUpdate?.('quotation', 'receivedBy', { ...sig.receivedBy, label: e.target.value })}
                     className="form-input" placeholder="Enter label" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -172,7 +172,7 @@ const QuotationSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.quotation.receivedBy.title')}
                 >
                   <input type="text" value={sig.receivedBy.title || ''}
-                    onChange={e => onUpdate('quotation', 'receivedBy', { ...sig.receivedBy, title: e.target.value })}
+                    onChange={e => onUpdate?.('quotation', 'receivedBy', { ...sig.receivedBy, title: e.target.value })}
                     className="form-input" placeholder="Enter title" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -200,7 +200,7 @@ const BillingSignaturesCard = memo(({
   onUpdate,
 }: {
   signatures: Signatures
-  onUpdate: (type: keyof Signatures, field: string, value: any) => void
+  onUpdate?: (type: keyof Signatures, field: string, value: any) => void
 }) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
@@ -217,7 +217,7 @@ const BillingSignaturesCard = memo(({
           </svg>
         </div>
         <h2 className="section-title">Billing Statement Signatures</h2>
-        <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />
+        {onUpdate && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
       </div>
 
       <div className="card-content">
@@ -234,7 +234,7 @@ const BillingSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.billing.preparedBy.name')}
                 >
                   <input type="text" value={sig.preparedBy.name}
-                    onChange={e => onUpdate('billing', 'preparedBy', { ...sig.preparedBy, name: e.target.value })}
+                    onChange={e => onUpdate?.('billing', 'preparedBy', { ...sig.preparedBy, name: e.target.value })}
                     className="form-input" placeholder="Enter name" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -247,7 +247,7 @@ const BillingSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.billing.preparedBy.title')}
                 >
                   <input type="text" value={sig.preparedBy.title}
-                    onChange={e => onUpdate('billing', 'preparedBy', { ...sig.preparedBy, title: e.target.value })}
+                    onChange={e => onUpdate?.('billing', 'preparedBy', { ...sig.preparedBy, title: e.target.value })}
                     className="form-input" placeholder="Enter title" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -263,7 +263,7 @@ const BillingSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.billing.approvedBy.name')}
                 >
                   <input type="text" value={sig.approvedBy.name}
-                    onChange={e => onUpdate('billing', 'approvedBy', { ...sig.approvedBy, name: e.target.value })}
+                    onChange={e => onUpdate?.('billing', 'approvedBy', { ...sig.approvedBy, name: e.target.value })}
                     className="form-input" placeholder="Enter name" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -276,7 +276,7 @@ const BillingSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.billing.approvedBy.title')}
                 >
                   <input type="text" value={sig.approvedBy.title}
-                    onChange={e => onUpdate('billing', 'approvedBy', { ...sig.approvedBy, title: e.target.value })}
+                    onChange={e => onUpdate?.('billing', 'approvedBy', { ...sig.approvedBy, title: e.target.value })}
                     className="form-input" placeholder="Enter title" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -292,7 +292,7 @@ const BillingSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.billing.finalApprover.name')}
                 >
                   <input type="text" value={sig.finalApprover.name}
-                    onChange={e => onUpdate('billing', 'finalApprover', { ...sig.finalApprover, name: e.target.value })}
+                    onChange={e => onUpdate?.('billing', 'finalApprover', { ...sig.finalApprover, name: e.target.value })}
                     className="form-input" placeholder="Enter name" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -305,7 +305,7 @@ const BillingSignaturesCard = memo(({
                   onBlur={() => emitBlur('signatures.billing.finalApprover.title')}
                 >
                   <input type="text" value={sig.finalApprover.title}
-                    onChange={e => onUpdate('billing', 'finalApprover', { ...sig.finalApprover, title: e.target.value })}
+                    onChange={e => onUpdate?.('billing', 'finalApprover', { ...sig.finalApprover, title: e.target.value })}
                     className="form-input" placeholder="Enter title" {...forceInputProps} />
                 </CollaborativeField>
               </div>
@@ -331,15 +331,33 @@ BillingSignaturesCard.displayName = 'BillingSignaturesCard'
 function safeSignatures(signatures: Signatures): Signatures {
   return {
     quotation: {
-      preparedBy: { name: '', title: '', ...signatures?.quotation?.preparedBy },
-      approvedBy: { name: '', title: '', ...signatures?.quotation?.approvedBy },
-      receivedBy: { label: '', title: '', ...signatures?.quotation?.receivedBy },
+      preparedBy: { 
+        name: signatures?.quotation?.preparedBy?.name ?? '', 
+        title: signatures?.quotation?.preparedBy?.title ?? '' 
+      },
+      approvedBy: { 
+        name: signatures?.quotation?.approvedBy?.name ?? '', 
+        title: signatures?.quotation?.approvedBy?.title ?? '' 
+      },
+      receivedBy: { 
+        label: signatures?.quotation?.receivedBy?.label ?? '', 
+        title: signatures?.quotation?.receivedBy?.title ?? '' 
+      },
     },
     billing: {
-      preparedBy:    { name: '', title: '', ...signatures?.billing?.preparedBy },
-      approvedBy:    { name: '', title: '', ...signatures?.billing?.approvedBy },
-      finalApprover: { name: '', title: '', ...signatures?.billing?.finalApprover },
-    },
+      preparedBy: { 
+        name: signatures?.billing?.preparedBy?.name ?? '', 
+        title: signatures?.billing?.preparedBy?.title ?? '' 
+      },
+      approvedBy: { 
+        name: signatures?.billing?.approvedBy?.name ?? '', 
+        title: signatures?.billing?.approvedBy?.title ?? '' 
+      },
+      finalApprover: { 
+        name: signatures?.billing?.finalApprover?.name ?? '', 
+        title: signatures?.billing?.finalApprover?.title ?? '' 
+      },
+    }
   }
 }
 

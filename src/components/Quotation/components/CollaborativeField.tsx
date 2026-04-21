@@ -67,12 +67,28 @@ export function CollaborativeField({
     if (!childRef.current) return
     
     const newRects: Record<string, TextRangeRect[]> = {}
+    let hasValidCalculation = false
+
     focused.forEach(u => {
-      if (u.selection && u.selection.start !== u.selection.end) {
-        const rects = getTextRangeRects(childRef.current!, u.selection.start, u.selection.end)
-        if (rects.length > 0) newRects[u.sid] = rects
+      if (u.selection) {
+        try {
+          const rects = getTextRangeRects(childRef.current!, u.selection.start, u.selection.end)
+          if (rects.length > 0) {
+            newRects[u.sid] = rects
+            hasValidCalculation = true
+          }
+        } catch (e) {
+          console.warn('[collaboration] Highlight calculation failed:', e)
+        }
       }
     })
+
+    // Resilience: If we have focused users but calculation returned nothing (e.g. during a DOM flip),
+    // we keep the previous rects for one more frame to prevent flickering.
+    if (!hasValidCalculation && focused.length > 0) {
+      return
+    }
+
     setRemoteSelectionRects(newRects)
   }, [focused, children]) // Re-run if remote focus changes or local content updates
 
@@ -134,12 +150,12 @@ export function CollaborativeField({
                   key={`${sid}-sel-${i}`}
                   className="collab-selection-rect"
                   style={{
-                    left: rect.left,
-                    top: rect.top,
+                    left: rect.left + 4, // Compensation for .collab-highlight-overlay { inset: -4px }
+                    top: rect.top + 4,
                     width: rect.width,
                     height: rect.height,
                     backgroundColor: userColor,
-                    opacity: 0.3
+                    opacity: rect.width > 2 ? 0.3 : 0.8 // Brighter for cursors
                   }}
                 />
               )

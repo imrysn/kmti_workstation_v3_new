@@ -6,8 +6,8 @@ import { CollaborativeField } from './CollaborativeField'
 interface Props {
   billingDetails: BillingDetails
   quotationDetails: QuotationDetails
-  onUpdateBilling: (updates: Partial<BillingDetails>) => void
-  onUpdateQuotation: (updates: Partial<QuotationDetails>) => void
+  onUpdateBilling?: (updates: Partial<BillingDetails>) => void
+  onUpdateQuotation?: (updates: Partial<QuotationDetails>) => void
 }
 
 const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder: string }> = [
@@ -45,28 +45,30 @@ const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBil
           </div>
         )}
 
-        <button
-          className="info-card-edit-btn"
-          onClick={() => setIsEditing(e => !e)}
-          title={isEditing ? 'Done editing' : 'Edit billing details'}
-        >
-          {isEditing ? (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              Done
-            </>
-          ) : (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Edit
-            </>
-          )}
-        </button>
+        {(onUpdateBilling || onUpdateQuotation) && (
+          <button
+            className="info-card-edit-btn"
+            onClick={() => setIsEditing(e => !e)}
+            title={isEditing ? 'Done editing' : 'Edit billing details'}
+          >
+            {isEditing ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Done
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="card-content">
@@ -84,7 +86,7 @@ const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBil
                 <input
                   type="text"
                   value={billingDetails.invoiceNo}
-                  onChange={e => onUpdateBilling({ invoiceNo: e.target.value })}
+                  onChange={e => onUpdateBilling?.({ invoiceNo: e.target.value })}
                   className="form-input"
                   placeholder="Invoice number"
                   autoFocus
@@ -102,7 +104,7 @@ const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBil
                 <input
                   type="text"
                   value={billingDetails.jobOrderNo}
-                  onChange={e => onUpdateBilling({ jobOrderNo: e.target.value })}
+                  onChange={e => onUpdateBilling?.({ jobOrderNo: e.target.value })}
                   className="form-input"
                   placeholder="Job order number"
                 />
@@ -127,7 +129,7 @@ const BillingDetailsCard = memo(({ billingDetails, quotationDetails, onUpdateBil
                   <input
                     type="text"
                     value={billingDetails[key] as string}
-                    onChange={e => onUpdateBilling({ [key]: e.target.value })}
+                    onChange={e => onUpdateBilling?.({ [key]: e.target.value })}
                     className="form-input"
                     placeholder={placeholder}
                   />

@@ -44,17 +44,21 @@ export function getTextRangeRects(
     'font-family', 'font-size', 'font-weight', 'font-style', 'font-variant',
     'line-height', 'text-transform', 'letter-spacing', 'word-spacing',
     'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
-    'border-style', 'border-width', 'box-sizing', 'width', 'text-indent'
+    'border-style', 'border-width', 'box-sizing', 'width', 'text-indent',
+    'text-align', 'vertical-align', 'display'
   ]
 
   properties.forEach(prop => {
     mirror.style.setProperty(prop, style.getPropertyValue(prop))
   })
 
+  // Ensure mirror is block-level for width/alignment to work
+  mirror.style.display = 'block'
+
   const val = input.value
-  const before = val.substring(0, selection.start)
-  const selected = val.substring(selection.start, selection.end)
-  const after = val.substring(selection.end)
+  const before = val.substring(0, start)
+  const selected = val.substring(start, end)
+  const after = val.substring(end)
 
   // Clear mirror
   mirror.textContent = ''
@@ -65,7 +69,8 @@ export function getTextRangeRects(
   mirror.appendChild(spanBefore)
 
   const spanSelected = document.createElement('span')
-  spanSelected.textContent = selected
+  // For cursors (empty selection), we use a zero-width space to get the height/position
+  spanSelected.textContent = selected || '\u200B' 
   spanSelected.id = 'collab-target-selection'
   mirror.appendChild(spanSelected)
 
@@ -74,19 +79,17 @@ export function getTextRangeRects(
   mirror.appendChild(spanAfter)
 
   // Force layout
-  const inputRect = input.getBoundingClientRect()
   const selectionRect = spanSelected.getBoundingClientRect()
   const mirrorRect = mirror.getBoundingClientRect()
 
-  // Calculate relative to mirror start (which should be 0,0 relative to input content area)
-  // We need to account for scroll position of the input if it's scrollable
+  // Calculate relative to mirror start
   const scrollLeft = input.scrollLeft
   const scrollTop = input.scrollTop
 
   return [{
     left: selectionRect.left - mirrorRect.left - scrollLeft,
     top: selectionRect.top - mirrorRect.top - scrollTop,
-    width: selectionRect.width,
+    width: selected ? selectionRect.width : 2, // 2px wide for cursors
     height: selectionRect.height
   }]
 }

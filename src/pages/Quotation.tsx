@@ -1,12 +1,9 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useModal } from '../components/ModalContext'
 import { 
   useInvoiceState, 
   useFileOperations,
-  makeBlankTask,
-  Task, 
-  CompanyInfo as CompanyInfoType, 
-  ClientInfo as ClientInfoType 
+  makeBlankTask
 } from '../hooks/quotation'
 import { useCollaboration } from '../hooks/quotation/useCollaboration'
 import { useAuth } from '../context/AuthContext'
@@ -29,7 +26,7 @@ import './quotation/QuotationApp.css'
 import './Quotation.css'
 
 export default function Quotation() {
-  const { notify, alert } = useModal()
+  const { notify } = useModal()
   const { user } = useAuth()
 
   // ── UI States ──────────────────────────────────────────────────
@@ -93,7 +90,6 @@ export default function Quotation() {
     remoteUsers,
     myEffectiveName,
     myColor,
-    mySessionId,
     emitFocus,
     emitBlur,
     emitSelection,
@@ -105,7 +101,7 @@ export default function Quotation() {
     userName: user?.username || 'User',
     onUserJoined: (u) => notify(`${u.name} joined the session`, 'success'),
     onUserLeft: (u) => notify(`${u.name} left the session`, 'info'),
-    onRemotePatch: (patch, sid) => {
+    onRemotePatch: (patch: { path: string; value: any }, sid: string) => {
       // Find the user's color for the highlight
       const userColor = remoteUsers[sid]?.color || '#4A90D9'
       if (patch.path !== '__full_restore__') {
@@ -125,10 +121,10 @@ export default function Quotation() {
         updateClientInfo(prev => ({ ...prev, [key]: patch.value }))
       } else if (patch.path.startsWith('quotationDetails.')) {
         const key = patch.path.split('.')[1]
-        updateQuotationDetails({ [key]: patch.value })
+        updateQuotationDetails({ [key as any]: patch.value })
       } else if (patch.path.startsWith('billingDetails.')) {
         const key = patch.path.split('.')[1]
-        updateBillingDetails({ [key]: patch.value })
+        updateBillingDetails({ [key as any]: patch.value })
       } else if (patch.path.startsWith('signatures.')) {
         const parts = patch.path.split('.')
         updateSignatures(parts[1] as any, parts[2], patch.value)
@@ -167,7 +163,7 @@ export default function Quotation() {
         return [entry, ...prev.slice(0, 49)]
       })
     },
-    onError: (msg) => {
+    onError: (msg: string) => {
       notify?.(msg, 'error')
       setIsLobbyOpen(true)
     }
@@ -313,8 +309,6 @@ export default function Quotation() {
 
   const handleBrowse = async () => {
     // Wrap performLoad so we can detect success vs cancellation.
-    // loadInvoice() is void — we check currentFilePath after a tick instead.
-    const prevFilePath = currentFilePath
 
     // Perform the load — this mutates state directly via loadData()
     // We need to hook into the result, so we duplicate the electron/file logic
@@ -409,8 +403,19 @@ export default function Quotation() {
   const effSignatures = previewData?.signatures || signatures
   const effOverrides = previewData?.manualOverrides || manualOverrides
 
+  const collValue = useMemo(() => ({
+    isConnected,
+    remoteUsers,
+    myColor,
+    recentEdits,
+    emitFocus,
+    emitBlur,
+    emitSelection,
+    emitPatch
+  }), [isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch])
+
   return (
-    <CollaborationProvider value={{ isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch }}>
+    <CollaborationProvider value={collValue}>
       <div className="quot-app-root">
         {/* ── Toolbar ──────────────────────────────────────────── */}
         <div className="quot-toolbar">

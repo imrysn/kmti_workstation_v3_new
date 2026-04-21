@@ -365,14 +365,16 @@ const TasksTable = memo(({
                   onBlur={() => emitBlur('footer.overhead')}
                 >
                   <input
-                    type="number" value={overheadDraft}
+                    type="text"
+                    inputMode="decimal"
+                    value={overheadDraft}
                     onChange={e => setOverheadDraft(e.target.value)}
                     onBlur={e => handleOverheadBlur(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter') handleOverheadBlur((e.target as HTMLInputElement).value)
                       if (e.key === 'Escape') setEditingOverhead(false)
                     }}
-                    className="footer-input amount-input" step="0.01" min="0" autoFocus
+                    className="footer-input amount-input" autoFocus
                   />
                 </CollaborativeField>
               </div>
@@ -401,14 +403,16 @@ const TasksTable = memo(({
                   onBlur={() => emitBlur('footer.adjustment')}
                 >
                   <input
-                    type="number" value={grandTotalDraft}
+                    type="text"
+                    inputMode="decimal"
+                    value={grandTotalDraft}
                     onChange={e => setGrandTotalDraft(e.target.value)}
                     onBlur={e => handleGrandTotalBlur(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter') handleGrandTotalBlur((e.target as HTMLInputElement).value)
                       if (e.key === 'Escape') setEditingGrandTotal(false)
                     }}
-                    className="footer-input amount-input total-input" step="0.01" min="0" autoFocus
+                    className="footer-input amount-input total-input" autoFocus
                   />
                 </CollaborativeField>
               </div>

@@ -5,7 +5,7 @@ import { CollaborativeField } from './CollaborativeField'
 
 interface Props {
   quotationDetails: QuotationDetails
-  onUpdate: (updates: Partial<QuotationDetails>) => void
+  onUpdate?: (updates: Partial<QuotationDetails>) => void
 }
 
 // Pattern for auto-generated quotation numbers: KMTE-YYMMDD-NNN
@@ -20,7 +20,7 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
 
   const handleQuotNoChange = (value: string) => {
     setQuotNoManual(true)
-    onUpdate({ quotationNo: value })
+    onUpdate?.({ quotationNo: value })
   }
 
   const handleQuotNoReset = () => {
@@ -29,7 +29,7 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
     const yy = d.getFullYear().toString().slice(-2)
     const mm = (d.getMonth() + 1).toString().padStart(2, '0')
     const dd = d.getDate().toString().padStart(2, '0')
-    onUpdate({ quotationNo: `KMTE-${yy}${mm}${dd}-001` })
+    onUpdate?.({ quotationNo: `KMTE-${yy}${mm}${dd}-001` })
   }
 
   const formatDate = (dateStr: string) => {
@@ -68,28 +68,30 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
           </div>
         )}
 
-        <button
-          className="info-card-edit-btn"
-          onClick={() => setIsEditing(e => !e)}
-          title={isEditing ? 'Done editing' : 'Edit document details'}
-        >
-          {isEditing ? (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-              Done
-            </>
-          ) : (
-            <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              Edit
-            </>
-          )}
-        </button>
+        {onUpdate && (
+          <button
+            className="info-card-edit-btn"
+            onClick={() => setIsEditing(e => !e)}
+            title={isEditing ? 'Done editing' : 'Edit document details'}
+          >
+            {isEditing ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Done
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                Edit
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       <div className="card-content">
@@ -106,7 +108,7 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
                 <input
                   type="date"
                   value={quotationDetails.date}
-                  onChange={e => onUpdate({ date: e.target.value })}
+                  onChange={e => onUpdate?.({ date: e.target.value })}
                   className="form-input"
                   autoFocus
                 />
@@ -163,7 +165,7 @@ const QuotationDetailsCard = memo(({ quotationDetails, onUpdate }: Props) => {
                 <input
                   type="text"
                   value={quotationDetails.referenceNo}
-                  onChange={e => onUpdate({ referenceNo: e.target.value })}
+                  onChange={e => onUpdate?.({ referenceNo: e.target.value })}
                   className="form-input"
                   placeholder="e.g. NE-2026-04"
                 />
