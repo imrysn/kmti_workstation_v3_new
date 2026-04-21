@@ -48,7 +48,13 @@
   flex: 1;
   padding: 32px;
   gap: 0 40px;
-  background: rgba(245, 245, 245, 0.836);
+  background: var(--bg-primary); /* Reverted to primary for depth */
+  position: relative;
+  transition: background 0.3s ease;
+}
+
+.dark-theme .scratchpad-grid {
+  background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 70%), var(--bg-primary);
 }
 
 .box-label {
@@ -60,7 +66,7 @@
   /* Fixed height for alignment */
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .input-label {
@@ -76,7 +82,7 @@
 .box-label span {
   font-size: 14px;
   font-weight: 800;
-  color: #000000;
+  color: var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
@@ -122,14 +128,14 @@
 }
 
 .highlight-line.error {
-  background: rgba(239, 68, 68, 0.25);
-  border-left: 3px solid #ef4444;
+  background: var(--bg-danger-subtle);
+  border-left: 3px solid var(--danger);
 }
 
 .highlight-line.active {
-  background: rgba(0, 163, 255, 0.2);
-  border-left: 3px solid #00a3ff;
-  box-shadow: inset 0 0 10px rgba(0, 163, 255, 0.1);
+  background: rgba(56, 189, 248, 0.1);
+  border-left: 3px solid var(--accent);
+  box-shadow: inset 0 0 10px rgba(56, 189, 248, 0.03);
 }
 
 .highlight-line.active.error {
@@ -141,13 +147,12 @@
 .scratchpad-textarea {
   position: relative;
   z-index: 1;
-  background: #000;
+  background: var(--bg-secondary);
   flex: 1;
   min-height: 0;
   /* Allow the textarea to shrink if necessary */
-  flex: 1;
-  color: #ffffff !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 8px;
   padding: 16px 20px;
   font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
@@ -159,11 +164,27 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   /* Technical Grid Background */
   background-image:
-    linear-gradient(#d3c723ad 1px, transparent 1px);
+    linear-gradient(var(--border-subtle) 1px, transparent 1px);
   background-size: 100px 32px;
   background-position: 0 -1px;
   background-origin: content-box;
   background-attachment: local;
+}
+
+.scratchpad-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Explicit "Paper Mode" for Dark Theme as requested */
+.dark-theme .scratchpad-textarea {
+  background: #ffffff;
+  color: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  background-image: linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+}
+
+.dark-theme .scratchpad-textarea::placeholder {
+  color: rgba(0, 0, 0, 0.35);
 }
 
 .scratchpad-textarea.readonly {
@@ -172,8 +193,8 @@
 
 .scratchpad-textarea:focus {
   outline: none !important;
-  border-color: rgba(255, 255, 255, 0.603) !important;
-  box-shadow: none !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent-subtle) !important;
 }
 
 .error-text {

@@ -47,6 +47,11 @@ export const useDateTimeSettings = () => {
     mode, setMode,
     isExpanded, setIsExpanded,
     theme,
-    safeThemeIndex
+    safeThemeIndex,
+    // Stopwatch initial values passed through to useStopwatch — never stored as useState
+    // because useStopwatch owns that state. These are read-once on mount.
+    swRunning: initialSettings.swRunning,
+    swAccumulated: initialSettings.swAccumulated,
+    swStartTime: initialSettings.swStartTime,
   };
 };

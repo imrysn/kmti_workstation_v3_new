@@ -1,12 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { StopwatchRecord } from '../types';
+import { STORAGE_KEY } from '../constants';
+
+/**
+ * Persist just the stopwatch fields into the existing settings blob.
+ * Called immediately on toggle so swStartTime is never lost to a logout/crash.
+ */
+function persistSwState(swRunning: boolean, swAccumulated: number, swStartTime: number | null) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const data = stored ? JSON.parse(stored) : {};
+    data.swRunning = swRunning;
+    data.swAccumulated = swAccumulated;
+    data.swStartTime = swStartTime;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('[useStopwatch] Failed to persist sw state', e);
+  }
+}
 
 export const useStopwatch = (initialSettings: any) => {
-  const [swRunning, setSwRunning] = useState(initialSettings.swRunning || false);
-  const [swAccumulated, setSwAccumulated] = useState(Number(initialSettings.swAccumulated) || 0);
-  const [swStartTime, setSwStartTime] = useState<number | null>(Number(initialSettings.swStartTime) || null);
-  const [swCurrent, setSwCurrent] = useState(Number(initialSettings.swAccumulated) || 0);
+  // If the app was closed/logged-out while running, reconstruct the elapsed
+  // time from the saved startTime instead of starting from zero.
+  const wasRunning = initialSettings.swRunning || false;
+  const savedStart = Number(initialSettings.swStartTime) || null;
+  const savedAccumulated = Number(initialSettings.swAccumulated) || 0;
+
+  const restoredAccumulated = wasRunning && savedStart
+    ? savedAccumulated + (Date.now() - savedStart)
+    : savedAccumulated;
+
+  // If it was running before refresh/logout, restore it as still running from now.
+  // swAccumulated holds all elapsed time up to the refresh, swStartTime resets to now.
+  const [swRunning, setSwRunning] = useState(wasRunning);
+  const [swAccumulated, setSwAccumulated] = useState(restoredAccumulated);
+  const [swStartTime, setSwStartTime] = useState<number | null>(wasRunning ? Date.now() : null);
+  const [swCurrent, setSwCurrent] = useState(restoredAccumulated);
   const [swRecords, setSwRecords] = useState<StopwatchRecord[]>([]);
+
+  // Keep a ref of live values for the unmount flush
+  const liveRef = useRef({ swRunning: wasRunning, swAccumulated: restoredAccumulated, swStartTime: wasRunning ? Date.now() : null as number | null, swCurrent: restoredAccumulated });
 
   // Load Records on Init
   useEffect(() => {
@@ -29,14 +62,39 @@ export const useStopwatch = (initialSettings: any) => {
     return () => clearInterval(timer);
   }, [swRunning, swStartTime, swAccumulated]);
 
+  // Keep liveRef in sync so the unmount flush always has current values
+  useEffect(() => {
+    liveRef.current = { swRunning, swAccumulated, swStartTime, swCurrent };
+  });
+
+  // Flush current state to localStorage on unmount (logout/page change safety net)
+  useEffect(() => {
+    return () => {
+      const { swRunning, swAccumulated, swStartTime, swCurrent } = liveRef.current;
+      // Preserve running state — on next mount, the restore logic will
+      // reconstruct elapsed time from swStartTime and resume the ticker.
+      const finalAccumulated = swRunning && swStartTime
+        ? swAccumulated + (Date.now() - swStartTime)
+        : swAccumulated;
+      // Keep swRunning: true so login restore knows to continue ticking
+      persistSwState(swRunning, finalAccumulated, swRunning ? Date.now() : null);
+    };
+  }, []);
+
   const toggleStopwatch = () => {
     if (swRunning) {
-      setSwAccumulated(swCurrent);
+      const paused = swCurrent;
+      setSwAccumulated(paused);
       setSwStartTime(null);
       setSwRunning(false);
+      // Write immediately — don't wait for the reactive effect
+      persistSwState(false, paused, null);
     } else {
-      setSwStartTime(Date.now());
+      const start = Date.now();
+      setSwStartTime(start);
       setSwRunning(true);
+      // Write immediately — this is the critical one that was getting lost
+      persistSwState(true, swAccumulated, start);
     }
   };
 
@@ -45,6 +103,7 @@ export const useStopwatch = (initialSettings: any) => {
     setSwStartTime(null);
     setSwAccumulated(0);
     setSwCurrent(0);
+    persistSwState(false, 0, null);
   };
 
   const formatStopwatch = (ms: number) => {
