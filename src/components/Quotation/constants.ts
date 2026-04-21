@@ -27,10 +27,10 @@ export const LAYOUT = {
   COMPRESSED_MARGIN_MM: 5,
 
   // How many main tasks fit comfortably on a single A4 page.
-  // Pages beyond the first don't carry the client-info / contact header
-  // block, so they can hold slightly more — but we use a single constant
-  // for simplicity and safety.
-  TASKS_PER_PAGE: 15,
+  // We use separate limits to ensure footers/signatures always fit.
+  TASKS_PER_PAGE_QUOTATION: 14,
+  TASKS_PER_PAGE_BILLING_STANDARD: 18, // For non-final pages (no footers)
+  TASKS_PER_PAGE_BILLING_FINAL: 14,    // For the final page (with signatures/bank details)
 
   // Switch to 5mm margin when a page carries >= this many tasks.
   COMPRESSION_THRESHOLD: 14,

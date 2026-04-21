@@ -1,0 +1,258 @@
+{
+  "companyInfo": {
+    "name": "KUSAKABE & MAENO TECH., INC",
+    "address": "Unit 2-B Building B, Vital Industrial Properties Inc.",
+    "city": "First Cavite Industrial Estates, P-CIB PEZA Zone",
+    "location": "Dasmariñas City, Cavite Philippines",
+    "phone": "TEL: +63-46-414-4009"
+  },
+  "clientInfo": {
+    "company": "NEXTENGINEERING Co, Ltd.",
+    "contact": "MR. Masahiro Hasegawa",
+    "address": "7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan",
+    "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
+  },
+  "quotationDetails": {
+    "quotationNo": "KMTE-29",
+    "referenceNo": "",
+    "date": "2026-04-21"
+  },
+  "billingDetails": {
+    "invoiceNo": "",
+    "jobOrderNo": "",
+    "bankName": "RIZAL COMMERCIAL BANK CORPORATION",
+    "accountName": "KUSAKABE & MAENO TECH INC.",
+    "accountNumber": "0000000011581337",
+    "bankAddress": "RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE",
+    "swiftCode": "RCBCPHMM",
+    "branchCode": "358"
+  },
+  "tasks": [
+    {
+      "id": 1776751079369,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776752127343,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776752631975,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776752702911,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776752704742,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753406056,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753439646,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753458279,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753486967,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753487879,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753533247,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753568095,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776753614534,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776754860848,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    }
+  ],
+  "baseRates": {
+    "timeChargeRate2D": 2700,
+    "timeChargeRate3D": 2700,
+    "timeChargeRateOthers": 0,
+    "otHoursMultiplier": 1.3,
+    "overtimeRate": 3300,
+    "softwareRate": 500,
+    "overheadPercentage": 20
+  },
+  "signatures": {
+    "quotation": {
+      "preparedBy": {
+        "name": "MR. MICHAEL PEÑANO",
+        "title": "Engineering Manager"
+      },
+      "approvedBy": {
+        "name": "MR. YUICHIRO MAENO",
+        "title": "President"
+      },
+      "receivedBy": {
+        "label": "(Signature Over Printed Name)"
+      }
+    },
+    "billing": {
+      "preparedBy": {
+        "name": "MS. PAULYN MURRIEL BEJER",
+        "title": "Accounting Staff"
+      },
+      "approvedBy": {
+        "name": "MR. MICHAEL PEÑANO",
+        "title": "Engineering Manager"
+      },
+      "finalApprover": {
+        "name": "MR. YUICHIRO MAENO",
+        "title": "President"
+      }
+    }
+  },
+  "manualOverrides": {
+    "tasks": {},
+    "footer": {}
+  },
+  "collapsedTaskIds": [],
+  "savedAt": "2026-04-21T07:06:00.879Z"
+}

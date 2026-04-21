@@ -33,7 +33,7 @@ interface PageSlice {
   startIndex: number
 }
 
-const { A4_W_PX, A4_H_PX, TASKS_PER_PAGE } = LAYOUT
+const { A4_W_PX, A4_H_PX, TASKS_PER_PAGE_QUOTATION, TASKS_PER_PAGE_BILLING_STANDARD, TASKS_PER_PAGE_BILLING_FINAL } = LAYOUT
 
 // ── Pagination engine ──────────────────────────────────────────────────────
 
@@ -47,23 +47,48 @@ const { A4_W_PX, A4_H_PX, TASKS_PER_PAGE } = LAYOUT
 function computePages(
   mainTasks: Task[],
   calculateTotal: (task: Task) => number,
+  mode: 'quotation' | 'billing',
 ): PageSlice[] {
+  const finalLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_FINAL : TASKS_PER_PAGE_QUOTATION
+  const standardLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_STANDARD : TASKS_PER_PAGE_QUOTATION
+
+  // Case 1: Simple one-page fit
+  if (mainTasks.length <= finalLimit) {
+    return [{
+      tasks: mainTasks,
+      totals: mainTasks.map(calculateTotal),
+      startIndex: 0,
+    }]
+  }
+
+  // Case 2: Multi-page logic
   const pages: PageSlice[] = []
   let i = 0
+  
   while (i < mainTasks.length) {
-    const slice = mainTasks.slice(i, i + TASKS_PER_PAGE)
+    const remainingCount = mainTasks.length - i
+    const isLastPage = remainingCount <= finalLimit
+    const limit = isLastPage ? finalLimit : standardLimit
+
+    const slice = mainTasks.slice(i, i + limit)
     pages.push({
       tasks: slice,
       totals: slice.map(calculateTotal),
       startIndex: i,
     })
-    i += TASKS_PER_PAGE
+    i += limit
+
+    // If we finished the tasks but the last page we rendered wasn't a "final" page
+    // (e.g. we took exactly standardLimit tasks and 0 remain, but standardLimit > finalLimit),
+    // we need one more empty page to carry the footer/signatures.
+    if (i === mainTasks.length && !isLastPage) {
+      pages.push({ tasks: [], totals: [], startIndex: i })
+    }
   }
-  // Always produce at least one page (empty state)
-  if (pages.length === 0) {
-    pages.push({ tasks: [], totals: [], startIndex: 0 })
-  }
-  return pages
+
+  return pages.length === 0 
+    ? [{ tasks: [], totals: [], startIndex: 0 }] 
+    : pages
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -107,7 +132,7 @@ const PrintPreviewModal = memo(({
   // ── Pagination ─────────────────────────────────────────────────
   const { pages, grandTotal, overheadTotal } = useMemo(() => {
     const mainTasks = tasks.filter(t => t.isMainTask)
-    const slices = computePages(mainTasks, calculateTaskTotal)
+    const slices = computePages(mainTasks, calculateTaskTotal, printMode)
 
     const subtotal = slices.flatMap(p => p.totals).reduce((s, t) => s + t, 0)
     const footer = manualOverrides?.footer || {}

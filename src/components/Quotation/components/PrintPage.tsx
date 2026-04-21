@@ -80,12 +80,15 @@ const PrintPage = memo(({
     return task.unitPage ?? 1
   }, [manualOverrides])
 
-  // How many blank filler rows to add below the task list on the last page
+  const showAdmin = isLastPage && baseRates.overheadPercentage > 0
+  const contentRowsCount = pageTasks.length + (showAdmin ? 1 : 0) + 1 // Tasks + Admin? + Nothing Follow
+  
+  // How many blank filler rows to add below the task list on the last page.
+  // Enforcement: 1st page must have 10 rows minimum INCLUDING computed tasks.
+  // If tasks are >= 10, we add 0 filler rows on the last page to prioritize signature space,
+  // especially for the 14-task single-page requirement.
   const fillerRowCount = isLastPage
-    ? Math.max(
-        LAYOUT.MIN_EMPTY_ROWS,
-        LAYOUT.TASKS_PER_PAGE - pageTasks.length - (baseRates.overheadPercentage > 0 ? 1 : 0) - 1,
-      )
+    ? Math.max(0, 10 - contentRowsCount)
     : 0
 
   // Apply compressed margins when page is nearly full
@@ -131,7 +134,7 @@ const PrintPage = memo(({
 
           {isLastPage && (
             <>
-              {baseRates.overheadPercentage > 0 && (
+              {showAdmin && (
                 <tr>
                   <td />
                   <td>Administrative overhead</td>
@@ -142,12 +145,12 @@ const PrintPage = memo(({
               )}
               <tr>
                 <td /><td />
-                <td className="description-cell nothing-follow" style={{ color: '#888' }}>
+                <td className="description-cell nothing-follow" style={{ color: '#888', fontStyle: 'italic' }}>
                   --- NOTHING FOLLOW ---
                 </td>
                 <td /><td /><td />
               </tr>
-              {Array.from({ length: Math.max(0, fillerRowCount) }, (_, i) => (
+              {Array.from({ length: fillerRowCount }, (_, i) => (
                 <tr key={`empty-${i}`}>
                   <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
                   <td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>
@@ -267,6 +270,7 @@ const PrintPage = memo(({
       className={[
         'quotation-visual-exact',
         `mode-${printMode}`,
+        `task-count-${pageTasks.length}`,
         isContinuation ? 'page-break' : '',
         isCompressed   ? 'compressed' : '',
       ].filter(Boolean).join(' ')}
