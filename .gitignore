@@ -65,3 +65,4 @@ backend/scripts/diagnostics/
 
 *.exe
 *.zip
+*.json
