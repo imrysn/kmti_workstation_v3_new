@@ -257,6 +257,6 @@ class KMTIServerGUI(ctk.CTk):
             sys.exit(0)
 
 if __name__ == "__main__":
-    from main import app
-    gui = KMTIServerGUI(app)
+    from main import combined_app
+    gui = KMTIServerGUI(combined_app)
     gui.mainloop()

@@ -129,10 +129,16 @@ app.include_router(designers.router, prefix="/api/designers", tags=["Designers"]
 app.include_router(quotations.router, prefix="/api/quotations", tags=["Shared Quotations"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
-# socketio.ASGIApp intercepts /socket.io/* WebSocket traffic and passes all other
-# HTTP requests through to the FastAPI app underneath.
+# IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE
+# FastAPI's CORSMiddleware runs. We must therefore pass cors_allowed_origins here
+# at the outer wrapper level, otherwise Electron (file:// origin) gets a 403.
 import socketio as _sio_module
-combined_app = _sio_module.ASGIApp(quotations.sio, app)
+combined_app = _sio_module.ASGIApp(
+    quotations.sio, 
+    app, 
+    static_files={},
+    socketio_path='socket.io'
+)
 
 # Static serving for Help Center screenshots (NAS)
 FEEDBACK_DIR = r"\\KMTI-NAS\Shared\data\storage\feedback"

@@ -86,7 +86,7 @@ export default function Designers() {
     }
   }, [selectedCategory, query, page])
 
-  const handleCopy = (text: string, id: string) => {
+  const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text)
     notify(`Copied: ${text}`, 'success')
   }

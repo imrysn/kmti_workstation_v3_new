@@ -31,7 +31,7 @@ interface DesignersTableProps {
   loading: boolean
   loadingMore: boolean
   focusedIndex: number
-  handleCopy: (text: string, id: string) => void
+  handleCopy: (text: string) => void
   handleKeyDown: (e: React.KeyboardEvent) => void
   tableContainerRef: React.RefObject<HTMLDivElement>
   loadMoreRef: React.RefObject<HTMLDivElement>
@@ -107,13 +107,13 @@ export default function DesignersTable({
                   key={row.id || idx}
                   className={idx === focusedIndex ? 'focused-row' : ''}
                 >
-                  <td onClick={() => handleCopy(row.englishName, `en-${idx}`)}>
+                  <td onClick={() => handleCopy(row.englishName)}>
                     <Highlight text={row.englishName} query={query} />
                   </td>
-                  <td onClick={() => handleCopy(row.japaneseName, `jp-${idx}`)} className="char-japanese">
+                  <td onClick={() => handleCopy(row.japaneseName)} className="char-japanese">
                     <Highlight text={row.japaneseName} query={query} />
                   </td>
-                  <td onClick={() => handleCopy(row.email, `email-${idx}`)} className="designer-email">
+                  <td onClick={() => handleCopy(row.email)} className="designer-email">
                     <Highlight text={row.email} query={query} />
                   </td>
                   {canManage && (

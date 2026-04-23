@@ -11,3 +11,5 @@ bcrypt
 pyinstaller
 pymupdf
 groq
+python-socketio
+python-engineio

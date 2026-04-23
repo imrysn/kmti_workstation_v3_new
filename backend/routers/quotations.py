@@ -28,7 +28,14 @@ from db.database import get_db
 from models.quotation import Quotation, QuotationHistory
 
 # ─── Socket.IO Server ─────────────────────────────────────────────────────────
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+# cors_allowed_origins MUST be the string "*" (not a list) — the string form
+# triggers python-engineio's unconditional allow-all code path.
+sio = socketio.AsyncServer(
+    async_mode="asgi",
+    cors_allowed_origins="*",
+    logger=False,
+    engineio_logger=False,
+)
 socket_app = socketio.ASGIApp(sio)
 
 # Tracks connected users per document room: { quotation_id -> { sid -> { name, color } } }
@@ -84,7 +91,11 @@ async def connect(sid: str, environ: dict):
 @sio.event
 async def join_doc(sid: str, data: dict):
     """Join a shared quotation room. data = { quot_id, user_name, password? }"""
-    q_id = data.get("quot_id")
+    try:
+        q_id = int(data.get("quot_id", 0))
+    except (ValueError, TypeError):
+        return
+
     user_name = data.get("user_name", "Unknown")
     password = data.get("password")
     
@@ -117,16 +128,7 @@ async def join_doc(sid: str, data: dict):
     if q_id not in _active_users:
         _active_users[q_id] = {}
 
-    # Evict any stale entry for the same user name (case-insensitive) before adding the new one.
-    stale_sids = [
-        s for s, u in _active_users[q_id].items()
-        if u.get("name", "").lower() == user_name.lower() and s != sid
-    ]
-    for stale_sid in stale_sids:
-        del _active_users[q_id][stale_sid]
-        # Important: Send the updated users dict so others purge the old sid correctly
-        await sio.emit("user_left", {"sid": stale_sid, "users": _active_users[q_id]}, room=room_name)
-
+    # Unique user identity: use sid to allow same-name users (common on cloned workstation images)
     _active_users[q_id][sid] = {"name": user_name, "color": color}
     
     # Broadcast join
@@ -141,7 +143,7 @@ async def join_doc(sid: str, data: dict):
         print(f"[COLLAB] Requesting live state from {leader_sid} for new joiner {sid}")
         await sio.emit("sync_state_request", {"target_sid": sid}, to=leader_sid)
     else:
-        print(f"[COLLAB] No existing users in room f'quot_{q_id}' to sync from.")
+        print(f"[COLLAB] No existing users in room 'quot_{q_id}' to sync from.")
 
 @sio.event
 async def update_field(sid: str, data: dict):
@@ -236,10 +238,21 @@ async def disconnect(sid: str):
                 room=room_name,
             )
             
-            # If last user left, cleanup in-memory presence
+            # If last user left, cleanup in-memory presence and deactivate in DB
             if not users:
                 if q_id in _active_users:
                     del _active_users[q_id]
+                
+                # Sync DB status
+                from db.database import AsyncSessionLocal
+                try:
+                    async with AsyncSessionLocal() as session:
+                        await session.execute(
+                            update(Quotation).where(Quotation.id == q_id).values(is_active=False)
+                        )
+                        await session.commit()
+                except Exception as e:
+                    print(f"[COLLAB] Failed to deactivate session {q_id} on disconnect: {e}")
             break
     print(f"[Socket] Client disconnected: {sid}")
 
@@ -322,37 +335,20 @@ async def list_quotations(
 
 @router.get("/sessions")
 async def list_active_sessions(db: AsyncSession = Depends(get_db)):
-    """Returns list of quotations that have at least one connected user.
+    """Returns list of quotations that are currently active.
     
-    The DB 'is_active' flag can get stale after server restarts (in-memory
-    _active_users is cleared but DB isn't updated). We cross-reference both:
-    only return sessions that appear in _active_users with >= 1 connected user.
-    As a side-effect, stale DB flags are cleaned up.
+    Cross-references the database 'is_active' flag with the live Socket.IO presence.
+    This provides a resilient list that doesn't disappear if the socket hasn't 
+    finished handshaking or if the server recently restarted.
     """
-    # Get all IDs that have real connected users right now
-    live_ids = [q_id for q_id, users in _active_users.items() if len(users) > 0]
-
-    if not live_ids:
-        # Clean up any stale is_active flags in DB
-        await db.execute(update(Quotation).values(is_active=False))
-        await db.commit()
-        return {"sessions": []}
-
-    stmt = select(Quotation).where(Quotation.id.in_(live_ids)).order_by(desc(Quotation.updated_at))
+    # 1. Start with all quotations marked active in DB
+    stmt = select(Quotation).where(Quotation.is_active == True).order_by(desc(Quotation.updated_at))
     result = await db.execute(stmt)
     items = result.scalars().all()
 
-    # Also clean up any stale is_active records not in live_ids
-    await db.execute(
-        update(Quotation)
-        .where(Quotation.is_active == True)
-        .where(~Quotation.id.in_(live_ids))
-        .values(is_active=False)
-    )
-    await db.commit()
-
     sessions = []
     for i in items:
+        # 2. Add live user info from memory
         users = _active_users.get(i.id, {})
         sessions.append({
             "id": i.id,
@@ -362,6 +358,7 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
             "users": list(users.values()),
             "hasPassword": bool(i.password)
         })
+    
     return {"sessions": sessions}
 
 @router.post("/")

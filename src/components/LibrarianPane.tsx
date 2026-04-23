@@ -407,6 +407,7 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
+                  e.stopPropagation()
                   handleSend()
                 }
               }}

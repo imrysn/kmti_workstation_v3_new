@@ -9,14 +9,13 @@ import type { RemoteUser } from '../../hooks/quotation/useCollaboration'
 import './CollaborationBar.css'
 
 interface Props {
-  isConnected: boolean
   remoteUsers: Record<string, RemoteUser>
   myColor: string
   userName: string
   quotNo: string | null
 }
 
-export function CollaborationBar({ isConnected, remoteUsers, myColor, userName, quotNo }: Props) {
+export function CollaborationBar({ remoteUsers, myColor, userName, quotNo }: Props) {
   if (!quotNo) return null
 
   const others = Object.values(remoteUsers)

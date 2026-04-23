@@ -89,72 +89,84 @@ export function useCollaboration({
     errorHandlerRef.current = onError
   }, [onError])
 
+  // Track the computer name/workstation ID immediately on mount
+  useEffect(() => {
+    const fetchHost = async () => {
+      try {
+        const info = await (window as any).electronAPI?.getWorkstationInfo?.()
+        if (info?.computerName) {
+          setMyEffectiveName(info.computerName)
+        }
+      } catch (e) {
+        console.warn('[COLLAB] Failed to fetch host info:', e)
+      }
+    }
+    fetchHost()
+  }, [])
+
   useEffect(() => {
     if (!quotId) return
 
-    // Clear stale presence from previous room immediately — don't wait for server
+    // Clear state for new room
     setRemoteUsers({})
     setIsConnected(false)
 
-    // Create or reuse socket — connect to SERVER_BASE with the custom mount path
+    // Create or reuse socket singleton
     if (!socketRef.current) {
       socketRef.current = io(SERVER_BASE, {
-        path: '/socket.io',           // matches socketio.ASGIApp wrapping at root in FastAPI
-        transports: ['websocket', 'polling'],
-        reconnectionAttempts: 5,
+        path: '/socket.io',
+        // polling-first: Initial HTTP handshake bypasses WebSocket CORS checks,
+        // then automatically upgrades to WebSocket after session is established.
+        transports: ['polling', 'websocket'],
+        reconnectionAttempts: 10,
+        reconnectionDelay: 2000,
+        timeout: 10000,
       })
     }
+
     const socket = socketRef.current
 
-    // If already connected (room switch), emit join immediately without waiting for 'connect'
-    const doJoin = async () => {
-      let finalName = userName || 'Unknown'
-      try {
-        const info = await (window as any).electronAPI?.getWorkstationInfo?.()
-        if (info?.computerName) finalName = info.computerName
-      } catch (e) {
-        console.warn('[collaboration] Failed to fetch workstation info:', e)
-      }
-      setMyEffectiveName(finalName)
-      socket.emit('join_doc', { 
-        quot_id: quotId, 
-        quot_no: quotNo, // Sent as fallback/metadata
-        user_name: finalName, 
-        password, 
-        display_name: displayName || null 
+    // Define room-level join logic
+    const doJoinRoom = () => {
+      if (!quotId) return
+      socket.emit('join_doc', {
+        quot_id: quotId,
+        quot_no: quotNo,
+        user_name: myEffectiveName,
+        password: password,
+        display_name: displayName || null
       })
       currentQuotIdRef.current = quotId
     }
 
-    socket.on('connect', async () => {
+    socket.on('connect', () => {
       setIsConnected(true)
       setMySessionId(socket.id || '')
-      await doJoin()
-    })
-
-    // Socket already connected from a previous room — switch rooms immediately
-    if (socket.connected) {
-      setIsConnected(true)
-      setMySessionId(socket.id || '')
-      if (currentQuotIdRef.current && currentQuotIdRef.current !== quotId) {
-        socket.emit('leave_doc', { quot_id: currentQuotIdRef.current })
-      }
-      doJoin()
-    }
-
-    socket.on('connect_error', (err) => {
-      console.error('[collaboration] Connection Error:', err.message, 'URL:', SERVER_BASE)
-      setIsConnected(false)
-    })
-
-    socket.on('reconnect_attempt', (num) => {
-      console.log(`[collaboration] Reconnect attempt #${num}...`)
+      doJoinRoom()
     })
 
     socket.on('disconnect', (reason) => {
-      console.warn('[collaboration] Disconnected:', reason)
+      console.warn('[COLLAB] Disconnected:', reason)
       setIsConnected(false)
     })
+
+    socket.on('connect_error', (err) => {
+      console.error('[COLLAB] Connection Error:', err.message, '| Server:', SERVER_BASE)
+      setIsConnected(false)
+    })
+
+    // If already connected (room switch), trigger join immediately
+    if (socket.connected) {
+      setIsConnected(true)
+      setMySessionId(socket.id || '')
+      
+      // Clean up previous room if it changed
+      if (currentQuotIdRef.current && currentQuotIdRef.current !== quotId) {
+        socket.emit('leave_doc', { quot_id: currentQuotIdRef.current })
+      }
+      
+      doJoinRoom()
+    }
 
     // Server confirmed we joined and assigned our color
     socket.on('joined', (data: { sid: string; color: string; users: Record<string, any> }) => {
@@ -289,13 +301,14 @@ export function useCollaboration({
     })
 
     return () => {
-      // We DO NOT emit 'leave_doc' here anymore. 
-      // This allows the user to navigate to other pages in the app 
-      // without being removed from the collaborative workspace.
+      if (currentQuotIdRef.current) {
+        socket.emit('leave_doc', { quot_id: currentQuotIdRef.current })
+      }
       socket.removeAllListeners()
+      socket.disconnect()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quotId, userName])
+  }, [quotId, userName, myEffectiveName, password, displayName, quotNo])
 
   const leaveRoom = useCallback(() => {
     if (socketRef.current && currentQuotIdRef.current) {

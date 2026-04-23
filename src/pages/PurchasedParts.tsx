@@ -100,7 +100,9 @@ export default function PurchasedParts() {
     if (e.key === 'ArrowDown') { e.preventDefault(); setFocusedIndex(prev => Math.min(prev + 1, searchConfig.searchResults.length - 1)) }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setFocusedIndex(prev => Math.max(prev - 1, 0)) }
     else if (e.key === 'Enter' && focusedIndex >= 0) {
-      e.preventDefault(); const item = searchConfig.searchResults[focusedIndex]
+      const item = searchConfig.searchResults[focusedIndex]
+      if (!item) return; // Prevent crash if focusedIndex is out of bounds
+      e.preventDefault();
       if (item.isFolder) handleTreeSelectLocal(item.filePath.split('\\').join('/'), true)
       else handleOpen(item)
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { partsApi } from '../../services/api';
 import type { IPurchasedPart } from '../../types';
 import { useDebounce } from '../../hooks/useDebounce';

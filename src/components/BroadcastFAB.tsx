@@ -63,24 +63,46 @@ const BroadcastFAB: React.FC = () => {
 
   // Socket listener for real-time acknowledgment alerts
   useEffect(() => {
+    console.log('[BROADCAST] Connecting to real-time alert engine...')
     const socket = io(SERVER_BASE, {
       path: '/socket.io',
-      transports: ['websocket', 'polling']
+      // polling-first: Initial HTTP handshake bypasses WebSocket CORS checks
+      // then automatically upgrades to WebSocket after session is established
+      transports: ['polling', 'websocket'],
+      reconnectionAttempts: 10,
+    })
+
+    socket.on('connect', () => {
+      console.log('[BROADCAST] Alert engine linked.')
     })
 
     socket.on('broadcast_acknowledged', (data: any) => {
       playAckAlert()
       // Refresh history if open to show newest acks in real-time
-      if (isPanelOpen && activeView === 'history') {
-        fetchHistory()
-        if (data.id) fetchAcks(data.id)
-      }
+      // Note: We use the *current* state by checking the condition inside the event handler
+      // Or we can rely on the server broadcast to trigger a fetch
+      window.dispatchEvent(new CustomEvent('kmti:broadcast-update', { detail: data }))
       notify(`${data.workstation} acknowledged the broadcast.`, 'success')
+    })
+
+    socket.on('connect_error', (err) => {
+      console.error('[BROADCAST] Link Error:', err.message)
     })
 
     return () => {
       socket.disconnect()
     }
+  }, []) // Empty dependency array = only connect once on mount
+
+  // Secondary effect to refresh history when event fires
+  useEffect(() => {
+    const handleUpdate = () => {
+      if (isPanelOpen && activeView === 'history') {
+        fetchHistory()
+      }
+    }
+    window.addEventListener('kmti:broadcast-update', handleUpdate)
+    return () => window.removeEventListener('kmti:broadcast-update', handleUpdate)
   }, [isPanelOpen, activeView])
 
 

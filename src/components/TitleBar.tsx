@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useModal } from './ModalContext'
@@ -87,8 +87,6 @@ export default function TitleBar() {
   const { user, logout, hasRole } = useAuth()
   const { theme, toggleTheme, themeLocked } = useTheme()
   const { confirm, notify } = useModal()
-  const location = useLocation()
-  const navigate = useNavigate()
   const [updateState, setUpdateState] = useState<
     null | 'available' | 'downloading' | 'downloaded'
   >(null)

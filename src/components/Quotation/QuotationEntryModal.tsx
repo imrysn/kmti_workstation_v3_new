@@ -270,17 +270,31 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
             </button>
           </footer>
         )}
-
-        {isLibraryOpen && (
-          <QuotationLibraryModal
-            onClose={() => setIsLibraryOpen(false)}
-            onSelect={(q) => {
-              setIsLibraryOpen(false)
-              onJoin(q.id)
-            }}
-          />
-        )}
       </div>
+
+      {/* Render outside of quot-entry-card to avoid CSS transform & overflow:hidden stacking context traps */}
+      {isLibraryOpen && (
+        <QuotationLibraryModal
+          onClose={() => setIsLibraryOpen(false)}
+          onSelect={(q) => {
+            setIsLibraryOpen(false)
+            if (q.hasPassword) {
+              // Show password prompt — reuse the same joiningSession flow
+              setJoiningSession({ 
+                id: q.id, 
+                quotNo: q.quotationNo, 
+                displayName: q.displayName || q.quotationNo, 
+                userCount: 0, 
+                users: [],
+                hasPassword: true
+              })
+              setJoinPassword('')
+            } else {
+              onJoin(q.id)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }

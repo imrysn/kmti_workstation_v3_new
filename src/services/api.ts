@@ -5,7 +5,9 @@ import type { IProject, IQuotation, IQuotationHistory } from '../types'
 export const SERVER_BASE = (() => {
   const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null
   if (override) return override
-  return import.meta.env.DEV ? 'http://localhost:8000' : 'http://192.168.200.105:8000'
+  // DEV mode always uses localhost — VITE_API_PROD_URL is production-only
+  if (import.meta.env.DEV) return 'http://localhost:8000'
+  return import.meta.env.VITE_API_PROD_URL || 'http://192.168.200.105:8000'
 })()
 export const API_BASE = `${SERVER_BASE}/api`
 

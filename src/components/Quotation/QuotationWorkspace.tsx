@@ -504,7 +504,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
 
           <div className="quot-toolbar-actions">
             <CollaborationBar
-              isConnected={isConnected}
               remoteUsers={remoteUsers}
               myColor={myColor}
               userName={myEffectiveName}
