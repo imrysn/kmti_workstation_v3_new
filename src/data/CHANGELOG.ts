@@ -25,9 +25,11 @@ export const CHANGELOG: VersionChangelog[] = [
     version: '3.6.9',
     date: 'April 23, 2026',
     entries: [
+      { type: 'improvement', text: 'Quotation Control — Enabled manual rounding-off overrides for row-level and grand totals while maintaining calculation integrity.' },
+      { type: 'improvement', text: 'Real-time Library Sync — Fixed a critical gap where collaborative workspace renames and client updates would not reflect in the Quotation Library until a manual save.' },
+      { type: 'improvement', text: 'Hours Input — Increased maximum input limit to 3 digits instead of 24 hours.' },
       { type: 'fix', text: 'KMTI Tech Assistant Interface — Fixed a fatal crash when pressing Enter inside the chat box that incorrectly triggered document search bindings.' },
-      { type: 'fix', text: 'Quotation Collaboration Stability — Resolved persistent "Offline Mode" disconnections caused by a socket memory leak during background re-renders.' },
-      { type: 'fix', text: 'Socket API Architecture — Ensured stable server restarts and websocket paths for multi-user document tracking.' }
+      { type: 'fix', text: 'Quotation Collaboration Stability — Resolved persistent "Offline Mode" disconnections caused by a socket memory leak during background re-renders.' }
     ],
   },
   {

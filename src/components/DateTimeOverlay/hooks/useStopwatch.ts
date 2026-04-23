@@ -70,7 +70,7 @@ export const useStopwatch = (initialSettings: any) => {
   // Flush current state to localStorage on unmount (logout/page change safety net)
   useEffect(() => {
     return () => {
-      const { swRunning, swAccumulated, swStartTime, swCurrent } = liveRef.current;
+      const { swRunning, swAccumulated, swStartTime } = liveRef.current;
       // Preserve running state — on next mount, the restore logic will
       // reconstruct elapsed time from swStartTime and resume the ticker.
       const finalAccumulated = swRunning && swStartTime

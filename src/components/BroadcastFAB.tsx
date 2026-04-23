@@ -30,6 +30,8 @@ const BroadcastFAB: React.FC = () => {
   const [message, setMessage] = useState('')
   const [severity, setSeverity] = useState<'info' | 'warning' | 'danger'>('info')
   const [isSending, setIsSending] = useState(false)
+  const [ackingId, setAckingId] = useState<number | null>(null)
+  const [acksMap, setAcksMap] = useState<Record<number, any[]>>({})
 
   const fabRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -96,14 +98,22 @@ const BroadcastFAB: React.FC = () => {
 
   // Secondary effect to refresh history when event fires
   useEffect(() => {
-    const handleUpdate = () => {
+    const handleUpdate = (e: any) => {
       if (isPanelOpen && activeView === 'history') {
         fetchHistory()
+      }
+      
+      // If the admin is actively looking at the acks for the exact broadcast that was just acknowledged,
+      // silently fetch the fresh data so it updates in real-time.
+      if (e.detail && e.detail.id === ackingId) {
+        broadcastApi.getAcks(e.detail.id).then(res => {
+          setAcksMap(prev => ({ ...prev, [e.detail.id]: res.data.data }))
+        }).catch(() => {})
       }
     }
     window.addEventListener('kmti:broadcast-update', handleUpdate)
     return () => window.removeEventListener('kmti:broadcast-update', handleUpdate)
-  }, [isPanelOpen, activeView])
+  }, [isPanelOpen, activeView, ackingId])
 
 
   // Handle window resizing
@@ -228,21 +238,25 @@ const BroadcastFAB: React.FC = () => {
   }
 
 
-  const [ackingId, setAckingId] = useState<number | null>(null)
-  const [acksMap, setAcksMap] = useState<Record<number, any[]>>({})
+
 
   const fetchAcks = async (id: number) => {
-    if (acksMap[id]) {
-      setAckingId(ackingId === id ? null : id)
+    // If it's already open, simply toggle it closed
+    if (ackingId === id) {
+      setAckingId(null)
       return
     }
 
+    setIsLoadingHistory(true)
     try {
+      // Force fetching fresh data every time we open the dropdown
       const res = await broadcastApi.getAcks(id)
       setAcksMap(prev => ({ ...prev, [id]: res.data.data }))
       setAckingId(id)
     } catch (e) {
       notify("Failed to fetch acknowledgments", "error")
+    } finally {
+      setIsLoadingHistory(false)
     }
   }
 

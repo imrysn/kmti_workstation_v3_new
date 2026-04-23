@@ -393,18 +393,22 @@
   border-top: 2px solid var(--border-subtle);
 }
 
-.edit-calculated-input {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 0 0 2px var(--accent-subtle) inset;
-  font-weight: 700;
-  color: var(--accent);
+/* Manual override inputs in calculated columns (Time, OT, Software, Total) */
+.tasks-table .table-input.edit-calculated-input {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border: 1.5px solid var(--accent) !important;
+  font-weight: 700 !important;
+  text-align: right !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 0 2px var(--accent-subtle) !important;
 }
 
-.dark-theme .edit-calculated-input {
-  background-color: var(--bg-secondary);
-  color: #ffffff;
-  border-color: #ffffff;
+.dark-theme .tasks-table .table-input.edit-calculated-input,
+.void-theme .tasks-table .table-input.edit-calculated-input {
+  background-color: var(--bg-secondary) !important;
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
 }
 
 /* 笏笏 Fixed Column Widths for Header and Body Synchronization 笏 */

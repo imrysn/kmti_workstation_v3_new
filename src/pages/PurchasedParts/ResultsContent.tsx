@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState } from 'react'
 import * as ReactWindow from 'react-window'
 import * as AutoSizerModule from 'react-virtualized-auto-sizer'
 import { SearchIcon, FileIcon } from '../../components/FileIcons'

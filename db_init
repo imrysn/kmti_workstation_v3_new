@@ -13,7 +13,7 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260423-222",
+    "quotationNo": "KMTE-260423-254",
     "referenceNo": "",
     "date": "2026-04-23"
   },
@@ -27,73 +27,7 @@
     "swiftCode": "RCBCPHMM",
     "branchCode": "358"
   },
-  "tasks": [
-    {
-      "id": 1776902634411,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 23,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776902642044,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 23,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776902642323,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 24,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776902642491,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 24,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776902642652,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 1,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    }
-  ],
+  "tasks": [],
   "baseRates": {
     "timeChargeRate2D": 2700,
     "timeChargeRate3D": 2700,
@@ -137,5 +71,5 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-23T00:33:00.960Z"
+  "savedAt": "2026-04-23T08:46:34.163Z"
 }

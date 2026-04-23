@@ -90,9 +90,6 @@ export interface FooterOverrides {
 }
 
 export interface TaskOverrides {
-  basicLabor?: number
-  overtime?: number
-  software?: number
   total?: number
   unitPage?: number
 }

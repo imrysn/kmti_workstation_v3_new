@@ -131,13 +131,11 @@ export const TaskRow = memo(({
           onFocus={() => emitFocus(`task.${task.id}.referenceNumber`)}
           onBlur={() => emitBlur(`task.${task.id}.referenceNumber`)}
         >
-          {useMemo(() => (
-            <input
-              type="text" value={task.referenceNumber || ''}
-              onChange={e => handleUpdate('referenceNumber', e.target.value)}
-              className="table-input reference-input" placeholder="Ref No"
-            />
-          ), [task.referenceNumber, handleUpdate])}
+          <input
+            type="text" value={task.referenceNumber || ''}
+            onChange={e => handleUpdate('referenceNumber', e.target.value)}
+            className="table-input reference-input" placeholder="Ref No"
+          />
         </CollaborativeField>
       </td>
 
@@ -154,14 +152,12 @@ export const TaskRow = memo(({
             onBlur={() => emitBlur(`task.${task.id}.description`)}
             className="full-width-collab"
           >
-            {useMemo(() => (
-              <input
-                type="text" value={task.description}
-                onChange={e => handleUpdate('description', e.target.value)}
-                className={`table-input description-input ${!task.isMainTask ? 'sub-task-input' : ''}`}
-                placeholder={task.isMainTask ? 'Assembly Name' : "Part's name"}
-              />
-            ), [task.description, task.isMainTask, handleUpdate])}
+            <input
+              type="text" value={task.description}
+              onChange={e => handleUpdate('description', e.target.value)}
+              className={`table-input description-input ${!task.isMainTask ? 'sub-task-input' : ''}`}
+              placeholder={task.isMainTask ? 'Assembly Name' : "Part's name"}
+            />
           </CollaborativeField>
         </div>
       </td>
@@ -174,15 +170,13 @@ export const TaskRow = memo(({
           onFocus={() => emitFocus(`task.${task.id}.hours`)}
           onBlur={() => emitBlur(`task.${task.id}.hours`)}
         >
-          {useMemo(() => (
-            <input
-              type="text"
-              inputMode="decimal"
-              value={task.hours || ''}
-              onChange={e => handleUpdate('hours', Math.min(24, Math.max(0, parseFloat(e.target.value) || 0)))}
-              className="table-input number-input"
-            />
-          ), [task.hours, handleUpdate])}
+          <input
+            type="text"
+            inputMode="decimal"
+            value={task.hours || ''}
+            onChange={e => handleUpdate('hours', Math.min(999, Math.max(0, parseFloat(e.target.value) || 0)))}
+            className="table-input number-input"
+          />
         </CollaborativeField>
       </td>
 
@@ -194,39 +188,19 @@ export const TaskRow = memo(({
           onFocus={() => emitFocus(`task.${task.id}.minutes`)}
           onBlur={() => emitBlur(`task.${task.id}.minutes`)}
         >
-          {useMemo(() => (
-            <input
-              type="text"
-              inputMode="numeric"
-              value={task.minutes || ''}
-              onChange={e => handleUpdate('minutes', Math.min(59, Math.max(0, parseFloat(e.target.value) || 0)))}
-              className="table-input number-input"
-            />
-          ), [task.minutes, handleUpdate])}
+          <input
+            type="text"
+            inputMode="numeric"
+            value={task.minutes || ''}
+            onChange={e => handleUpdate('minutes', Math.min(59, Math.max(0, parseFloat(e.target.value) || 0)))}
+            className="table-input number-input"
+          />
         </CollaborativeField>
       </td>
 
-      {/* TIME CHARGE (calculated / editable) */}
+      {/* TIME CHARGE (calculated - read only) */}
       <td className="calculated-cell time-charge-bg">
-        {isEditing ? (
-          <CollaborativeField
-            fieldKey={`task.${task.id}.manualBasicLabor`}
-            remoteUsers={remoteUsers}
-            onFocus={() => emitFocus(`task.${task.id}.manualBasicLabor`)}
-            onBlur={() => emitBlur(`task.${task.id}.manualBasicLabor`)}
-          >
-            {useMemo(() => (
-              <input
-                type="text"
-                inputMode="decimal"
-                value={subtotals.basicLabor || ''}
-                onChange={e => handleEditValueChange('basicLabor', e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="table-input number-input edit-calculated-input"
-              />
-            ), [subtotals.basicLabor, handleEditValueChange, handleKeyDown])}
-          </CollaborativeField>
-        ) : formatCurrency(subtotals.basicLabor)}
+        {formatCurrency(subtotals.basicLabor)}
       </td>
 
       {/* OT RATE (hours input) */}
@@ -237,42 +211,22 @@ export const TaskRow = memo(({
           onFocus={() => emitFocus(`task.${task.id}.overtimeHours`)}
           onBlur={() => emitBlur(`task.${task.id}.overtimeHours`)}
         >
-          {useMemo(() => (
-            <input
-              type="text"
-              inputMode="decimal"
-              value={task.overtimeHours || ''}
-              onChange={e => handleUpdate('overtimeHours', parseFloat(e.target.value) || 0)}
-              className="table-input number-input"
-            />
-          ), [task.overtimeHours, handleUpdate])}
+          <input
+            type="text"
+            inputMode="decimal"
+            value={task.overtimeHours || ''}
+            onChange={e => handleUpdate('overtimeHours', parseFloat(e.target.value) || 0)}
+            className="table-input number-input"
+          />
         </CollaborativeField>
       </td>
 
-      {/* OVERTIME (calculated / editable) */}
+      {/* OVERTIME (calculated - read only) */}
       <td className="calculated-cell overtime-bg">
-        {isEditing ? (
-          <CollaborativeField
-            fieldKey={`task.${task.id}.manualOvertime`}
-            remoteUsers={remoteUsers}
-            onFocus={() => emitFocus(`task.${task.id}.manualOvertime`)}
-            onBlur={() => emitBlur(`task.${task.id}.manualOvertime`)}
-          >
-            {useMemo(() => (
-              <input
-                type="text"
-                inputMode="decimal"
-                value={subtotals.overtime || ''}
-                onChange={e => handleEditValueChange('overtime', e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="table-input number-input edit-calculated-input"
-              />
-            ), [subtotals.overtime, handleEditValueChange, handleKeyDown])}
-          </CollaborativeField>
-        ) : formatCurrency(subtotals.overtime)}
+        {formatCurrency(subtotals.overtime)}
       </td>
 
-      {/* SOFTWARE (units + calculated / editable) */}
+      {/* SOFTWARE (units input + calculated total) */}
       <td className="software-cell">
         <div className="software-input-container">
           <CollaborativeField
@@ -282,37 +236,15 @@ export const TaskRow = memo(({
             onBlur={() => emitBlur(`task.${task.id}.softwareUnits`)}
             className="software-collab-wrapper"
           >
-            {useMemo(() => (
-              <input
-                type="text"
-                inputMode="decimal"
-                value={task.softwareUnits || ''}
-                onChange={e => handleUpdate('softwareUnits', parseFloat(e.target.value) || 0)}
-                className="table-input number-input software-units-input"
-              />
-            ), [task.softwareUnits, handleUpdate])}
+            <input
+              type="text"
+              inputMode="decimal"
+              value={task.softwareUnits || ''}
+              onChange={e => handleUpdate('softwareUnits', parseFloat(e.target.value) || 0)}
+              className="table-input number-input software-units-input"
+            />
           </CollaborativeField>
-          {isEditing ? (
-            <CollaborativeField
-              fieldKey={`task.${task.id}.manualSoftware`}
-              remoteUsers={remoteUsers}
-              onFocus={() => emitFocus(`task.${task.id}.manualSoftware`)}
-              onBlur={() => emitBlur(`task.${task.id}.manualSoftware`)}
-            >
-              {useMemo(() => (
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={subtotals.software || ''}
-                  onChange={e => handleEditValueChange('software', e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="table-input number-input edit-calculated-input software-edit-input"
-                />
-              ), [subtotals.software, handleEditValueChange, handleKeyDown])}
-            </CollaborativeField>
-          ) : (
-            <span className="software-total">{formatCurrency(subtotals.software)}</span>
-          )}
+          <span className="software-total">{formatCurrency(subtotals.software)}</span>
         </div>
       </td>
 
@@ -325,28 +257,26 @@ export const TaskRow = memo(({
             onBlur={() => emitBlur(`task.${task.id}.type`)}
             className="type-collab-wrapper"
           >
-            {useMemo(() => (
-              task.type === '2D' || task.type === '3D' || !task.type ? (
-                <select
-                  value={task.type || '3D'}
-                  onChange={e => handleUpdate('type', e.target.value === 'Others' ? 'Custom' : e.target.value)}
-                  className="table-input type-select"
-                >
-                  <option value="2D">2D</option>
-                  <option value="3D">3D</option>
-                  <option value="Others">Others...</option>
-                </select>
-              ) : (
-                <div className="custom-type-container">
-                  <input
-                    type="text" value={task.type === 'Custom' ? '' : task.type}
-                    onChange={e => handleUpdate('type', e.target.value)}
-                    className="table-input custom-type-input" placeholder="Specify type" autoFocus
-                  />
-                  <button type="button" onClick={() => handleUpdate('type', '3D')} className="reset-type-button" title="Back to dropdown">↺</button>
-                </div>
-              )
-            ), [task.type, handleUpdate])}
+            {task.type === '2D' || task.type === '3D' || !task.type ? (
+              <select
+                value={task.type || '3D'}
+                onChange={e => handleUpdate('type', e.target.value === 'Others' ? 'Custom' : e.target.value)}
+                className="table-input type-select"
+              >
+                <option value="2D">2D</option>
+                <option value="3D">3D</option>
+                <option value="Others">Others...</option>
+              </select>
+            ) : (
+              <div className="custom-type-container">
+                <input
+                  type="text" value={task.type === 'Custom' ? '' : task.type}
+                  onChange={e => handleUpdate('type', e.target.value)}
+                  className="table-input custom-type-input" placeholder="Specify type" autoFocus
+                />
+                <button type="button" onClick={() => handleUpdate('type', '3D')} className="reset-type-button" title="Back to dropdown">↺</button>
+              </div>
+            )}
           </CollaborativeField>
       </td>
 
@@ -359,16 +289,14 @@ export const TaskRow = memo(({
             onFocus={() => emitFocus(`task.${task.id}.manualTotal`)}
             onBlur={() => emitBlur(`task.${task.id}.manualTotal`)}
           >
-            {useMemo(() => (
-              <input
-                type="text"
-                inputMode="decimal"
-                value={subtotals.total}
-                onChange={e => handleEditValueChange('total', e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="table-input number-input edit-calculated-input"
-              />
-            ), [subtotals.total, handleEditValueChange, handleKeyDown])}
+            <input
+              type="text"
+              inputMode="decimal"
+              value={subtotals.total}
+              onChange={e => handleEditValueChange('total', e.target.value)}
+              onKeyDown={handleKeyDown}
+              className="table-input number-input edit-calculated-input"
+            />
           </CollaborativeField>
         ) : formatCurrency(subtotals.total)}
       </td>

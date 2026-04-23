@@ -42,18 +42,12 @@ export function calculateTaskTotal(
   let software = totalSoftwareUnits * baseRates.softwareRate
 
   const override = (manualOverrides?.tasks || {})[task.id]
-  if (override) {
-    if (override.basicLabor !== undefined) basicLabor = override.basicLabor
-    if (override.overtime !== undefined) overtime = override.overtime
-    if (override.software !== undefined) software = override.software
-
-    if (override.total !== undefined) {
-      return {
-        basicLabor: Number(basicLabor.toFixed(2)),
-        overtime: Number(overtime.toFixed(2)),
-        software: Number(software.toFixed(2)),
-        total: Number(override.total.toFixed(2)),
-      }
+  if (override && override.total !== undefined) {
+    return {
+      basicLabor: Number(basicLabor.toFixed(2)),
+      overtime: Number(overtime.toFixed(2)),
+      software: Number(software.toFixed(2)),
+      total: Number(override.total.toFixed(2)),
     }
   }
 

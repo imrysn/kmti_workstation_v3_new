@@ -145,6 +145,36 @@ async def join_doc(sid: str, data: dict):
     else:
         print(f"[COLLAB] No existing users in room 'quot_{q_id}' to sync from.")
 
+# ─── Internal Helpers ────────────────────────────────────────────────────────
+async def _sync_metadata(q_id: int, data: dict, db: AsyncSession):
+    """Synchronizes DB columns with the inner JSON data blob."""
+    stmt = select(Quotation).where(Quotation.id == q_id)
+    res = await db.execute(stmt)
+    quot = res.scalar_one_or_none()
+    if not quot: return
+    
+    qd = data.get("quotationDetails", {})
+    new_q_no = qd.get("quotationNo", quot.quotation_no)
+    
+    # Sync Logic: If display_name matches old q_no, or is empty, sync to new q_no
+    new_display = quot.display_name
+    if not quot.display_name or quot.display_name == quot.quotation_no:
+        new_display = new_q_no
+        
+    await db.execute(
+        update(Quotation)
+        .where(Quotation.id == q_id)
+        .values(
+            data=json.dumps(data, ensure_ascii=False),
+            quotation_no=new_q_no,
+            display_name=new_display,
+            updated_at=datetime.utcnow(),
+            client_name=data.get("clientInfo", {}).get("company", ""),
+            designer_name=data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
+        )
+    )
+    await db.commit()
+
 @sio.event
 async def update_field(sid: str, data: dict):
     """Partial state update. Persists to DB after debounced broadcast."""
@@ -162,12 +192,7 @@ async def update_field(sid: str, data: dict):
     if full_state:
         from db.database import AsyncSessionLocal
         async with AsyncSessionLocal() as session:
-            await session.execute(
-                update(Quotation)
-                .where(Quotation.id == q_id)
-                .values(data=json.dumps(full_state, ensure_ascii=False), updated_at=datetime.utcnow())
-            )
-            await session.commit()
+            await _sync_metadata(q_id, full_state, session)
 
 @sio.event
 async def sync_state_response(sid: str, data: dict):
@@ -437,15 +462,7 @@ async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
 @router.patch("/{q_id}")
 async def update_quotation(q_id: int, data: dict, db: AsyncSession = Depends(get_db)):
     """Full update of quotation data."""
-    stmt = update(Quotation).where(Quotation.id == q_id).values(
-        data=json.dumps(data, ensure_ascii=False), 
-        updated_at=datetime.utcnow(),
-        # Also sync metadata if it changed in the JSON
-        client_name=data.get("clientInfo", {}).get("company", ""),
-        designer_name=data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
-    )
-    await db.execute(stmt)
-    await db.commit()
+    await _sync_metadata(q_id, data, db)
     return {"success": True}
 
 @router.get("/{q_id}/history")

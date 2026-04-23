@@ -72,7 +72,7 @@ const TasksTable = memo(({
   }, [collapsedTasks, onCollapsedTasksChange])
 
   // ── Totals memo ────────────────────────────────────────────────
-  const { taskTotals, overheadTotal, subtotal, grandTotal, mainTaskCount } = useMemo(() => {
+  const { taskTotals, overheadTotal, subtotal, rawSubtotal, grandTotal, mainTaskCount } = useMemo(() => {
     const mainTaskCount = tasks.filter(t => t.isMainTask).length
 
     const totals: TaskSubtotals[] = tasks.map(task => {
@@ -80,8 +80,10 @@ const TasksTable = memo(({
       return { taskId: task.id, basicLabor, overtime, software, total }
     })
 
-    const sub = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
+    const rawSub = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
     const footer = manualOverrides?.footer || {}
+
+    const sub = rawSub
 
     const overhead = footer.overhead !== undefined
       ? footer.overhead
@@ -89,20 +91,30 @@ const TasksTable = memo(({
 
     const grand = sub + overhead + (footer.adjustment || 0)
 
-    return { taskTotals: totals, overheadTotal: overhead, subtotal: sub, grandTotal: grand, mainTaskCount }
+    return { taskTotals: totals, overheadTotal: overhead, subtotal: sub, rawSubtotal: rawSub, grandTotal: grand, mainTaskCount }
   }, [tasks, baseRates, manualOverrides])
 
-  // Reset footer overrides when the subtotal changes so overhead auto-recalculates
-  const prevSubtotalRef = useRef<number | null>(null)
+  // Reset footer overrides when the underlying sum of tasks changes
+  // so that overhead and adjustments auto-recalculate from the new base.
+  const prevRawSubtotalRef = useRef<number | null>(null)
   useEffect(() => {
-    if (prevSubtotalRef.current === null) { prevSubtotalRef.current = subtotal; return }
-    if (prevSubtotalRef.current === subtotal) return
-    prevSubtotalRef.current = subtotal
+    // Initial mount: capture current raw subtotal
+    if (prevRawSubtotalRef.current === null) {
+      prevRawSubtotalRef.current = rawSubtotal
+      return
+    }
+
+    // Only reset if the underlying task values actually changed
+    // (e.g. adding/removing tasks or changing task hours/types)
+    if (prevRawSubtotalRef.current === rawSubtotal) return
+    prevRawSubtotalRef.current = rawSubtotal
+
+    // Clear footer overrides to force re-computation
     setManualOverrides?.(prev => {
-      if (!prev.footer.overhead && !prev.footer.adjustment) return prev
+      if (Object.keys(prev.footer || {}).length === 0) return prev
       return { ...prev, footer: {} }
     })
-  }, [subtotal, setManualOverrides])
+  }, [rawSubtotal, setManualOverrides])
 
   // ── Footer helpers ─────────────────────────────────────────────
   const formatValue = (val: number): string => {
