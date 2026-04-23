@@ -62,7 +62,7 @@ logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(">>> KMTI Workstation Backend v3.6.1 Starting Up...")
+    logger.info(">>> KMTI Workstation Backend v3.6.9 Starting Up...")
     try:
         # Robust DB Initialization (Handle busy connections during restarts)
         async with engine.begin() as conn:
@@ -88,8 +88,7 @@ async def lifespan(app: FastAPI):
         except:
             pass
 
-
-app = FastAPI(title="KMTI Workstation v3.6.4", version="3.6.4", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation v3.6.9", version="3.6.9", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -151,7 +150,7 @@ else:
 def health_check():
     return {
         "status": "ok", 
-        "version": "3.6.4", 
+        "version": "3.6.9", 
         "uptime_seconds": time.time() - START_TIME
     }
 

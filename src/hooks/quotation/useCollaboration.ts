@@ -306,6 +306,7 @@ export function useCollaboration({
       }
       socket.removeAllListeners()
       socket.disconnect()
+      socketRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quotId, userName, myEffectiveName, password, displayName, quotNo])

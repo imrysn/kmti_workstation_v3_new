@@ -22,6 +22,15 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.6.9',
+    date: 'April 23, 2026',
+    entries: [
+      { type: 'fix', text: 'KMTI Tech Assistant Interface — Fixed a fatal crash when pressing Enter inside the chat box that incorrectly triggered document search bindings.' },
+      { type: 'fix', text: 'Quotation Collaboration Stability — Resolved persistent "Offline Mode" disconnections caused by a socket memory leak during background re-renders.' },
+      { type: 'fix', text: 'Socket API Architecture — Ensured stable server restarts and websocket paths for multi-user document tracking.' }
+    ],
+  },
+  {
     version: '3.6.8',
     date: 'April 23, 2026',
     entries: [
