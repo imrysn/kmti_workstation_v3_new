@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { broadcastApi, SERVER_BASE } from '../services/api'
 import megaphoneIcon from '../assets/megaphone-icon.png'
 import { io } from 'socket.io-client'
+import { useAuth } from '../context/AuthContext'
 import './BroadcastOverlay.css'
 
 interface Broadcast {
@@ -114,37 +115,43 @@ const BroadcastOverlay: React.FC = () => {
     }
   }, [])
 
+  const { hasRole } = useAuth()
+
   useEffect(() => {
     fetchBroadcasts()
     const interval = setInterval(fetchBroadcasts, 8000)
     
-    const socket = io(SERVER_BASE, {
-      path: '/socket.io',
-      transports: ['websocket', 'polling']
-    })
+    // Only admins/IT need to listen for acknowledgment alerts
+    let socket: any = null
+    if (hasRole('admin', 'it')) {
+      socket = io(SERVER_BASE, {
+        path: '/socket.io',
+        transports: ['websocket', 'polling']
+      })
 
-    socket.on('broadcast_acknowledged', (data: any) => {
-      const newAck = {
-        id: Math.random().toString(36).substr(2, 9),
-        workstation: data.workstation,
-        username: data.username,
-        time: data.time
-      }
-      
-      setRecentAcks(prev => [newAck, ...prev].slice(0, 3))
-      playAckAlert()
-      
-      // Auto-remove after 6 seconds
-      setTimeout(() => {
-        setRecentAcks(prev => prev.filter(a => a.id !== newAck.id))
-      }, 6000)
-    })
+      socket.on('broadcast_acknowledged', (data: any) => {
+        const newAck = {
+          id: Math.random().toString(36).substr(2, 9),
+          workstation: data.workstation,
+          username: data.username,
+          time: data.time
+        }
+        
+        setRecentAcks(prev => [newAck, ...prev].slice(0, 3))
+        playAckAlert()
+        
+        // Auto-remove after 6 seconds
+        setTimeout(() => {
+          setRecentAcks(prev => prev.filter(a => a.id !== newAck.id))
+        }, 6000)
+      })
+    }
 
     return () => {
       clearInterval(interval)
-      socket.disconnect()
+      if (socket) socket.disconnect()
     }
-  }, [fetchBroadcasts])
+  }, [fetchBroadcasts, hasRole])
 
   const handleAcknowledge = async (id: number) => {
     setExitingId(id)

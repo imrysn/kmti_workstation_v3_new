@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import axios from 'axios'
-import type { IProject } from '../types'
+import type { IProject, IQuotation, IQuotationHistory } from '../types'
 
 export const SERVER_BASE = (() => {
   const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null

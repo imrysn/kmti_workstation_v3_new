@@ -21,14 +21,19 @@ class QueueHandler(logging.Handler):
         super().__init__()
         self.log_widget = log_widget
         self.patterns = [
-            (r'POST /api/auth/login', "🔐 User Login Attempt"),
+            (r'POST /api/auth/login', "🔐 User Authenticated"),
             (r'GET /api/parts/projects\?category=PROJECTS', "📂 Browsing Project Catalog"),
             (r'POST /api/parts/projects/(\d+)/scan', "🚀 Started NAS Scan for project [\1]"),
             (r'GET /api/parts/\?.*search=([^& ]+)', "🔎 Searching: \1"),
             (r'GET /api/parts/tree/(\d+)', "🌳 Exploring Folder Structure [\1]"),
             (r'GET /api/parts/preview/(\d+)', "🖼️ Viewing Part Preview [\1]"),
-            (r'GET /api/flags/', "⚙️ Checking Feature Flags"),
-            (r'GET /health', "💓 System Health Check"),
+            (r'GET /api/flags/', "⚙️ Synchronizing Feature Flags"),
+            (r'GET /api/help/tickets/unread_count', "📬 Checking Support Notifications"),
+            (r'GET /api/broadcast/active', "🛰️ Monitoring live broadcasts"),
+            (r'POST /api/broadcast/(\d+)/acknowledge', "✅ Workstation acknowledged broadcast [\1]"),
+            (r'POST /api/broadcast', "📢 Sending a new global alert"),
+            (r'GET /api/quotations/sessions', "👥 Monitoring active workspace sessions"),
+            (r'GET /health', "💓 Pulse: System Healthy"),
         ]
 
     def translate_log(self, msg):
@@ -36,6 +41,13 @@ class QueueHandler(logging.Handler):
         if " /api/" not in msg:
             return msg # Keep system/error logs as is
         
+        # Extract workstation or IP prefix if available
+        # Example: 192.168.1.1 - [log body]
+        prefix = ""
+        prefix_match = re.match(r'^([\d\.]+)', msg)
+        if prefix_match:
+            prefix = f"[{prefix_match.group(1)}] "
+
         for pattern, replacement in self.patterns:
             match = re.search(pattern, msg)
             if match:
@@ -43,13 +55,12 @@ class QueueHandler(logging.Handler):
                 final_msg = replacement
                 for i, group in enumerate(match.groups()):
                     final_msg = final_msg.replace(f"\\{i+1}", group)
-                return final_msg
+                return f"{prefix}{final_msg}"
         
-        # If no pattern matches but it's an API call, just show the path
-        # Example: 127.0.0.1:63826 - "GET /api/custom HTTP/1.1" 200 OK
+        # If no pattern matches but it's an API call, show a cleaned path
         m = re.search(r'"[A-Z]+ (/[^ ]+) HTTP', msg)
         if m:
-            return f"🔌 API Call: {m.group(1)}"
+            return f"{prefix}🔌 Interaction: {m.group(1)}"
             
         return msg
 
