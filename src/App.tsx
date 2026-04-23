@@ -27,9 +27,11 @@ import BroadcastFAB from './components/BroadcastFAB'
 import AnniversaryOverlay from './components/AnniversaryOverlay'
 
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { UpdateProvider, useUpdate } from './context/UpdateContext'
 import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { useHeartbeat } from './hooks/useHeartbeat'
+import MandatoryUpdateOverlay from './components/MandatoryUpdateOverlay'
 import { setApiToken, onUnauthorized } from './services/api'
 import './styles/App.css'
 
@@ -221,6 +223,7 @@ function WorkstationShell() {
       <FeedbackWidget />
       <BroadcastOverlay />
       <BroadcastFAB />
+      <MandatoryUpdateOverlay />
     </div>
   )
 }
@@ -230,11 +233,23 @@ function WorkstationShell() {
  */
 function AppContent() {
   const { user, token, triggerSessionExpired } = useAuth()
+  const { checkForUpdate } = useUpdate()
 
   // Sync token into axios interceptor whenever it changes
   useEffect(() => {
     setApiToken(token)
   }, [token])
+
+  // Trigger update check after login / session restoration (Production only)
+  useEffect(() => {
+    if (user && import.meta.env.PROD) {
+      // Small delay to let initial UI settle
+      const timer = setTimeout(() => {
+        checkForUpdate()
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [user, checkForUpdate])
 
   // Register global 401 handler — shows Session Expired modal instead of silent logout
   useEffect(() => {
@@ -257,12 +272,14 @@ export default function App() {
     <ErrorBoundary>
       <ThemeProvider>
         <AuthProvider>
-          <ModalProvider>
-            <HashRouter>
-              <AppContent />
-              <AnniversaryOverlay />
-            </HashRouter>
-          </ModalProvider>
+          <UpdateProvider>
+            <ModalProvider>
+              <HashRouter>
+                <AppContent />
+                <AnniversaryOverlay />
+              </HashRouter>
+            </ModalProvider>
+          </UpdateProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

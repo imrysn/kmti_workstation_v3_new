@@ -4,6 +4,7 @@ import { useModal } from '../components/ModalContext'
 import type { IAppSettings } from '../types'
 import { StatusIcon } from '../components/FileIcons'
 import { useAuth } from '../context/AuthContext'
+import { useUpdate } from '../context/UpdateContext'
 import './Settings.css'
 
 const DEFAULT: IAppSettings = {
@@ -19,68 +20,36 @@ export default function Settings() {
   const [clearing, setClearing] = useState(false)
   const [cleared, setCleared] = useState(false)
 
-  // Update States
-  const [updateStatus, setUpdateStatus] = useState<'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error'>('idle')
-  const [updateInfo, setUpdateInfo] = useState<any>(null)
-  const [downloadProgress, setDownloadProgress] = useState(0)
-  const [updateError, setUpdateError] = useState<string | null>(null)
+  const { 
+    updateStatus, 
+    updateInfo, 
+    downloadProgress, 
+    updateError,
+    checkForUpdate,
+    downloadUpdate,
+    installAndRestart,
+    simulateUpdate,
+    resetUpdateState
+  } = useUpdate()
   
   const { hasRole } = useAuth()
   const { confirm, alert, notify } = useModal()
 
   useEffect(() => {
     settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res.data }))
-
-    // --- Auto Updater Listeners ---
-    const api = window.electronAPI
-    if (!api) return
-
-    api.onUpdateAvailable((info: any) => {
-      setUpdateStatus('available')
-      setUpdateInfo(info)
-      notify(`Update Found: v${info.version}`, 'info')
-    })
-
-    api.onUpdateNotAvailable(() => {
-      setUpdateStatus('idle')
-      notify('Software is up to date', 'success')
-    })
-
-    api.onUpdateProgress((progress: any) => {
-      setUpdateStatus('downloading')
-      setDownloadProgress(Math.round(progress.percent))
-    })
-
-    api.onUpdateDownloaded(() => {
-      setUpdateStatus('ready')
-      notify('Update downloaded and ready to install', 'success')
-    })
-
-    api.onUpdateError((err: string) => {
-      setUpdateStatus('error')
-      setUpdateError(err)
-      alert(`Update failed: ${err}`, 'Update Error')
-    })
-
-    return () => {
-      api.removeUpdateListeners()
-    }
-  }, [notify, alert])
+  }, [])
 
   const handleCheck = async () => {
-    setUpdateStatus('checking')
-    setUpdateError(null)
     try {
-      await window.electronAPI.checkForUpdate()
+      await checkForUpdate()
     } catch (err: any) {
-      setUpdateStatus('error')
-      setUpdateError(err.message)
+      // Error is handled in UpdateContext
     }
   }
 
   const handleDownload = async () => {
     try {
-      await window.electronAPI.downloadUpdate()
+      await downloadUpdate()
     } catch (err: any) {
       alert(err.message, 'Download Error')
     }
@@ -89,7 +58,7 @@ export default function Settings() {
   const handleInstall = () => {
     confirm(
       "The application will close now to install the update. Proceed?",
-      () => window.electronAPI.installAndRestart(),
+      () => installAndRestart(),
       undefined,
       'info'
     )
@@ -184,6 +153,19 @@ export default function Settings() {
               <button className="btn btn-ghost" onClick={handleCheck} disabled={updateStatus === 'checking'}>
                 {updateStatus === 'checking' ? 'Please wait...' : 'Check for Updates'}
               </button>
+            )}
+
+            {!import.meta.env.PROD && (
+              <div style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
+                <button className="btn btn-ghost" style={{ borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', fontSize: 11 }} onClick={() => simulateUpdate('available')}>
+                  DEBUG: SIMULATE UPDATE
+                </button>
+                {updateStatus !== 'idle' && (
+                  <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={resetUpdateState}>
+                    RESET
+                  </button>
+                )}
+              </div>
             )}
 
             {updateStatus === 'available' && (

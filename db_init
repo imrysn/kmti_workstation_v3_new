@@ -13,7 +13,7 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260423-254",
+    "quotationNo": "KMTE-260423-12345",
     "referenceNo": "",
     "date": "2026-04-23"
   },
@@ -27,7 +27,21 @@
     "swiftCode": "RCBCPHMM",
     "branchCode": "358"
   },
-  "tasks": [],
+  "tasks": [
+    {
+      "id": 1776934829807,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 12,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    }
+  ],
   "baseRates": {
     "timeChargeRate2D": 2700,
     "timeChargeRate3D": 2700,
@@ -71,5 +85,5 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-23T08:46:34.163Z"
+  "savedAt": "2026-04-23T09:01:29.077Z"
 }

@@ -94,22 +94,24 @@ const BroadcastOverlay: React.FC = () => {
         return
       }
 
-      // Respect dismissed broadcasts
+      // Respect dismissed broadcasts (robust ID checking)
       const seenRaw = localStorage.getItem('kmti_seen_broadcasts')
-      const seenIds: number[] = seenRaw ? JSON.parse(seenRaw) : []
-      if (seenIds.includes(data.id)) {
+      const seenIds: number[] = seenRaw ? JSON.parse(seenRaw).map(Number) : []
+      const currentId = Number(data.id)
+
+      if (seenIds.includes(currentId)) {
         setBroadcasts([])
         return
       }
 
-      // Handle arrival alerts
-      if (data.id !== lastAlertedId.current) {
-        lastAlertedId.current = data.id
+      // Handle arrival alerts - ensure we don't flash/play for already seen/handled items
+      if (currentId !== lastAlertedId.current) {
+        lastAlertedId.current = currentId
         playAlert(data.severity)
         triggerFlash()
       }
 
-      setBroadcasts([data]) // Currently keeping it to 1 main for the "Dynamic Island" look but queue-ready
+      setBroadcasts([data]) 
     } catch (err) {
       console.error('Failed to fetch broadcasts:', err)
     }
@@ -172,8 +174,11 @@ const BroadcastOverlay: React.FC = () => {
     // Animation timeout then remove locally
     setTimeout(() => {
       const seenRaw = localStorage.getItem('kmti_seen_broadcasts')
-      const seenIds: number[] = seenRaw ? JSON.parse(seenRaw) : []
-      const updatedSeen = [...new Set([...seenIds, id])]
+      const seenIds: number[] = seenRaw ? JSON.parse(seenRaw).map(Number) : []
+      
+      // Add current ID, remove duplicates, and keep only the latest 100 entries
+      const updatedSeen = [...new Set([...seenIds, Number(id)])].slice(-100)
+      
       localStorage.setItem('kmti_seen_broadcasts', JSON.stringify(updatedSeen))
       setBroadcasts(prev => prev.filter(b => b.id !== id))
       setExitingId(null)
