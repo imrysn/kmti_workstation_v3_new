@@ -22,25 +22,22 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
-    version: '3.6.9',
-    date: 'April 20, 2026',
-    entries: [
-      { type: 'new', text: 'AI Tech Assistant — You can now ask questions about finding files and folders on the indexed data. (Limited to 3 per day due to API free tier)' },
-      { type: 'new', text: 'Clients Directory — A dedicated module for managing engineering clients and contacts with category filtering.' },
-      { type: 'new', text: 'Inline Preview Editing — You can now edit the "UNIT (PAGE)" column directly in the Print Preview for quick document adjustments.' },
-      { type: 'improvement', text: 'Smarter "New" Action — Persist company and client details while resetting the computation table for faster repetitive workflows.' },
-      { type: 'improvement', text: 'Ultra-Responsive TitleBar — Hardened navigation layout to ensure accessibility even at very narrow window widths.' },
-      { type: 'improvement', text: 'Partial Data Entry — Clients can now be saved with optional fields, allowing you to fill in details as you go.' },
-    ],
-  },
-  {
     version: '3.6.8',
-    date: 'April 16, 2026',
+    date: 'April 23, 2026',
     entries: [
+      { type: 'new', text: 'AI Tech Assistant — You can now ask questions about finding files and folders on the indexed data. (Limited to 3 per day due to API free tier), located only in findr. (Answers might still be delusional or throw random as RAG is still in development).' },
+      { type: 'new', text: 'Clients Page — A dedicated module for managing engineering clients and contacts with category filtering.' },
+      { type: 'new', text: 'Inverted Paper Mode — The Material Calculator now intelligently switches its "Scratchpad" aesthetic based on your active theme.' },
+      { type: 'new', text: 'Dark Paper aesthetic — Introduced a high-contrast, professional drafting surface for Light Theme to reduce glare and improve focus.' },
       { type: 'new', text: 'Broadcast Center — A high-priority communication hub for Admin and IT roles to send global workstation alerts.' },
-      { type: 'new', text: 'Dynamic Island Overlay — Premium, severity-themed (Info/Warning/Danger) glass pills with fluid "bloom" animations.' },
-      { type: 'improvement', text: 'Smart Quadrant Logic — The broadcaster panel now intelligently expands toward screen center based on its drag position.' },
+      { type: 'new', text: 'Dynamic Island Overlay — Premium, severity-themed glass pills with "bloom" animations. (Broadcast Message)' },
+      { type: 'new', text: 'Inline Preview Editing — You can now edit the "UNIT (PAGE)" column directly in the Print Preview for quick document adjustments.' },
+      { type: 'improvement', text: 'Modernized Calculator UI — Complete visual overhaul with Dark and Light modes.' },
+      { type: 'improvement', text: 'Smarter "New" Action — Persist company and client information for newly created quotations.' },
+      { type: 'improvement', text: 'Ultra-Responsive TitleBar — Hardened navigation layout to ensure accessibility even at very narrow window widths.' },
+      { type: 'improvement', text: 'Smart Quadrant Logic — The broadcaster panel now intelligently expands toward screen center based on its drag position. - admin only' },
       { type: 'improvement', text: 'Intelligent Persistence — Messages auto-hide after 15 seconds and use "show-once" logic to avoid repetitive interruptions.' },
+      { type: 'improvement', text: 'Code & Logic Cleanup — Streamlined material spec parsing and removed legacy code blocks for better performance.' },
     ],
   },
   {

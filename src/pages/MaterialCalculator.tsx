@@ -85,7 +85,7 @@ export default function MaterialCalculator() {
       if (parts.length > 1) {
         const last = parts[parts.length - 1];
         const lastNum = parseFloat(last);
-        if (!isNaN(lastNum) && parts.indexOf(last) === parts.length - 1) {
+        if (!isNaN(lastNum)) {
           qty = lastNum;
           actualSpec = parts.slice(0, -1).join(' ');
         }
@@ -139,8 +139,6 @@ export default function MaterialCalculator() {
 
   return (
     <div className="page-container calc-page">
-
-
       <div className="scratchpad-container glass-panel">
         <div className="scratchpad-grid">
           <div className="box-label input-label">
