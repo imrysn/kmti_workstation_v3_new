@@ -13,9 +13,9 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260422-225",
+    "quotationNo": "KMTE-260423-222",
     "referenceNo": "",
-    "date": "2026-04-22"
+    "date": "2026-04-23"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -29,10 +29,10 @@
   },
   "tasks": [
     {
-      "id": 1776901205595,
+      "id": 1776902634411,
       "description": "",
       "referenceNumber": "",
-      "hours": 2,
+      "hours": 23,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -42,10 +42,10 @@
       "parentId": null
     },
     {
-      "id": 1776901217541,
+      "id": 1776902642044,
       "description": "",
       "referenceNumber": "",
-      "hours": 3,
+      "hours": 23,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -55,10 +55,10 @@
       "parentId": null
     },
     {
-      "id": 1776901217701,
+      "id": 1776902642323,
       "description": "",
       "referenceNumber": "",
-      "hours": 4,
+      "hours": 24,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -68,10 +68,10 @@
       "parentId": null
     },
     {
-      "id": 1776901217871,
+      "id": 1776902642491,
       "description": "",
       "referenceNumber": "",
-      "hours": 5,
+      "hours": 24,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -81,36 +81,10 @@
       "parentId": null
     },
     {
-      "id": 1776901567566,
+      "id": 1776902642652,
       "description": "",
       "referenceNumber": "",
-      "hours": 2,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776901567758,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 3,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776901568151,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 4,
+      "hours": 1,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -163,5 +137,5 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-22T23:46:11.754Z"
+  "savedAt": "2026-04-23T00:33:00.960Z"
 }

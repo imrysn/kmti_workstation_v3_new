@@ -71,7 +71,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
   const [isBaseRatesPanelOpen, setIsBaseRatesPanelOpen] = useState(false)
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
-  const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [recentEdits, setRecentEdits] = useState<Record<string, { color: string; timestamp: number }>>({})
   const [previewData, setPreviewData] = useState<any | null>(null)
   const [activePreviewTs, setActivePreviewTs] = useState<string | null>(null)
@@ -237,17 +236,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         reorderTasks(patch.value.draggedId, patch.value.targetId)
       }
     },
-    onAuditEntry: (entry) => {
-      setAuditLogs(prev => {
-        const idx = prev.findIndex(item => item.id === entry.id)
-        if (idx >= 0) {
-          const next = [...prev]
-          next[idx] = entry
-          return next
-        }
-        return [entry, ...prev.slice(0, 49)]
-      })
-    },
     onRequestState: getSaveData,
     onError: (msg: string) => {
       notify?.(msg, 'error')
@@ -354,7 +342,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   // Reset preview and logs when switching quotations
   useEffect(() => {
     handleExitPreview()
-    setAuditLogs([])
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quotationDetails.quotationNo])
 
@@ -587,7 +574,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         <div className="quot-layout">
           <HistorySidebar
             quotId={quotId}
-            quotNo={quotNo}
             onRestore={(data) => {
               loadData(data, 'version_restore')
               emitSnapshot(data, 'Version Restore')
@@ -595,8 +581,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             }}
             onPreview={handlePreview}
             previewingTs={activePreviewTs}
-            auditLogs={auditLogs}
-            workstationName={myEffectiveName}
           />
 
           <div className="quot-main-area">

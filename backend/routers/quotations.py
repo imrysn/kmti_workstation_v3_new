@@ -312,7 +312,7 @@ async def list_quotations(
                 "designerName": i.designer_name,
                 "workstation": i.workstation,
                 "date": i.date.strftime("%Y-%m-%d") if i.date else None,
-                "modifiedAt": i.updated_at.isoformat() if i.updated_at else None,
+                "modifiedAt": i.updated_at.isoformat() + "Z" if i.updated_at else None,
                 "isActive": i.is_active,
                 "hasPassword": bool(i.password),
                 "displayName": i.display_name or i.quotation_no
@@ -461,10 +461,9 @@ async def get_history(q_id: int, db: AsyncSession = Depends(get_db)):
         "history": [
             {
                 "id": h.id,
-                "label": h.created_at.strftime("%b %d, %Y — %H:%M:%S"),
-                "description": h.label,
+                "label": h.label or "System Snapshot",
                 "author": h.author,
-                "timestamp": h.created_at.isoformat()
+                "timestamp": h.created_at.isoformat() + "Z"
             } for h in items
         ]
     }

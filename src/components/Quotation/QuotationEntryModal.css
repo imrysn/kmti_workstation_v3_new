@@ -325,10 +325,31 @@ body.dark-theme .quot-entry-footer {
   font-size: 14px;
   font-weight: 600;
   transition: all 0.2s ease;
+  border: 1px solid transparent;
+  /* Align with secondary buttons */
 }
 
 .quot-footer-btn:hover {
   color: var(--accent);
+}
+
+.quot-footer-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.1);
+  margin: 0 4px;
+}
+
+body.dark-theme .quot-footer-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.quot-btn-secondary {
+  opacity: 0.8;
+}
+
+.quot-btn-secondary:hover {
+  opacity: 1;
 }
 
 .quot-footer-btn svg {

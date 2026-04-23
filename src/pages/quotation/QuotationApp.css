@@ -16,7 +16,8 @@
   --quot-accent: var(--text-muted);
   --quot-bg-main: var(--bg-primary);
   --quot-bg-card: var(--bg-secondary);
-  --quot-bg-accent: var(--quot-primary); /* Default for light mode */
+  --quot-bg-accent: var(--quot-primary);
+  /* Default for light mode */
   --quot-border: var(--border);
   --quot-border-subtle: var(--border-subtle);
   --quot-text-main: var(--text-primary);
@@ -32,7 +33,8 @@
   --quot-primary-deep: var(--accent-hover);
   --quot-bg-main: var(--bg-surface-subtle);
   --quot-bg-card: var(--bg-secondary);
-  --quot-bg-accent: var(--bg-surface); /* For the Grand Total footer in dark mode */
+  --quot-bg-accent: var(--bg-surface);
+  /* For the Grand Total footer in dark mode */
   --quot-border: var(--border);
   --quot-border-subtle: var(--border-subtle);
   --quot-text-main: var(--text-primary);
@@ -906,7 +908,8 @@
   flex-direction: column;
   padding: 8px 24px;
   border-top: 2px solid var(--quot-primary);
-  border-left: 6px solid var(--quot-primary); /* Professional highlight */
+  border-left: 6px solid var(--quot-primary);
+  /* Professional highlight */
   gap: 2px;
 }
 
@@ -914,38 +917,41 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 0;
+  padding: 3px 0;
 }
 
-.quot-app-root .grand-total-row .grand-total-label {
+.quot-app-root .grand-total-label {
   font-family: 'Arimo', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: #ffffff; /* Explicit white for contrast */
+  opacity: 0.9;
 }
 
-.quot-app-root .grand-total-row .grand-total-value {
+.quot-app-root .grand-total-value {
   font-family: 'Arimo', sans-serif;
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #ffffff; /* Explicit white for contrast */
 }
 
+/* Specific styling for the final Grand Total row */
 .quot-app-root .grand-total-row.grand-total-final {
   border-top: 1px solid rgba(255, 255, 255, 0.2);
-  margin-top: 4px;
-  padding-top: 6px;
+  margin-top: 6px;
+  padding-top: 8px;
 }
 
 .quot-app-root .grand-total-row.grand-total-final .grand-total-label {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   color: #ffffff;
+  opacity: 1;
 }
 
 .quot-app-root .grand-total-row.grand-total-final .grand-total-value {
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
   color: #ffffff;
 }
 
@@ -1402,13 +1408,18 @@
   margin-bottom: 8px;
 }
 
-.brp-summary-row {
+.table-subtotal-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
-  color: var(--quot-text-muted);
-  padding: 3px 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff; /* Force white for high contrast on blue bg */
+  opacity: 0.9;
+}
+
+.table-subtotal-row .subtotal-value {
+  color: #fff; /* Ensure values are also white */
 }
 
 .brp-summary-value {
@@ -1446,6 +1457,7 @@
 .brp-done-btn:hover {
   background: var(--quot-primary-deep);
 }
+
 /*  Collaboration Layout  */
 .quot-layout {
   display: flex;

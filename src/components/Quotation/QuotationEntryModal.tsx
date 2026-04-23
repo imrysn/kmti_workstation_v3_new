@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { quotationApi } from '../../services/api'
+import QuotationLibraryModal from './QuotationLibraryModal'
 import './QuotationEntryModal.css'
 
 interface ActiveSession {
@@ -27,6 +28,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
   const [sessions, setSessions] = useState<ActiveSession[]>([])
   const [loading, setLoading] = useState(true)
   const [isCreating, setIsCreating] = useState(false)
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false)
   const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '' })
   const [joiningSession, setJoiningSession] = useState<ActiveSession | null>(null)
   const [joinPassword, setJoinPassword] = useState('')
@@ -259,7 +261,24 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
               </svg>
               Start New Workspace
             </button>
+            <div className="quot-footer-divider" />
+            <button className="quot-footer-btn quot-btn-secondary" onClick={() => setIsLibraryOpen(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              Open Quotation Library
+            </button>
           </footer>
+        )}
+
+        {isLibraryOpen && (
+          <QuotationLibraryModal
+            onClose={() => setIsLibraryOpen(false)}
+            onSelect={(q) => {
+              setIsLibraryOpen(false)
+              onJoin(q.id)
+            }}
+          />
         )}
       </div>
     </div>

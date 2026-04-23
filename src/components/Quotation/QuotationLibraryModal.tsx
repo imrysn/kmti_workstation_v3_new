@@ -102,11 +102,16 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
     const date = new Date(dateStr)
-    return date.toLocaleDateString(undefined, {
+    const dStr = date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     })
+    const tStr = date.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+    return `${dStr}, ${tStr}`
   }
 
   // ── Render ──────────────────────────────────────────────────────

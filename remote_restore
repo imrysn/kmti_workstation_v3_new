@@ -13,9 +13,9 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260422-225",
+    "quotationNo": "KMTE-260423-678",
     "referenceNo": "",
-    "date": "2026-04-22"
+    "date": "2026-04-23"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -29,7 +29,59 @@
   },
   "tasks": [
     {
-      "id": 1776901205595,
+      "id": 1776902813342,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 24,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776902823929,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 23,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776902824098,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 23,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776902824250,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 23,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776905952669,
       "description": "",
       "referenceNumber": "",
       "hours": 2,
@@ -42,7 +94,7 @@
       "parentId": null
     },
     {
-      "id": 1776901217541,
+      "id": 1776905952822,
       "description": "",
       "referenceNumber": "",
       "hours": 3,
@@ -55,75 +107,10 @@
       "parentId": null
     },
     {
-      "id": 1776901217701,
+      "id": 1776905952973,
       "description": "",
       "referenceNumber": "",
       "hours": 4,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776901217871,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 5,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776901788346,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 24,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776901788697,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 24,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776901788865,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 24,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776901789018,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 24,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -176,5 +163,5 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-22T23:50:00.953Z"
+  "savedAt": "2026-04-23T00:59:16.026Z"
 }

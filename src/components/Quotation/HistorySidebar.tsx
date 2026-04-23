@@ -5,10 +5,9 @@
  * of the currently open shared quotation.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { quotationApi } from '../../services/api'
 import { IQuotationHistory } from '../../types'
-import { interpretAudit } from './utils/auditUtils'
 import './HistorySidebar.css'
 
 // Internal Premium Icons
@@ -80,19 +79,14 @@ function groupItemsByDate<T extends { timestamp: string }>(items: T[]) {
 
 interface Props {
   quotId: number | undefined
-  quotNo: string | null
   onRestore: (data: any) => void
   onPreview?: (data: any, ts: string) => void
   previewingTs?: string | null
-  auditLogs: any[]
-  workstationName?: string
 }
 
-export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewingTs, auditLogs, workstationName }: Props) {
+export function HistorySidebar({ quotId, onRestore, onPreview, previewingTs }: Props) {
   const [expanded, setExpanded] = useState(false)
-  const [activeTab, setActiveTab] = useState<'history' | 'activity'>('history')
   const [snapshots, setSnapshots] = useState<IQuotationHistory[]>([])
-  const [localLogs, setLocalLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [restoringId, setRestoringId] = useState<number | null>(null)
@@ -106,7 +100,8 @@ export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewin
     try {
       const res = await quotationApi.getHistory(quotId)
       setSnapshots(res.data.history || [])
-    } catch {
+    } catch (err) {
+      console.error('[history] Failed to fetch:', err)
       setSnapshots([])
     } finally {
       setLoading(false)
@@ -117,36 +112,27 @@ export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewin
   // Reset local sidebar state when quotNo changes
   useEffect(() => {
     setSnapshots([])
-    setLocalLogs([])
     setPreviewLoadingId(null)
   }, [quotId])
 
   // Fetch whenever the sidebar expands or quotNo changes
   useEffect(() => {
     if (expanded && quotId) {
-      if (activeTab === 'history') fetchHistory()
-      // else fetchLogs() // Activity logs currently simplified to Socket-only for this version
+      fetchHistory()
     }
-  }, [expanded, quotId, activeTab, fetchHistory])
+  }, [expanded, quotId, fetchHistory])
 
   // Listen for background refresh events (triggered by collaboration socket)
   useEffect(() => {
     if (!quotId) return
     const handleRefresh = (e: any) => {
-      if (e.detail?.quotId === quotId && activeTab === 'history') {
-        fetchHistory(true) // silent refresh
+      if (e.detail?.quotId === quotId) {
+        fetchHistory(true)
       }
     }
     window.addEventListener('quot:history-refresh' as any, handleRefresh)
     return () => window.removeEventListener('quot:history-refresh' as any, handleRefresh)
-  }, [quotId, activeTab, fetchHistory])
-
-  // Merge local logs with live audit logs from prop (Memoized for performance)
-  const displayLogs = useMemo(() => {
-    return [...auditLogs, ...localLogs]
-      .filter(log => log && log.id)
-      .filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
-  }, [auditLogs, localLogs])
+  }, [quotId, fetchHistory])
 
   const handleRestore = async (snap: IQuotationHistory) => {
     if (!quotId) return
@@ -163,13 +149,13 @@ export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewin
 
   const handlePreview = async (snap: IQuotationHistory) => {
     if (!quotId || !onPreview) return
-    if (previewingTs === snap.timestamp) return // already previewing
+    if (previewingTs === snap.timestamp) return
     setPreviewLoadingId(snap.id)
     try {
       const res = await quotationApi.restoreHistory(quotId, snap.id)
       onPreview(res.data, snap.timestamp)
     } catch (e) {
-      console.error('Failed to fetch preview:', e)
+      alert('Failed to load preview.')
     } finally {
       setPreviewLoadingId(null)
     }
@@ -190,27 +176,12 @@ export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewin
       {/* Panel content */}
       {expanded && (
         <div className="history-sidebar__content">
-          <div className="history-sidebar__tabs">
-            <button
-              className={`history-sidebar__tab ${activeTab === 'history' ? 'active' : ''}`}
-              onClick={() => setActiveTab('history')}
-            >
-              Versions
-            </button>
-            <button
-              className={`history-sidebar__tab ${activeTab === 'activity' ? 'active' : ''}`}
-              onClick={() => setActiveTab('activity')}
-            >
-              Activity
-            </button>
-          </div>
-
           <div className="history-sidebar__scroll-area">
             {!quotId && (
               <p className="history-sidebar__empty">Waiting for database connection...</p>
             )}
 
-            {quotId && activeTab === 'history' && (
+            {quotId && (
               <>
                 {loading && snapshots.length === 0 && <p className="history-sidebar__empty">Loading versions…</p>}
                 {!loading && snapshots.length === 0 && <p className="history-sidebar__empty">No snapshots yet.</p>}
@@ -227,64 +198,41 @@ export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewin
                       return (
                         <div
                           key={snap.id}
-                          className={`timeline-item ${isPreviewing ? 'timeline-item--previewing' : ''} ${isPreLoading ? 'timeline-item--loading' : ''}`}
-                          onClick={() => handlePreview(snap)}
+                          className={`timeline-item ${isPreviewing ? 'timeline-item--previewing' : ''} ${isPreLoading ? 'timeline-item--loading' : ''} ${restoringId === snap.id ? 'timeline-item--restoring' : ''}`}
                         >
-                          <div className="timeline-node" />
+                          <div className="timeline-marker"></div>
                           <div className="timeline-content">
-                            <div className="timeline-label">
-                              <span>{timeStr}</span>
-                              <button
-                                className="restore-ghost-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleRestore(snap)
-                                }}
-                                disabled={restoringId === snap.id}
-                                title="Restore this version permanently"
-                              >
-                                {restoringId === snap.id ? '...' : 'Restore'}
-                              </button>
+                            <div className="timeline-header">
+                              <span className="timeline-time">{timeStr}</span>
+                              <div className="timeline-actions">
+                                {onPreview && (
+                                  <button
+                                    className="timeline-action-btn"
+                                    onClick={() => handlePreview(snap)}
+                                    title="Preview this version"
+                                    disabled={isPreLoading}
+                                  >
+                                    {isPreLoading ? 'Loading...' : isPreviewing ? 'Currently Viewing' : 'Preview'}
+                                  </button>
+                                )}
+                                <button
+                                  className="timeline-action-btn timeline-action-btn--restore"
+                                  onClick={() => handleRestore(snap)}
+                                  disabled={restoringId === snap.id}
+                                >
+                                  {restoringId === snap.id ? 'Restoring...' : 'Restore'}
+                                </button>
+                              </div>
                             </div>
                             <div className="timeline-desc">
-                              {snap.label || 'Modified system snapshot'}
-                              <span className="timeline-author">by {snap.author}</span>
+                              <span className="timeline-primary-label">{snap.label}</span>
+                              <span className="timeline-author"> · {snap.author}</span>
                             </div>
-                            <div className="timeline-meta">{formatTimeAgo(snap.timestamp)}</div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))}
-              </>
-            )}
-
-            {quotId && activeTab === 'activity' && (
-              <>
-                {loading && displayLogs.length === 0 && <p className="history-sidebar__empty">Loading activity…</p>}
-                {!loading && displayLogs.length === 0 && <p className="history-sidebar__empty">No activity yet.</p>}
-
-                {Object.entries(groupItemsByDate(displayLogs)).map(([dateKey, logs]) => (
-                  <div key={dateKey}>
-                    <div className="history-group-header">{dateKey}</div>
-                    {logs.map(log => {
-                      const initials = log.userName ? log.userName.charAt(0).toUpperCase() : '?'
-                      return (
-                        <div key={log.id} className="activity-card">
-                          <div className="activity-user-badge">
-                            <div className="activity-avatar" style={{ backgroundColor: log.userColor }}>
-                              {initials}
+                            <div className="timeline-meta" style={{ fontSize: '10px', opacity: 0.6, marginTop: '2px' }}>
+                              {snapDt.toLocaleDateString([], { month: 'short', day: 'numeric' })} at {timeStr}
+                              {' • '}{formatTimeAgo(snap.timestamp)}
                             </div>
-                            <span className="activity-username">{log.userName}</span>
-                            <span style={{ marginLeft: 'auto', fontSize: '9px', opacity: 0.5 }}>
-                              {safeParseDate(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
                           </div>
-                          <div className="activity-body">
-                            {log.action || (log.patch ? interpretAudit(log.patch.path, log.patch.value) : 'Updated field')}
-                          </div>
-                          <div className="timeline-meta">{formatTimeAgo(log.timestamp)}</div>
                         </div>
                       )
                     })}
@@ -294,7 +242,7 @@ export function HistorySidebar({ quotId, quotNo, onRestore, onPreview, previewin
             )}
           </div>
 
-          {quotId && activeTab === 'history' && !loading && snapshots.length > 0 && (
+          {quotId && !loading && snapshots.length > 0 && (
             <button
               className={`history-sidebar__refresh ${isRefreshing ? 'history-sidebar__refresh--active' : ''}`}
               onClick={() => fetchHistory(true)}
