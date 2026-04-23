@@ -179,7 +179,7 @@ function WorkstationShell() {
             <Route
               path="/settings"
               element={
-                <ProtectedRoute roles={['admin', 'it']}>
+                <ProtectedRoute>
                   <Settings />
                 </ProtectedRoute>
               }

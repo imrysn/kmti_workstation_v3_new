@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logoutReset: () => ipcRenderer.invoke('logout-reset'),
   captureScreenshot: () => ipcRenderer.invoke('capture-screenshot'),
   getWorkstationInfo: () => ipcRenderer.invoke('get-workstation-info'),
+  flashWindow: (shouldFlash) => ipcRenderer.invoke('flash-window', shouldFlash),
 
   // --- Auto Updater ---
   checkForUpdate: () => ipcRenderer.invoke('check-for-update'),

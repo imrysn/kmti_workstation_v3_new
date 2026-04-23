@@ -226,10 +226,7 @@ export default function Login() {
 
             <button className="login-submit-btn" type="submit" disabled={isLoading || !username || !password}>
               {isLoading ? (
-                <div className="loader-container">
-                  <div className="spinner"></div>
-                  <span>Verifying...</span>
-                </div>
+                'VERIFYING...'
               ) : (
                 'SIGN IN'
               )}

@@ -24,7 +24,7 @@ export function FileDetails({
   const isAiActive = activeTab === 'ai'
 
   return (
-    <div className={`findr-sidebar-right ${isAiActive ? 'expanded' : ''} ${selectedResult?.fileType?.includes('.pdf') ? 'accent-pdf' :
+    <div className={`findr-sidebar-right ${isAiActive ? 'expanded ai-active' : ''} ${selectedResult?.fileType?.includes('.pdf') ? 'accent-pdf' :
       ['.xls', '.xlsx', '.csv'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-excel' :
         ['.icd', '.dwg', '.sldprt'].some(ext => selectedResult?.fileType?.includes(ext)) ? 'accent-cad' :
           selectedResult?.fileType?.includes('.zip') ? 'accent-zip' : ''
@@ -46,7 +46,7 @@ export function FileDetails({
         </button>
       </div>
 
-      <div className="findr-sidebar-content">
+      <div className={`findr-sidebar-content ${isAiActive ? 'is-ai-mode' : ''}`}>
         {!isAiActive ? (
           <>
             <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 800, borderBottom: '1px solid var(--border)', paddingBottom: 12, marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.1em' }}>

@@ -9,6 +9,20 @@ from datetime import datetime
 
 router = APIRouter()
 
+@router.get("/")
+async def list_broadcasts(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.it, UserRole.admin]))
+):
+    """List all recent broadcasts. Admin/IT only."""
+    result = await db.execute(
+        select(WorkstationBroadcast)
+        .order_by(WorkstationBroadcast.created_at.desc())
+        .limit(50)
+    )
+    broadcasts = result.scalars().all()
+    return {"data": broadcasts}
+
 @router.get("/active")
 async def get_active_broadcast(db: AsyncSession = Depends(get_db)):
     """Retrieve the most recent active broadcast."""
@@ -66,3 +80,50 @@ async def delete_broadcast(
     await db.commit()
     
     return {"success": True}
+
+@router.post("/{broadcast_id}/acknowledge")
+async def acknowledge_broadcast(
+    broadcast_id: int,
+    workstation: str = Form("Unknown"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Record that a specific user/workstation has acknowledged a broadcast."""
+    from models.broadcast import BroadcastAcknowledgment
+    from routers.quotations import sio
+    
+    ack = BroadcastAcknowledgment(
+        broadcast_id=broadcast_id,
+        username=current_user.username,
+        workstation=workstation
+    )
+    db.add(ack)
+    await db.commit()
+
+    # Emit socket event for real-time admin alert
+    try:
+        await sio.emit("broadcast_acknowledged", {
+            "id": broadcast_id,
+            "username": current_user.username,
+            "workstation": workstation,
+            "time": datetime.now().strftime("%H:%M:%S")
+        })
+    except: pass
+    
+    return {"success": True}
+
+@router.get("/{broadcast_id}/acks")
+async def get_broadcast_acks(
+    broadcast_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role([UserRole.it, UserRole.admin]))
+):
+    """List all acknowledgments for a specific broadcast. Admin/IT only."""
+    from models.broadcast import BroadcastAcknowledgment
+    result = await db.execute(
+        select(BroadcastAcknowledgment)
+        .where(BroadcastAcknowledgment.broadcast_id == broadcast_id)
+        .order_by(BroadcastAcknowledgment.acknowledged_at.desc())
+    )
+    acks = result.scalars().all()
+    return {"data": acks}

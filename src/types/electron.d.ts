@@ -18,6 +18,7 @@ export interface KMTIElectronAPI {
     arch: string;
     username: string;
   }>;
+  flashWindow: (shouldFlash?: boolean) => Promise<void>;
 
   // --- Auto Updater ---
   checkForUpdate: () => Promise<any>;

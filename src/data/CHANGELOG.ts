@@ -29,7 +29,7 @@ export const CHANGELOG: VersionChangelog[] = [
       { type: 'new', text: 'Clients Page — A dedicated module for managing engineering clients and contacts with category filtering.' },
       { type: 'new', text: 'Inverted Paper Mode — The Material Calculator now intelligently switches its "Scratchpad" aesthetic based on your active theme.' },
       { type: 'new', text: 'Dark Paper aesthetic — Introduced a high-contrast, professional drafting surface for Light Theme to reduce glare and improve focus.' },
-      { type: 'new', text: 'Broadcast Center — A high-priority communication hub for Admin and IT roles to send global workstation alerts.' },
+      { type: 'new', text: 'Broadcast Center — A high-priority communication hub for Admin role to send global workstation alerts.' },
       { type: 'new', text: 'Dynamic Island Overlay — Premium, severity-themed glass pills with "bloom" animations. (Broadcast Message)' },
       { type: 'new', text: 'Inline Preview Editing — You can now edit the "UNIT (PAGE)" column directly in the Print Preview for quick document adjustments.' },
       { type: 'improvement', text: 'Modernized Calculator UI — Complete visual overhaul with Dark and Light modes.' },

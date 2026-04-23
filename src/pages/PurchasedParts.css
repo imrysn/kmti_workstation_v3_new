@@ -604,12 +604,21 @@
   width: 480px; /* Slightly wider for better AI chat experience */
 }
 
+.findr-sidebar-right.ai-active {
+  background-color: var(--bg-primary); /* Sync with Librarian background */
+}
+
 .findr-sidebar-tabs {
   display: flex;
-  background: var(--bg-tertiary);
+  background: var(--bg-surface);
   border-bottom: 1px solid var(--border);
   padding: 4px;
   gap: 4px;
+}
+
+.findr-sidebar-right.ai-active .findr-sidebar-tabs {
+  background: transparent;
+  border-bottom: none;
 }
 
 .findr-sidebar-tab {
@@ -638,7 +647,7 @@
 .findr-sidebar-tab.active {
   background: var(--bg-secondary);
   color: var(--accent);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .findr-sidebar-content {
@@ -647,6 +656,10 @@
   padding: 24px;
   display: flex;
   flex-direction: column;
+}
+
+.findr-sidebar-content.is-ai-mode {
+  padding: 0; /* Remove padding for seamless AI assistant */
 }
 
 /* Mini AI Glow for Tab */
@@ -727,21 +740,21 @@
 }
 
 .findr-badge.folder {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #fecaca;
+  background: var(--bg-danger-subtle);
+  color: var(--danger);
+  border-color: rgba(220, 38, 38, 0.2);
 }
 
 .findr-badge.icd {
-  background: #e0f2fe;
-  color: #075985;
-  border-color: #bae6fd;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-color: rgba(2, 132, 199, 0.2);
 }
 
 .findr-badge.cad {
-  background: #fef3c7;
-  color: #92400e;
-  border-color: #fde68a;
+  background: var(--bg-warning-subtle);
+  color: var(--warning);
+  border-color: rgba(217, 119, 6, 0.2);
 }
 
 .findr-props-card {

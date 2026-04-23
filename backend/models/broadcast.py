@@ -21,3 +21,15 @@ class WorkstationBroadcast(Base):
     created_by = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     expires_at = Column(DateTime, nullable=True) # If null, message stays until manual removal
+
+class BroadcastAcknowledgment(Base):
+    """
+    Tracks acknowledgment of broadcasts by specific workstations/users.
+    """
+    __tablename__ = "kmti_broadcast_acks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    broadcast_id = Column(Integer, index=True)
+    username = Column(String(100))
+    workstation = Column(String(100))
+    acknowledged_at = Column(DateTime, default=datetime.now)

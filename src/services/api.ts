@@ -173,8 +173,15 @@ export const telemetryApi = {
 // --- Broadcast Messages ---
 export const broadcastApi = {
   getActive: () => api.get('/broadcast/active'),
-  create: (formData: FormData) => api.post('/broadcast/', formData),
+  list: () => api.get('/broadcast/'),
+  create: (data: FormData) => api.post('/broadcast/', data),
   delete: (id: number) => api.delete(`/broadcast/${id}`),
+  acknowledge: (id: number, workstation: string) => {
+    const fd = new FormData();
+    fd.append('workstation', workstation);
+    return api.post(`/broadcast/${id}/acknowledge`, fd);
+  },
+  getAcks: (id: number) => api.get(`/broadcast/${id}/acks`)
 }
 
 // --- Quotations (Database-First) ---

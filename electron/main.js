@@ -205,6 +205,10 @@ app.whenReady().then(() => {
     }
   })
   ipcMain.handle('close-window', (event) => { BrowserWindow.fromWebContents(event.sender)?.close() })
+  ipcMain.handle('flash-window', (event, shouldFlash = true) => { 
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win) win.flashFrame(shouldFlash);
+  })
 
   ipcMain.handle('login-success', () => {
     if (!mainWindow || mainWindow.isDestroyed()) return

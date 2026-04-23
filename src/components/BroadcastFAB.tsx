@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from './ModalContext'
-import { broadcastApi } from '../services/api'
+import { broadcastApi, SERVER_BASE } from '../services/api'
+import { io } from 'socket.io-client'
 import megaphoneIcon from '../assets/megaphone-icon.png'
 import './BroadcastFAB.css'
 
@@ -13,9 +14,18 @@ interface Position {
 const BroadcastFAB: React.FC = () => {
   const { hasRole } = useAuth()
   const { notify } = useModal()
-  const [position, setPosition] = useState<Position>({ x: 32, y: window.innerHeight - 80 })
+
+  // Default position: Bottom-Left. Resetting every refresh as requested.
+  const [position, setPosition] = useState<Position>({ 
+    x: 32, 
+    y: window.innerHeight - 80 
+  })
+
   const [isDragging, setIsDragging] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [activeView, setActiveView] = useState<'new' | 'history'>('new')
+  const [history, setHistory] = useState<any[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [expansionQuadrant, setExpansionQuadrant] = useState({ x: 'left', y: 'top' })
   const [message, setMessage] = useState('')
   const [severity, setSeverity] = useState<'info' | 'warning' | 'danger'>('info')
@@ -23,12 +33,101 @@ const BroadcastFAB: React.FC = () => {
 
   const fabRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const dragStartPos = useRef<{ x: number, y: number }>({ x: 0, y: 0 })
   const hasMovedRef = useRef(false)
 
+  const playAckAlert = () => {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
+      if (!AudioCtx) return
+      const ctx = new AudioCtx()
+      const now = ctx.currentTime
+      
+      const playChirp = (time: number, freq: number) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.setValueAtTime(freq, time)
+        gain.gain.setValueAtTime(0.1, time)
+        gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1)
+        osc.start(time)
+        osc.stop(time + 0.1)
+      }
+
+      playChirp(now, 880)
+      playChirp(now + 0.15, 1100)
+    } catch (e) {}
+  }
+
+  // Socket listener for real-time acknowledgment alerts
+  useEffect(() => {
+    const socket = io(SERVER_BASE, {
+      path: '/socket.io',
+      transports: ['websocket', 'polling']
+    })
+
+    socket.on('broadcast_acknowledged', (data: any) => {
+      playAckAlert()
+      // Refresh history if open to show newest acks in real-time
+      if (isPanelOpen && activeView === 'history') {
+        fetchHistory()
+        if (data.id) fetchAcks(data.id)
+      }
+      notify(`${data.workstation} acknowledged the broadcast.`, 'success')
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [isPanelOpen, activeView])
+
+
+  // Handle window resizing
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition(prev => ({
+        x: Math.min(prev.x, window.innerWidth - 80),
+        y: Math.min(prev.y, window.innerHeight - 80)
+      }))
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const fetchHistory = async () => {
+    setIsLoadingHistory(true)
+    try {
+      const res = await broadcastApi.list()
+      setHistory(res.data.data)
+    } catch (err) {
+      console.error('Failed to fetch history:', err)
+    } finally {
+      setIsLoadingHistory(false)
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    try {
+      await broadcastApi.delete(id)
+      notify('Broadcast retired.', 'success')
+      fetchHistory()
+    } catch (err) {
+      notify('Failed to delete.', 'error')
+    }
+  }
+
+  useEffect(() => {
+    if (isPanelOpen && activeView === 'history') {
+      fetchHistory()
+    }
+    if (isPanelOpen && activeView === 'new') {
+      setTimeout(() => textareaRef.current?.focus(), 100)
+    }
+  }, [isPanelOpen, activeView])
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true)
     hasMovedRef.current = false
     dragStartPos.current = {
       x: e.clientX - position.x,
@@ -39,36 +138,36 @@ const BroadcastFAB: React.FC = () => {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging) return
+      if (dragStartPos.current.x === 0 && dragStartPos.current.y === 0) return
 
-      const newX = Math.min(Math.max(20, e.clientX - dragStartPos.current.x), window.innerWidth - 60)
-      const newY = Math.min(Math.max(40, e.clientY - dragStartPos.current.y), window.innerHeight - 60)
+      const deltaX = Math.abs(e.clientX - (dragStartPos.current.x + position.x))
+      const deltaY = Math.abs(e.clientY - (dragStartPos.current.y + position.y))
 
-      if (Math.abs(e.clientX - (dragStartPos.current.x + position.x)) > 5 ||
-        Math.abs(e.clientY - (dragStartPos.current.y + position.y)) > 5) {
+      if (!hasMovedRef.current && (deltaX > 8 || deltaY > 8)) {
         hasMovedRef.current = true
+        setIsDragging(true)
       }
 
-      const newPos = { x: newX, y: newY }
-      setPosition(newPos)
+      if (hasMovedRef.current) {
+        const newX = Math.min(Math.max(20, e.clientX - dragStartPos.current.x), window.innerWidth - 60)
+        const newY = Math.min(Math.max(40, e.clientY - dragStartPos.current.y), window.innerHeight - 60)
+        setPosition({ x: newX, y: newY })
+      }
     }
 
     const handleMouseUp = () => {
-      if (isDragging) {
-        setIsDragging(false)
-      }
+      setIsDragging(false)
+      dragStartPos.current = { x: 0, y: 0 }
     }
 
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove)
-      window.addEventListener('mouseup', handleMouseUp)
-    }
+    window.addEventListener('mousemove', handleMouseMove)
+    window.addEventListener('mouseup', handleMouseUp)
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [isDragging, position])
+  }, [position])
 
   // Click outside to close handle
   useEffect(() => {
@@ -93,14 +192,12 @@ const BroadcastFAB: React.FC = () => {
       const formData = new FormData()
       formData.append('message', message)
       formData.append('severity', severity)
-      formData.append('duration_minutes', '60') // Hardcoded availability window
+      formData.append('duration_minutes', '0') // 0 = No expiry, manual ack required
 
       await broadcastApi.create(formData)
       notify('Broadcast sent successfully!', 'success')
       setMessage('')
       setIsPanelOpen(false)
-      // Broadcast will appear on next poll (60s) or we can trigger a refresh via context if needed
-      // Currently, it will appear on next poll.
     } catch (err) {
       notify('Failed to send broadcast.', 'error')
     } finally {
@@ -108,6 +205,24 @@ const BroadcastFAB: React.FC = () => {
     }
   }
 
+
+  const [ackingId, setAckingId] = useState<number | null>(null)
+  const [acksMap, setAcksMap] = useState<Record<number, any[]>>({})
+
+  const fetchAcks = async (id: number) => {
+    if (acksMap[id]) {
+      setAckingId(ackingId === id ? null : id)
+      return
+    }
+
+    try {
+      const res = await broadcastApi.getAcks(id)
+      setAcksMap(prev => ({ ...prev, [id]: res.data.data }))
+      setAckingId(id)
+    } catch (e) {
+      notify("Failed to fetch acknowledgments", "error")
+    }
+  }
 
   if (!hasRole('admin', 'it')) return null
 
@@ -120,7 +235,7 @@ const BroadcastFAB: React.FC = () => {
           style={{ left: position.x, top: position.y }}
           onMouseDown={handleMouseDown}
           onClick={() => {
-            if (!isDragging && !hasMovedRef.current) {
+            if (!hasMovedRef.current) {
               setExpansionQuadrant({
                 x: position.x > window.innerWidth / 2 ? 'right' : 'left',
                 y: position.y > window.innerHeight / 2 ? 'bottom' : 'top'
@@ -148,47 +263,97 @@ const BroadcastFAB: React.FC = () => {
           style={{
             left: position.x,
             top: position.y,
-            // Locked Quadrant Logic (Prevents jumping during drag)
-            transform: `${expansionQuadrant.x === 'right' ? 'translateX(-100%)' : 'translateX(0)'} ${expansionQuadrant.y === 'bottom' ? 'translateY(-100%)' : 'translateY(0)'}`,
-            transformOrigin: `${expansionQuadrant.y} ${expansionQuadrant.x}`
-          }}
+            // Inline variables for the @keyframes animation
+            '--tx-start': expansionQuadrant.x === 'right' ? '-100%' : '0%',
+            '--ty-start': expansionQuadrant.y === 'bottom' ? '-90%' : '10%',
+            '--tx-end': expansionQuadrant.x === 'right' ? '-100%' : '0%',
+            '--ty-end': expansionQuadrant.y === 'bottom' ? '-100%' : '0%',
+            transform: `translate(${expansionQuadrant.x === 'right' ? '-100%' : '0%'}, ${expansionQuadrant.y === 'bottom' ? '-100%' : '0%'})`,
+            transformOrigin: `${expansionQuadrant.x} ${expansionQuadrant.y}`
+          } as React.CSSProperties}
         >
           <div className="bm-header" onMouseDown={handleMouseDown}>
             <h3>BROADCAST CENTER</h3>
-            <button onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsPanelOpen(false)}>×</button>
+            <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={() => setIsPanelOpen(false)}>×</button>
           </div>
 
-          <form className="bm-form" onSubmit={handleSend}>
-            <div className="bm-grid">
-              <div className="bm-field">
-                <label>Type</label>
-                <select value={severity} onChange={(e) => setSeverity(e.target.value as any)}>
-                  <option value="info">Information</option>
-                  <option value="warning">Warning</option>
-                  <option value="danger">Danger</option>
-                </select>
+          <div className="bm-tabs">
+            <button type="button" className={`bm-tab ${activeView === 'new' ? 'active' : ''}`} onClick={() => setActiveView('new')}>New Message</button>
+            <button type="button" className={`bm-tab ${activeView === 'history' ? 'active' : ''}`} onClick={() => setActiveView('history')}>History</button>
+          </div>
+
+          {activeView === 'new' ? (
+            <form className="bm-form" onSubmit={handleSend}>
+              <div className="bm-grid">
+                <div className="bm-field">
+                  <label>Type</label>
+                  <select value={severity} onChange={(e) => setSeverity(e.target.value as any)}>
+                    <option value="info">Information</option>
+                    <option value="warning">Warning</option>
+                    <option value="danger">Danger</option>
+                  </select>
+                </div>
               </div>
-            </div>
 
-            <div className="bm-field">
-              <label>Message</label>
-              <textarea
-                placeholder="Type urgent message here..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                maxLength={400}
-                required
-              />
-            </div>
+              <div className="bm-field">
+                <label>Message</label>
+                <textarea
+                  ref={textareaRef}
+                  placeholder="Type urgent message here..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  maxLength={400}
+                  required
+                />
+              </div>
 
-            <div className="bm-actions">
-              <button type="submit" className="bm-btn-send" disabled={isSending || !message.trim()}>
-                {isSending ? 'SENDING...' : 'BROADCAST NOW'}
-              </button>
-            </div>
-          </form>
+              <div className="bm-actions">
+                <button type="submit" className="bm-btn-send" disabled={isSending || !message.trim()}>
+                  {isSending ? 'SENDING...' : 'BROADCAST'}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="bm-history">
+              {isLoadingHistory ? (
+                <div className="bm-loading">Loading History...</div>
+              ) : history.length === 0 ? (
+                <div className="bm-empty">No previous broadcasts</div>
+              ) : (
+                <div className="bm-list">
+                  {history.map(item => (
+                    <div key={item.id} className={`bm-item sev-${item.severity}`}>
+                      <div className="bm-item-header">
+                        <span className="bm-item-author">{item.created_by}</span>
+                        <span className="bm-item-date">{new Date(item.created_at).toLocaleDateString()}</span>
+                        <div className="bm-item-actions">
+                          <button type="button" className="bm-item-acks" onClick={() => fetchAcks(item.id)}>Acks</button>
+                          <button type="button" className="bm-item-del" onClick={() => handleDelete(item.id)}>Delete</button>
+                        </div>
+                      </div>
+                      <div className="bm-item-msg">{item.message}</div>
 
-          <div className="bm-footer">Messages will show to all users</div>
+                      {ackingId === item.id && (
+                        <div className="bm-acks-list">
+                          {acksMap[item.id]?.length === 0 ? (
+                            <div className="bm-ack-none">No acknowledgments yet</div>
+                          ) : (
+                            acksMap[item.id]?.map(ack => (
+                              <div key={ack.id} className="bm-ack-item">
+                                <strong>{ack.workstation}</strong>
+                                <span>{ack.username} @ {new Date(ack.acknowledged_at).toLocaleTimeString()}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       )}
     </>
