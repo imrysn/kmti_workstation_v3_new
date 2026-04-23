@@ -59,6 +59,15 @@ export default function Quotation() {
 
   const handleCreateNew = useCallback(async (name: string, password?: string) => {
     try {
+      // 1. Fetch workstation/hostname (The true Owner ID)
+      let workstation = ''
+      try {
+        const info = await (window as any).electronAPI?.getWorkstationInfo?.()
+        workstation = info?.computerName || ''
+      } catch (e) {
+        console.warn('[lobby] Failed to fetch workstation info')
+      }
+
       // Generate a formal quotation number
       const today = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2)
       const seq = Math.floor(Math.random() * 900 + 100).toString()
@@ -66,8 +75,13 @@ export default function Quotation() {
       // Display name is the user-provided label (e.g. "Draft for Client X")
       const displayName = name || quotNo
 
-      // Create a DB record immediately — this gives us a real ID for the socket room
-      const res = await quotationApi.create({ quot_no: quotNo, display_name: displayName, password })
+      // 2. Create a DB record immediately — this gives us a real ID for the socket room
+      const res = await quotationApi.create({ 
+        quot_no: quotNo, 
+        display_name: displayName, 
+        password,
+        workstation 
+      })
       const { id } = res.data
 
       setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create' })
@@ -104,6 +118,7 @@ export default function Quotation() {
 
   return (
     <QuotationWorkspace
+      key={activeSession.quotId || activeSession.quotNo}
       {...activeSession}
       onLeave={handleLeaveWorkspace}
       onSwitchSession={handleSwitchSession}

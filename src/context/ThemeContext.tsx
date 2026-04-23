@@ -66,11 +66,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       return;
     }
 
-    // Normal light <-> dark toggle (debounced 250ms to make sequences not obvious)
-    if (toggleTimeoutRef.current) clearTimeout(toggleTimeoutRef.current);
-    toggleTimeoutRef.current = setTimeout(() => {
-      setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-    }, 250);
+    // Instant toggle for better UX responsiveness
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   return (

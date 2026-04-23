@@ -14,7 +14,7 @@
  * ghost-room creation on the backend.
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useModal } from '../ModalContext'
 import {
   useInvoiceState,
@@ -77,6 +77,8 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   const [activePreviewTs, setActivePreviewTs] = useState<string | null>(null)
 
   // ── Document State ─────────────────────────────────────────────
+  const isSyncedFromRemote = useRef(false)
+
   const {
     companyInfo, clientInfo, quotationDetails, billingDetails,
     tasks, baseRates, signatures, manualOverrides, collapsedTaskIds,
@@ -107,8 +109,15 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       if (initialQuotId) {
         try {
           const res = await quotationApi.get(initialQuotId)
-          // If the DB has data, load it.
-          // If it's a fresh record (data: {}), initialize with defaults.
+          
+          // CRITICAL: If we already received a more up-to-date buffer from 
+          // a collaborative peer while we were waiting for the DB, 
+          // don't overwrite the peer's state with the old DB state.
+          if (isSyncedFromRemote.current) {
+            console.log('[workspace] Skipping DB hydration: already synced from peer.')
+            return
+          }
+
           if (res.data && res.data.quotationDetails) {
             loadData(res.data, 'db_init')
             setQuotNo(res.data.quotationDetails.quotationNo || initialQuotNo)
@@ -187,6 +196,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       }
 
       if (patch.path === '__full_restore__') {
+        isSyncedFromRemote.current = true
         loadData(patch.value, 'remote_restore')
       } else if (patch.path.startsWith('companyInfo.')) {
         const key = patch.path.split('.')[1]
@@ -238,6 +248,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         return [entry, ...prev.slice(0, 49)]
       })
     },
+    onRequestState: getSaveData,
     onError: (msg: string) => {
       notify?.(msg, 'error')
       // Session error  Ekick user back to lobby
@@ -423,6 +434,8 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     if (quot.id === quotId) return
 
     const switchSession = () => {
+      notify?.(`Switching workspace to ${quot.quotationNo}...`, 'info')
+      leaveRoom() // Explicitly depart current room to avoid ghosting
       onSwitchSession({
         quotId: quot.id,
         quotNo: quot.quotationNo,
@@ -486,7 +499,18 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
               </div>
               <div className="quot-doc-secondary">
                 {quotationDetails.date ? formatToolbarDate(quotationDetails.date) : 'New Quotation'}
-                {currentFilePath && <span className="quot-file-path"> · {currentFilePath.split(/[\\\/]/).pop()}</span>}
+                {currentFilePath && (
+                  <span className="quot-file-path">
+                    {' · '}
+                    {(() => {
+                      const file = currentFilePath.split(/[\\\/]/).pop() || ''
+                      if (file === 'db_init') return 'Master Record'
+                      if (file === 'remote_restore') return 'Collaborative Sync'
+                      if (file === 'version_restore') return 'Historical Snapshot'
+                      return file
+                    })()}
+                  </span>
+                )}
               </div>
             </div>
           </div>

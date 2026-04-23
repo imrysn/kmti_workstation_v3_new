@@ -128,8 +128,11 @@
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border-subtle);
   z-index: 10;
+}
+
+.quot-library-table th.text-right {
+  padding-left: 160px;
 }
 
 .quot-library-table td {
@@ -138,32 +141,88 @@
   color: var(--text-primary);
 }
 
+.quot-library-table th:nth-child(1) {
+  width: 30%;
+}
+
+/* Quotation No + Client */
+.quot-library-table th:nth-child(2) {
+  width: 20%;
+}
+
+/* Owner */
+.quot-library-table th:nth-child(3) {
+  width: 25%;
+}
+
+/* Modified */
+.quot-library-table th:nth-child(4) {
+  width: 25%;
+}
+
+/* Action */
+
+.quotation-no-cell {
+  padding: 16px 24px !important;
+}
+
+.quot-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quot-no-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quot-no-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.client-subtext {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  opacity: 0.8;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quot-library-table tr {
+  transition: transform 0.2s, background 0.2s, box-shadow 0.2s;
+  border-left: 3px solid transparent;
+}
+
 .quot-library-table tr:hover {
-  background: var(--bg-surface-hover);
+  background: rgba(var(--accent-rgb), 0.04) !important;
+  border-left-color: var(--accent);
+  transform: scale(1.002);
+  box-shadow: inset 4px 0 12px rgba(0, 0, 0, 0.02);
 }
 
 .quot-library-table tr.is-active-row {
-  background: rgba(40, 167, 69, 0.03);
-}
-
-.quot-no-cell {
-  font-family: 'JetBrains Mono', 'Monaco', monospace;
-  font-weight: 600;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  background: rgba(40, 167, 69, 0.05);
+  border-left-color: #28a745;
 }
 
 .active-badge {
   background: #28a745;
   color: white;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   padding: 2px 6px;
   border-radius: 4px;
   text-transform: uppercase;
-  font-weight: 700;
-  font-family: inherit;
+  font-weight: 800;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
 }
 
 .lock-icon {
@@ -179,7 +238,67 @@
   text-align: right;
 }
 
-.quot-library-loading, .quot-library-empty {
+.quot-library-table .action-cell {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  align-items: center;
+  padding-right: 32px;
+}
+
+.quot-library-table .btn-join {
+  background: #28a745 !important;
+  color: white !important;
+  border: none !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+}
+
+.quot-library-table .btn-join:hover {
+  background: #218838 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.quot-library-table .btn-delete-minimal {
+  background: none;
+  border: none;
+  color: #dc3545;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0.7;
+}
+
+.quot-library-table .btn-delete-minimal:hover {
+  color: #c82333;
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.quot-library-table .workstation-badge {
+  font-family: 'Arimo', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--accent-subtle);
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+  text-transform: uppercase;
+}
+
+.quot-library-table .owner-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.quot-library-loading,
+.quot-library-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -238,15 +357,29 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }

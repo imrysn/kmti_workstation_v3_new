@@ -133,6 +133,16 @@ async def join_doc(sid: str, data: dict):
     await sio.emit("joined", {"sid": sid, "color": color, "users": _active_users[q_id]}, to=sid)
     await sio.emit("user_joined", {"sid": sid, "name": user_name, "color": color, "users": _active_users[q_id]}, room=room_name, skip_sid=sid)
 
+    # NEW: If others are already in the room, request the latest unsaved state from the first one
+    # to ensure the new joiner is immediately up to date without waiting for a manual save.
+    existing_sids = [s for s in list(_active_users[q_id].keys()) if s != sid]
+    if existing_sids:
+        leader_sid = existing_sids[0]
+        print(f"[COLLAB] Requesting live state from {leader_sid} for new joiner {sid}")
+        await sio.emit("sync_state_request", {"target_sid": sid}, to=leader_sid)
+    else:
+        print(f"[COLLAB] No existing users in room f'quot_{q_id}' to sync from.")
+
 @sio.event
 async def update_field(sid: str, data: dict):
     """Partial state update. Persists to DB after debounced broadcast."""
@@ -156,6 +166,19 @@ async def update_field(sid: str, data: dict):
                 .values(data=json.dumps(full_state, ensure_ascii=False), updated_at=datetime.utcnow())
             )
             await session.commit()
+
+@sio.event
+async def sync_state_response(sid: str, data: dict):
+    """Relay the full state from an existing editor to a new joiner."""
+    target_sid = data.get("target_sid")
+    full_state = data.get("full_state")
+    if target_sid and full_state:
+        print(f"[COLLAB] Relaying live state from {sid} to {target_sid}")
+        # Send only to the joiner who requested it
+        await sio.emit("remote_patch", {
+            "sid": sid, 
+            "patch": {"path": "__full_restore__", "value": full_state}
+        }, to=target_sid)
 
 @sio.event
 async def trigger_snapshot(sid: str, data: dict):
@@ -287,8 +310,9 @@ async def list_quotations(
                 "quotationNo": i.quotation_no,
                 "clientName": i.client_name,
                 "designerName": i.designer_name,
-                "date": i.date.strftime("%Y-%m-%d"),
-                "modifiedAt": i.updated_at.isoformat(),
+                "workstation": i.workstation,
+                "date": i.date.strftime("%Y-%m-%d") if i.date else None,
+                "modifiedAt": i.updated_at.isoformat() if i.updated_at else None,
                 "isActive": i.is_active,
                 "hasPassword": bool(i.password),
                 "displayName": i.display_name or i.quotation_no
@@ -348,6 +372,8 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
       Lightweight:  { quot_no, display_name?, password? }  — workspace-first creation
       Full:         { quotationDetails, clientInfo, ... }  — save from within editor
     """
+    workstation = data.get("workstation")
+    
     # ── Lightweight workspace-first creation ──────────────────────
     if "quot_no" in data:
         q_no = data["quot_no"]
@@ -365,6 +391,7 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
             quotation_no=q_no,
             display_name=display,
             password=password,
+            workstation=workstation,
             is_active=True,  # Set to true immediately so it shows in lobby
             data=json.dumps({}, ensure_ascii=False),  # empty, will be filled on first save
         )
@@ -392,6 +419,7 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
         quotation_no=q_no,
         client_name=ci.get("company", ""),
         designer_name=sig.get("name", ""),
+        workstation=workstation,
         data=json.dumps(data, ensure_ascii=False),
         display_name=q_no
     )
@@ -452,6 +480,10 @@ async def restore_history(q_id: int, h_id: int, db: AsyncSession = Depends(get_d
 
 @router.delete("/{q_id}")
 async def delete_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
+    # Delete associated history first to satisfy foreign key constraints
+    await db.execute(delete(QuotationHistory).where(QuotationHistory.quotation_id == q_id))
+    
+    # Delete the quotation record
     await db.execute(delete(Quotation).where(Quotation.id == q_id))
     await db.commit()
     return {"success": True}

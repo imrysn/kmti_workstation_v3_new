@@ -35,6 +35,7 @@ interface UseCollaborationOptions {
   onAuditEntry?: (entry: any) => void
   onUserJoined?: (user: RemoteUser) => void
   onUserLeft?: (user: RemoteUser) => void
+  onRequestState?: () => any
   onError?: (message: string) => void
 }
 
@@ -48,6 +49,7 @@ export function useCollaboration({
   onAuditEntry,
   onUserJoined,
   onUserLeft,
+  onRequestState,
   onError,
 }: UseCollaborationOptions): CollaborationState & {
   emitFocus: (fieldKey: string) => void
@@ -66,12 +68,14 @@ export function useCollaboration({
   const currentQuotIdRef = useRef<number | null>(null)
   const patchHandlerRef = useRef(onRemotePatch)
   const auditHandlerRef = useRef(onAuditEntry)
+  const requestStateRef = useRef(onRequestState)
 
   // Keep references to latest callbacks to avoid stale closures in socket listeners
   useEffect(() => {
     patchHandlerRef.current = onRemotePatch
     auditHandlerRef.current = onAuditEntry
-  }, [onRemotePatch, onAuditEntry])
+    requestStateRef.current = onRequestState
+  }, [onRemotePatch, onAuditEntry, onRequestState])
 
   const joinHandlerRef = useRef(onUserJoined)
   const leftHandlerRef = useRef(onUserLeft)
@@ -271,6 +275,17 @@ export function useCollaboration({
           window.dispatchEvent(new CustomEvent('quot:history-refresh', { detail: { quotId } }))
         }
       }, 500)
+    })
+
+    // Handle requests for our current live state from new joiners
+    socket.on('sync_state_request', (data: { target_sid: string }) => {
+      if (requestStateRef.current) {
+        const state = requestStateRef.current()
+        socket.emit('sync_state_response', {
+          target_sid: data.target_sid,
+          full_state: state
+        })
+      }
     })
 
     return () => {

@@ -81,10 +81,10 @@
       "parentId": null
     },
     {
-      "id": 1776901567566,
+      "id": 1776901788346,
       "description": "",
       "referenceNumber": "",
-      "hours": 2,
+      "hours": 24,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -94,10 +94,10 @@
       "parentId": null
     },
     {
-      "id": 1776901567758,
+      "id": 1776901788697,
       "description": "",
       "referenceNumber": "",
-      "hours": 3,
+      "hours": 24,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -107,10 +107,23 @@
       "parentId": null
     },
     {
-      "id": 1776901568151,
+      "id": 1776901788865,
       "description": "",
       "referenceNumber": "",
-      "hours": 4,
+      "hours": 24,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1776901789018,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 24,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -163,5 +176,5 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-22T23:46:11.754Z"
+  "savedAt": "2026-04-22T23:50:00.953Z"
 }

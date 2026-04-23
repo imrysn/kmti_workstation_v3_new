@@ -105,11 +105,11 @@ export default function AnniversaryOverlay() {
     const isDev = import.meta.env.DEV
     const currentMonth = now.getMonth() + 1
 
-    if (!isDev) {
-      if (currentMonth !== FOUNDING_MONTH) return
-      const key = storageKey(now.getFullYear(), currentMonth)
-      if (localStorage.getItem(key) === 'dismissed') return
-    }
+    if (isDev) return
+
+    if (currentMonth !== FOUNDING_MONTH) return
+    const key = storageKey(now.getFullYear(), currentMonth)
+    if (localStorage.getItem(key) === 'dismissed') return
 
     const t = setTimeout(() => setVisible(true), 1200)
     return () => clearTimeout(t)
@@ -175,7 +175,7 @@ export default function AnniversaryOverlay() {
   if (!visible) return null
 
   return (
-    <div className="ann-overlay" onClick={() => handleDismiss(false)}>
+    <div className="ann-overlay" onClick={() => handleDismiss(dontShowAgain)}>
       {/* Confetti & Fireworks */}
       <div className="ann-fx-layer" aria-hidden="true">
         {particles.map((p, i) => {
@@ -199,16 +199,16 @@ export default function AnniversaryOverlay() {
         })}
 
         {fireworks.map(fw => (
-          <div 
-            key={fw.id} 
-            className="ann-fw-burst" 
+          <div
+            key={fw.id}
+            className="ann-fw-burst"
             style={{ left: `${fw.x}%`, top: `${fw.y}%`, color: fw.color }}
           >
             {Array.from({ length: 12 }).map((_, i) => (
-              <div 
-                key={i} 
-                className="ann-fw-particle" 
-                style={{ '--angle': `${i * 30}deg` } as any} 
+              <div
+                key={i}
+                className="ann-fw-particle"
+                style={{ '--angle': `${i * 30}deg` } as any}
               />
             ))}
           </div>
@@ -245,9 +245,20 @@ export default function AnniversaryOverlay() {
             </div>
           </div>
         </div>
-        
 
-        <p className="ann-continue-hint">Click anywhere to continue</p>
+
+        <div className="ann-footer">
+          <label className="ann-dont-show" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="checkbox"
+              className="ann-checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+            />
+            <span className="ann-dont-show-text">Don't show again this month</span>
+          </label>
+          <p className="ann-continue-hint">Click anywhere to continue</p>
+        </div>
       </div>
     </div>
   )

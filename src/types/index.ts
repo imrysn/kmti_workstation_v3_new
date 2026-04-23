@@ -78,6 +78,7 @@ export interface IQuotation {
   quotationNo: string
   clientName: string
   designerName: string
+  workstation?: string // Hostname ID
   date: string
   modifiedAt: string
   isActive: boolean

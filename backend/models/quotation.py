@@ -10,6 +10,7 @@ class Quotation(Base):
     quotation_no = Column(String(50), unique=True, index=True, nullable=False)
     client_name = Column(String(255), index=True)
     designer_name = Column(String(255), index=True)
+    workstation = Column(String(255), index=True) # "Owner" (Hostname)
     date = Column(DateTime, default=datetime.utcnow)
     data = Column(Text, nullable=False) # Changed from JSON to Text for MariaDB compatibility
     

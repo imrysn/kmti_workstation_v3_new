@@ -33,7 +33,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
   const [showPassword, setShowPassword] = useState(false)
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  
+
   const fetchSessions = async (silent = false) => {
     if (!silent) setLoading(true)
     setErrorMessage(null)
@@ -56,7 +56,6 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newRoom.name.trim()) return
     onCreateNew(newRoom.name.trim(), newRoom.password)
   }
 
@@ -89,15 +88,9 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
               onClick={onClose}
               title={mandatory ? 'Back to Dashboard' : 'Back to editor'}
             >
-              {mandatory ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              )}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
             </button>
           )}
         </header>
@@ -138,9 +131,6 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                 Back to lobby
               </button>
               <form onSubmit={handleCreateSubmit} className="quot-entry-form">
-                <h3>Start New Workspace</h3>
-                <p>Initialize a fresh collaborative session. Choose a name to help others find you.</p>
-
                 <div className="form-group">
                   <label>Workspace Name</label>
                   <div className="input-with-icon">
@@ -153,7 +143,6 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                       value={newRoom.name}
                       onChange={e => setNewRoom(prev => ({ ...prev, name: e.target.value }))}
                       autoFocus
-                      required
                       className="form-input"
                     />
                   </div>
@@ -188,71 +177,79 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
           ) : (
             <>
               <div className="quot-entry-sessions">
-              <h3>Active Workspaces</h3>
-              {loading ? (
-                <div className="quot-entry-loading">
-                  <div className="spinner-small" />
-                  <span>Querying sessions...</span>
-                </div>
-              ) : errorMessage ? (
-                <div className="quot-entry-error-msg">
-                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e05c6b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                   </svg>
-                   <span>{errorMessage}</span>
-                </div>
-              ) : sessions.length === 0 ? (
-                <div className="quot-entry-empty">
-                  <p>No active workspaces found.</p>
-                  <span>Create a new one to start collaborating.</span>
-                </div>
-              ) : (
-                <div className="quot-session-list">
-                  {sessions.map(s => (
-                    <div key={s.id} className="quot-session-item" onClick={() => handleJoinClick(s)}>
-                      <div className="quot-session-info">
-                        <div className="quot-session-name-row">
-                          <span className="quot-session-no">{s.displayName}</span>
-                          {s.hasPassword && (
-                            <div className="quot-session-lock" title="Password required">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                              </svg>
-                            </div>
-                          )}
-                        </div>
-                        <div className="quot-session-meta">
-                          <span className="quot-session-subno">{s.quotNo}</span>
-                          <div className="quot-session-avatars">
-                            {s.users.map((u, i) => (
-                              <div
-                                key={i}
-                                className="quot-session-avatar"
-                                style={{ backgroundColor: u.color, marginLeft: i === 0 ? 0 : -8 }}
-                                title={u.name}
-                              >
-                                 {(u.name || 'U').charAt(0).toUpperCase()}
-                              </div>
-                            ))}
-                          </div>
-                          <span className="quot-session-count">
-                            {s.userCount} {s.userCount === 1 ? 'user' : 'users'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="quot-session-action">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }}>
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                      </div>
+                <h3>Active Workspaces</h3>
+                {loading ? (
+                  <div className="quot-entry-loading">
+                    <div className="spinner-small" />
+                    <span>Establishing secure connection...</span>
+                  </div>
+                ) : errorMessage ? (
+                  <div className="quot-entry-error-msg">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e05c6b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{errorMessage}</span>
+                  </div>
+                ) : sessions.length === 0 ? (
+                  <div className="quot-entry-empty">
+                    <div className="quot-empty-icon">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                      </svg>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
+                    <p>No active workspaces</p>
+                    <span>Start a new collaborative session below to begin working with your team.</span>
+                  </div>
+                ) : (
+                  <div className="quot-session-list">
+                    {sessions.map(s => (
+                      <div key={s.id} className="quot-session-item" onClick={() => handleJoinClick(s)}>
+                        <div className="quot-session-info">
+                          <div className="quot-session-name-row">
+                            <span className="quot-session-no">{s.displayName}</span>
+                            {s.hasPassword && (
+                              <div className="quot-session-lock" title="Password required">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="quot-session-meta">
+                            <span className="quot-session-subno">{s.quotNo}</span>
+                            <div className="quot-session-avatars">
+                              {s.users.map((u, i) => (
+                                <div
+                                  key={i}
+                                  className="quot-session-avatar"
+                                  style={{ backgroundColor: u.color, marginLeft: i === 0 ? 0 : -8 }}
+                                  title={u.name}
+                                >
+                                  {(u.name || 'U').charAt(0).toUpperCase()}
+                                </div>
+                              ))}
+                            </div>
+                            <span className="quot-session-count">
+                              {s.userCount} {s.userCount === 1 ? 'user' : 'users'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="quot-session-action">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.3 }}>
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         {!isCreating && !joiningSession && (
           <footer className="quot-entry-footer">
