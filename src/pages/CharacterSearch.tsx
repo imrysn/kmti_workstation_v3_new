@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { SearchIcon } from '../components/FileIcons'
 import DraftingNoteModal from '../components/DraftingNoteModal'
 import { ResultSkeleton } from '../components/Skeleton'
+import { SpeechButton } from '../components/SpeechButton'
 import './CharacterSearch.css'
 
 // Memoized Highlighter Component for Performance
@@ -246,12 +247,13 @@ export default function CharacterSearch() {
                         <td onClick={() => handleCopy(r.englishChar, `eng-${i}`)} title="Click to copy">
                           <Highlight text={r.englishChar} query={query} />
                         </td>
-                        <td
-                          className={`char-japanese font-${fontMode}`}
-                          onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
-                          title="Click to copy"
-                        >
-                          <Highlight text={r.japaneseChar} query={query} />
+                        <td className={`char-japanese font-${fontMode}`}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: 6 }}>
+                            <div onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)} title="Click to copy" style={{ cursor: 'pointer' }}>
+                              <Highlight text={r.japaneseChar} query={query} />
+                            </div>
+                            <SpeechButton text={r.japaneseChar} className="minimal" />
+                          </div>
                         </td>
                         {canManage && (
                           <td style={{ textAlign: 'center' }}>

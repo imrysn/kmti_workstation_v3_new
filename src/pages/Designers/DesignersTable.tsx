@@ -3,6 +3,8 @@ import type { IDesigner } from '../../types'
 import { SearchIcon, PlusIcon, EditIcon, TrashIcon } from '../../components/FileIcons'
 import './Designers.css'
 
+import { SpeechButton } from '../../components/SpeechButton'
+
 // Memoized Highlighter Component for Performance
 const Highlight = memo(({ text, query }: { text: string; query: string }) => {
   const parts = useMemo(() => {
@@ -110,8 +112,17 @@ export default function DesignersTable({
                   <td onClick={() => handleCopy(row.englishName)}>
                     <Highlight text={row.englishName} query={query} />
                   </td>
-                  <td onClick={() => handleCopy(row.japaneseName)} className="char-japanese">
-                    <Highlight text={row.japaneseName} query={query} />
+                  <td className="char-japanese">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: 6 }}>
+                      <div 
+                        style={{ cursor: 'pointer' }} 
+                        onClick={() => handleCopy(row.japaneseName)}
+                        title="Click to copy Japanese character"
+                      >
+                        <Highlight text={row.japaneseName} query={query} />
+                      </div>
+                      <SpeechButton text={row.japaneseName} className="minimal" />
+                    </div>
                   </td>
                   <td onClick={() => handleCopy(row.email)} className="designer-email">
                     <Highlight text={row.email} query={query} />

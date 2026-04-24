@@ -2,6 +2,7 @@ import React, { memo, useMemo } from 'react'
 import type { IHeatTreatment } from '../../types'
 import { SearchIcon, PlusIcon, EditIcon, TrashIcon } from '../../components/FileIcons'
 import { ResultSkeleton } from '../../components/Skeleton'
+import { SpeechButton } from '../../components/SpeechButton'
 import './HeatTreatment.css'
 
 // Memoized Highlighter Component for Performance
@@ -24,6 +25,7 @@ export const Highlight = memo(({ text, query }: { text: string; query: string })
     </>
   )
 })
+
 
 interface HeatTreatmentTableProps {
   query: string
@@ -117,13 +119,17 @@ const HeatTreatmentTable: React.FC<HeatTreatmentTableProps> = memo(({
                     >
                       <Highlight text={r.englishChar} query={query} />
                     </td>
-                    <td
-                      onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
-                      className="char-japanese"
-                      style={{ cursor: 'pointer', position: 'relative' }}
-                      title="Click to copy Japanese character"
-                    >
-                      <Highlight text={r.japaneseChar} query={query} />
+                    <td className="char-japanese">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: 6 }}>
+                        <div 
+                          style={{ cursor: 'pointer' }} 
+                          onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
+                          title="Click to copy Japanese character"
+                        >
+                          <Highlight text={r.japaneseChar} query={query} />
+                        </div>
+                        <SpeechButton text={r.japaneseChar} className="minimal" />
+                      </div>
                     </td>
                     {canManage && (
                       <td className="actions-cell">

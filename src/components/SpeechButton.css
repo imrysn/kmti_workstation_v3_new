@@ -1,0 +1,67 @@
+.kmti-speech-btn {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  opacity: 0.7;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.kmti-speech-btn:hover {
+  background: transparent;
+  color: var(--accent);
+  opacity: 1;
+  transform: scale(1.2);
+}
+
+.kmti-speech-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.kmti-speech-btn.speaking {
+  color: var(--accent);
+  opacity: 1;
+  animation: pulse-border 1.5s infinite;
+}
+
+.kmti-speech-btn.speaking .wave-1 {
+  animation: wave 1s infinite;
+}
+
+.kmti-speech-btn.speaking .wave-2 {
+  animation: wave 1s infinite 0.2s;
+}
+
+@keyframes pulse-border {
+  0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.2); }
+  70% { box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
+}
+
+@keyframes wave {
+  0%, 100% { opacity: 1; transform: translateX(0); }
+  50% { opacity: 0.3; transform: translateX(2px); }
+}
+
+/* For use inside lists or cards where white text isn't preferred */
+.kmti-speech-btn.minimal {
+  background: transparent;
+  border: none;
+  opacity: 0.4;
+}
+
+.kmti-speech-btn.minimal:hover {
+  opacity: 1;
+  background: transparent;
+  color: var(--accent);
+  transform: scale(1.2);
+}
