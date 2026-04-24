@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext'
 import { SearchIcon } from '../components/FileIcons'
 import DraftingNoteModal from '../components/DraftingNoteModal'
 import { ResultSkeleton } from '../components/Skeleton'
-import { SpeechButton } from '../components/SpeechButton'
+import { KMTISensei } from '../components/KMTISensei'
 import './CharacterSearch.css'
 
 // Memoized Highlighter Component for Performance
@@ -233,12 +233,12 @@ export default function CharacterSearch() {
                   <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Try a different character or check your spelling.</div>
                 </div>
               ) : (
-                <table className="char-table">
+                <table className="char-table" style={{ width: '100%', tableLayout: 'fixed' }}>
                   <thead>
                     <tr>
-                      <th>English</th>
-                      <th>Japanese</th>
-                      {canManage && <th style={{ width: 100, textAlign: 'center' }}>Actions</th>}
+                      <th style={{ width: '45%', minWidth: 120 }}>English</th>
+                      <th style={{ width: '40%', minWidth: 150 }}>Japanese</th>
+                      <th className="actions-col" style={{ width: '15%', minWidth: 90, textAlign: 'center' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -248,16 +248,10 @@ export default function CharacterSearch() {
                           <Highlight text={r.englishChar} query={query} />
                         </td>
                         <td className={`char-japanese font-${fontMode}`}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: 6 }}>
-                            <div onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)} title="Click to copy" style={{ cursor: 'pointer' }}>
-                              <Highlight text={r.japaneseChar} query={query} />
-                            </div>
-                            <SpeechButton text={r.japaneseChar} className="minimal" />
-                          </div>
+                           <KMTISensei text={r.japaneseChar} query={query} />
                         </td>
-                        {canManage && (
-                          <td style={{ textAlign: 'center' }}>
-                            <div className="char-actions">
+                        <td className="actions-col" style={{ width: '15%', minWidth: 90, textAlign: 'center' }}>
+                          <div className="char-actions">
                               <button className="icon-btn edit" onClick={() => openNoteModal(r)} title="Edit Note">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                               </button>
@@ -266,9 +260,9 @@ export default function CharacterSearch() {
                               </button>
                             </div>
                           </td>
-                        )}
-                      </tr>
-                    ))}
+                        </tr>
+                      )
+                    )}
                   </tbody>
                 </table>
               )}

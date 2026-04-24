@@ -1,0 +1,110 @@
+.kmti-sensei-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: start;
+  transition: all 0.3s ease;
+}
+
+.sensei-text-wrapper {
+  flex: initial;
+  width: fit-content;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: inherit;
+  line-height: 1.4;
+}
+
+.sensei-text-container {
+  display: inline-flex;
+}
+
+.sensei-char {
+  transition: all 0.2s ease;
+  display: inline-block;
+  position: relative;
+}
+
+/* SEARCH HIGHLIGHTING */
+.sensei-char.search-match {
+  background: rgba(var(--accent-rgb), 0.2);
+  color: var(--accent);
+  font-weight: 700;
+  border-radius: 2px;
+}
+
+/* KARAOKE HIGHLIGHTING */
+.sensei-char.karaoke-glow {
+  color: var(--accent);
+  font-weight: 900;
+  transform: translateY(-2px) scale(1.2);
+  text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.4);
+  z-index: 2;
+}
+
+.sensei-char.karaoke-glow::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+  animation: underline-shimmer 0.5s ease-out;
+}
+
+@keyframes underline-shimmer {
+  0% { transform: scaleX(0); opacity: 0; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+/* AUDIO BUTTON */
+.sensei-audio-btn {
+  background: transparent;
+  border: none;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-primary);
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.sensei-audio-btn:hover {
+  opacity: 1;
+  color: var(--accent);
+  transform: scale(1.2);
+}
+
+.sensei-audio-btn.speaking {
+  opacity: 1;
+  color: var(--accent);
+  animation: audio-pulse 1s infinite alternate;
+}
+
+@keyframes audio-pulse {
+  from { opacity: 0.6; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.15); }
+}
+
+.sensei-audio-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sensei-audio-btn .wave-1 {
+  opacity: 0.5;
+}
+
+.kmti-sensei-cell.active .sensei-audio-btn {
+  opacity: 1;
+}

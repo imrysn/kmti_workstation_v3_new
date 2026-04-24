@@ -1,9 +1,8 @@
 import React, { memo, useMemo } from 'react'
 import type { IDesigner } from '../../types'
 import { SearchIcon, PlusIcon, EditIcon, TrashIcon } from '../../components/FileIcons'
+import { KMTISensei } from '../../components/KMTISensei'
 import './Designers.css'
-
-import { SpeechButton } from '../../components/SpeechButton'
 
 // Memoized Highlighter Component for Performance
 const Highlight = memo(({ text, query }: { text: string; query: string }) => {
@@ -94,13 +93,13 @@ export default function DesignersTable({
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
-          <table className="char-table">
+          <table className="char-table" style={{ minWidth: 700 }}>
             <thead>
               <tr>
-                <th style={{ width: '30%' }}>Client Name</th>
-                <th style={{ width: '30%' }}>Japanese Name</th>
-                <th style={{ width: '25%' }}>Email Address</th>
-                {canManage && <th style={{ width: '15%', textAlign: 'right' }}>Actions</th>}
+                <th style={{ width: '30%', minWidth: 150 }}>Client Name</th>
+                <th style={{ width: '30%', minWidth: 200 }}>Japanese Name</th>
+                <th style={{ width: '25%', minWidth: 200 }}>Email Address</th>
+                {canManage && <th style={{ width: '15%', minWidth: 100, textAlign: 'right' }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -113,16 +112,7 @@ export default function DesignersTable({
                     <Highlight text={row.englishName} query={query} />
                   </td>
                   <td className="char-japanese">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: 6 }}>
-                      <div 
-                        style={{ cursor: 'pointer' }} 
-                        onClick={() => handleCopy(row.japaneseName)}
-                        title="Click to copy Japanese character"
-                      >
-                        <Highlight text={row.japaneseName} query={query} />
-                      </div>
-                      <SpeechButton text={row.japaneseName} className="minimal" />
-                    </div>
+                    <KMTISensei text={row.japaneseName} query={query} />
                   </td>
                   <td onClick={() => handleCopy(row.email)} className="designer-email">
                     <Highlight text={row.email} query={query} />

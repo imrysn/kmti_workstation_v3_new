@@ -2,7 +2,7 @@ import React, { memo, useMemo } from 'react'
 import type { IHeatTreatment } from '../../types'
 import { SearchIcon, PlusIcon, EditIcon, TrashIcon } from '../../components/FileIcons'
 import { ResultSkeleton } from '../../components/Skeleton'
-import { SpeechButton } from '../../components/SpeechButton'
+import { KMTISensei } from '../../components/KMTISensei'
 import './HeatTreatment.css'
 
 // Memoized Highlighter Component for Performance
@@ -98,12 +98,12 @@ const HeatTreatmentTable: React.FC<HeatTreatmentTableProps> = memo(({
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No results found.</div>
         ) : (
           <div className="findr-results-scroll" ref={tableContainerRef} onKeyDown={handleKeyDown} tabIndex={0}>
-            <table className="char-table">
+            <table className="char-table" style={{ minWidth: 600 }}>
               <thead>
                 <tr>
-                  <th>English</th>
-                  <th>Japanese</th>
-                  {canManage && <th style={{ textAlign: 'right', width: 100 }}>Actions</th>}
+                  <th style={{ minWidth: 200 }}>English</th>
+                  <th style={{ minWidth: 300 }}>Japanese</th>
+                  {canManage && <th style={{ textAlign: 'right', width: 100, minWidth: 100 }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -120,16 +120,7 @@ const HeatTreatmentTable: React.FC<HeatTreatmentTableProps> = memo(({
                       <Highlight text={r.englishChar} query={query} />
                     </td>
                     <td className="char-japanese">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'start', gap: 6 }}>
-                        <div 
-                          style={{ cursor: 'pointer' }} 
-                          onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
-                          title="Click to copy Japanese character"
-                        >
-                          <Highlight text={r.japaneseChar} query={query} />
-                        </div>
-                        <SpeechButton text={r.japaneseChar} className="minimal" />
-                      </div>
+                      <KMTISensei text={r.japaneseChar} query={query} />
                     </td>
                     {canManage && (
                       <td className="actions-cell">
