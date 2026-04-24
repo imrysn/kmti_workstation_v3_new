@@ -7,6 +7,8 @@ import { IPurchasedPart, IProject } from '../../types'
 import { PredictiveInput } from './PredictiveInput'
 import { formatFileSize } from './utils'
 import { ResultSkeleton } from '../../components/Skeleton'
+import { SpecFilter } from './SpecFilter'
+import './SpecFilter.css'
 
 
 const { FixedSizeList } = ReactWindow as any;
@@ -25,7 +27,6 @@ interface ResultsContentProps {
   setRecursiveSearch: (val: boolean) => void
   selectedProject: IProject | null
   folderFilter: string
-  setFolderFilter: (val: string) => void
   onNavigate: (path: string, isFolder: boolean) => void
   isSearching: boolean
   isLoadingMore: boolean
@@ -40,6 +41,9 @@ interface ResultsContentProps {
   selectedResult: IPurchasedPart | null
   setSelectedResult: (part: IPurchasedPart | null) => void
   onLoadMore?: () => void | Promise<void>
+  selectedSpecs: string[]
+  onSpecClick: (spec: string) => void
+  categories: string[]
 }
 
 // --- Lazy Thumbnail Result Row ---
@@ -112,10 +116,11 @@ const VirtualResultRow = React.memo(({ index, style, data }: any) => {
 export const ResultsContent = React.memo(function ResultsContent({
   search, setSearch, caseSensitive, setCaseSensitive, cadOnly, setCadOnly,
   includeFolders, setIncludeFolders, recursiveSearch, setRecursiveSearch,
-  selectedProject, folderFilter, setFolderFilter, onNavigate,
+  selectedProject, folderFilter, onNavigate,
   isSearching, isLoadingMore, resultCapped, resultTotal, searchResults, searchTime,
   focusedIndex, setFocusedIndex, resultsListRef, handleOpen,
-  selectedResult, setSelectedResult, onLoadMore
+  selectedResult, setSelectedResult, onLoadMore,
+  selectedSpecs, onSpecClick, categories
 }: ResultsContentProps) {
   
   const [isScrolling, setIsScrolling] = useState(false);
@@ -189,6 +194,15 @@ export const ResultsContent = React.memo(function ResultsContent({
           <label className="findr-filter"><input type="checkbox" checked={recursiveSearch} onChange={e => setRecursiveSearch(e.target.checked)} /> Recursive</label>
         </div>
       </div>
+
+      {selectedProject?.id === 1 && (
+        <SpecFilter 
+          searchResults={searchResults}
+          selectedSpecs={selectedSpecs}
+          onSpecClick={onSpecClick}
+          dynamicCategories={categories}
+        />
+      )}
 
       <div className="findr-results-header">
         {(selectedProject || selectedResult) && (

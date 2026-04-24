@@ -13,6 +13,19 @@ export function usePartsSearch(selectedProjectId?: number) {
   const [recursiveSearch, setRecursiveSearch] = useState(false);
   const [folderFilter, setFolderFilter] = useState('');
   
+  const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
+  
+  const toggleSelectedSpec = useCallback((spec: string) => {
+    setSelectedSpecs(prev => {
+      if (!spec) return []; // 'ALL' clears all
+      const next = [...prev];
+      const idx = next.indexOf(spec);
+      if (idx > -1) next.splice(idx, 1);
+      else next.push(spec);
+      return next;
+    });
+  }, []);
+
   const debouncedSearch = useDebounce(search, 300);
 
   const [searchResults, setSearchResults] = useState<IPurchasedPart[]>([]);
@@ -36,23 +49,23 @@ export function usePartsSearch(selectedProjectId?: number) {
     }
   }, [search]);
 
-  // Reset when project changes to avoid "Ghost results" from previous project
+  // Reset when project changes
   useEffect(() => {
     setSearchResults([]);
     setResultTotal(0);
     setSearch('');
     setFolderFilter('');
+    setSelectedSpecs([]); // Clear specs on project change
     setOffset(0);
   }, [selectedProjectId]);
 
   const handleSearch = useCallback(async (isLoadMore = false) => {
-    if (!selectedProjectId && !search) {
+    if (!selectedProjectId && !search && selectedSpecs.length === 0) {
       setSearchResults([]);
       setResultTotal(0);
       return;
     }
 
-    // Safety: Don't load more if already loading or no more results
     if (isLoadMore && (isLoadingMore || !resultCapped)) return;
 
     const start = performance.now();
@@ -65,9 +78,13 @@ export function usePartsSearch(selectedProjectId?: number) {
     
     try {
       const currentOffset = isLoadMore ? offset + limit : 0;
+      
+      // Combine search text + specs for the API call
+      const combinedSearch = [search, ...selectedSpecs].filter(s => s.trim().length > 0).join(' ');
+
       const res = await partsApi.listParts(
         selectedProjectId,
-        search || undefined, 
+        combinedSearch || undefined, 
         caseSensitive,
         cadOnly,
         includeFolders,
@@ -100,17 +117,26 @@ export function usePartsSearch(selectedProjectId?: number) {
       setIsLoadingMore(false);
     }
   }, [
-    selectedProjectId, search, caseSensitive, cadOnly, 
+    selectedProjectId, search, selectedSpecs, caseSensitive, cadOnly, 
     includeFolders, folderFilter, recursiveSearch, limit, offset, resultCapped, isLoadingMore
   ]);
+
+  const [categories, setCategories] = useState<string[]>([]);
+
+  // Fetch dynamic categories on mount
+  useEffect(() => {
+    partsApi.getCategories().then(setCategories).catch(console.error);
+  }, []);
 
   // Execute search when any filter changes
   useEffect(() => {
     handleSearch(false);
-  }, [debouncedSearch, selectedProjectId, cadOnly, includeFolders, recursiveSearch, folderFilter, caseSensitive]);
+  }, [debouncedSearch, selectedSpecs, selectedProjectId, cadOnly, includeFolders, recursiveSearch, folderFilter, caseSensitive]);
 
   return {
     search, setSearch,
+    selectedSpecs, toggleSelectedSpec,
+    categories,
     caseSensitive, setCaseSensitive,
     cadOnly, setCadOnly,
     includeFolders, setIncludeFolders,

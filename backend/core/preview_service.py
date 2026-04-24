@@ -8,6 +8,7 @@ from core.thumbnail_helper import get_shell_thumbnail
 from core.dwg_forensic import get_dwg_preview
 from core.sw_forensic import get_sw_preview
 from core.path_utils import globalize_path
+from core.config import PREVIEW_CACHE_DIR
 
 try:
     import fitz  # PyMuPDF
@@ -22,7 +23,7 @@ DEFAULT_PLACEHOLDER = os.path.join(PLACEHOLDER_DIR, 'cad_document.png')
 MISSING_FILE_PLACEHOLDER = os.path.join(PLACEHOLDER_DIR, 'missing_file.png')
 ENGINE_MISSING_PLACEHOLDER = os.path.join(PLACEHOLDER_DIR, 'engine_missing.png')
 
-async def get_cached_preview(file_path: str, ext: str) -> Response:
+async def get_cached_preview(file_path: str, ext: str, full: bool = False) -> Response:
     """Gets preview from disk cache or generates and caches it professionally"""
     # 0. Globalize path first to resolve drive letters to UNC
     file_path = globalize_path(file_path)
@@ -34,25 +35,26 @@ async def get_cached_preview(file_path: str, ext: str) -> Response:
                 return FileResponse(MISSING_FILE_PLACEHOLDER)
             raise HTTPException(status_code=404, detail="File missing on disk")
             
-        file_stat = os.stat(file_path)
-        cache_key = hashlib.md5(f"{file_path}_{file_stat.st_mtime}".encode('utf-8')).hexdigest()
-        cache_dir = os.path.join(os.path.dirname(__file__), '..', '.preview_cache')
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, f"{cache_key}.png")
-        
-        if os.path.exists(cache_path):
-            def _read_cache():
-                with open(cache_path, 'rb') as f:
-                    return f.read()
-            cache_data = await asyncio.to_thread(_read_cache)
-            return Response(content=cache_data, media_type="image/png")
+        # 0.5 If FULL view is requested, we often want the raw file (especially for PDFs)
+        cache_path = None
+        if not full:
+            file_stat = os.stat(file_path)
+            cache_key = hashlib.md5(f"{file_path}_{file_stat.st_mtime}".encode('utf-8')).hexdigest()
+            cache_path = os.path.join(PREVIEW_CACHE_DIR, f"{cache_key}.png")
+            
+            if os.path.exists(cache_path):
+                def _read_cache():
+                    with open(cache_path, 'rb') as f:
+                        return f.read()
+                cache_data = await asyncio.to_thread(_read_cache)
+                return Response(content=cache_data, media_type="image/png")
     except Exception as e:
-        # If cache fails, we proceed to generation...
+        # If cache fails, we proceed...
         cache_path = None
         print(f">>> [PREVIEW DIAG] Exception in cache check for {file_path}: {e}")
 
     def return_and_cache(content, media_type="image/png"):
-        if cache_path and content and media_type == "image/png":
+        if not full and cache_path and content and media_type == "image/png":
             try:
                 def _write_cache():
                     with open(cache_path, 'wb') as f:
@@ -63,7 +65,8 @@ async def get_cached_preview(file_path: str, ext: str) -> Response:
 
     # 1. High Performance PDF Thumbnailing (Phase 2 Upgrade)
     if ext == '.pdf':
-        if fitz:
+        if fitz and not full:
+            # ONLY generate thumbnail if we are NOT in full mode
             try:
                 def _get_pdf_thumb():
                     # This generates a 1st page snapshot, much faster and lighter for lists
@@ -89,11 +92,8 @@ async def get_cached_preview(file_path: str, ext: str) -> Response:
                 with open(file_path, 'rb') as f:
                     return f.read()
             file_data = await asyncio.to_thread(_read_file)
-            headers = {
-                "Content-Security-Policy": "default-src 'self' 'unsafe-inline'; frame-ancestors *",
-                "X-Frame-Options": "ALLOWALL"
-            }
-            return Response(content=file_data, media_type="application/pdf", headers=headers)
+            # Remove restrictive headers to fix Electron CSP blocks when webSecurity is already off
+            return Response(content=file_data, media_type="application/pdf")
         except Exception: pass
 
     # 2. DWG Forensic (Specialized for CAD drafting reliability)
@@ -127,9 +127,10 @@ async def get_cached_preview(file_path: str, ext: str) -> Response:
             if thumb_data:
                 return return_and_cache(thumb_data)
             else:
-                print(f">>> [PREVIEW DIAG] Shell Loader (Thumbnail Engine) missing for {ext} on this machine.")
+                print(f">>> [PREVIEW DIAG] Professional engine skipped for {ext}. No handlers available.")
                 if os.path.exists(ENGINE_MISSING_PLACEHOLDER):
                     return FileResponse(ENGINE_MISSING_PLACEHOLDER)
+                return Response(content=b"", status_code=204)
         except Exception as e:
             print(f">>> [PREVIEW DIAG] Professional extraction failed for {file_path}: {e}")
 

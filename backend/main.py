@@ -20,14 +20,7 @@ from core.github_sync import sync_service
 from fastapi.staticfiles import StaticFiles
 
 START_TIME = time.time()
-IS_FROZEN = getattr(sys, 'frozen', False)
-
-# --- Production Paths Logic ---
-# Ensure logs and local files are relative to the EXE in production
-if IS_FROZEN:
-    BASE_DIR = os.path.dirname(sys.executable)
-else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+from core.config import IS_FROZEN, BASE_DIR, LOG_DIR
 
 from db.database import engine, Base
 from models import telemetry as telemetry_model, broadcast as broadcast_model # Ensure models are registered for metadata
@@ -37,27 +30,18 @@ except ImportError:
     indexer = None
 
 # --- Production-Proof Logging Setup ---
-if IS_FROZEN:
-    # In production (C:\Program Files), we cannot write to the EXE folder.
-    # We log to stdout ONLY, and Electron captures it in a safe USER folder.
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        handlers=[logging.StreamHandler(sys.stdout)]
-    )
-else:
-    # In development, we keep the convenient file log
-    LOG_DIR = os.path.join(BASE_DIR, "logs")
-    os.makedirs(LOG_DIR, exist_ok=True)
-    LOG_FILE = os.path.join(LOG_DIR, "production.log")
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        handlers=[
-            logging.FileHandler(LOG_FILE, encoding='utf-8'),
-            logging.StreamHandler(sys.stdout)
-        ]
-    )
+# Use the stable LOG_DIR from config
+LOG_FILE = os.path.join(LOG_DIR, "production.log")
+
+logging_handlers = [logging.StreamHandler(sys.stdout)]
+if not IS_FROZEN:
+    logging_handlers.append(logging.FileHandler(LOG_FILE, encoding='utf-8'))
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=logging_handlers
+)
 logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager

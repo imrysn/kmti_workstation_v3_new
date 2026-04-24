@@ -19,13 +19,15 @@ def get_sw_preview(file_path: str) -> bytes:
         with open(file_path, 'rb') as f:
             file_size = os.path.getsize(file_path)
             
-            # Scan more of the file for CAD (up to 100MB)
-            if file_size < 100 * 1024 * 1024:
+            # AGGRESSIVE UPGRADE: For older SW files (2013-2016), the preview can be anywhere.
+            # We will scan the target file thoroughly.
+            if file_size < 150 * 1024 * 1024:
                 data = f.read()
             else:
+                # For massive assemblies, we check the first and last 40MB
                 f.seek(0)
-                head = f.read(20 * 1024 * 1024)
-                f.seek(max(0, file_size - 20 * 1024 * 1024))
+                head = f.read(40 * 1024 * 1024)
+                f.seek(max(0, file_size - 40 * 1024 * 1024))
                 tail = f.read()
                 data = head + b"..." + tail
                 

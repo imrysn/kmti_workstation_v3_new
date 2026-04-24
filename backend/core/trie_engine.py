@@ -65,6 +65,7 @@ async def warm_up_trie():
     from models.part import CadFileIndex, Project
     from sqlalchemy import select, distinct
     import time
+    import asyncio
 
     start = time.time()
     logger.info("Trie Engine: Warming up cache...")
@@ -77,16 +78,24 @@ async def warm_up_trie():
                 trie_service.add(row[0])
 
             # 2. Index Unique File Names
-            # We select unique names to keep the trie memory-efficient
             file_res = await session.execute(select(distinct(CadFileIndex.file_name)))
             
-            # Use chunks if there are 400k records to avoid blocking the loop too long
             count = 0
             for row in file_res.fetchall():
                 trie_service.add(row[0])
                 count += 1
                 if count % 10000 == 0:
-                    await asyncio.sleep(0) # Yield for other tasks
+                    await asyncio.sleep(0)
+
+            # 3. Index Assembly Context (Folder Names)
+            path_res = await session.execute(select(distinct(CadFileIndex.parent_path)))
+            for row in path_res.fetchall():
+                path = row[0]
+                if not path: continue
+                parts = [p for p in path.replace('\\', '/').split('/') if p and len(p) > 2]
+                for p in parts:
+                    if ':' in p: continue
+                    trie_service.add(p)
             
             trie_service.is_ready = True
             duration = time.time() - start

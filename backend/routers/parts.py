@@ -51,19 +51,17 @@ async def get_suggestions(
 ):
     """
     Predictive search suggestions.
-    - Global (Trie) if no parent_path is provided.
-    - Scoped (SQL) if parent_path is provided (disregards global).
+    - Global: Scans both file names and folder names (for assembly context).
+    - Scoped: Finds distinct terms in the current folder.
     """
     if parent_path:
-        # Scoped suggestions (SQL LIKE for exact folder match)
-        # Replace / with \ for SQL matching if needed, though normalize_path should handle it
         norm_parent = parent_path.replace('/', '\\')
         stmt = (
             select(distinct(CadFileIndex.file_name))
             .where(
                 and_(
                     CadFileIndex.parent_path == norm_parent,
-                    CadFileIndex.file_name.like(f"{q}%")
+                    CadFileIndex.file_name.ilike(f"{q}%")
                 )
             )
             .limit(10)
@@ -71,8 +69,9 @@ async def get_suggestions(
         res = await db.execute(stmt)
         return res.scalars().all()
     else:
-        # Global suggestions (Trie Engine)
-        return trie_service.search(q, limit=10)
+        # Search for suggestions in both file names and parent paths (assembly context)
+        # This helps find drawing numbers when typing assembly names
+        return trie_service.search(q, limit=12)
 
 cad_extensions = {'.icd', '.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'}
 
@@ -329,6 +328,42 @@ async def get_project_tree(project_id: int, parent_path: str = Query(None), db: 
 
 # --- PARTS/FILES API ---
 
+@router.get("/categories")
+async def get_categories(db: AsyncSession = Depends(get_db)):
+    """
+    Dynamically lists the top-level folders in the 'Purchased Parts' root.
+    This allows the UI to sync filters with the actual folder structure on the NAS.
+    """
+    try:
+        from sqlalchemy import select
+        # Use findr's primary project for "Purchased Parts" (usually ID 1 or the one with category='PURCHASED')
+        result = await db.execute(select(Project).where(or_(Project.id == 1, Project.category == 'PURCHASED_PARTS')))
+        project = result.scalar_one_or_none()
+        
+        if not project:
+            return []
+            
+        base_path = project.root_path
+        if not os.path.exists(base_path):
+            # Fallback for different environment paths
+            from core.path_utils import globalize_path
+            base_path = globalize_path(base_path)
+            if not os.path.exists(base_path):
+                return []
+                
+        # Discover all subfolders at the root level
+        categories = []
+        for entry in os.scandir(base_path):
+            if entry.is_dir() and not entry.name.startswith('.'):
+                categories.append(entry.name.upper())
+                
+        return sorted(list(set(categories)))
+    except Exception as e:
+        import logging
+        logging.getLogger("kmti_backend").error(f"Category discovery failed: {str(e)}")
+        return []
+
+
 @router.get("/")
 async def list_parts(
     project_id: int = None,
@@ -407,23 +442,31 @@ async def list_parts(
                 boolean_search = ""
 
         if boolean_search:
-            # Smart Relevance Ranking:
-            # 1. Boost exact matches on file_name
-            # 2. Boost files/folders starting with the search term
-            # 3. Use Full-Text match score for everything else
-            # 4. Tie-break with folder status and alphabetical order
+            # SEMANTIC UPGRADE: We now treat the Folder Context (file_path) as metadata.
+            # This allows Numerical Drawings (DWG-001) to be found by Assembly Keywords (WHEEL).
             query = query.where(text("MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE)"))
-            # We use order_by with the score expression
+            
+            # Ranking Algorithm:
+            # 1. Exact Filename Match (DWG-101) -> 1000 pts
+            # 2. Filename starts with search -> 500 pts
+            # 3. Path contains search (Contextual Match) -> 300 pts
+            # 4. Full-Text Relevance Score -> 10 pts
             query = query.order_by(
                 text("""
                     (CASE WHEN file_name = :raw THEN 1000 ELSE 0 END) +
                     (CASE WHEN file_name LIKE :pfx THEN 500 ELSE 0 END) +
+                    (CASE WHEN file_path LIKE :pfx_path THEN 300 ELSE 0 END) +
                     (MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE) * 10) DESC
                 """),
                 CadFileIndex.is_folder.desc(),
                 CadFileIndex.file_name.asc()
             )
-            query = query.params(val=boolean_search, raw=search.strip(), pfx=f"{search.strip()}%")
+            query = query.params(
+                val=boolean_search, 
+                raw=search.strip(), 
+                pfx=f"{search.strip()}%",
+                pfx_path=f"%{search.strip()}%"
+            )
         else:
             query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
     else:
@@ -466,7 +509,7 @@ async def list_parts(
     }
 
 @router.get("/preview/{file_id}")
-async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
+async def get_preview(file_id: int, full: bool = False, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(CadFileIndex).where(CadFileIndex.id == file_id))
     record = result.scalar_one_or_none()
     
@@ -476,7 +519,7 @@ async def get_preview(file_id: int, db: AsyncSession = Depends(get_db)):
     file_path = record.file_path
     ext = record.file_type.lower() if record.file_type else ""
     
-    return await get_cached_preview(file_path, ext)
+    return await get_cached_preview(file_path, ext, full=full)
 
 @router.get("/download")
 async def download_part(file_id: int, db: AsyncSession = Depends(get_db)):

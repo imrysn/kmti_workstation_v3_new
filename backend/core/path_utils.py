@@ -20,30 +20,40 @@ def globalize_path(path_str: str) -> str:
     globally accessible UNC path (like \\KMTI-NAS\Shared\foo).
     Uses win32wnet for dynamic resolution if available.
     """
-    if not path_str or not os.name == 'nt':
+    if not path_str or os.name != 'nt':
         return path_str or ""
     
+    p_norm = path_str.replace("/", "\\")
+    
+    # If the path already exists locally on the server PC, use it as is.
+    if os.path.exists(p_norm):
+        return p_norm
+
     # 1. Attempt Dynamic UNC Resolution via Windows API (The most precise way)
-    # This handles any drive letter dynamically without needing the map.
-    if len(path_str) >= 2 and path_str[1] == ':':
+    if len(p_norm) >= 2 and p_norm[1] == ':':
         try:
             import win32wnet
-            # Normalize to backslashes for the Windows API
-            p_win = path_str.replace("/", "\\")
             # 1 = UNIVERSAL_NAME_INFO_LEVEL
-            unc_path = win32wnet.WNetGetUniversalName(p_win, 1)
+            unc_path = win32wnet.WNetGetUniversalName(p_norm, 1)
+            # The result is usually a record or value depending on the level
             if unc_path:
                 return unc_path
         except Exception:
-            # Fallback to hardcoded map if dynamic resolution fails 
             pass
 
-    # 2. Fallback to Hardcoded Map
-    p_norm = path_str.replace("\\", "/")
+    # 2. Fallback to Hardcoded Map + Auto Discovery
     for drive, unc in UNC_MAP.items():
         if p_norm.upper().startswith(drive.upper()):
-            # Combine UNC and the remaining path, ensuring backslash consistency for UNC
-            res = unc + p_norm[len(drive):].replace("/", "\\")
-            return res
+            # Reconstruct the UNC path
+            candidate = unc.rstrip("\\") + "\\" + p_norm[len(drive):].lstrip("\\")
+            # If the candidate actually exists on the network, return it!
+            if os.path.exists(candidate):
+                return candidate
             
-    return path_str.replace("/", "\\")
+    # 3. Final heuristic: If drive C/D/etc. is missing on server, try common NAS root
+    if len(p_norm) >= 2 and p_norm[1] == ':' and not os.path.exists(p_norm[:3]):
+        candidate = "\\\\KMTI-NAS\\Shared\\" + p_norm[3:].lstrip("\\")
+        if os.path.exists(candidate):
+            return candidate
+            
+    return p_norm

@@ -102,11 +102,17 @@ export default function PurchasedParts() {
     if (!selectedResult || treeConfig.pendingSelectPath) return
     const normPath = selectedResult.filePath.replace(/\\/g, '/')
     
-    // Only navigate if we aren't already in the right spot
-    if (treeConfig.selectedTreePath !== normPath || !treeConfig.selectedProject) {
+    // SAFETY: Only auto-navigate the sidebar if we are already in the correct project.
+    // This prevents "Navigation Loops" where switching projects pulls you back to the old selection.
+    if (!treeConfig.selectedProject || 
+        !normPath.toLowerCase().startsWith(treeConfig.selectedProject.rootPath.replace(/\\/g, '/').toLowerCase())) {
+      return; 
+    }
+
+    if (treeConfig.selectedTreePath !== normPath) {
       handleNavigate(normPath, false)
     }
-  }, [selectedResult, treeConfig.selectedTreePath, treeConfig.selectedProject, handleNavigate])
+  }, [selectedResult, treeConfig.selectedTreePath, treeConfig.selectedProject?.id, handleNavigate])
 
   const handleTreeSelectLocal = (path: string, isFolder: boolean) => {
     handleNavigate(path, isFolder)
@@ -229,7 +235,6 @@ export default function PurchasedParts() {
           setRecursiveSearch={searchConfig.setRecursiveSearch}
           selectedProject={treeConfig.selectedProject}
           folderFilter={searchConfig.folderFilter}
-          setFolderFilter={searchConfig.setFolderFilter}
           onNavigate={handleNavigate}
           isSearching={searchConfig.isSearching}
           isLoadingMore={searchConfig.isLoadingMore}
@@ -243,6 +248,9 @@ export default function PurchasedParts() {
           handleOpen={handleOpen}
           selectedResult={selectedResult}
           setSelectedResult={setSelectedResult}
+          selectedSpecs={searchConfig.selectedSpecs}
+          onSpecClick={searchConfig.toggleSelectedSpec}
+          categories={searchConfig.categories}
           onLoadMore={() => searchConfig.handleSearch(true)}
         />
 

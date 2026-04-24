@@ -16,10 +16,9 @@ import shutil
 from models.user import User, UserRole
 from core.auth import require_role
 from core.github_sync import sync_service
+from core.config import SETTINGS_FILE, PREVIEW_CACHE_DIR
 
 router = APIRouter()
-
-SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "..", "settings.json")
 
 def load_settings():
     if os.path.exists(SETTINGS_FILE):
@@ -66,7 +65,7 @@ async def clear_preview_cache(
     current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
     """Deletes all cached previews. Admin and IT only."""
-    cache_dir = os.path.join(os.path.dirname(__file__), "..", ".preview_cache")
+    cache_dir = PREVIEW_CACHE_DIR
     if os.path.exists(cache_dir):
         try:
             await asyncio.to_thread(shutil.rmtree, cache_dir)

@@ -1,0 +1,126 @@
+.spec-filter-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  min-height: 48px;
+}
+
+.spec-filter-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.spec-filter-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.spec-filter-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 20px; /* space for arrows */
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.spec-filter-list::-webkit-scrollbar {
+  display: none;
+}
+
+.scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  font-size: 18px;
+  transition: all 0.2s;
+}
+
+.scroll-btn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.scroll-btn.left {
+  left: 0;
+  background: linear-gradient(90deg, var(--bg-surface) 40%, transparent);
+  border: none;
+  box-shadow: none;
+  width: 40px;
+  border-radius: 0;
+}
+
+.scroll-btn.right {
+  right: 0;
+  background: linear-gradient(-90deg, var(--bg-surface) 40%, transparent);
+  border: none;
+  box-shadow: none;
+  width: 40px;
+  border-radius: 0;
+}
+
+.spec-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.spec-pill:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.spec-pill.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3);
+}
+
+.spec-count {
+  opacity: 0.6;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.spec-pill.active .spec-count {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0 4px;
+  border-radius: 4px;
+}

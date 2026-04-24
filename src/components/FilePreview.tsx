@@ -59,42 +59,29 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
         )}
         
         {error ? (
-          <div className="file-preview-error">
-            <div className="file-preview-error-icon">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
-                <path d="M13 2v7h7"></path>
-                <circle cx="12" cy="14" r="3"></circle>
-                <line x1="12" y1="17" x2="12" y2="18"></line>
+          <div className={`file-preview-placeholder ${isPdf ? 'pdf' : isCad ? 'cad' : 'image'}`} onClick={toggleZoom}>
+            <div className="file-preview-placeholder-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <text x="5" y="18" fontSize="5" fontWeight="bold" fill="currentColor">{isPdf ? 'PDF' : isCad ? 'CAD' : 'IMG'}</text>
               </svg>
             </div>
-            <div className="file-preview-error-text">Preview Unavailable</div>
+            <div className="file-preview-placeholder-text">Preview Unavailable</div>
+            <div style={{ fontSize: '10px', marginTop: -8 }}>Click to view full document</div>
           </div>
         ) : (
           <>
-            {isPdf ? (
-              <img
-                src={previewUrl}
-                alt={fileName}
-                className="file-preview-image file-preview-pdf-thumb"
-                onLoad={handleLoad}
-                onError={handleError}
-                style={{ display: loading ? 'none' : 'block' }}
-                onClick={toggleZoom}
-                title="Click to expand full PDF"
-              />
-            ) : (
-              <img
-                src={previewUrl}
-                alt={fileName}
-                className="file-preview-image"
-                onLoad={handleLoad}
-                onError={handleError}
-                style={{ display: loading ? 'none' : 'block' }}
-                onClick={toggleZoom}
-                title="Click to expand"
-              />
-            )}
+            <img
+              src={previewUrl}
+              alt={fileName}
+              className="file-preview-image"
+              onLoad={handleLoad}
+              onError={handleError}
+              style={{ display: loading ? 'none' : 'block' }}
+              onClick={toggleZoom}
+              title="Click to expand"
+            />
             {!loading && (
               <div className="file-preview-expand-btn" onClick={toggleZoom} title="Expand Preview">
                 <SearchIcon size={16} />
@@ -119,9 +106,9 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
             </div>
             
             {isPdf ? (
-              <iframe src={previewUrl} className="preview-modal-image preview-modal-pdf-iframe" title={fileName} />
+              <iframe src={`${previewUrl}?full=true`} className="preview-modal-image preview-modal-pdf-iframe" title={fileName} />
             ) : (
-              <img src={previewUrl} alt={fileName} className="preview-modal-image" />
+              <img src={`${previewUrl}?full=true`} alt={fileName} className="preview-modal-image" />
             )}
             
             <div className="preview-modal-info">
