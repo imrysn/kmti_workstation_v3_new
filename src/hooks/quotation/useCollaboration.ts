@@ -56,6 +56,7 @@ export function useCollaboration({
   emitBlur: (fieldKey: string) => void
   emitSelection: (fieldKey: string, start: number, end: number) => void
   emitPatch: (patch: { path: string; value: any }, fullState?: any) => void
+  emitBatchPatch: (patches: Array<{ path: string; value: any }>, fullState?: any) => void
   emitSnapshot: (fullState: any, label?: string) => void
   leaveRoom: () => void
 } {
@@ -350,6 +351,15 @@ export function useCollaboration({
     })
   }, [])
 
+  const emitBatchPatch = useCallback((patches: Array<{ path: string; value: any }>, fullState?: any) => {
+    if (!socketRef.current || !currentQuotIdRef.current) return
+    socketRef.current.emit('update_fields', {
+      quot_id: currentQuotIdRef.current,
+      patches,
+      full_state: fullState,
+    })
+  }, [])
+
   const emitSnapshot = useCallback((fullState: any, label?: string) => {
     if (!socketRef.current || !currentQuotIdRef.current) return
     socketRef.current.emit('trigger_snapshot', {
@@ -369,6 +379,7 @@ export function useCollaboration({
     emitBlur, 
     emitSelection, 
     emitPatch, 
+    emitBatchPatch,
     emitSnapshot,
     leaveRoom
   }

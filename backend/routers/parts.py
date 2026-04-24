@@ -34,11 +34,45 @@ class CreateProjectRequest(BaseModel):
     root_path: str
     category: str = "PROJECTS"
 
+from core.trie_engine import trie_service
+from typing import List, Optional
+
 class CreateFolderRequest(BaseModel):
     project_name: str
     base_path: str = ""
 
 router = APIRouter()
+
+@router.get("/suggest")
+async def get_suggestions(
+    q: str = Query(..., min_length=2), 
+    parent_path: Optional[str] = None, 
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Predictive search suggestions.
+    - Global (Trie) if no parent_path is provided.
+    - Scoped (SQL) if parent_path is provided (disregards global).
+    """
+    if parent_path:
+        # Scoped suggestions (SQL LIKE for exact folder match)
+        # Replace / with \ for SQL matching if needed, though normalize_path should handle it
+        norm_parent = parent_path.replace('/', '\\')
+        stmt = (
+            select(distinct(CadFileIndex.file_name))
+            .where(
+                and_(
+                    CadFileIndex.parent_path == norm_parent,
+                    CadFileIndex.file_name.like(f"{q}%")
+                )
+            )
+            .limit(10)
+        )
+        res = await db.execute(stmt)
+        return res.scalars().all()
+    else:
+        # Global suggestions (Trie Engine)
+        return trie_service.search(q, limit=10)
 
 cad_extensions = {'.icd', '.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'}
 
@@ -373,8 +407,23 @@ async def list_parts(
                 boolean_search = ""
 
         if boolean_search:
+            # Smart Relevance Ranking:
+            # 1. Boost exact matches on file_name
+            # 2. Boost files/folders starting with the search term
+            # 3. Use Full-Text match score for everything else
+            # 4. Tie-break with folder status and alphabetical order
             query = query.where(text("MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE)"))
-            query = query.params(val=boolean_search)
+            # We use order_by with the score expression
+            query = query.order_by(
+                text("""
+                    (CASE WHEN file_name = :raw THEN 1000 ELSE 0 END) +
+                    (CASE WHEN file_name LIKE :pfx THEN 500 ELSE 0 END) +
+                    (MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE) * 10) DESC
+                """),
+                CadFileIndex.is_folder.desc(),
+                CadFileIndex.file_name.asc()
+            )
+            query = query.params(val=boolean_search, raw=search.strip(), pfx=f"{search.strip()}%")
         else:
             query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
     else:

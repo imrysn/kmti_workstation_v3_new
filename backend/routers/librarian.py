@@ -266,8 +266,11 @@ async def query_librarian(request: QueryRequest, fast_request: Request, db: Asyn
             db.add(LibrarianChatMessage(session_id=session_id, ip_address=client_ip, role='assistant', content="".join(full_response)))
             await db.commit()
         except Exception as e:
-            logger.error(f"Stream Error: {e}", exc_info=True)
-            yield f"Error: {str(e)}"
+            logger.error(f"Librarian Stream Error: {e}", exc_info=True)
+            # PRO-ACTIVE FALLBACK: If AI fails, return the database results directly
+            # so the user isn't stuck with a technical error.
+            yield "⚠️ **AI ENGINE CONNECTION ERROR**\n\nI encountered a temporary problem connecting to my neural core. However, I have successfully queried the KMTI project database for you:\n\n"
+            yield context
 
     return StreamingResponse(generate_ai(), media_type="text/plain")
 

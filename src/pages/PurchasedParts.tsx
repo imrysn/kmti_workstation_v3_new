@@ -51,10 +51,24 @@ export default function PurchasedParts() {
     }
   }, [searchConfig.searchResults, searchConfig.isSearching, treeConfig.pendingSelectPath])
 
-  // SYNC: result selection -> tree highlight
-  useEffect(() => {
-    if (!selectedResult) return
-    const normPath = selectedResult.filePath.replace(/\\/g, '/')
+  const handleNavigate = React.useCallback((fullPath: string, isFolder: boolean) => {
+    const normPath = fullPath.replace(/\\/g, '/')
+    
+    // 1. Identify and switch project
+    const foundProj = treeConfig.projects.find(p => 
+      normPath.toLowerCase().startsWith(p.rootPath.replace(/\\/g, '/').toLowerCase())
+    )
+    if (foundProj) {
+      if (foundProj.id !== treeConfig.selectedProject?.id) {
+        treeConfig.setSelectedProject(foundProj)
+        // Ensure the correct sidebar tab is active (PROJECTS, PURCHASED PARTS, etc)
+        if (foundProj.category !== treeConfig.activeSideTab) {
+          treeConfig.setActiveSideTab(foundProj.category || 'PROJECTS')
+        }
+      }
+    }
+
+    // 2. Setup tree highlighting
     treeConfig.setSelectedTreePath(normPath)
     const parts = normPath.split('/')
     const ancestors: string[] = []
@@ -64,25 +78,38 @@ export default function PurchasedParts() {
       ancestors.forEach(a => next.add(a))
       return next
     })
+
+    // 3. Setup center results scope
+    if (isFolder) {
+      searchConfig.setFolderFilter(normPath)
+      setSelectedResult(null)
+    } else {
+      const parent = normPath.substring(0, normPath.lastIndexOf('/'))
+      searchConfig.setFolderFilter(parent)
+      treeConfig.setPendingSelectPath(normPath)
+      // The search effect will find the result and set setSelectedResult eventually
+    }
+
+    // 4. Scroll tree into view
     setTimeout(() => {
       const activeNode = treeContainerRef.current?.querySelector('.tree-node-item.active')
       if (activeNode) activeNode.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    }, 120)
-  }, [selectedResult])
+    }, 200)
+  }, [treeConfig.projects, treeConfig.selectedProject?.id, treeConfig.activeSideTab, searchConfig.folderFilter])
+
+  // SYNC: result selection -> trigger navigation
+  useEffect(() => {
+    if (!selectedResult || treeConfig.pendingSelectPath) return
+    const normPath = selectedResult.filePath.replace(/\\/g, '/')
+    
+    // Only navigate if we aren't already in the right spot
+    if (treeConfig.selectedTreePath !== normPath || !treeConfig.selectedProject) {
+      handleNavigate(normPath, false)
+    }
+  }, [selectedResult, treeConfig.selectedTreePath, treeConfig.selectedProject, handleNavigate])
 
   const handleTreeSelectLocal = (path: string, isFolder: boolean) => {
-    treeConfig.setSelectedTreePath(path)
-    if (isFolder) {
-      searchConfig.setFolderFilter(path)
-      setSelectedResult(null)
-    } else {
-      const match = searchConfig.searchResults.find(r => r.filePath.replace(/\\/g, '/') === path)
-      if (match) setSelectedResult(match)
-      else {
-        treeConfig.setPendingSelectPath(path)
-        searchConfig.setFolderFilter(path.substring(0, path.lastIndexOf('/')))
-      }
-    }
+    handleNavigate(path, isFolder)
   }
 
   const handleOpen = React.useCallback((part: IPurchasedPart) => {
@@ -101,9 +128,9 @@ export default function PurchasedParts() {
     else if (e.key === 'ArrowUp') { e.preventDefault(); setFocusedIndex(prev => Math.max(prev - 1, 0)) }
     else if (e.key === 'Enter' && focusedIndex >= 0) {
       const item = searchConfig.searchResults[focusedIndex]
-      if (!item) return; // Prevent crash if focusedIndex is out of bounds
+      if (!item) return; 
       e.preventDefault();
-      if (item.isFolder) handleTreeSelectLocal(item.filePath.split('\\').join('/'), true)
+      if (item.isFolder) handleNavigate(item.filePath.split('\\').join('/'), true)
       else handleOpen(item)
     }
   }
@@ -116,31 +143,20 @@ export default function PurchasedParts() {
         const found = treeConfig.projects.find(p => p.name.toUpperCase() === value.toUpperCase())
         if (found) {
           treeConfig.setSelectedProject(found)
+          treeConfig.setActiveSideTab(found.category || 'PROJECTS')
           notify(`Librarian navigated to ${found.name}`, 'success')
         } else {
           notify(`Could not find project: ${value}`, 'warning')
         }
       } else if (type === 'path') {
-        const normValue = value.replace(/\\/g, '/')
-        const foundProj = treeConfig.projects.find(p => normValue.toLowerCase().startsWith(p.rootPath.replace(/\\/g, '/').toLowerCase()))
-        if (foundProj) {
-          treeConfig.setSelectedProject(foundProj)
-          
-          // Extract parent directory to load the correct results list
-          const parentFolder = normValue.substring(0, normValue.lastIndexOf('/'))
-          searchConfig.setFolderFilter(parentFolder)
-          
-          treeConfig.setPendingSelectPath(normValue)
-          notify(`Librarian opening: ${normValue.split('/').pop()}`, 'success')
-        } else {
-          notify(`Path outside indexed projects: ${value}`, 'warning')
-        }
+        handleNavigate(value, false)
+        notify(`Librarian opening location...`, 'success')
       }
     }
 
     window.addEventListener('librarian-navigate', handleLibrarianNav)
     return () => window.removeEventListener('librarian-navigate', handleLibrarianNav)
-  }, [treeConfig.projects, treeConfig.setSelectedProject, treeConfig.setPendingSelectPath, notify])
+  }, [treeConfig.projects, treeConfig.setSelectedProject, handleNavigate, notify])
 
   // Initial Switcher Click-Outside
   useEffect(() => {
@@ -214,8 +230,7 @@ export default function PurchasedParts() {
           selectedProject={treeConfig.selectedProject}
           folderFilter={searchConfig.folderFilter}
           setFolderFilter={searchConfig.setFolderFilter}
-          setSelectedTreePath={treeConfig.setSelectedTreePath}
-          setExpandedFolders={treeConfig.setExpandedFolders}
+          onNavigate={handleNavigate}
           isSearching={searchConfig.isSearching}
           isLoadingMore={searchConfig.isLoadingMore}
           resultCapped={searchConfig.resultCapped}

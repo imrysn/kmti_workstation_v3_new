@@ -166,6 +166,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitBlur,
     emitSelection,
     emitPatch,
+    emitBatchPatch,
     emitSnapshot,
     leaveRoom
   } = useCollaboration({
@@ -248,35 +249,27 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   // ── Wrapped Update Handlers for Sync ───────────────────────────
   const syncCompanyInfo = useCallback((updates: typeof companyInfo) => {
     updateCompanyInfo(updates)
-    const fullState = getSaveData()
-    Object.entries(updates).forEach(([k, v]) => {
-      emitPatch({ path: `companyInfo.${k}`, value: v }, fullState)
-    })
-  }, [updateCompanyInfo, emitPatch, getSaveData])
+    const patches = Object.entries(updates).map(([k, v]) => ({ path: `companyInfo.${k}`, value: v }))
+    emitBatchPatch(patches, getSaveData())
+  }, [updateCompanyInfo, emitBatchPatch, getSaveData])
 
   const syncClientInfo = useCallback((updates: typeof clientInfo) => {
     updateClientInfo(updates)
-    const fullState = getSaveData()
-    Object.entries(updates).forEach(([k, v]) => {
-      emitPatch({ path: `clientInfo.${k}`, value: v }, fullState)
-    })
-  }, [updateClientInfo, emitPatch, getSaveData])
+    const patches = Object.entries(updates).map(([k, v]) => ({ path: `clientInfo.${k}`, value: v }))
+    emitBatchPatch(patches, getSaveData())
+  }, [updateClientInfo, emitBatchPatch, getSaveData])
 
   const syncQuotationDetails = useCallback((updates: Partial<typeof quotationDetails>) => {
     updateQuotationDetails(updates)
-    const fullState = getSaveData()
-    Object.entries(updates).forEach(([k, v]) => {
-      emitPatch({ path: `quotationDetails.${k}`, value: v }, fullState)
-    })
-  }, [updateQuotationDetails, emitPatch, getSaveData])
+    const patches = Object.entries(updates).map(([k, v]) => ({ path: `quotationDetails.${k}`, value: v }))
+    emitBatchPatch(patches, getSaveData())
+  }, [updateQuotationDetails, emitBatchPatch, getSaveData])
 
   const syncBillingDetails = useCallback((updates: Partial<typeof billingDetails>) => {
     updateBillingDetails(updates)
-    const fullState = getSaveData()
-    Object.entries(updates).forEach(([k, v]) => {
-      emitPatch({ path: `billingDetails.${k}`, value: v }, fullState)
-    })
-  }, [updateBillingDetails, emitPatch, getSaveData])
+    const patches = Object.entries(updates).map(([k, v]) => ({ path: `billingDetails.${k}`, value: v }))
+    emitBatchPatch(patches, getSaveData())
+  }, [updateBillingDetails, emitBatchPatch, getSaveData])
 
   const syncSignatures = useCallback((type: keyof typeof signatures, field: string, value: any) => {
     updateSignatures(type, field, value)
@@ -464,8 +457,9 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitBlur,
     emitSelection,
     emitPatch,
+    emitBatchPatch,
     emitSnapshot
-  }), [isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch, emitSnapshot])
+  }), [isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch, emitBatchPatch, emitSnapshot])
 
   return (
     <CollaborationProvider value={collValue}>

@@ -15,7 +15,7 @@ File Persistence Policy:
 import os
 import json
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -168,7 +168,7 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession):
             data=json.dumps(data, ensure_ascii=False),
             quotation_no=new_q_no,
             display_name=new_display,
-            updated_at=datetime.utcnow(),
+            updated_at=datetime.now(timezone.utc),
             client_name=data.get("clientInfo", {}).get("company", ""),
             designer_name=data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
         )
@@ -189,6 +189,27 @@ async def update_field(sid: str, data: dict):
     await sio.emit("remote_patch", {"sid": sid, "patch": patch}, room=room_name, skip_sid=sid)
     
     # 2. Persist to DB (Debounced logic could be added here, but for now direct)
+    if full_state:
+        from db.database import AsyncSessionLocal
+        async with AsyncSessionLocal() as session:
+            await _sync_metadata(q_id, full_state, session)
+
+@sio.event
+async def update_fields(sid: str, data: dict):
+    """Batched state updates. Broadcasts each patch to peers."""
+    q_id = data.get("quot_id")
+    patches = data.get("patches", [])
+    full_state = data.get("full_state")
+    
+    if not q_id or not patches: return
+    room_name = f"quot_{q_id}"
+
+    # 1. Immediate Broadcast each patch to other editors
+    # (Peers handle them sequentially in their local state)
+    for patch in patches:
+        await sio.emit("remote_patch", {"sid": sid, "patch": patch}, room=room_name, skip_sid=sid)
+    
+    # 2. Persist metadata once for the whole batch if full_state is provided
     if full_state:
         from db.database import AsyncSessionLocal
         async with AsyncSessionLocal() as session:

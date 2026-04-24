@@ -3,7 +3,7 @@ import os
 import json
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import select
 
 # Add the parent directory to sys.path so we can import from 'db' and 'models'
@@ -55,7 +55,7 @@ async def migrate():
                     try:
                         q_date = datetime.strptime(date_str, "%Y-%m-%d")
                     except:
-                        q_date = datetime.utcnow()
+                        q_date = datetime.now(timezone.utc)
 
                     new_q = Quotation(
                         quotation_no=q_no,
@@ -110,7 +110,7 @@ async def migrate():
                                 quotation_no=real_q_no,
                                 client_name=ci.get("company", "Unknown Client"),
                                 designer_name=sig.get("name", "Unknown Designer"),
-                                date=datetime.utcnow(),
+                                date=datetime.now(timezone.utc),
                                 data=json.dumps(snap_data, ensure_ascii=False),
                                 is_active=False
                             )
@@ -142,7 +142,7 @@ async def migrate():
                             label=meta.get("description", f"Snapshot {s_stem}"),
                             author=meta.get("author", "Unknown"),
                             data=json.dumps(s_data.get("data", s_data), ensure_ascii=False),
-                            created_at=datetime.strptime(s_stem, "%Y%m%d_%H%M%S") if len(s_stem) == 15 else datetime.utcnow()
+                            created_at=datetime.strptime(s_stem, "%Y%m%d_%H%M%S") if len(s_stem) == 15 else datetime.now(timezone.utc)
                         )
                         session.add(history_entry)
                         print(f"  Added snapshot: {s.name} for {quot.quotation_no}")

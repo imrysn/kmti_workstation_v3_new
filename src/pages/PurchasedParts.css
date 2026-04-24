@@ -473,8 +473,14 @@
 .findr-search-icon {
   position: absolute;
   left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--accent);
   opacity: 0.6;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 5;
 }
 
 .findr-search-input {
@@ -510,6 +516,59 @@
   gap: 8px;
   cursor: pointer;
   font-weight: 500;
+}
+
+/* Predictive Suggestions Dropdown */
+.predictive-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.predictive-suggestions-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 300px;
+  overflow-y: auto;
+  animation: dropdownFade 0.2s ease-out;
+}
+
+.predictive-suggestion-item {
+  padding: 10px 16px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+}
+
+.predictive-suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.predictive-suggestion-item:hover,
+.predictive-suggestion-item.active {
+  background: var(--bg-surface-hover);
+  color: var(--accent);
+}
+
+.predictive-suggestion-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.predictive-suggestion-text .match {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 .findr-results-header {
@@ -579,6 +638,18 @@
 .findr-result-details {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.findr-result-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
 }
 
 .findr-result-meta {

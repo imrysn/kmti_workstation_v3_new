@@ -95,6 +95,8 @@ export const partsApi = {
   deleteItem: (fileId: number) => api.delete(`/parts/${fileId}`),
   getTree: (projectId: number, parentPath?: string) => 
     api.get(`/parts/tree/${projectId}`, { params: { parent_path: parentPath } }),
+  getSuggestions: (q: string, parentPath?: string) => 
+    api.get<string[]>(`/parts/suggest`, { params: { q, parent_path: parentPath } }).then(r => r.data),
 }
 
 // --- Character Search (Drafting Notes) ---

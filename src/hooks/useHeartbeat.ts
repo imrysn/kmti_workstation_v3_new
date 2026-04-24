@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { telemetryApi } from '../services/api';
+import { version as appVersion } from '../../package.json';
 
 export function useHeartbeat() {
   const location = useLocation();
@@ -26,7 +27,7 @@ export function useHeartbeat() {
 
         formData.append('module', module);
         formData.append('user_name', user.username);
-        formData.append('version', '3.6.7'); // Fixed for now, could be dynamic
+        formData.append('version', appVersion);
 
         await telemetryApi.heartbeat(formData);
       } catch (err) {

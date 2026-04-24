@@ -75,6 +75,10 @@ async def lifespan(app: FastAPI):
     if indexer:
         indexer.start()
     
+    # 3. Initialize Search Suggestions (Trie Engine)
+    from core.trie_engine import warm_up_trie
+    asyncio.create_task(warm_up_trie())
+    
     # Start the background polling task
     asyncio.create_task(sync_service.poll_github())
 

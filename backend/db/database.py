@@ -8,11 +8,18 @@ Never hardcode credentials here — see backend/.env.example for required keys.
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
 import os
+import sys
 
 try:
     from dotenv import load_dotenv
-    # Load .env from the backend directory (one level up from db/)
-    _env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+    # Load .env logic:
+    # 1. Check relative to the EXE (Production/Frozen mode)
+    # 2. Check relative to this file (Development/Script mode)
+    if getattr(sys, 'frozen', False):
+        _env_path = os.path.join(os.path.dirname(sys.executable), '.env')
+    else:
+        _env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+    
     load_dotenv(dotenv_path=_env_path)
 except ImportError:
     pass  # python-dotenv not installed; fall back to environment variables only

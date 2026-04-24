@@ -4,6 +4,7 @@ import * as AutoSizerModule from 'react-virtualized-auto-sizer'
 import { SearchIcon, FileIcon } from '../../components/FileIcons'
 import Breadcrumbs from '../../components/Breadcrumbs'
 import { IPurchasedPart, IProject } from '../../types'
+import { PredictiveInput } from './PredictiveInput'
 import { formatFileSize } from './utils'
 import { ResultSkeleton } from '../../components/Skeleton'
 
@@ -25,8 +26,7 @@ interface ResultsContentProps {
   selectedProject: IProject | null
   folderFilter: string
   setFolderFilter: (val: string) => void
-  setSelectedTreePath: (val: string) => void
-  setExpandedFolders: (updater: (prev: Set<string>) => Set<string>) => void
+  onNavigate: (path: string, isFolder: boolean) => void
   isSearching: boolean
   isLoadingMore: boolean
   resultCapped: boolean
@@ -81,6 +81,7 @@ const StandardResultRow = React.memo(({
     </div>
     <div className="findr-result-details">
       <div className="findr-result-name">{res.fileName}</div>
+      <div className="findr-result-path">{res.filePath.split('\\').join('/')}</div>
     </div>
     <div className="findr-result-meta">
       <div className="findr-result-size">{res.isFolder ? '--' : formatFileSize(res.size)}</div>
@@ -111,7 +112,7 @@ const VirtualResultRow = React.memo(({ index, style, data }: any) => {
 export const ResultsContent = React.memo(function ResultsContent({
   search, setSearch, caseSensitive, setCaseSensitive, cadOnly, setCadOnly,
   includeFolders, setIncludeFolders, recursiveSearch, setRecursiveSearch,
-  selectedProject, folderFilter, setFolderFilter, setSelectedTreePath, setExpandedFolders,
+  selectedProject, folderFilter, setFolderFilter, onNavigate,
   isSearching, isLoadingMore, resultCapped, resultTotal, searchResults, searchTime,
   focusedIndex, setFocusedIndex, resultsListRef, handleOpen,
   selectedResult, setSelectedResult, onLoadMore
@@ -123,15 +124,11 @@ export const ResultsContent = React.memo(function ResultsContent({
   const handleSelect = React.useCallback((res: IPurchasedPart, index: number) => {
     setFocusedIndex(index);
     if (res.isFolder) {
-      const normPath = res.filePath.split('\\').join('/');
-      setFolderFilter(normPath);
-      setSelectedTreePath(normPath);
-      setExpandedFolders(prev => new Set(prev).add(normPath));
-      setSelectedResult(null);
+      onNavigate(res.filePath.split('\\').join('/'), true);
     } else {
       setSelectedResult(res);
     }
-  }, [setFocusedIndex, setFolderFilter, setSelectedTreePath, setExpandedFolders, setSelectedResult]);
+  }, [setFocusedIndex, onNavigate, setSelectedResult]);
 
   const itemData = useMemo(() => ({
     results: searchResults,
@@ -178,16 +175,12 @@ export const ResultsContent = React.memo(function ResultsContent({
   return (
     <div className="findr-center">
       <div className="findr-search-container">
-        <div className="findr-search-input-wrapper">
-          <div className="findr-search-icon"><SearchIcon size={18} /></div>
-          <input
-            className="findr-search-input"
-            autoFocus
-            placeholder={`Search in ${selectedProject?.name || 'all projects'}...`}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
+        <PredictiveInput
+          placeholder={`Search in ${selectedProject?.name || 'all projects'}...`}
+          value={search}
+          onChange={setSearch}
+          parentPath={folderFilter || undefined}
+        />
 
         <div className="findr-search-filters">
           <label className="findr-filter"><input type="checkbox" checked={caseSensitive} onChange={e => setCaseSensitive(e.target.checked)} /> Case sensitive</label>
@@ -198,16 +191,12 @@ export const ResultsContent = React.memo(function ResultsContent({
       </div>
 
       <div className="findr-results-header">
-        {selectedProject && folderFilter && (
+        {(selectedProject || selectedResult) && (
           <Breadcrumbs
-            path={folderFilter}
-            rootPath={selectedProject.rootPath}
-            rootName={selectedProject.name}
-            onNavigate={(path) => {
-              setFolderFilter(path)
-              setSelectedTreePath(path)
-              setExpandedFolders(prev => new Set(prev).add(path))
-            }}
+            path={folderFilter || (selectedResult ? selectedResult.filePath.split('\\').join('/').split('/').slice(0, -1).join('/') : '')}
+            rootPath={selectedProject?.rootPath || ''}
+            rootName={selectedProject?.name || 'KMTI NAS'}
+            onNavigate={(path) => onNavigate(path, true)}
           />
         )}
         <span style={{ marginLeft: 'auto', opacity: 0.8 }}>
