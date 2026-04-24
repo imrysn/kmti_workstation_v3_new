@@ -98,12 +98,12 @@ const HeatTreatmentTable: React.FC<HeatTreatmentTableProps> = memo(({
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>No results found.</div>
         ) : (
           <div className="findr-results-scroll" ref={tableContainerRef} onKeyDown={handleKeyDown} tabIndex={0}>
-            <table className="char-table" style={{ minWidth: 600 }}>
+            <table className="char-table" style={{ width: '100%', tableLayout: 'fixed' }}>
               <thead>
                 <tr>
-                  <th style={{ minWidth: 200 }}>English</th>
-                  <th style={{ minWidth: 300 }}>Japanese</th>
-                  {canManage && <th style={{ textAlign: 'right', width: 100, minWidth: 100 }}>Actions</th>}
+                  <th style={{ width: '35%', minWidth: 100 }}>English</th>
+                  <th style={{ width: '45%', minWidth: 120 }}>Japanese</th>
+                  {canManage && <th style={{ textAlign: 'right', width: '20%', minWidth: 90 }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -115,11 +115,16 @@ const HeatTreatmentTable: React.FC<HeatTreatmentTableProps> = memo(({
                     <td
                       onClick={() => handleCopy(r.englishChar, `en-${i}`)}
                       style={{ cursor: 'pointer', position: 'relative' }}
-                      title="Click to copy English character"
+                      title="Click to copy"
                     >
                       <Highlight text={r.englishChar} query={query} />
                     </td>
-                    <td className="char-japanese">
+                    <td
+                      className="char-japanese"
+                      onClick={() => handleCopy(r.japaneseChar, `jp-${i}`)}
+                      style={{ cursor: 'pointer' }}
+                      title="Click to copy"
+                    >
                       <KMTISensei text={r.japaneseChar} query={query} />
                     </td>
                     {canManage && (

@@ -132,20 +132,20 @@
 /* Category Pills */
 .category-pills-container {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
   overflow-y: auto;
   flex: 1;
   padding-right: 4px;
-  align-content: flex-start;
 }
 
 .category-pill {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 16px;
-  border-radius: 100px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  max-height: 40px;
   font-size: 12px;
   font-weight: 600;
   border: 1px solid var(--border);
@@ -153,14 +153,13 @@
   color: var(--text-secondary);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  white-space: nowrap;
-  width: auto;
-  min-width: 70px;
-  flex: 0 1 auto;
+  width: 100%;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .category-pill.all-pill {
-  flex: 1 1 100%;
+  /* Inherits from .category-pill */
 }
 
 .category-pill:hover {
@@ -366,16 +365,10 @@
   }
 
   .heat-treatment-sidebar {
-    width: 260px;
+    width: 150px;
   }
 
   .sidebar-card {
     padding: 20px 12px;
-  }
-
-  .category-pill {
-    padding: 8px 12px;
-    font-size: 11px;
-    min-width: 60px;
   }
 }

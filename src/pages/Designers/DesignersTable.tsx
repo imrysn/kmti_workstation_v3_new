@@ -93,13 +93,13 @@ export default function DesignersTable({
           tabIndex={0}
           onKeyDown={handleKeyDown}
         >
-          <table className="char-table" style={{ minWidth: 700 }}>
+          <table className="char-table" style={{ width: '100%', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ width: '30%', minWidth: 150 }}>Client Name</th>
-                <th style={{ width: '30%', minWidth: 200 }}>Japanese Name</th>
-                <th style={{ width: '25%', minWidth: 200 }}>Email Address</th>
-                {canManage && <th style={{ width: '15%', minWidth: 100, textAlign: 'right' }}>Actions</th>}
+                <th style={{ width: '25%', minWidth: 100 }}>Client Name</th>
+                <th style={{ width: '30%', minWidth: 120 }}>Japanese Name</th>
+                <th style={{ width: '30%', minWidth: 120 }}>Email Address</th>
+                {canManage && <th style={{ width: '15%', minWidth: 90, textAlign: 'right' }}>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -111,7 +111,12 @@ export default function DesignersTable({
                   <td onClick={() => handleCopy(row.englishName)}>
                     <Highlight text={row.englishName} query={query} />
                   </td>
-                  <td className="char-japanese">
+                  <td
+                    className="char-japanese"
+                    onClick={() => handleCopy(row.japaneseName)}
+                    style={{ cursor: 'pointer' }}
+                    title="Click to copy"
+                  >
                     <KMTISensei text={row.japaneseName} query={query} />
                   </td>
                   <td onClick={() => handleCopy(row.email)} className="designer-email">
