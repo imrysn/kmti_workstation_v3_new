@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import './KMTISensei.css';
 
 interface KMTISenseiProps {
@@ -11,15 +11,15 @@ interface KMTISenseiProps {
 }
 
 /**
- * KMTI Sensei: A high-fidelity language learning component for CAD engineers.
- * Handles search highlighting AND real-time karaoke-style TTS synchronization.
+ * KMTI Sensei: Browser Web Speech API TTS with karaoke-style sync.
+ * Sanitizes formatting symbols, picks best available Japanese voice.
  */
 export const KMTISensei: React.FC<KMTISenseiProps> = ({
   text,
   query = '',
   lang = 'ja-JP',
-  rate = 0.9,
-  pitch = 1.0,
+  rate = 1.2,
+  pitch = 1.25,
   className = ''
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -27,15 +27,23 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
   const [activeCharLength, setActiveCharLength] = useState(0);
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
 
-  // Find ja-JP voice on mount
+  // Load best available Japanese voice
   useEffect(() => {
-    const updateVoices = () => {
+    const loadVoice = () => {
       const voices = window.speechSynthesis.getVoices();
-      const jaVoice = voices.find(v => v.lang.includes('ja-JP') || v.lang.includes('ja_JP'));
-      if (jaVoice) setVoice(jaVoice);
+      const jaVoices = voices.filter(v => v.lang.includes('ja-JP') || v.lang.includes('ja_JP'));
+      if (jaVoices.length > 0) {
+        const best = jaVoices.find(v =>
+          v.name.includes('Google') ||
+          v.name.includes('Ayumi') ||
+          v.name.includes('Kyoko') ||
+          v.name.includes('Haruka')
+        ) || jaVoices[0];
+        setVoice(best);
+      }
     };
-    updateVoices();
-    window.speechSynthesis.onvoiceschanged = updateVoices;
+    loadVoice();
+    window.speechSynthesis.onvoiceschanged = loadVoice;
   }, []);
 
   const speak = (e: React.MouseEvent) => {
@@ -45,10 +53,14 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
     if (isSpeaking) {
       setIsSpeaking(false);
       setActiveCharIndex(-1);
+      setActiveCharLength(0);
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Strip formatting symbols — replace with space to preserve karaoke index alignment
+    const spokenText = text.replace(/[*※]/g, ' ');
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+
     if (voice) utterance.voice = voice;
     utterance.lang = lang;
     utterance.rate = rate;
@@ -65,48 +77,40 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
       setActiveCharIndex(-1);
       setActiveCharLength(0);
     };
-
-    // THE KARAOKE BRIDGE: Track character boundaries using engine-reported length
+    // Karaoke sync: highlight the word currently being spoken
     utterance.onboundary = (event) => {
       if (event.name === 'word' || event.name === 'sentence') {
         setActiveCharIndex(event.charIndex);
-        setActiveCharLength(event.charLength || 1); // Default to 1 if engine doesn't report length
+        setActiveCharLength(event.charLength || 1);
       }
     };
 
     window.speechSynthesis.speak(utterance);
   };
 
-  // Logic to render text with BOTH search highlights and karaoke highlights
+  // Render text with karaoke + search highlights
   const renderedContent = useMemo(() => {
     if (!text) return null;
 
-    // 1. If not speaking and no search query, just return text
     if (!isSpeaking && !query.trim()) {
       return <span>{text}</span>;
     }
 
-    // 2. Prepare segments for search highlighting
     const escapedQuery = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const searchRegex = escapedQuery ? new RegExp(`(${escapedQuery})`, 'gi') : null;
 
     return (
       <span className="sensei-text-container">
         {text.split('').map((char, index) => {
-          // THE PRECISION SYNC: Highlight exactly what the engine reports
-          const isKaraokeActive = isSpeaking && index >= activeCharIndex && index < activeCharIndex + activeCharLength;
-
-          // Is this character part of the search query?
-          // (Simplified search check for individual chars)
+          const isKaraokeActive =
+            isSpeaking &&
+            index >= activeCharIndex &&
+            index < activeCharIndex + activeCharLength;
           const isSearchMatch = searchRegex && char.match(searchRegex);
-
           return (
             <span
               key={index}
-              className={`sensei-char 
-                ${isKaraokeActive ? 'karaoke-glow' : ''} 
-                ${isSearchMatch ? 'search-match' : ''}
-              `}
+              className={`sensei-char ${isKaraokeActive ? 'karaoke-glow' : ''} ${isSearchMatch ? 'search-match' : ''}`}
             >
               {char}
             </span>
@@ -114,7 +118,7 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
         })}
       </span>
     );
-  }, [text, query, isSpeaking, activeCharIndex]);
+  }, [text, query, isSpeaking, activeCharIndex, activeCharLength]);
 
   return (
     <div className={`kmti-sensei-cell ${isSpeaking ? 'active' : ''} ${className}`}>
@@ -125,7 +129,7 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
       <button
         className={`sensei-audio-btn ${isSpeaking ? 'speaking' : ''}`}
         onClick={speak}
-        title={isSpeaking ? "Stop Speaking" : "Speak"}
+        title={isSpeaking ? 'Stop Speaking' : 'Speak'}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           {isSpeaking ? (

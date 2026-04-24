@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { quotationApi } from '../../services/api'
+import { useAuth } from '../../context/AuthContext'
 import QuotationLibraryModal from './QuotationLibraryModal'
 import './QuotationEntryModal.css'
 
@@ -10,6 +11,7 @@ interface ActiveSession {
   userCount: number
   users: Array<{ name: string; color: string }>
   hasPassword?: boolean
+  workstation?: string
 }
 
 interface NewRoomForm {
@@ -33,6 +35,8 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
   const [joiningSession, setJoiningSession] = useState<ActiveSession | null>(null)
   const [joinPassword, setJoinPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [myWorkstation, setMyWorkstation] = useState<string | null>(null)
+  const { hasRole } = useAuth()
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -53,6 +57,14 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
   useEffect(() => {
     fetchSessions()
     const timer = setInterval(() => fetchSessions(true), 10000)
+
+    // Identify local workstation for bypass logic
+    if ((window as any).electronAPI?.getWorkstationInfo) {
+      (window as any).electronAPI.getWorkstationInfo().then((info: any) => {
+        if (info?.computerName) setMyWorkstation(info.computerName)
+      })
+    }
+
     return () => clearInterval(timer)
   }, [])
 
@@ -62,7 +74,11 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
   }
 
   const handleJoinClick = (s: ActiveSession) => {
-    if (s.hasPassword) {
+    // Ownership Bypass: Allow entry without password if owner workstation or Admin
+    const isOwner = myWorkstation && s.workstation === myWorkstation
+    const isAdmin = hasRole('admin', 'it')
+
+    if (s.hasPassword && !isOwner && !isAdmin) {
       setJoiningSession(s)
     } else {
       onJoin(s.id)
@@ -278,7 +294,12 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
           onClose={() => setIsLibraryOpen(false)}
           onSelect={(q) => {
             setIsLibraryOpen(false)
-            if (q.hasPassword) {
+            
+            // Ownership Bypass for Library Selection
+            const isOwner = myWorkstation && q.workstation === myWorkstation
+            const isAdmin = hasRole('admin', 'it')
+
+            if (q.hasPassword && !isOwner && !isAdmin) {
               // Show password prompt — reuse the same joiningSession flow
               setJoiningSession({ 
                 id: q.id, 
@@ -286,7 +307,8 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                 displayName: q.displayName || q.quotationNo, 
                 userCount: 0, 
                 users: [],
-                hasPassword: true
+                hasPassword: true,
+                workstation: q.workstation
               })
               setJoinPassword('')
             } else {

@@ -11,7 +11,6 @@ from pydantic import BaseModel
 from groq import AsyncGroq
 from datetime import date, datetime
 from db.database import get_db
-from models.part import CadFileIndex, Project
 from models.librarian_usage import LibrarianUsage
 from models.librarian_chat import LibrarianChatMessage, LibrarianSession
 from models.librarian_knowledge import LibrarianLearnedFact

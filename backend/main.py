@@ -11,11 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
 from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations
-import asyncio
 import time
 import logging
 import os
-import sys
 from core.github_sync import sync_service
 from fastapi.staticfiles import StaticFiles
 

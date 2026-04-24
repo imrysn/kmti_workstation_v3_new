@@ -26,6 +26,8 @@ from sqlalchemy.orm import selectinload
 import socketio
 from db.database import get_db
 from models.quotation import Quotation, QuotationHistory
+from models.user import User, UserRole
+from core.auth import get_current_user
 
 # ─── Socket.IO Server ─────────────────────────────────────────────────────────
 # cors_allowed_origins MUST be the string "*" (not a list) — the string form
@@ -112,7 +114,15 @@ async def join_doc(sid: str, data: dict):
             await sio.emit("join_error", {"message": "Quotation not found."}, to=sid)
             return
         
-        if quot.password and quot.password != password:
+        # ── Password / Ownership Bypass (Method 3) ──────────────────
+        # Entry is allowed IF:
+        # 1. No password is set
+        # 2. OR the provided password is correct
+        # 3. OR the user is the original owner (recognized by workstation name)
+        
+        is_owner = (user_name and quot.workstation == user_name)
+        
+        if quot.password and quot.password != password and not is_owner:
             await sio.emit("join_error", {"message": "Invalid password."}, to=sid)
             return
 
@@ -345,7 +355,8 @@ async def list_quotations(
     designer: Optional[str] = None,
     limit: int = 100, 
     offset: int = 0,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """List quotations from DB with filtering."""
     stmt = select(Quotation).order_by(desc(Quotation.updated_at))
@@ -362,6 +373,8 @@ async def list_quotations(
     result = await db.execute(stmt)
     items = result.scalars().all()
     
+    is_admin = current_user.role in [UserRole.admin, UserRole.it]
+    
     return {
         "quotations": [
             {
@@ -374,6 +387,7 @@ async def list_quotations(
                 "modifiedAt": i.updated_at.isoformat() + "Z" if i.updated_at else None,
                 "isActive": i.is_active,
                 "hasPassword": bool(i.password),
+                "password": i.password if is_admin else None, # Elevated view for recovery
                 "displayName": i.display_name or i.quotation_no
             } for i in items
         ]
@@ -402,7 +416,8 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
             "displayName": i.display_name or i.quotation_no,
             "userCount": len(users),
             "users": list(users.values()),
-            "hasPassword": bool(i.password)
+            "hasPassword": bool(i.password),
+            "workstation": i.workstation
         })
     
     return {"sessions": sessions}
@@ -513,11 +528,41 @@ async def restore_history(q_id: int, h_id: int, db: AsyncSession = Depends(get_d
     return json.loads(history.data)
 
 @router.delete("/{q_id}")
-async def delete_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
-    # Delete associated history first to satisfy foreign key constraints
-    await db.execute(delete(QuotationHistory).where(QuotationHistory.quotation_id == q_id))
+async def delete_quotation(
+    q_id: int, 
+    workstation: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Permanently delete a quotation and its history.
     
-    # Delete the quotation record
+    Authorization:
+    - Admin/IT roles can delete any record.
+    - Regular users can only delete records owned by their current workstation.
+    """
+    # 1. Fetch quotation to check ownership
+    stmt = select(Quotation).where(Quotation.id == q_id)
+    res = await db.execute(stmt)
+    quot = res.scalar_one_or_none()
+    
+    if not quot:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quotation not found")
+        
+    # 2. Authorization Check
+    is_admin = current_user.role in [UserRole.admin, UserRole.it]
+    # Match workstation hostname for ownership (Shared Account scenario)
+    is_owner = workstation and quot.workstation == workstation
+
+    if not is_admin and not is_owner:
+        owner_label = quot.workstation if quot.workstation else "Legacy/Unknown"
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Deletion Denied: This record belongs to workstation '{owner_label}'. Only the owner or an administrator can delete it."
+        )
+
+    # 3. Perform Deletion (with history cleanup)
+    await db.execute(delete(QuotationHistory).where(QuotationHistory.quotation_id == q_id))
     await db.execute(delete(Quotation).where(Quotation.id == q_id))
     await db.commit()
+    
     return {"success": True}

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { broadcastApi, SERVER_BASE } from '../services/api'
+import { broadcastApi } from '../services/api'
 import megaphoneIcon from '../assets/megaphone-icon.png'
-import { io } from 'socket.io-client'
 import { useAuth } from '../context/AuthContext'
 import './BroadcastOverlay.css'
 
@@ -123,35 +122,29 @@ const BroadcastOverlay: React.FC = () => {
     fetchBroadcasts()
     const interval = setInterval(fetchBroadcasts, 8000)
     
-    // Only admins/IT need to listen for acknowledgment alerts
-    let socket: any = null
-    if (hasRole('admin', 'it')) {
-      socket = io(SERVER_BASE, {
-        path: '/socket.io',
-        transports: ['websocket', 'polling']
-      })
-
-      socket.on('broadcast_acknowledged', (data: any) => {
-        const newAck = {
-          id: Math.random().toString(36).substr(2, 9),
-          workstation: data.workstation,
-          username: data.username,
-          time: data.time
-        }
-        
-        setRecentAcks(prev => [newAck, ...prev].slice(0, 3))
-        playAckAlert()
-        
-        // Auto-remove after 6 seconds
-        setTimeout(() => {
-          setRecentAcks(prev => prev.filter(a => a.id !== newAck.id))
-        }, 6000)
-      })
+    // Listen for real-time ack events dispatched by BroadcastFAB's socket (admin/IT only)
+    // This avoids opening a second duplicate socket connection from this component
+    const handleBroadcastUpdate = (e: Event) => {
+      if (!hasRole('admin', 'it')) return
+      const data = (e as CustomEvent).detail
+      const newAck: AckNotification = {
+        id: Math.random().toString(36).substr(2, 9),
+        workstation: data.workstation,
+        username: data.username,
+        time: data.time
+      }
+      setRecentAcks(prev => [newAck, ...prev].slice(0, 3))
+      playAckAlert()
+      setTimeout(() => {
+        setRecentAcks(prev => prev.filter(a => a.id !== newAck.id))
+      }, 6000)
     }
+
+    window.addEventListener('kmti:broadcast-update', handleBroadcastUpdate)
 
     return () => {
       clearInterval(interval)
-      if (socket) socket.disconnect()
+      window.removeEventListener('kmti:broadcast-update', handleBroadcastUpdate)
     }
   }, [fetchBroadcasts, hasRole])
 

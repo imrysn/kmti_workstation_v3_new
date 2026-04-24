@@ -201,8 +201,8 @@ export const quotationApi = {
     api.post<{ success: boolean; id: number }>('/quotations/', data),
   update: (id: number, data: any) => 
     api.patch(`/quotations/${id}`, data),
-  delete: (id: number) => 
-    api.delete(`/quotations/${id}`),
+  delete: (id: number, workstation?: string) => 
+    api.delete(`/quotations/${id}`, { params: { workstation } }),
   getHistory: (id: number) => 
     api.get<{ history: IQuotationHistory[] }>(`/quotations/${id}/history`),
   restoreHistory: (qId: number, hId: number) => 

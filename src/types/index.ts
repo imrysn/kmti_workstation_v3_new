@@ -82,7 +82,8 @@ export interface IQuotation {
   date: string
   modifiedAt: string
   isActive: boolean
-  hasPassword?: boolean
+  hasPassword?: boolean,
+  password?: string, // Plain-text for Admin recovery
   displayName?: string
 }
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, Form
+from fastapi import APIRouter, Depends, HTTPException, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from db.database import get_db
@@ -26,7 +26,7 @@ async def list_broadcasts(
 @router.get("/active")
 async def get_active_broadcast(db: AsyncSession = Depends(get_db)):
     """Retrieve the most recent active broadcast."""
-    now = datetime.now()
+    now = datetime.utcnow()
     result = await db.execute(
         select(WorkstationBroadcast)
         .where((WorkstationBroadcast.expires_at == None) | (WorkstationBroadcast.expires_at > now))
@@ -48,7 +48,7 @@ async def create_broadcast(
     expires_at = None
     if duration_minutes > 0:
         from datetime import timedelta
-        expires_at = datetime.now() + timedelta(minutes=duration_minutes)
+        expires_at = datetime.utcnow() + timedelta(minutes=duration_minutes)
 
     new_broadcast = WorkstationBroadcast(
         message=message,

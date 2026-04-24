@@ -38,6 +38,8 @@ const BroadcastFAB: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const dragStartPos = useRef<{ x: number, y: number }>({ x: 0, y: 0 })
   const hasMovedRef = useRef(false)
+  // Ref mirror of position — used by drag handler to avoid stale closure re-registrations
+  const positionRef = useRef<Position>(position)
 
   const playAckAlert = () => {
     try {
@@ -63,38 +65,28 @@ const BroadcastFAB: React.FC = () => {
     } catch (e) {}
   }
 
-  // Socket listener for real-time acknowledgment alerts
+  // Socket listener: admin/IT only — prevents orphaned connections for regular users
   useEffect(() => {
-    console.log('[BROADCAST] Connecting to real-time alert engine...')
+    if (!hasRole('admin', 'it')) return
+
     const socket = io(SERVER_BASE, {
       path: '/socket.io',
-      // polling-first: Initial HTTP handshake bypasses WebSocket CORS checks
-      // then automatically upgrades to WebSocket after session is established
       transports: ['polling', 'websocket'],
       reconnectionAttempts: 10,
     })
 
-    socket.on('connect', () => {
-      console.log('[BROADCAST] Alert engine linked.')
-    })
-
     socket.on('broadcast_acknowledged', (data: any) => {
       playAckAlert()
-      // Refresh history if open to show newest acks in real-time
-      // Note: We use the *current* state by checking the condition inside the event handler
-      // Or we can rely on the server broadcast to trigger a fetch
       window.dispatchEvent(new CustomEvent('kmti:broadcast-update', { detail: data }))
       notify(`${data.workstation} acknowledged the broadcast.`, 'success')
     })
 
     socket.on('connect_error', (err) => {
-      console.error('[BROADCAST] Link Error:', err.message)
+      console.error('[BROADCAST] Socket error:', err.message)
     })
 
-    return () => {
-      socket.disconnect()
-    }
-  }, []) // Empty dependency array = only connect once on mount
+    return () => { socket.disconnect() }
+  }, []) // Intentionally omits hasRole — stable function, only run once on mount
 
   // Secondary effect to refresh history when event fires
   useEffect(() => {
@@ -115,6 +107,9 @@ const BroadcastFAB: React.FC = () => {
     return () => window.removeEventListener('kmti:broadcast-update', handleUpdate)
   }, [isPanelOpen, activeView, ackingId])
 
+
+  // Keep positionRef in sync with rendered position state for drag handler
+  useEffect(() => { positionRef.current = position }, [position])
 
   // Handle window resizing
   useEffect(() => {
@@ -172,8 +167,9 @@ const BroadcastFAB: React.FC = () => {
     const handleMouseMove = (e: MouseEvent) => {
       if (dragStartPos.current.x === 0 && dragStartPos.current.y === 0) return
 
-      const deltaX = Math.abs(e.clientX - (dragStartPos.current.x + position.x))
-      const deltaY = Math.abs(e.clientY - (dragStartPos.current.y + position.y))
+      // Use positionRef (not position state) to avoid re-registering this listener on every drag tick
+      const deltaX = Math.abs(e.clientX - (dragStartPos.current.x + positionRef.current.x))
+      const deltaY = Math.abs(e.clientY - (dragStartPos.current.y + positionRef.current.y))
 
       if (!hasMovedRef.current && (deltaX > 8 || deltaY > 8)) {
         hasMovedRef.current = true
@@ -182,7 +178,7 @@ const BroadcastFAB: React.FC = () => {
 
       if (hasMovedRef.current) {
         const newX = Math.min(Math.max(20, e.clientX - dragStartPos.current.x), window.innerWidth - 60)
-        const newY = Math.min(Math.max(40, e.clientY - dragStartPos.current.y), window.innerHeight - 60)
+        const newY = Math.min(Math.max(20, e.clientY - dragStartPos.current.y), window.innerHeight - 60)
         setPosition({ x: newX, y: newY })
       }
     }
@@ -199,7 +195,7 @@ const BroadcastFAB: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove)
       window.removeEventListener('mouseup', handleMouseUp)
     }
-  }, [position])
+  }, []) // positionRef is a ref — no stale closure, no re-registration on every drag tick
 
   // Click outside to close handle
   useEffect(() => {

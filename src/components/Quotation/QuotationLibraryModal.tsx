@@ -23,7 +23,7 @@ interface Props {
  */
 export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const { hasRole } = useAuth()
-  const { notify, confirm } = useModal()
+  const { notify, confirm, alert } = useModal()
 
   // ── State ───────────────────────────────────────────────────────
   const [quotations, setQuotations] = useState<IQuotation[]>([])
@@ -74,7 +74,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
       `Are you sure you want to PERMANENTLY delete quotation ${q.quotationNo}?`,
       async () => {
         try {
-          await quotationApi.delete(q.id)
+          await quotationApi.delete(q.id, myWorkstation || undefined)
           notify?.('Quotation record purged.', 'success')
           fetchLibrary()
         } catch (err) {
@@ -85,6 +85,23 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
       'danger',
       'Confirm Deletion',
       'Delete Record'
+    )
+  }
+
+  const handleReveal = (q: IQuotation) => {
+    const pwd = q.password || 'Unknown'
+    const isIT = hasRole('it')
+
+    confirm(
+      `Password for ${q.quotationNo} is: [ ${pwd} ]`,
+      () => {
+        navigator.clipboard.writeText(pwd)
+        notify?.('Password copied to clipboard.', 'success')
+      },
+      undefined,
+      'info',
+      isIT ? 'IT OVERRIDE' : 'Password Recovery',
+      'Copy to Clipboard'
     )
   }
 
@@ -205,6 +222,21 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
                       >
                         {q.isActive ? 'Join' : 'Open'}
                       </button>
+
+                      {hasRole('admin', 'it') && q.hasPassword && (
+                        <button
+                          className="btn-reveal-pwd"
+                          onClick={() => handleReveal(q)}
+                          title="Show password"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            <circle cx="12" cy="16" r="1" />
+                          </svg>
+                        </button>
+                      )}
+
                       <button
                         className="btn-delete-minimal"
                         onClick={(e) => handleDelete(e, q)}
