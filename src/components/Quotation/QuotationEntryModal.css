@@ -31,7 +31,7 @@
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-top: 4px solid var(--accent);
+  border-top: 2px solid var(--accent);
   border-radius: 20px;
   box-shadow:
     0 20px 50px rgba(0, 0, 0, 0.3),
@@ -299,45 +299,52 @@ body.dark-theme .quot-session-item:hover {
 
 /* ── Footer action strip ────────────────────────────────────────── */
 .quot-entry-footer {
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-  padding: 12px;
-  display: flex;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.2);
+  border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  background: rgba(15, 23, 42, 0.04) !important;
+  /* Muted slate background */
 }
 
 body.dark-theme .quot-entry-footer {
-  border-top-color: rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-top-color: rgba(255, 255, 255, 0.05) !important;
 }
 
 .quot-footer-btn {
-  flex: 1;
-  height: 48px;
-  border-radius: 12px;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
-  /* Align with secondary buttons */
+  flex: 1 !important;
+  height: 40px !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  color: #475569 !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  transition: all 0.25s ease !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+body.dark-theme .quot-footer-btn {
+  color: #94a3b8 !important;
 }
 
 .quot-footer-btn:hover {
-  color: var(--accent);
+  color: var(--accent) !important;
+  transform: translateY(-1px) !important;
+  background: transparent !important;
 }
 
 .quot-footer-divider {
   width: 1px;
-  height: 24px;
+  height: 20px;
   background: rgba(0, 0, 0, 0.1);
-  margin: 0 4px;
+  margin: 0 2px;
 }
 
 body.dark-theme .quot-footer-divider {
@@ -476,23 +483,32 @@ body.dark-theme .quot-entry-form .form-input {
   color: var(--accent);
 }
 
-.btn-block {
-  width: 100%;
-  height: 48px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 14px;
-  margin-top: 10px;
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  transition: all 0.2s ease;
+.quot-entry-form .btn-block {
+  display: flex !important;
+  width: auto !important;
+  min-width: 160px !important;
+  height: 40px !important;
+  margin: 32px auto 0 !important;
+  border-radius: 0 !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  letter-spacing: -0.01em !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  color: #475569 !important;
+  /* Professional slate color from design */
+  border: none !important;
+  transition: all 0.25s ease !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
 }
 
-.btn-block:hover {
-  background: rgba(var(--accent-rgb, 2, 132, 199), 0.05);
-  color: var(--accent);
-  border-color: var(--accent);
+.quot-entry-form .btn-block:hover {
+  background: transparent !important;
+  color: var(--accent) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: none !important;
 }
 
 /* ── Utilities ───────────────────────────────────────────────────── */

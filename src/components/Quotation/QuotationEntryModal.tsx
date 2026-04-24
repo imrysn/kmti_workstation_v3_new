@@ -137,7 +137,12 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                     className="form-input"
                   />
                 </div>
-                <button type="submit" className="btn btn-primary btn-block">Unlock & Join</button>
+                <button type="submit" className="btn btn-primary btn-block">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
+                  </svg>
+                  Unlock & Join
+                </button>
               </form>
             </div>
           ) : isCreating ? (
@@ -189,7 +194,12 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
                   </div>
                 </div>
 
-                <button type="submit" className="btn btn-primary btn-block">Initialize Workspace</button>
+                <button type="submit" className="btn btn-primary btn-block">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Initialize Workspace
+                </button>
               </form>
             </div>
           ) : (

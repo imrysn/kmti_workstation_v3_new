@@ -22,6 +22,17 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.0',
+    date: 'April 24, 2026',
+    entries: [
+      { type: 'new', text: 'Quotation Password Recovery — Admin can now securely reveal workspace passwords if owners forgot it.' },
+      { type: 'new', text: 'Text-to-Speech — You can now listen to Japanese text using "listen" button.' },
+      { type: 'new', text: 'Predictive Input & Filter Pill on search (findr) — Searching query will be easier and faster.' },
+      { type: 'improvement', text: 'Workstation Ownership Bypass — Original workspace creators can now re-enter their own password-protected workstation.' },
+      { type: 'improvement', text: 'Secure Quotation — Non-owners can\'t delete quotations.' },
+    ],
+  },
+  {
     version: '3.6.9',
     date: 'April 23, 2026',
     entries: [

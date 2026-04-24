@@ -25,6 +25,19 @@ const BroadcastOverlay: React.FC = () => {
   const [exitingId, setExitingId] = useState<number | null>(null)
   const lastAlertedId = useRef<number | null>(null)
 
+  const speakBroadcast = (message: string) => {
+    if (!window.speechSynthesis) return
+    
+    // Safety: don't shout in early development, but ensure voice is clear
+    const utterance = new SpeechSynthesisUtterance(message)
+    utterance.volume = 0.8
+    utterance.rate = 1.0
+    
+    // Cancel any current speech (don't stack alerts)
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(utterance)
+  }
+
   const playAckAlert = () => {
     try {
       const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext
@@ -108,6 +121,9 @@ const BroadcastOverlay: React.FC = () => {
         lastAlertedId.current = currentId
         playAlert(data.severity)
         triggerFlash()
+        
+        // Native High-Fidelity TTS
+        speakBroadcast(data.message)
       }
 
       setBroadcasts([data]) 
