@@ -733,24 +733,32 @@
 }
 
 .billing-header .company-address-visual {
-  font-size: 13px;
-  /* Address font size - larger */
+  font-size: 11px;
+  /* Address font size - matches template */
   line-height: 1.4;
   color: #000;
-  margin-bottom: 15px;
-  /* 15px space below address */
+  margin-bottom: 4px;
+  /* Small gap before VAT line */
   text-align: center;
   font-weight: normal;
-  /* Not bold */
   max-width: 100%;
-  /* Maximum width for address block */
+}
+
+.billing-header .company-vat-visual {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #000;
+  margin-bottom: 12px;
+  /* Gap before BILLING STATEMENT title */
+  text-align: center;
+  font-weight: normal;
 }
 
 .billing-header .quotation-title-visual {
-  font-size: 18px;
-  /* "BILLING STATEMENT" font size */
-  font-weight: normal;
-  /* Not bold */
+  font-size: 20px;
+  /* Larger, matches 'BILLING STATEMENT' template style */
+  font-weight: bold;
+  /* Bold in new template */
   margin-top: 0;
   color: #000;
 }
@@ -1419,12 +1427,4 @@
     min-height: 100px !important;
     /* Balanced room for table clearance */
   }
-}
-
-section-visual,
-.quotation-visual-exact.mode-billing.task-count-12 .contact-section-visual,
-.quotation-visual-exact.mode-billing.task-count-13 .contact-section-visual,
-.quotation-visual-exact.mode-billing.task-count-14 .contact-section-visual {
-  margin-top: -10px !important;
-  /* Pull up client name */
 }

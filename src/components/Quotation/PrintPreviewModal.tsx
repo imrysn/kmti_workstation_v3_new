@@ -5,6 +5,7 @@ import type {
 import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead, getUnitPageCount } from '../../utils/quotation'
 import { LAYOUT } from './constants'
 import PrintPage from './components/PrintPage'
+import { exportToExcel } from './utils/excelExport'
 
 import './styles/PrintPreviewModal.css'
 import './styles/VisualLayout.css'
@@ -64,7 +65,7 @@ function computePages(
   // Case 2: Multi-page logic
   const pages: PageSlice[] = []
   let i = 0
-  
+
   while (i < mainTasks.length) {
     const remainingCount = mainTasks.length - i
     const isLastPage = remainingCount <= finalLimit
@@ -86,8 +87,8 @@ function computePages(
     }
   }
 
-  return pages.length === 0 
-    ? [{ tasks: [], totals: [], startIndex: 0 }] 
+  return pages.length === 0
+    ? [{ tasks: [], totals: [], startIndex: 0 }]
     : pages
 }
 
@@ -251,7 +252,7 @@ const PrintPreviewModal = memo(({
       const docNo = printMode === 'billing'
         ? (billingDetails.invoiceNo || quotationDetails.quotationNo || 'Draft')
         : (quotationDetails.quotationNo || 'Draft')
-      const defaultName = `KMTI_${docType}_${docNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
+      const defaultName = `${docType}_${docNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
 
       styleEl = document.createElement('style')
       styleEl.id = '__kmti-pdf-print-override'
@@ -259,28 +260,51 @@ const PrintPreviewModal = memo(({
       document.head.appendChild(styleEl)
       await new Promise(r => setTimeout(r, 300))
 
-      const pdfResult = await el.printToPDF({
-        printBackground: true, preferCSSPageSize: false,
-        pageSize: 'A4', landscape: false, margins: { marginType: 'none' },
+      const savePath = await el.showSaveDialog({
+        title: 'Save PDF',
+        defaultPath: defaultName,
+        filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
       })
-      if (!pdfResult.success || !pdfResult.data) throw new Error(pdfResult.error || 'Failed to generate PDF')
 
-      const saveResult = await el.showSaveDialog({
-        title: `Save ${docType}`, defaultPath: defaultName,
-        filters: [{ name: 'PDF Document', extensions: ['pdf'] }],
+      if (!savePath) return
+
+      const pdfData = await el.printToPDF({
+        printBackground: true,
+        pageSize: 'A4',
+        landscape: false,
+        margins: { marginType: 'none' }
       })
-      if (saveResult.canceled || !saveResult.filePath) return
 
-      const writeResult = await el.writeFile(saveResult.filePath, pdfResult.data)
-      if (!writeResult.success) throw new Error(writeResult.error || 'Failed to write file')
-    } catch (err: any) {
-      console.error('PDF Download failed:', err)
-      alert(`Error generating PDF: ${err.message}`)
+      await el.writeFile(savePath, pdfData)
+    } catch (err) {
+      console.error('PDF export failed:', err)
     } finally {
       styleEl?.remove()
       setIsProcessing(false)
     }
-  }, [printMode, quotationDetails, billingDetails])
+  }, [printMode, billingDetails, quotationDetails])
+
+  const handleExportExcel = useCallback(async () => {
+    setIsProcessing(true)
+    try {
+      await exportToExcel({
+        mode: printMode,
+        quotNo: quotationDetails.quotationNo || 'Draft',
+        clientInfo,
+        quotationDetails,
+        billingDetails,
+        tasks,
+        baseRates,
+        manualOverrides,
+        signatures,
+      })
+    } catch (err) {
+      console.error('Excel export failed:', err)
+      alert('Failed to export Excel. Please check if the backend is running.')
+    } finally {
+      setIsProcessing(false)
+    }
+  }, [printMode, quotationDetails, clientInfo, billingDetails, tasks, baseRates, manualOverrides, signatures])
 
   // ── Zoom controls ──────────────────────────────────────────────
   const ZOOM_LEVELS = useMemo(() => [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3], [])
@@ -370,13 +394,22 @@ const PrintPreviewModal = memo(({
               {isProcessing ? 'Processing…' : 'Print'}
             </button>
 
-            <button id="ppm-btn-pdf" className="ppm-action-btn export" onClick={handleDownloadPDF} disabled={isProcessing}>
+            <button id="ppm-btn-pdf" className="ppm-action-btn export-pdf" onClick={handleDownloadPDF} disabled={isProcessing}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
               </svg>
-              {isProcessing ? 'Generating…' : 'Download PDF'}
+              PDF
+            </button>
+
+            <button id="ppm-btn-excel" className="ppm-action-btn export-excel" onClick={handleExportExcel} disabled={isProcessing}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <line x1="3" y1="9" x2="21" y2="9" />
+                <line x1="9" y1="21" x2="9" y2="9" />
+              </svg>
+              Excel
             </button>
 
             <button id="ppm-btn-close" className="ppm-close-btn" onClick={onClose}>

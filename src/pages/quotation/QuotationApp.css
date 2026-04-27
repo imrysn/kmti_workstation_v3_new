@@ -176,6 +176,34 @@
   background: var(--quot-primary-deep);
 }
 
+/* ── Themed Toolbar Buttons ────────────────────────────────── */
+.quot-app-root .btn-save-themed {
+  background: transparent !important;
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+.quot-app-root .btn-save-themed:hover {
+  background: var(--accent-subtle) !important;
+}
+
+.quot-app-root .btn-pdf-themed {
+  background: transparent !important;
+  color: #ef4444 !important;
+  border-color: #ef4444 !important;
+}
+.quot-app-root .btn-pdf-themed:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.quot-app-root .btn-excel-themed {
+  background: transparent !important;
+  color: #10b981 !important;
+  border-color: #10b981 !important;
+}
+.quot-app-root .btn-excel-themed:hover {
+  background: rgba(16, 185, 129, 0.1) !important;
+}
+
 .quot-app-root .btn-ghost {
   background: var(--quot-bg-card);
   border: 1px solid var(--quot-border);

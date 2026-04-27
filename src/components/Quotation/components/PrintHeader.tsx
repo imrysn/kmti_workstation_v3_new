@@ -22,12 +22,16 @@ const PrintHeader = memo(({ printMode, companyInfo, quotationDetails, isSecondPa
             : <><span>KUSAKABE & MAENO</span><br /><span>TECH., INC.</span></>}
         </div>
         {printMode === 'billing' && (
-          <div className="company-address-visual">
-            {[companyInfo.address, companyInfo.city, companyInfo.location]
-              .filter(Boolean)
-              .join(', ')}<br />
-            Vat Reg. TIN: 008-883-390-000
-          </div>
+          <>
+            <div className="company-address-visual">
+              Unit 2-B Building B, Vital Industrial Properties Inc.,
+              First Cavite Industrial Estates, P-CIB PEZA Zone,
+              Dasmarinas City, Cavite Philippines
+            </div>
+            <div className="company-vat-visual">
+              Vat Reg. TIN: 008-883-390-000
+            </div>
+          </>
         )}
         <div className="quotation-title-visual">
           {printMode === 'billing' ? 'BILLING STATEMENT' : 'Quotation'}

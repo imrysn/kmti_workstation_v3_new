@@ -39,7 +39,6 @@ import { CollaborationBar } from './CollaborationBar'
 import { HistorySidebar } from './HistorySidebar'
 import { ActivitySidebar } from './ActivitySidebar'
 import QuotationLibraryModal from './QuotationLibraryModal'
-import { exportToExcel } from './utils/excelExport'
 import '../../pages/quotation/QuotationApp.css'
 import '../../pages/Quotation.css'
 
@@ -565,17 +564,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitChat
   ])
 
-  const handleExportExcel = () => {
-    exportToExcel({
-      quotNo,
-      clientInfo: effClient,
-      quotationDetails: effQuotDetails,
-      tasks: effTasks,
-      baseRates: effBaseRates,
-      manualOverrides: effOverrides,
-      signatures: effSignatures,
-    })
-  }
 
   return (
     <CollaborationProvider value={collValue}>
@@ -613,32 +601,18 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
           </div>
 
           <div className="quot-toolbar-actions">
+            {/* 1. Avatar Icons & Sync Status */}
             <CollaborationBar
               remoteUsers={remoteUsers}
               myColor={myColor}
               userName={myEffectiveName}
               quotNo={quotNo}
               isSyncing={isSyncing}
-              onExportExcel={handleExportExcel}
             />
-            <button className="btn" onClick={newInvoice} title="Create new quotation">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
-              </svg>
-              New
-            </button>
-            <button className="btn btn-primary" onClick={handleSave} title="Save changes to database">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-              </svg>
-              Save
-            </button>
-            <button className="btn" onClick={() => setIsLibraryOpen(true)} title="Load from library">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-              Load
-            </button>
+
+            <div className="toolbar-divider" />
+
+            {/* 2. Workspace */}
             <button 
               type="button"
               className="btn" 
@@ -671,12 +645,42 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
               </svg>
               Workspace
             </button>
+
             <div className="toolbar-divider" />
-            <button className="btn" onClick={() => setIsPrintPreviewOpen(true)} disabled={isPreview}>
+
+            {/* 3. New ; Load ; Save */}
+            <button className="btn" onClick={newInvoice} title="Create new quotation">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+              New
+            </button>
+            <button className="btn" onClick={() => setIsLibraryOpen(true)} title="Load from library">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              Load
+            </button>
+            <button className="btn btn-primary btn-save-themed" onClick={handleSave} title="Save changes to database">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save
+            </button>
+
+            <div className="toolbar-divider" />
+
+            {/* 4. Print / Export */}
+            <button 
+              className="btn btn-primary" 
+              onClick={() => setIsPrintPreviewOpen(true)} 
+              disabled={isPreview} 
+              title="Open Print Center"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
               </svg>
-              Print / PDF
+              Print / Export
             </button>
           </div>
         </header>

@@ -1,46 +1,30 @@
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
-import type { Task, BaseRates, ManualOverrides, Signatures, ClientInfo, QuotationDetails } from '../../../hooks/quotation'
+import type { Task, BaseRates, ManualOverrides, Signatures, ClientInfo, QuotationDetails, BillingDetails } from '../../../hooks/quotation'
 import { calculateTaskTotal, calculateOverhead, getUnitPageCount } from '../../../utils/quotation'
 
-// Border helpers
-const M: Partial<ExcelJS.Border> = { style: 'medium' }
-const T: Partial<ExcelJS.Border> = { style: 'thin' }
-
-function applyBorder(
-  cell: ExcelJS.Cell,
-  top?: Partial<ExcelJS.Border>,
-  bottom?: Partial<ExcelJS.Border>,
-  left?: Partial<ExcelJS.Border>,
-  right?: Partial<ExcelJS.Border>
-) {
-  cell.border = {
-    ...(top    && { top }),
-    ...(bottom && { bottom }),
-    ...(left   && { left }),
-    ...(right  && { right }),
-  }
-}
-
 export interface ExcelExportData {
+  mode: 'quotation' | 'billing'
   quotNo: string
   clientInfo: ClientInfo
   quotationDetails: QuotationDetails
+  billingDetails: BillingDetails
   tasks: Task[]
   baseRates: BaseRates
   manualOverrides: ManualOverrides
   signatures: Signatures
 }
 
-/**
- * High-Fidelity Excel Export for KMTI Quotations
- * Uses the same calculation pipeline as PrintPage/PrintPreviewModal.
- * Layout source: Quotation_KMTE-260423-12345_2026-04-27.xlsx
- */
+// ─────────────────────────────────────────────────────────────────────────────
+// exportToExcel
+// ─────────────────────────────────────────────────────────────────────────────
 export async function exportToExcel(data: ExcelExportData) {
-  const { quotNo, clientInfo, quotationDetails, tasks, baseRates, manualOverrides, signatures } = data
+  const {
+    mode, quotNo, clientInfo, quotationDetails, billingDetails,
+    tasks, baseRates, manualOverrides, signatures,
+  } = data
 
-  // ─── Compute totals (mirrors PrintPreviewModal logic) ─────────────────────
+  // ── 1. Compute totals ─────────────────────────────────────────────────────
   const mainTasks = tasks.filter(t => t.isMainTask)
   const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides).total)
   const subtotal = taskTotals.reduce((s, t) => s + t, 0)
@@ -52,350 +36,469 @@ export async function exportToExcel(data: ExcelExportData) {
   const grandTotal = subtotal + overheadTotal + (footer.adjustment || 0)
   const metaDate = quotationDetails.date || new Date().toISOString().slice(0, 10)
 
+  // ── 2. Fetch template from backend ────────────────────────────────────────
+  const templateKey = mode === 'billing' ? 'billing' : 'quotation'
+  const templateRes = await fetch(`http://localhost:8000/api/quotations/templates/${templateKey}`)
+  if (!templateRes.ok) throw new Error(`Failed to load ${templateKey} template: ${templateRes.status}`)
+  const templateBuffer = await templateRes.arrayBuffer()
+
+  // ── 3. Load workbook ──────────────────────────────────────────────────────
   const workbook = new ExcelJS.Workbook()
-  const sheet = workbook.addWorksheet('Quotation', {
-    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0, right: 0, top: 0, bottom: 0, header: 0, footer: 0 }, printArea: 'A1:G50' },
-    views: [{ showGridLines: true }],
-  })
+  await workbook.xlsx.load(templateBuffer)
+  const sheet = workbook.worksheets[0]
 
-  // ─── 1. Column Widths (A–G) — exact from reference file ───────────────────
-  sheet.columns = [
-    { width: 6 },       // A
-    { width: 7.125 },   // B
-    { width: 18.25 },   // C
-    { width: 40.375 },  // D
-    { width: 17 },      // E
-    { width: 9.25 },    // F
-    { width: 22.625 },  // G
-  ]
+  // ── 4. Logo injection ─────────────────────────────────────────────────────
+  // The template already contains the correct high-res logo, so we no longer
+  // manually inject a duplicate logo here.
 
-  // ─── 2. Row Heights — exact from reference file ────────────────────────────
-  const rowHeights: Record<number, number> = {
-    1: 21.75, 2: 15.75, 3: 13.5, 4: 13.5, 5: 18,
-    6: 26.25, 7: 35.1, 8: 17.25, 9: 18, 10: 21,
-    11: 16.5, 12: 17.25, 13: 17.25, 14: 14.25,
-    15: 36.75, 16: 24.95, 26: 28.5, 27: 20.1,
-    28: 13.5, 29: 15,
-    33: 14.25, 36: 14.25, 37: 14.25, 38: 14.25,
-    39: 14.25, 40: 14.25, 41: 14.25, 42: 14.25,
-    43: 15, 44: 14.25, 45: 14.25, 46: 14.25, 48: 14.25,
-  }
-  Object.entries(rowHeights).forEach(([r, h]) => {
-    sheet.getRow(Number(r)).height = h
-  })
-  // Table data rows 17–25 all get 20.1
-  for (let r = 17; r <= 25; r++) sheet.getRow(r).height = 20.1
-
-  // ─── 3. Logo (OneCellAnchor, 1.6" × 1.6" ≈ 120px at 96dpi) ───────────────
-  try {
-    const logoUrl = './src/assets/kmti_logo.png'
-    const response = await fetch(logoUrl)
-    const arrayBuffer = await response.arrayBuffer()
-    const logo = workbook.addImage({ buffer: arrayBuffer, extension: 'png' })
-    // 120px ≈ 1.6" at 96dpi — matches reference file anchor at tl col=0, row=0
-    sheet.addImage(logo, { tl: { col: 0, row: 0 }, ext: { width: 120, height: 120 } })
-  } catch (_) {}
-
-  // ─── 4. Header Title (font: Anita Semi-square, size 20, bold) ─────────────
-  sheet.mergeCells('C1:D2')
-  const title1 = sheet.getCell('C1')
-  title1.value = 'KUSAKABE & MAENO'
-  title1.font = { name: 'Anita Semi-square', size: 20, bold: true }
-  title1.alignment = { horizontal: 'center', vertical: 'middle' }
-
-  sheet.mergeCells('C3:D4')
-  const title2 = sheet.getCell('C3')
-  title2.value = 'TECH., INC.'
-  title2.font = { name: 'Anita Semi-square', size: 20, bold: true }
-  title2.alignment = { horizontal: 'center', vertical: 'top' }
-
-  // ─── 5. "Quotation" document title ────────────────────────────────────────
-  sheet.mergeCells('C6:D6')
-  const docTitle = sheet.getCell('C6')
-  docTitle.value = 'Quotation'
-  docTitle.font = { name: 'Arial', size: 20, bold: true }
-  docTitle.alignment = { horizontal: 'center', vertical: 'middle' }
-
-  // ─── 6. Company Info (rows 1–4: E:G, row 5: F:G) ─────────────────────────
-  // Rows 1–4 use E:G merge; row 5 (TEL) uses F:G merge (E5 is blank)
-  const companyRows: Array<{ merge: string; cell: string; value: string; size: number; bold?: boolean }> = [
-    { merge: 'E1:G1', cell: 'E1', value: 'KUSAKABE & MAENO TECH., INC.',               size: 11, bold: true },
-    { merge: 'E2:G2', cell: 'E2', value: 'Unit 2-B Building B, Vital Industrial Properties Inc.', size: 11 },
-    { merge: 'E3:G3', cell: 'E3', value: 'First Cavite Industrial Estates, P-CIB PEZA Zone',      size: 11 },
-    { merge: 'E4:G4', cell: 'E4', value: 'Dasmarinas City, Cavite Philippines',                    size: 11 },
-  ]
-  companyRows.forEach(({ merge, cell, value, size, bold }) => {
-    sheet.mergeCells(merge)
-    const c = sheet.getCell(cell)
-    c.value = value
-    c.font = { name: 'Arial', size, bold: bold ?? false }
-    c.alignment = { horizontal: 'right' }
-  })
-  // TEL row: F5:G5 (E5 intentionally blank)
-  sheet.mergeCells('F5:G5')
-  const telCell = sheet.getCell('F5')
-  telCell.value = 'TEL: +63-46-414-4009'
-  telCell.font = { name: 'Arial', size: 11 }
-  telCell.alignment = { horizontal: 'right' }
-
-  // ─── 7. Client Info (rows 9–13) ───────────────────────────────────────────
-  sheet.mergeCells('A9:C9')
-  const quotTo = sheet.getCell('A9')
-  quotTo.value = 'Quotation to:'
-  quotTo.font = { name: 'Arial', size: 10, bold: true }
-
-  sheet.mergeCells('A10:C10')
-  const clientName = sheet.getCell('A10')
-  clientName.value = clientInfo.company
-  clientName.font = { name: 'Arial', size: 11, bold: true }
-
-  sheet.mergeCells('A11:C11')
-  const clientContact = sheet.getCell('A11')
-  clientContact.value = clientInfo.contact
-  clientContact.font = { name: 'Arial', size: 11, bold: true }
-
-  sheet.mergeCells('A12:D12')
-  const clientAddr = sheet.getCell('A12')
-  clientAddr.value = clientInfo.address
-  clientAddr.font = { name: 'Arial', size: 10 }
-  clientAddr.alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
-
-  sheet.mergeCells('A13:D13')
-  const clientTel = sheet.getCell('A13')
-  clientTel.value = `TEL: ${clientInfo.phone || ''}`
-  clientTel.font = { name: 'Arial', size: 10 }
-  clientTel.alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
-
-  // ─── 8. Document Details (E10:G12) ────────────────────────────────────────
-  // Labels in E; values in F:G merged
-  const metaRows = [
-    { row: 10, label: 'Quotation NO.:',  value: quotNo,                        bold: true },
-    { row: 11, label: 'REFERENCE NO.:', value: quotationDetails.referenceNo || '', bold: false },
-    { row: 12, label: 'DATE:',          value: metaDate,                       bold: false },
-  ]
-  metaRows.forEach(({ row, label, value, bold }) => {
-    const labelCell = sheet.getCell(`E${row}`)
-    labelCell.value = label
-    labelCell.font = { name: 'Arial', size: 10 }
-    labelCell.alignment = { horizontal: 'left' }
-
-    sheet.mergeCells(`F${row}:G${row}`)
-    const valCell = sheet.getCell(`F${row}`)
-    valCell.value = value
-    valCell.font = { name: 'Arial', size: 10, bold }
-    valCell.alignment = { horizontal: 'left' }
-    valCell.border = { bottom: T }
-  })
-
-  // ─── 9. Table Header (row 15) ─────────────────────────────────────────────
-  // Columns: A=NO. | B:C=REFERENCE NO. | D=DESCRIPTION | E=UNIT | F=TYPE | G=PRICE
-  // B15:C15 merged for "REFERENCE NO."; D15 standalone for "DESCRIPTION"
-  sheet.mergeCells('B15:C15')
-
-  sheet.getRow(15).height = 36.75
-
-  const hdrFont = { name: 'Arial', size: 11, bold: true }
-  const hdrAlign: Partial<ExcelJS.Alignment> = { horizontal: 'center', vertical: 'middle' }
-
-  const hdrDefs: Array<{ col: number; value: string }> = [
-    { col: 1, value: 'NO.' },
-    { col: 2, value: 'REFERENCE NO.' },  // B15 (B15:C15 merged)
-    { col: 4, value: 'DESCRIPTION' },    // D15
-    { col: 5, value: 'UNIT' },
-    { col: 6, value: 'TYPE' },
-    { col: 7, value: 'PRICE' },
-  ]
-  hdrDefs.forEach(({ col, value }) => {
-    const cell = sheet.getCell(15, col)
-    cell.value = value
-    cell.font = hdrFont
-    cell.alignment = hdrAlign
-  })
-
-  // Header border: medium on top/bottom, medium on left(A)/right(G), thin between
-  applyBorder(sheet.getCell(15, 1), M, M, M, T)  // A15
-  applyBorder(sheet.getCell(15, 2), M, M, undefined, T)  // B15 (merged B:C)
-  applyBorder(sheet.getCell(15, 4), M, M, T, T)  // D15
-  applyBorder(sheet.getCell(15, 5), M, M, T, T)  // E15
-  applyBorder(sheet.getCell(15, 6), M, M, T)      // F15
-  applyBorder(sheet.getCell(15, 7), M, M, T, M)  // G15
-
-  // ─── 10. Table Data Rows ──────────────────────────────────────────────────
-  // Layout per row: A=no | B:C=refNo | D=description | E=qty | F=type | G=price
-  // Fixed structure:
-  //   Rows 16 to (16+tasks.length-1): task data
-  //   Next row after tasks: Admin Overhead (B:C merged, no number in A)
-  //   Row after that: NOTHING FOLLOW (D cell)
-  //   Remaining rows up to row 25: empty bordered rows
-  //   Row 26: Total
-
-  const TABLE_START = 16
-  const TABLE_END = 25      // last data row before total
-
-  // Row border helper for table body rows
-  function applyTableRowBorders(r: number) {
-    applyBorder(sheet.getCell(r, 1), T, T, M, T)
-    applyBorder(sheet.getCell(r, 2), T, T, undefined, T)
-    applyBorder(sheet.getCell(r, 4), T, T, T, T)
-    applyBorder(sheet.getCell(r, 5), T, T, T, T)
-    applyBorder(sheet.getCell(r, 6), T, T, T)
-    applyBorder(sheet.getCell(r, 7), T, T, T, M)
+  // ── 5. Fill sheet ─────────────────────────────────────────────────────────
+  if (mode === 'quotation') {
+    _fillQuotation(sheet, {
+      quotNo, clientInfo, quotationDetails, mainTasks, taskTotals,
+      overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
+    })
+  } else {
+    _fillBilling(sheet, {
+      quotNo, clientInfo, billingDetails, mainTasks, taskTotals,
+      overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
+    })
   }
 
-  let currentRow = TABLE_START
-
-  // Task rows — main tasks only, same as PrintPage
-  mainTasks.forEach((task, idx) => {
-    if (currentRow > TABLE_END - 2) return // guard: room for Overhead + NothingFollow
-    sheet.mergeCells(`B${currentRow}:C${currentRow}`)
-
-    const unitPage = getUnitPageCount(task.id, tasks, manualOverrides)
-
-    sheet.getCell(`A${currentRow}`).value = idx + 1
-    sheet.getCell(`A${currentRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-
-    sheet.getCell(`B${currentRow}`).value = task.referenceNumber || ''
-    sheet.getCell(`B${currentRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-
-    sheet.getCell(`D${currentRow}`).value = task.description || ''
-    sheet.getCell(`D${currentRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`D${currentRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
-
-    sheet.getCell(`E${currentRow}`).value = unitPage
-    sheet.getCell(`E${currentRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`E${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-
-    sheet.getCell(`F${currentRow}`).value = task.type || '3D'
-    sheet.getCell(`F${currentRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`F${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-
-    sheet.getCell(`G${currentRow}`).value = taskTotals[idx]
-    sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`G${currentRow}`).numFmt = '"¥"#,##0'
-    sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
-
-    applyTableRowBorders(currentRow)
-    currentRow++
-  })
-
-  // Admin Overhead row — only when overheadPercentage > 0, mirrors PrintPage showAdmin
-  const overheadRow = currentRow
-  sheet.mergeCells(`B${overheadRow}:C${overheadRow}`)
-  if (showAdmin) {
-    sheet.getCell(`B${overheadRow}`).value = 'Administrative Overhead'
-    sheet.getCell(`B${overheadRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`B${overheadRow}`).alignment = { horizontal: 'center' }
-    sheet.getCell(`G${overheadRow}`).value = overheadTotal
-    sheet.getCell(`G${overheadRow}`).font = { name: 'Arial', size: 11 }
-    sheet.getCell(`G${overheadRow}`).numFmt = '"¥"#,##0'
-    sheet.getCell(`G${overheadRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
-  }
-  applyTableRowBorders(overheadRow)
-  currentRow++
-
-  // NOTHING FOLLOW row (D cell, rest bordered)
-  const nfRow = currentRow
-  sheet.mergeCells(`B${nfRow}:C${nfRow}`)
-  sheet.getCell(`D${nfRow}`).value = '\u2026\u2026NOTHING FOLLOW \u2026\u2026'
-  sheet.getCell(`D${nfRow}`).font = { name: 'Arial', size: 11, bold: true }
-  sheet.getCell(`D${nfRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-  applyTableRowBorders(nfRow)
-  currentRow++
-
-  // Pad empty rows up to TABLE_END
-  while (currentRow <= TABLE_END) {
-    sheet.mergeCells(`B${currentRow}:C${currentRow}`)
-    applyTableRowBorders(currentRow)
-    currentRow++
-  }
-
-  // ─── 11. Total Row (row 26) ───────────────────────────────────────────────
-  sheet.mergeCells('A26:F26')
-  const totalLabel = sheet.getCell('A26')
-  totalLabel.value = 'Total Amount'
-  totalLabel.font = { name: 'Arial', size: 11, bold: true }
-  totalLabel.alignment = { horizontal: 'center', vertical: 'middle' }
-  applyBorder(totalLabel, M, M, M, T)
-
-  const totalVal = sheet.getCell('G26')
-  totalVal.value = grandTotal
-  totalVal.font = { name: 'Arial', size: 11, bold: true }
-  totalVal.numFmt = '"¥"#,##0'
-  totalVal.alignment = { horizontal: 'center', vertical: 'middle' }
-  applyBorder(totalVal, M, M, T, M)
-
-  // ─── 12. Terms / Visual Notes (rows 28–29) ────────────────────────────────
-  sheet.getCell('A28').value = 'Upon receipt of this quotation sheet, kindly send us one copy with your signature.'
-  sheet.getCell('A28').font = { name: 'Arial', size: 10 }
-  sheet.getCell('A29').value = 'The price will be changed without prior notice due to frequent changes of conversion rate.'
-  sheet.getCell('A29').font = { name: 'Arial', size: 10 }
-
-  // ─── 13. Signatures ───────────────────────────────────────────────────────
-  // Prepared by (rows 33–38)
-  sheet.getCell('A33').value = 'Prepared by:'
-  sheet.getCell('A33').font = { name: 'Arial', size: 11 }
-
-  // Signature line A36:C36 — thick bottom border
-  const TK: Partial<ExcelJS.Border> = { style: 'medium' }
-  sheet.mergeCells('A36:C36')
-  ;['A36', 'B36', 'C36'].forEach(addr => {
-    sheet.getCell(addr).border = { bottom: TK }
-  })
-
-  sheet.mergeCells('A37:C37')
-  sheet.getCell('A37').value = signatures.quotation.preparedBy.name || 'MR. MICHAEL PEÑANO'
-  sheet.getCell('A37').font = { name: 'Arial', size: 10, bold: true }
-  sheet.getCell('A37').alignment = { horizontal: 'center' }
-
-  sheet.mergeCells('A38:C38')
-  sheet.getCell('A38').value = 'Engineering Manager'
-  sheet.getCell('A38').font = { name: 'Arial', size: 9 }
-  sheet.getCell('A38').alignment = { horizontal: 'center' }
-
-  // Approved by (rows 40–45)
-  sheet.getCell('A40').value = 'Approved by:'
-  sheet.getCell('A40').font = { name: 'Arial', size: 11 }
-
-  sheet.mergeCells('A43:C43')
-  ;['A43', 'B43', 'C43'].forEach(addr => {
-    sheet.getCell(addr).border = { bottom: TK }
-  })
-
-  sheet.mergeCells('A44:C44')
-  sheet.getCell('A44').value = signatures.quotation.approvedBy.name || 'MR. YUICHIRO MAENO'
-  sheet.getCell('A44').font = { name: 'Arial', size: 10, bold: true }
-  sheet.getCell('A44').alignment = { horizontal: 'center' }
-
-  sheet.mergeCells('A45:C45')
-  sheet.getCell('A45').value = signatures.quotation.approvedBy.title || 'President'
-  sheet.getCell('A45').font = { name: 'Arial', size: 9 }
-  sheet.getCell('A45').alignment = { horizontal: 'center' }
-
-  // Received by (rows 40–44, cols E–F)
-  sheet.getCell('E40').value = 'Received by:'
-  sheet.getCell('E40').font = { name: 'Arial', size: 11 }
-
-  sheet.mergeCells('E43:F43')
-  ;['E43', 'F43'].forEach(addr => {
-    sheet.getCell(addr).border = { bottom: TK }
-  })
-
-  sheet.mergeCells('E44:F44')
-  sheet.getCell('E44').value = signatures.quotation.receivedBy.label || '(Signature Over Printed Name)'
-  sheet.getCell('E44').font = { name: 'Arial', size: 10, bold: true }
-  sheet.getCell('E44').alignment = { horizontal: 'center' }
-
-  // ─── 14. Footer (row 48) ──────────────────────────────────────────────────
-  sheet.getCell('A48').value = 'cc: admin/acctg/Engineering'
-  sheet.getCell('A48').font = { name: 'Arial', size: 8 }
-
-  sheet.getCell('F48').value = 'Admin Quotation Template v3.0-2026'
-  sheet.getCell('F48').font = { name: 'Arial', size: 8 }
-
-  // ─── 15. Save ─────────────────────────────────────────────────────────────
+  // ── 6. Save ───────────────────────────────────────────────────────────────
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  saveAs(blob, `Quotation_${quotNo || 'Draft'}_${metaDate}.xlsx`)
+  const docType = mode === 'billing' ? 'Billing' : 'Quotation'
+  saveAs(blob, `${docType}_${quotNo}_${metaDate}.xlsx`)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// QUOTATION FILLER
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Verified layout from analyze_templates.js output:
+//
+//  HEADER
+//    D1          Company name (static — in template)
+//    D3          "Quotation" title (static)
+//    G5–G9       Company address block (static)
+//
+//  CLIENT INFO
+//    A11         "Quotation to:" label (static)
+//    A12         client company
+//    A13         client contact name
+//    A14         client address   (merged A14:D14)
+//    A15         client phone     (merged A15:D15)
+//
+//  DOCUMENT META (right side, merged pairs F:G)
+//    E12 label / F12  Quotation NO.    ← write F12 (F:G merged)
+//    E13 label / F13  Reference NO.   ← write F13 (no merge shown — but E13 is label)
+//    E14 label / F14  Date            ← write F14 (F:G merged)
+//
+//  TASK TABLE  (10 pre-styled rows: 18–27)
+//    A  = row index (NO.)
+//    B  = reference number  (B:C merged per row)
+//    D  = description
+//    E  = unit / page count
+//    F  = type
+//    G  = price (¥)
+//
+//  OVERHEAD / FOOTER
+//    B25 / G25   Administrative Overhead row  (B:C merged)
+//    D26         "NOTHING FOLLOW" text
+//    G28         Grand total
+//
+//  TERMS (static — in template)
+//    A30, A31
+//
+//  SIGNATURES
+//    A35         "Prepared by:" label
+//    A39         prepared-by name    (merged A39:C39)
+//    A40         prepared-by title   (merged A40:C40)
+//    A42         "Approved by:" label
+//    E42         "Received by:" label
+//    A46         approved-by name    (merged A46:C46)
+//    A47         approved-by title   (merged A47:C47)
+//    E46         received-by label   (merged E46:F46)
+//
+//  FOOTER
+//    A50         cc line (static)
+//    F50         template version (static)
+//
+// ─────────────────────────────────────────────────────────────────────────────
+function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
+  quotNo: string
+  clientInfo: ClientInfo
+  quotationDetails: QuotationDetails
+  mainTasks: Task[]
+  taskTotals: number[]
+  overheadTotal: number
+  grandTotal: number
+  showAdmin: boolean
+  metaDate: string
+  signatures: Signatures
+  manualOverrides: ManualOverrides
+  tasks: Task[]
+}) {
+  const {
+    quotNo, clientInfo, quotationDetails, mainTasks, taskTotals,
+    overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
+  } = d
+
+  // ── Client info ───────────────────────────────────────────────────────────
+  sheet.getCell('A12').value = clientInfo.company
+  sheet.getCell('A12').font = { name: 'Arial', size: 10, bold: true, underline: false }
+  sheet.getCell('A13').value = clientInfo.contact
+  sheet.getCell('A13').font = { name: 'Arial', size: 10, bold: true, underline: true }
+  sheet.getCell('A14').value = clientInfo.address
+  sheet.getCell('A14').font = { name: 'Arial', size: 10 }
+  sheet.getCell('A15').value = `TEL: ${clientInfo.phone || ''}`
+  sheet.getCell('A15').font = { name: 'Arial', size: 10 }
+
+    // ── Document meta ─────────────────────────────────────────────────────────
+    // Bold the labels
+    ;['E12', 'E13', 'E14'].forEach(cell => {
+      const c = sheet.getCell(cell)
+      c.font = { name: 'Arial', size: 10, bold: true }
+    })
+
+  // F12:G12 merged → write to F12
+  sheet.getCell('F12').value = quotNo
+  sheet.getCell('F12').font = { name: 'Arial', size: 10 }
+  // E13 is label "REFERENCE NO." — value goes in F13 (no merge, but G13 appears blank)
+  sheet.getCell('F13').value = quotationDetails.referenceNo || ''
+  sheet.getCell('F13').font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+  // F14:G14 merged → write to F14
+  sheet.getCell('F14').value = metaDate
+  sheet.getCell('F14').font = { name: 'Arial', size: 10 }
+
+  // ── Task table rows 18–27 (10 rows) ──────────────────────────────────────
+  const TABLE_START = 18
+  const TABLE_END = 27  // inclusive — 10 pre-styled rows
+  const MAX_TASKS = 10
+
+  // Clear all 10 data rows first (preserve border/fill styling, clear values only)
+  for (let r = TABLE_START; r <= TABLE_END; r++) {
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach(col => {
+      sheet.getCell(`${col}${r}`).value = null
+    })
+  }
+  // Clear overhead / nothing-follow / total placeholder values
+  sheet.getCell('B25').value = null
+  sheet.getCell('C25').value = null
+  sheet.getCell('G25').value = null
+  sheet.getCell('D26').value = null
+  sheet.getCell('G28').value = null
+
+  // Write task rows
+  const tasksToShow = mainTasks.slice(0, MAX_TASKS)
+  let currentRow = TABLE_START
+
+  tasksToShow.forEach((task, idx) => {
+    const unitPage = getUnitPageCount(task.id, tasks, manualOverrides)
+    sheet.getCell(`A${currentRow}`).value = idx + 1
+    sheet.getCell(`A${currentRow}`).font = { name: 'Arial', size: 10 }
+    sheet.getCell(`B${currentRow}`).value = task.referenceNumber || ''
+    sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`B${currentRow}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell(`D${currentRow}`).value = task.description || ''
+    sheet.getCell(`D${currentRow}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell(`E${currentRow}`).value = unitPage
+    sheet.getCell(`E${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`E${currentRow}`).font = { name: 'Arial', size: 10 }
+    sheet.getCell(`F${currentRow}`).value = task.type || '3D'
+    sheet.getCell(`F${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`F${currentRow}`).font = { name: 'Arial', size: 10 }
+    sheet.getCell(`G${currentRow}`).value = taskTotals[idx]
+    sheet.getCell(`G${currentRow}`).numFmt = '"¥"#,##0'
+    sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
+    sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 10 }
+    currentRow++
+  })
+
+  // ── Administrative Overhead ───────────────────────────────────────────────
+  if (showAdmin && overheadTotal !== 0) {
+    const adminRow = currentRow
+    sheet.getCell(`B${adminRow}`).value = 'Administrative Overhead'
+    sheet.getCell(`B${adminRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
+    sheet.getCell(`B${adminRow}`).font = { name: 'Arial', size: 10 }
+    sheet.getCell(`G${adminRow}`).value = overheadTotal
+    sheet.getCell(`G${adminRow}`).numFmt = '"¥"#,##0'
+    sheet.getCell(`G${adminRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
+    sheet.getCell(`G${adminRow}`).font = { name: 'Arial', size: 10 }
+    currentRow++
+  }
+
+  // ── Nothing Follow ────────────────────────────────────────────────────────
+  const nfRow = currentRow
+  sheet.getCell(`D${nfRow}`).value = '\u2026\u2026NOTHING FOLLOW \u2026\u2026'
+  sheet.getCell(`D${nfRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`D${nfRow}`).font = { name: 'Arial', size: 11, bold: true }
+  currentRow++
+
+  // ── Grand total (G28) ─────────────────────────────────────────────────────
+  sheet.getCell('G28').value = grandTotal
+  sheet.getCell('G28').numFmt = '"¥"#,##0'
+  sheet.getCell('G28').alignment = { horizontal: 'center', vertical: 'middle' }
+
+  // ── Signatures ────────────────────────────────────────────────────────────
+  // "Prepared by:" label is static in template at A35 — don't overwrite
+  // Name at A39 (merged A39:C39), title at A40 (merged A40:C40)
+  sheet.getCell('A39').value = signatures.quotation.preparedBy.name
+  sheet.getCell('A39').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('A39').font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell('A40').value = signatures.quotation.preparedBy.title || ''
+  sheet.getCell('A40').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('A40').font = { name: 'Arial', size: 10, italic: true }
+
+  // "Approved by:" at A42, "Received by:" at E42 — static in template
+  // Approved name at A46 (merged A46:C46), title at A47 (merged A47:C47)
+  sheet.getCell('A46').value = signatures.quotation.approvedBy.name
+  sheet.getCell('A46').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('A46').font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell('A47').value = signatures.quotation.approvedBy.title || ''
+  sheet.getCell('A47').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('A47').font = { name: 'Arial', size: 10, italic: true }
+
+  // Received by label at E46 (merged E46:F46)
+  sheet.getCell('E46').value = signatures.quotation.receivedBy.label || '(Signature Over Printed Name)'
+  sheet.getCell('E46').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('E46').font = { name: 'Arial', size: 10, bold: true }
+
+  // Un-bold TIN in header (usually D5 for Quotation as well)
+  ;['D5', 'E5', 'F5'].forEach(cell => {
+    sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: false }
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BILLING FILLER
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Verified layout from analyze_templates.js output:
+//
+//  HEADER
+//    D1          Company name (static)
+//    D3–F3       Address line 1 (merged, static)
+//    D4–F4       Address line 2 (merged, static)
+//    D5–F5       VAT TIN (merged, static)
+//    D7–F7       "BILLING STATEMENT" (merged, static)
+//
+//  DOCUMENT META (right side)
+//    E9  label / F9   Date           (F9:G9 merged) ← write F9
+//    E10 label / F10  Invoice No.    (F10:G10 merged) — NO: F10 merged with A10? 
+//                     Actually: A10:C10 merged (client), F10 separate ← write F10
+//    E11 label / F11  Quotation No.  (F11:G11 merged) ← write F11
+//    E12 label / F12  Job Order No.  (F12:G12 merged — but A12:D12 is client addr)
+//                     ← write F12
+//    (No separate F10 merge listed — E10 is label, value cell is unlisted = F10)
+//
+//  CLIENT INFO (left side, merged A:C per row)
+//    A10   client company     (merged A10:C10... actually merged with what?)
+//    A11   client contact     (merged A11:...)
+//    A12   client address     (merged A12:D12)
+//    A13   client phone       (merged A13:D13)
+//
+//  TASK TABLE (10 pre-styled rows: 16–25)
+//    A15 header row
+//    A  = NO.
+//    B  = reference number  (B:C merged per row)
+//    D  = description
+//    E  = unit / page count
+//    F  = type
+//    G  = price (¥)
+//
+//  OVERHEAD / FOOTER
+//    B23 / G23   Administrative Overhead  (B:C merged)
+//    D24         "NOTHING FOLLOW"
+//    G26         Grand total
+//
+//  SIGNATURES
+//    A29         "Prepared by:" label
+//    E29         "Approved by:" label
+//    A33         prepared-by name    (merged A33:C33)
+//    E33         approved-by name    (merged E33:G33)
+//    E40         final approver name (merged E40:G40)
+//
+//  BANK DETAILS
+//    A43         "BANK DETAILS (Yen)" header (merged A43:C43)
+//    B44 label / D44   Bank name
+//    B45 label / D45   Account name
+//    B46 label / D46   Account number
+//    B47 label / D47   Bank address    (D47:G47 merged)
+//    D48               Bank address line 2 (continuation)
+//    B49 label / D49   Swift code
+//    B50 label / D50   Branch code
+//
+// ─────────────────────────────────────────────────────────────────────────────
+function _fillBilling(sheet: ExcelJS.Worksheet, d: {
+  quotNo: string
+  clientInfo: ClientInfo
+  billingDetails: BillingDetails
+  mainTasks: Task[]
+  taskTotals: number[]
+  overheadTotal: number
+  grandTotal: number
+  showAdmin: boolean
+  metaDate: string
+  signatures: Signatures
+  manualOverrides: ManualOverrides
+  tasks: Task[]
+}) {
+  const {
+    quotNo, clientInfo, billingDetails, mainTasks, taskTotals,
+    overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
+  } = d
+
+    // ── Document meta ─────────────────────────────────────────────────────────
+    ; (['E9', 'E10', 'E11', 'E12'] as const).forEach(cell => {
+      const c = sheet.getCell(cell)
+      c.font = { name: 'Arial', size: 10, bold: true }
+    })
+
+  sheet.getCell('F9').value = metaDate
+  sheet.getCell('F9').font = { name: 'Arial', size: 10 }
+  sheet.getCell('F10').value = billingDetails.invoiceNo || ''
+  sheet.getCell('F10').font = { name: 'Arial', size: 10 }
+  sheet.getCell('F11').value = quotNo
+  sheet.getCell('F11').font = { name: 'Arial', size: 10 }
+  sheet.getCell('F12').value = billingDetails.jobOrderNo || ''
+  sheet.getCell('F12').font = { name: 'Arial', size: 10 }
+
+  // Un-bold TIN line (D5)
+  ;['D5', 'E5', 'F5'].forEach(cell => {
+    sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: false }
+  })
+
+  // ── Client info ───────────────────────────────────────────────────────────
+  sheet.getCell('A10').value = clientInfo.company
+  sheet.getCell(`A10`).font = { name: 'Arial', size: 10, bold: true, underline: false }
+  sheet.getCell('A11').value = clientInfo.contact
+  sheet.getCell(`A11`).font = { name: 'Arial', size: 10, bold: true, underline: true }
+  sheet.getCell('A12').value = clientInfo.address
+  sheet.getCell(`A12`).font = { name: 'Arial', size: 10 }
+  sheet.getCell('A13').value = `TEL: ${clientInfo.phone || ''}`
+  sheet.getCell(`A13`).font = { name: 'Arial', size: 10 }
+
+  // ── Task table rows 16–25 (10 rows) ──────────────────────────────────────
+  const TABLE_START = 16
+  const TABLE_END = 25
+  const MAX_TASKS = 10
+
+  for (let r = TABLE_START; r <= TABLE_END; r++) {
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach(col => {
+      sheet.getCell(`${col}${r}`).value = null
+    })
+  }
+  sheet.getCell('B23').value = null
+  sheet.getCell('C23').value = null
+  sheet.getCell('G23').value = null
+  sheet.getCell('D24').value = null
+  sheet.getCell('G26').value = null
+
+  const tasksToShow = mainTasks.slice(0, MAX_TASKS)
+  let currentRow = TABLE_START
+
+  tasksToShow.forEach((task: Task, idx: number) => {
+    sheet.getCell(`A${currentRow}`).font = { name: 'Arial', size: 10 }
+    const unitPage = getUnitPageCount(task.id, tasks, manualOverrides)
+    sheet.getCell(`A${currentRow}`).value = idx + 1
+    sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`B${currentRow}`).value = task.referenceNumber || ''
+    sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`B${currentRow}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell(`D${currentRow}`).value = task.description || ''
+    sheet.getCell(`D${currentRow}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell(`E${currentRow}`).value = unitPage
+    sheet.getCell(`E${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`E${currentRow}`).font = { name: 'Arial', size: 10 }
+    sheet.getCell(`F${currentRow}`).value = task.type || '3D'
+    sheet.getCell(`F${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`F${currentRow}`).font = { name: 'Arial', size: 10 }
+    sheet.getCell(`G${currentRow}`).value = taskTotals[idx]
+    sheet.getCell(`G${currentRow}`).numFmt = '"¥"#,##0'
+    sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 10 }
+    currentRow++
+  })
+
+  // ── Administrative Overhead ───────────────────────────────────────────────
+  if (showAdmin && overheadTotal !== 0) {
+    const adminRow = currentRow
+    sheet.getCell(`B${adminRow}`).value = 'Administrative Overhead'
+    sheet.getCell(`B${adminRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
+    sheet.getCell(`B${adminRow}`).font = { name: 'Arial', size: 10 }
+    sheet.getCell(`G${adminRow}`).value = overheadTotal
+    sheet.getCell(`G${adminRow}`).numFmt = '"¥"#,##0'
+    sheet.getCell(`G${adminRow}`).font = { name: 'Arial', size: 10 }
+    currentRow++
+  }
+
+  // ── Nothing Follow ────────────────────────────────────────────────────────
+  const nfRow = currentRow
+  sheet.getCell(`D${nfRow}`).value = '\u2026\u2026NOTHING FOLLOW \u2026\u2026'
+  sheet.getCell(`D${nfRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`D${nfRow}`).font = { name: 'Arial', size: 11, bold: true }
+  currentRow++
+
+  // ── Grand total ───────────────────────────────────────────────────────────
+  sheet.getCell('G26').value = grandTotal
+  sheet.getCell('G26').numFmt = '"¥"#,##0'
+  sheet.getCell('G26').alignment = { horizontal: 'center', vertical: 'middle' }
+
+  // ── Signatures ────────────────────────────────────────────────────────────
+  // Prepared by: name at A33 (merged A33:C33), title at A34
+  sheet.getCell('A33').value = signatures.billing.preparedBy.name
+  sheet.getCell('A33').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('A33').font = { name: 'Arial', size: 10, bold: true }
+
+  sheet.mergeCells('A34:C34')
+  const prepTitleCell = sheet.getCell('A34')
+  prepTitleCell.value = signatures.billing.preparedBy.title || 'Accounting Staff'
+  prepTitleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  prepTitleCell.font = { name: 'Arial', size: 10, italic: true }
+
+  // Approved by: name at E33 (merged E33:G33), title at E34
+  sheet.getCell('E33').value = signatures.billing.approvedBy.name
+  sheet.getCell('E33').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('E33').font = { name: 'Arial', size: 10, bold: true }
+
+  sheet.mergeCells('E34:G34')
+  const appTitleCell = sheet.getCell('E34')
+  appTitleCell.value = signatures.billing.approvedBy.title || 'Engineering Manager'
+  appTitleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  appTitleCell.font = { name: 'Arial', size: 10, italic: true }
+
+  // Final approver: name at E40 (merged E40:G40), title at E41
+  sheet.getCell('E40').value = signatures.billing.finalApprover.name
+  sheet.getCell('E40').alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell('E40').font = { name: 'Arial', size: 10, bold: true }
+
+  sheet.mergeCells('E41:G41')
+  const finalTitleCell = sheet.getCell('E41')
+  finalTitleCell.value = signatures.billing.finalApprover.title || 'President'
+  finalTitleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  finalTitleCell.font = { name: 'Arial', size: 10, italic: true }
+
+  // ── Bank details ──────────────────────────────────────────────────────────
+  // Labels B44–B50 are static in the template.
+  // Values go in column D (D44, D45, D46, D47/D48 for address, D49, D50).
+  if (billingDetails.bankName) sheet.getCell('D44').value = billingDetails.bankName
+  if (billingDetails.accountName) sheet.getCell('D45').value = billingDetails.accountName
+  if (billingDetails.accountNumber) sheet.getCell('D46').value = billingDetails.accountNumber
+
+  // Bank address: template has D47:G47 merged + D48 as overflow line.
+  if (billingDetails.bankAddress) {
+    const addressStr = billingDetails.bankAddress;
+    const splitIndex = addressStr.toUpperCase().indexOf('LANGKAAN');
+
+    if (splitIndex > 0) {
+      sheet.getCell('D47').value = addressStr.substring(0, splitIndex).trim();
+      sheet.getCell('D48').value = addressStr.substring(splitIndex).trim();
+    } else {
+      sheet.getCell('D47').value = addressStr;
+      sheet.getCell('D48').value = null;
+    }
+  }
+
+  if (billingDetails.swiftCode) sheet.getCell('D49').value = billingDetails.swiftCode
+  if (billingDetails.branchCode) sheet.getCell('D50').value = billingDetails.branchCode
 }

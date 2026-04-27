@@ -1,12 +1,11 @@
 import { memo, useState } from 'react'
-import type { BillingDetails, QuotationDetails } from '../../../hooks/quotation'
+import type { BillingDetails } from '../../../hooks/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
 
 interface Props {
   billingDetails: BillingDetails
   onUpdateBilling?: (updates: Partial<BillingDetails>) => void
-  onUpdateQuotation?: (updates: Partial<QuotationDetails>) => void
 }
 
 const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder: string }> = [
@@ -18,7 +17,7 @@ const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder
   { key: 'branchCode',    label: 'Branch Code',         placeholder: 'e.g. 358' },
 ]
 
-const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling, onUpdateQuotation }: Props) => {
+const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 

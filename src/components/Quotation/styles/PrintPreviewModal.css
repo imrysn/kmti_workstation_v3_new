@@ -78,6 +78,8 @@ body:has(.print-preview-modal) .broadcast-fab {
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
   gap: 8px;
+  position: relative;
+  z-index: 1000;
 }
 
 .dark-theme .ppm-header {
@@ -196,16 +198,28 @@ body:has(.print-preview-modal) .broadcast-fab {
   background: var(--accent-hover);
 }
 
-.ppm-action-btn.export {
-  background: #107c41;
-  /* MS Office green */
+.ppm-action-btn.export-pdf {
+  background: #ef4444;
   color: #ffffff;
-  border-color: #0a5d2f;
+  border-color: #dc2626;
 }
 
-.ppm-action-btn.export:hover:not(:disabled) {
-  background: #fff;
-  color: #0a5d2f;
+.ppm-action-btn.export-pdf:hover:not(:disabled) {
+  background: #ffffff;
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.ppm-action-btn.export-excel {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #059669;
+}
+
+.ppm-action-btn.export-excel:hover:not(:disabled) {
+  background: #ffffff;
+  color: #10b981;
+  border-color: #10b981;
 }
 
 .ppm-action-btn:disabled {
@@ -2157,24 +2171,27 @@ body:has(.print-preview-modal) .broadcast-fab {
 }
 
 .preview-content .billing-header .company-address-visual {
-  font-size: 13px !important;
-  /* Address font size - larger */
+  font-size: 11px !important;
   line-height: 1.4 !important;
   color: #000 !important;
-  margin-bottom: 15px !important;
-  /* 15px space below address */
+  margin-bottom: 4px !important;
   text-align: center !important;
   font-weight: normal !important;
-  /* Not bold */
   max-width: 100% !important;
-  /* Maximum width for address block */
+}
+
+.preview-content .billing-header .company-vat-visual {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  color: #000 !important;
+  margin-bottom: 12px !important;
+  text-align: center !important;
+  font-weight: normal !important;
 }
 
 .preview-content .billing-header .quotation-title-visual {
-  font-size: 18px !important;
-  /* "BILLING STATEMENT" font size */
-  font-weight: normal !important;
-  /* Not bold */
+  font-size: 20px !important;
+  font-weight: bold !important;
   margin-top: 0 !important;
   color: #000 !important;
 }

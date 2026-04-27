@@ -1,0 +1,389 @@
+
+============================================================
+  QUOTATION TEMPLATE — backend/data/Quotation Template.xlsx
+============================================================
+Sheet name: Quotation
+Dimensions: Range { model: { top: 1, left: 1, bottom: 50, right: 7 } }
+
+── COLUMN WIDTHS ──
+  Col A: 6
+  Col B: 7.125
+  Col C: 18.25
+  Col D: 40.375
+  Col E: 17
+  Col F: 9.25
+  Col G: 22.625
+
+── MERGED CELLS ──
+  B17
+  B18
+  B19
+  D3
+  F12
+  F13
+  F14
+  A47
+  E46
+  B26
+  B27
+  A14
+  A15
+  A39
+  A40
+  A46
+  B25
+  A28
+  B20
+  B21
+  B22
+  B23
+  B24
+
+── ROW HEIGHTS (non-default) ──
+  Row 1: 21.75pt
+  Row 3: 19.5pt
+  Row 5: 18pt
+  Row 6: 18pt
+  Row 7: 16.5pt
+  Row 8: 17.25pt
+  Row 9: 18pt
+  Row 11: 17.25pt
+  Row 12: 17.25pt
+  Row 13: 17.25pt
+  Row 14: 14.25pt
+  Row 15: 17.25pt
+  Row 17: 24.75pt
+  Row 18: 20.1pt
+  Row 19: 20.1pt
+  Row 20: 20.1pt
+  Row 21: 20.1pt
+  Row 22: 20.1pt
+  Row 23: 20.1pt
+  Row 24: 20.1pt
+  Row 25: 20.1pt
+  Row 26: 28.5pt
+  Row 27: 20.1pt
+  Row 28: 24.75pt
+  Row 30: 14.25pt
+  Row 31: 14.25pt
+  Row 35: 14.25pt
+  Row 39: 20.25pt
+  Row 40: 14.25pt
+  Row 42: 14.25pt
+  Row 46: 20.25pt
+  Row 47: 14.25pt
+  Row 50: 14.25pt
+
+── NON-EMPTY CELLS ──
+  D1     | KUSAKABE & MAENO TECH., INC.             | font:{sz:24,bold:true} align:{h:undefined,v:middle}
+  D3     | Quotation                                | font:{sz:20,bold:true} align:{h:center,v:middle}
+  E3     | Quotation                                | font:{sz:20,bold:true} align:{h:center,v:middle}
+  F3     | Quotation                                | font:{sz:20,bold:true} align:{h:center,v:middle}
+  G5     | KUSAKABE & MAENO TECH., INC.             | font:{sz:11,bold:true} align:{h:right,v:undefined}
+  G6     | Unit 2-B Building B, Vital Industrial Properties Inc. | font:{sz:11,bold:undefined} align:{h:right,v:undefined}
+  G7     | First Cavite Industrial Estates, P-CIB PEZA Zone | font:{sz:11,bold:undefined} align:{h:right,v:undefined}
+  G8     | Dasmarinas City, Cavite Philippines      | font:{sz:11,bold:undefined} align:{h:right,v:undefined}
+  G9     | TEL: +63-46-414-4009                     | font:{sz:11,bold:undefined} align:{h:right,v:undefined}
+  A11    | Quotation to:                            | font:{sz:10,bold:true} align:{h:undefined,v:middle}
+  A12    | NEXTENGINEERING Co, Ltd.                 | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  E12    | Quotation NO.:                           | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  F12    | KMTE-260423-12345                        | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  G12    | KMTE-260423-12345                        | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  A13    | MR. Masahiro Hasegawa                    | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  E13    | REFERENCE NO.:                           | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  A14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  B14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  C14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  D14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  E14    | DATE:                                    | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  F14    | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
+  G14    | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
+  A15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  B15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  C15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  D15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  A17    | NO.                                      | font:{sz:11,bold:true} align:{h:center,v:middle}
+  B17    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}
+  C17    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}
+  D17    | DESCRIPTION                              | font:{sz:11,bold:true} align:{h:center,v:middle}
+  E17    | UNIT                                     | font:{sz:11,bold:true} align:{h:center,v:middle}
+  F17    | TYPE                                     | font:{sz:11,bold:true} align:{h:center,v:middle}
+  G17    | PRICE                                    | font:{sz:11,bold:true} align:{h:center,v:middle}
+  A18    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  E18    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  F18    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  G18    | 33435                                    | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  A19    | 2                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  E19    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  F19    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  G19    | 0                                        | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  A20    | 3                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  E20    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  F20    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  G20    | 0                                        | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  A21    | 4                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  E21    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  F21    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  G21    | 0                                        | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  A22    | 5                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  E22    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  F22    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  G22    | 0                                        | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  A23    | 6                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  E23    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  F23    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  G23    | 0                                        | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  A24    | 7                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  E24    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  F24    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:middle}
+  G24    | 0                                        | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  B25    | Administrative Overhead                  | font:{sz:11,bold:undefined} align:{h:left,v:undefined}
+  C25    | Administrative Overhead                  | font:{sz:11,bold:undefined} align:{h:left,v:undefined}
+  G25    | 6687                                     | font:{sz:11,bold:undefined} align:{h:right,v:middle}
+  D26    | ……NOTHING FOLLOW ……                      | font:{sz:11,bold:true} align:{h:center,v:middle}
+  A28    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:middle}
+  B28    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:middle}
+  C28    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:middle}
+  D28    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:middle}
+  E28    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:middle}
+  F28    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:middle}
+  G28    | 40122                                    | font:{sz:11,bold:true} align:{h:center,v:middle}
+  A30    | Upon receipt of this quotation sheet, kindly send us one copy with your signature. | font:{sz:10,bold:undefined}
+  A31    | The price will be changed without prior notice due to frequent changes of conversion rate. | font:{sz:10,bold:undefined}
+  A35    | Prepared by:                             | font:{sz:11,bold:undefined}
+  A39    | MR. MICHAEL PEÑANO                       | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  B39    | MR. MICHAEL PEÑANO                       | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  C39    | MR. MICHAEL PEÑANO                       | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  A40    | Engineering Manager                      | font:{sz:9,bold:undefined} align:{h:center,v:undefined}
+  B40    | Engineering Manager                      | font:{sz:9,bold:undefined} align:{h:center,v:undefined}
+  C40    | Engineering Manager                      | font:{sz:9,bold:undefined} align:{h:center,v:undefined}
+  A42    | Approved by:                             | font:{sz:11,bold:undefined}
+  E42    | Received by:                             | font:{sz:11,bold:undefined}
+  A46    | MR. YUICHIRO MAENO                       | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  B46    | MR. YUICHIRO MAENO                       | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  C46    | MR. YUICHIRO MAENO                       | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  E46    | (Signature Over Printed Name)            | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  F46    | (Signature Over Printed Name)            | font:{sz:10,bold:true} align:{h:center,v:undefined}
+  A47    | President                                | font:{sz:9,bold:undefined} align:{h:center,v:undefined}
+  B47    | President                                | font:{sz:9,bold:undefined} align:{h:center,v:undefined}
+  C47    | President                                | font:{sz:9,bold:undefined} align:{h:center,v:undefined}
+  A50    | cc: admin/acctg/Engineering              | font:{sz:8,bold:undefined}
+  F50    | Admin Quotation Template v3.0-2026       | font:{sz:8,bold:undefined}
+
+── IMAGES ──
+
+============================================================
+  BILLING TEMPLATE — backend/data/Billing Template.xlsx
+============================================================
+Sheet name: Billing Statement
+Dimensions: Range { model: { top: 1, left: 1, bottom: 50, right: 7 } }
+
+── COLUMN WIDTHS ──
+  Col A: 6
+  Col B: 7.125
+  Col C: 20.625
+  Col D: 40.375
+  Col E: 17
+  Col F: 9.25
+  Col G: 22.625
+
+── MERGED CELLS ──
+  A33
+  E32
+  A32
+  A43
+  D3
+  D4
+  D5
+  B44
+  B45
+  B46
+  B47
+  B49
+  B50
+  D47
+  D7
+  E33
+  E39
+  E40
+  B25
+  A26
+  B20
+  B21
+  B22
+  B23
+  B24
+  B15
+  B16
+  B17
+  B18
+  B19
+  A11
+  F11
+  A12
+  F12
+  A13
+  F9
+  A10
+  F10
+
+── ROW HEIGHTS (non-default) ──
+  Row 1: 21.75pt
+  Row 3: 13.5pt
+  Row 4: 13.5pt
+  Row 5: 18pt
+  Row 7: 35.1pt
+  Row 9: 18pt
+  Row 10: 17.25pt
+  Row 11: 17.25pt
+  Row 12: 16.5pt
+  Row 13: 17.25pt
+  Row 15: 36.75pt
+  Row 16: 20.1pt
+  Row 17: 20.1pt
+  Row 18: 20.1pt
+  Row 19: 20.1pt
+  Row 20: 20.1pt
+  Row 21: 20.1pt
+  Row 22: 20.1pt
+  Row 23: 20.1pt
+  Row 24: 20.1pt
+  Row 25: 20.1pt
+  Row 26: 28.5pt
+  Row 29: 15pt
+  Row 32: 14.25pt
+  Row 33: 20.25pt
+  Row 39: 14.25pt
+  Row 40: 20.25pt
+  Row 43: 15.75pt
+  Row 44: 16.5pt
+  Row 45: 17.25pt
+  Row 46: 17.25pt
+  Row 47: 17.25pt
+  Row 48: 17.25pt
+  Row 49: 17.25pt
+  Row 50: 15.75pt
+
+── NON-EMPTY CELLS ──
+  D1     | KUSAKABE & MAENO TECH., INC.             | font:{sz:24,bold:true} align:{h:undefined,v:middle}
+  D3     | Unit 2-B Building B, Vital Industrial Properties Inc. First Cavite Industrial | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E3     | Unit 2-B Building B, Vital Industrial Properties Inc. First Cavite Industrial | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F3     | Unit 2-B Building B, Vital Industrial Properties Inc. First Cavite Industrial | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  D4     | Estates, P-CIB PEZA Zone, Dasmarinas City, Cavite Philippines | font:{sz:11,bold:undefined} align:{h:center,v:top}
+  E4     | Estates, P-CIB PEZA Zone, Dasmarinas City, Cavite Philippines | font:{sz:11,bold:undefined} align:{h:center,v:top}
+  F4     | Estates, P-CIB PEZA Zone, Dasmarinas City, Cavite Philippines | font:{sz:11,bold:undefined} align:{h:center,v:top}
+  D5     | Vat Reg. TIN: 008-883-390-000            | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E5     | Vat Reg. TIN: 008-883-390-000            | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F5     | Vat Reg. TIN: 008-883-390-000            | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  D7     | BILLING STATEMENT                        | font:{sz:14,bold:undefined} align:{h:center,v:middle}
+  E7     | BILLING STATEMENT                        | font:{sz:14,bold:undefined} align:{h:center,v:middle}
+  F7     | BILLING STATEMENT                        | font:{sz:14,bold:undefined} align:{h:center,v:middle}
+  E9     | DATE:                                    | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  F9     | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
+  G9     | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
+  A10    | NEXTENGINEERING Co, Ltd.                 | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  B10    | NEXTENGINEERING Co, Ltd.                 | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  C10    | NEXTENGINEERING Co, Ltd.                 | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  E10    | Invoice No.:                             | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  A11    | MR. Masahiro Hasegawa                    | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  B11    | MR. Masahiro Hasegawa                    | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  C11    | MR. Masahiro Hasegawa                    | font:{sz:11,bold:true} align:{h:undefined,v:middle}
+  E11    | Quotation No.:                           | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  F11    | KMTE-260423-12345                        | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
+  G11    | KMTE-260423-12345                        | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
+  A12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  B12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  C12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  D12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  E12    | Job Order No.:                           | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  A13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  B13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  C13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  D13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  A15    | NO.                                      | font:{sz:11,bold:true} align:{h:center,v:middle}
+  B15    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}
+  C15    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}
+  D15    | DESCRIPTION                              | font:{sz:11,bold:true} align:{h:center,v:middle}
+  E15    | UNIT                                     | font:{sz:11,bold:true} align:{h:center,v:middle}
+  F15    | TYPE                                     | font:{sz:11,bold:true} align:{h:center,v:middle}
+  G15    | PRICE                                    | font:{sz:11,bold:true} align:{h:center,v:middle}
+  A16    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E16    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F16    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G16    | 33435                                    | font:{sz:11,bold:undefined}
+  A17    | 2                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E17    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F17    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G17    | 0                                        | font:{sz:11,bold:undefined}
+  A18    | 3                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E18    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F18    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G18    | 0                                        | font:{sz:11,bold:undefined}
+  A19    | 4                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E19    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F19    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G19    | 0                                        | font:{sz:11,bold:undefined}
+  A20    | 5                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E20    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F20    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G20    | 0                                        | font:{sz:11,bold:undefined}
+  A21    | 6                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E21    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F21    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G21    | 0                                        | font:{sz:11,bold:undefined}
+  A22    | 7                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E22    | 1                                        | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F22    | 3D                                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G22    | 0                                        | font:{sz:11,bold:undefined}
+  B23    | Administrative Overhead                  | font:{sz:11,bold:undefined}
+  C23    | Administrative Overhead                  | font:{sz:11,bold:undefined}
+  G23    | 6687                                     | font:{sz:11,bold:undefined}
+  D24    | ……NOTHING FOLLOW ……                      | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  A26    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  B26    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  C26    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  D26    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  E26    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  F26    | Total Amount                             | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  G26    | 40122                                    | font:{sz:11,bold:true} align:{h:center,v:undefined}
+  A29    | Prepared by:                             | font:{sz:11,bold:undefined}
+  E29    | Approved by:                             | font:{sz:11,bold:undefined}
+  A33    | MS. PAULYN MURRIEL BEJER                 | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  B33    | MS. PAULYN MURRIEL BEJER                 | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  C33    | MS. PAULYN MURRIEL BEJER                 | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E33    | MR. MICHAEL PEÑANO                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F33    | MR. MICHAEL PEÑANO                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G33    | MR. MICHAEL PEÑANO                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  E40    | MR. YUICHIRO MAENO                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  F40    | MR. YUICHIRO MAENO                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  G40    | MR. YUICHIRO MAENO                       | font:{sz:11,bold:undefined} align:{h:center,v:undefined}
+  A43    | BANK DETAILS (Yen)                       | font:{sz:11,bold:true} align:{h:left,v:middle}
+  B43    | BANK DETAILS (Yen)                       | font:{sz:11,bold:true} align:{h:left,v:middle}
+  C43    | BANK DETAILS (Yen)                       | font:{sz:11,bold:true} align:{h:left,v:middle}
+  B44    | BANK NAME:                               | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  C44    | BANK NAME:                               | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  D44    | RIZAL COMMERCIAL BANK CORPORATION        | font:{sz:10,bold:undefined}
+  B45    | SAVINGS ACCOUNT NAME:                    | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  C45    | SAVINGS ACCOUNT NAME:                    | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  D45    | KUSAKABE & MAENO TECH INC.               | font:{sz:10,bold:undefined}
+  B46    | SAVINGS ACCOUNT NUMBER:                  | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  C46    | SAVINGS ACCOUNT NUMBER:                  | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  D46    | 0000000011581337                         | font:{sz:10,bold:undefined}
+  B47    | BANK ADDRESS:                            | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  C47    | BANK ADDRESS:                            | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  D47    | RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE  | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  E47    | RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE  | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  F47    | RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE  | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  G47    | RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE  | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  D48    | LANGKAAN, DASMARINAS CAVITE              | font:{sz:10,bold:undefined}
+  B49    | SWIFT CODE:                              | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  C49    | SWIFT CODE:                              | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  D49    | RCBCPHMM                                 | font:{sz:10,bold:undefined}
+  B50    | BRANCH CODE:                             | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  C50    | BRANCH CODE:                             | font:{sz:10,bold:undefined} align:{h:left,v:undefined}
+  D50    | 358                                      | font:{sz:10,bold:undefined}
+
+── IMAGES ──
+
+
+Done. Paste this output in the chat.

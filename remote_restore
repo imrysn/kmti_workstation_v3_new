@@ -30,7 +30,7 @@
   "tasks": [
     {
       "id": 1776934829807,
-      "description": "DWG-TRRV",
+      "description": "",
       "referenceNumber": "",
       "hours": 12,
       "minutes": 23,
@@ -42,49 +42,10 @@
       "parentId": null
     },
     {
-      "id": 1777254505279,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1777254505400,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1777254505543,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
       "id": 1777267553138,
       "description": "",
       "referenceNumber": "",
-      "hours": 0,
+      "hours": 3,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -97,7 +58,7 @@
       "id": 1777267553539,
       "description": "",
       "referenceNumber": "",
-      "hours": 0,
+      "hours": 2,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -110,7 +71,7 @@
       "id": 1777267555786,
       "description": "",
       "referenceNumber": "",
-      "hours": 0,
+      "hours": 13,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -315,5 +276,5 @@
       "id": "1777255354067-b6l8mbpbk"
     }
   ],
-  "savedAt": "2026-04-27T05:25:57.084Z"
+  "savedAt": "2026-04-27T09:05:06.628Z"
 }

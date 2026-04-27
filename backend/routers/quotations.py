@@ -18,7 +18,8 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, desc, or_
 from sqlalchemy.orm import selectinload
@@ -28,6 +29,7 @@ from db.database import get_db
 from models.quotation import Quotation, QuotationHistory
 from models.user import User, UserRole
 from core.auth import get_current_user
+from core.config import BASE_DIR
 
 # ─── Socket.IO Server ─────────────────────────────────────────────────────────
 # cors_allowed_origins MUST be the string "*" (not a list) — the string form
@@ -372,6 +374,34 @@ async def focus_selection(sid: str, data: dict):
 
 router = APIRouter()
 
+# ─── Template File Endpoint ──────────────────────────────────────────────────
+_TEMPLATE_MAP = {
+    "quotation": "Quotation Template.xlsx",
+    "billing":   "Billing Template.xlsx",
+}
+
+@router.get("/templates/{template_name}")
+async def get_template(template_name: str):
+    """Serve an Excel template file from backend/data/.
+    
+    Used by the frontend Excel export to load a pixel-perfect base template
+    rather than building layout from scratch with ExcelJS.
+    template_name: 'quotation' | 'billing'
+    """
+    filename = _TEMPLATE_MAP.get(template_name)
+    if not filename:
+        raise HTTPException(status_code=404, detail=f"Unknown template: '{template_name}'")
+    
+    file_path = os.path.join(BASE_DIR, "data", filename)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail=f"Template file not found on disk: {filename}")
+    
+    return FileResponse(
+        path=file_path,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=filename,
+    )
+
 @router.get("/")
 async def list_quotations(
     q: Optional[str] = None, 
@@ -508,6 +538,8 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(new_q)
     return {"success": True, "id": new_q.id}
+
+
 
 @router.get("/{q_id}")
 async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
