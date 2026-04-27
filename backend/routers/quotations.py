@@ -74,9 +74,16 @@ def _get_audit_label(path: str, full_state: dict = None) -> str:
                     target_id = int(task_id_str)
                     for t in full_state["tasks"]:
                         if t.get("id") == target_id:
-                            assembly_name = f"'{t.get('description', 'Unnamed Task')}'"
+                            desc = t.get('description', '').strip()
+                            assembly_name = f"'{desc}'" if desc else f"Task #{target_id}"
                             break
                 except: pass
+            
+            # Map manual override fields
+            if "manual" in field.lower():
+                field = field.replace("manual", "").strip()
+                return f"{assembly_name}'s {field} (Override)"
+                
             return f"{assembly_name}'s {field}"
         return "Tasks"
     if "signatures" in p: return "Signatures"

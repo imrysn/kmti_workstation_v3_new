@@ -48,13 +48,27 @@
   color: var(--text-secondary);
 }
 
+.history-sidebar__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+  overflow: hidden; /* Contain children */
+}
+
+.history-sidebar__header-actions {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+
 /* Timeline Container */
 .history-sidebar__scroll-area {
   flex: 1;
   overflow-y: auto;
   padding: 0 16px 20px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--border) transparent;
 }
 
 /* Date Grouping */
@@ -243,9 +257,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(100% - 24px);
-  margin: 12px;
-  padding: 8px;
+  width: 100%;
+  padding: 6px 12px;
   background: var(--bg-surface-hover);
   border: 1px solid var(--border);
   border-radius: 6px;

@@ -100,7 +100,10 @@ export function interpretAudit(path: string, value?: any): string {
   if (path === 'tasks.add_sub')      return 'Added a new part to an assembly'
   if (path === 'tasks.remove')       return 'Removed an assembly'
   if (path === 'tasks.reorder')      return 'Reordered assemblies'
+  // ── Internal / Meta operations ──────────────────────────────
+  if (path === '__sync__')           return ''
   if (path === '__full_restore__')   return 'Restored a previous version'
+  if (path.startsWith('chatLog.'))   return '' // Chat is handled by separate UI
 
   // ── Task field updates — `task.{id}.{field}` ─────────────────
   if (path.startsWith('task.')) {

@@ -13,15 +13,37 @@ interface Props {
   myColor: string
   userName: string
   quotNo: string | null
+  isSyncing?: boolean
 }
 
-export function CollaborationBar({ remoteUsers, myColor, userName, quotNo }: Props) {
+export function CollaborationBar({ remoteUsers, myColor, userName, quotNo, isSyncing }: Props) {
   if (!quotNo) return null
 
   const others = Object.values(remoteUsers)
 
   return (
     <div className="collab-bar-mini">
+      {/* Sync Status */}
+      <div className={`collab-sync-status ${isSyncing ? 'collab-sync-status--active' : ''}`}>
+        {isSyncing ? (
+          <>
+            <svg className="sync-spinner" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            <span>Syncing...</span>
+          </>
+        ) : (
+          <>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            <span>Saved</span>
+          </>
+        )}
+      </div>
+
+      <div className="toolbar-divider" />
+
       {/* Active user avatars only */}
       <div className="collab-bar__users">
         {/* Me */}

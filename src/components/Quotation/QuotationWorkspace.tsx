@@ -285,46 +285,74 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   })
 
 
+  // ── Debounced DB Synchronization ──────────────────────────────
+  const [isSyncing, setIsSyncing] = useState(false)
+  const dbSyncTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+  const debouncedSyncDb = useCallback(() => {
+    if (dbSyncTimerRef.current) clearTimeout(dbSyncTimerRef.current)
+    
+    dbSyncTimerRef.current = setTimeout(async () => {
+      if (!isConnected) return
+      setIsSyncing(true)
+      try {
+        // We use emitPatch with a special 'sync' path or just any update
+        // but including the full_state ensures the backend persists it.
+        emitPatch({ path: '__sync__', value: Date.now() }, getSaveData())
+      } finally {
+        // Brief delay to show the "Synced" state
+        setTimeout(() => setIsSyncing(false), 800)
+      }
+    }, 2000) // 2 second debounce for DB writes
+  }, [isConnected, emitPatch, getSaveData])
+
   // ── Wrapped Update Handlers for Sync ───────────────────────────
   const syncCompanyInfo = useCallback((updates: typeof companyInfo) => {
     updateCompanyInfo(updates)
     const patches = Object.entries(updates).map(([k, v]) => ({ path: `companyInfo.${k}`, value: v }))
-    emitBatchPatch(patches, getSaveData())
-  }, [updateCompanyInfo, emitBatchPatch, getSaveData])
+    emitBatchPatch(patches) // No fullState here (real-time peer sync)
+    debouncedSyncDb()      // Debounced DB sync
+  }, [updateCompanyInfo, emitBatchPatch, debouncedSyncDb])
 
   const syncClientInfo = useCallback((updates: typeof clientInfo) => {
     updateClientInfo(updates)
     const patches = Object.entries(updates).map(([k, v]) => ({ path: `clientInfo.${k}`, value: v }))
-    emitBatchPatch(patches, getSaveData())
-  }, [updateClientInfo, emitBatchPatch, getSaveData])
+    emitBatchPatch(patches)
+    debouncedSyncDb()
+  }, [updateClientInfo, emitBatchPatch, debouncedSyncDb])
 
   const syncQuotationDetails = useCallback((updates: Partial<typeof quotationDetails>) => {
     updateQuotationDetails(updates)
     const patches = Object.entries(updates).map(([k, v]) => ({ path: `quotationDetails.${k}`, value: v }))
-    emitBatchPatch(patches, getSaveData())
-  }, [updateQuotationDetails, emitBatchPatch, getSaveData])
+    emitBatchPatch(patches)
+    debouncedSyncDb()
+  }, [updateQuotationDetails, emitBatchPatch, debouncedSyncDb])
 
   const syncBillingDetails = useCallback((updates: Partial<typeof billingDetails>) => {
     updateBillingDetails(updates)
     const patches = Object.entries(updates).map(([k, v]) => ({ path: `billingDetails.${k}`, value: v }))
-    emitBatchPatch(patches, getSaveData())
-  }, [updateBillingDetails, emitBatchPatch, getSaveData])
+    emitBatchPatch(patches)
+    debouncedSyncDb()
+  }, [updateBillingDetails, emitBatchPatch, debouncedSyncDb])
 
   const syncSignatures = useCallback((type: keyof typeof signatures, field: string, value: any) => {
     updateSignatures(type, field, value)
-    emitPatch({ path: `signatures.${type}.${field}`, value }, getSaveData())
-  }, [updateSignatures, emitPatch, getSaveData])
+    emitPatch({ path: `signatures.${type}.${field}`, value })
+    debouncedSyncDb()
+  }, [updateSignatures, emitPatch, debouncedSyncDb])
 
   const syncUpdateTask = useCallback((id: number, field: any, value: any) => {
     updateTask(id, field, value)
     emitPatch({ path: `task.${id}.${field}`, value })
-  }, [updateTask, emitPatch])
+    debouncedSyncDb()
+  }, [updateTask, emitPatch, debouncedSyncDb])
 
   const syncAddTask = useCallback(() => {
     const newTask = makeBlankTask()
     addTask(newTask)
-    emitPatch({ path: 'tasks.add', value: newTask }, getSaveData())
-  }, [addTask, emitPatch, getSaveData])
+    emitPatch({ path: 'tasks.add', value: newTask })
+    debouncedSyncDb()
+  }, [addTask, emitPatch, debouncedSyncDb])
 
   const syncAddSubTask = useCallback((mainTaskId: number | null) => {
     if (!mainTaskId) {
@@ -337,46 +365,54 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       parentId: mainTaskId
     }
     addSubTask(mainTaskId, notify, newSubTask)
-    emitPatch({ path: 'tasks.add_sub', value: newSubTask }, getSaveData())
-  }, [addSubTask, emitPatch, getSaveData, notify])
+    emitPatch({ path: 'tasks.add_sub', value: newSubTask })
+    debouncedSyncDb()
+  }, [addSubTask, emitPatch, debouncedSyncDb, notify])
 
   const syncRemoveTask = useCallback((id: number) => {
     removeTask(id)
-    emitPatch({ path: 'tasks.remove', value: id }, getSaveData())
-  }, [removeTask, emitPatch, getSaveData])
+    emitPatch({ path: 'tasks.remove', value: id })
+    debouncedSyncDb()
+  }, [removeTask, emitPatch, debouncedSyncDb])
 
   const syncReorderTasks = useCallback((draggedId: number, targetId: number) => {
     reorderTasks(draggedId, targetId)
-    emitPatch({ path: 'tasks.reorder', value: { draggedId, targetId } }, getSaveData())
-  }, [reorderTasks, emitPatch, getSaveData])
+    emitPatch({ path: 'tasks.reorder', value: { draggedId, targetId } })
+    debouncedSyncDb()
+  }, [reorderTasks, emitPatch, debouncedSyncDb])
 
   const syncUpdateFooter = useCallback((key: string, value: any) => {
     updateManualOverrides(prev => ({
       ...prev,
       footer: { ...prev.footer, [key]: value }
     }))
-    emitPatch({ path: `footer.${key}`, value }, getSaveData())
-  }, [updateManualOverrides, emitPatch, getSaveData])
+    emitPatch({ path: `footer.${key}`, value })
+    debouncedSyncDb()
+  }, [updateManualOverrides, emitPatch, debouncedSyncDb])
 
   const syncBaseRate = useCallback((field: keyof typeof baseRates, value: number) => {
     updateBaseRate(field, value)
-    emitPatch({ path: `baseRates.${field}`, value }, getSaveData())
-  }, [updateBaseRate, emitPatch, getSaveData])
+    emitPatch({ path: `baseRates.${field}`, value })
+    debouncedSyncDb()
+  }, [updateBaseRate, emitPatch, debouncedSyncDb])
 
   const syncDeleteChat = useCallback((msgId: string) => {
     updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, isDeleted: true, message: '' } : m))
-    emitPatch({ path: 'chatLog.delete', value: msgId }, getSaveData())
-  }, [updateChatLog, emitPatch, getSaveData])
+    emitPatch({ path: 'chatLog.delete', value: msgId })
+    debouncedSyncDb()
+  }, [updateChatLog, emitPatch, debouncedSyncDb])
 
   const syncEditChat = useCallback((msgId: string, newMessage: string) => {
     updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, message: newMessage, isEdited: true } : m))
     emitChatEdit(msgId, newMessage)
-  }, [updateChatLog, emitChatEdit])
+    debouncedSyncDb()
+  }, [updateChatLog, emitChatEdit, debouncedSyncDb])
 
   const syncReadChat = useCallback((msgId: string) => {
     updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, readBy: Array.from(new Set([...(m.readBy || []), myEffectiveName])) } : m))
     emitChatRead(msgId, myEffectiveName)
-  }, [updateChatLog, emitChatRead, myEffectiveName])
+    debouncedSyncDb()
+  }, [updateChatLog, emitChatRead, myEffectiveName, debouncedSyncDb])
 
   // Sync window title with document identity + unsaved state
   useEffect(() => {
@@ -569,6 +605,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
               myColor={myColor}
               userName={myEffectiveName}
               quotNo={quotNo}
+              isSyncing={isSyncing}
             />
             <button className="btn" onClick={newInvoice} title="Create new quotation">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

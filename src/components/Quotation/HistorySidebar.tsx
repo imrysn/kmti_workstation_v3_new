@@ -176,6 +176,19 @@ export function HistorySidebar({ quotId, onRestore, onPreview, previewingTs }: P
       {/* Panel content */}
       {expanded && (
         <div className="history-sidebar__content">
+          <div className="history-sidebar__header-actions">
+            {quotId && !loading && snapshots.length > 0 && (
+              <button
+                className={`history-sidebar__refresh ${isRefreshing ? 'history-sidebar__refresh--active' : ''}`}
+                onClick={() => fetchHistory(true)}
+                disabled={isRefreshing}
+              >
+                <RefreshIcon size={12} style={{ marginRight: '6px' }} />
+                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            )}
+          </div>
+
           <div className="history-sidebar__scroll-area">
             {!quotId && (
               <p className="history-sidebar__empty">Waiting for database connection...</p>
@@ -241,17 +254,6 @@ export function HistorySidebar({ quotId, onRestore, onPreview, previewingTs }: P
               </>
             )}
           </div>
-
-          {quotId && !loading && snapshots.length > 0 && (
-            <button
-              className={`history-sidebar__refresh ${isRefreshing ? 'history-sidebar__refresh--active' : ''}`}
-              onClick={() => fetchHistory(true)}
-              disabled={isRefreshing}
-            >
-              <RefreshIcon size={12} style={{ marginRight: '6px' }} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh'}
-            </button>
-          )}
         </div>
       )}
     </aside>
