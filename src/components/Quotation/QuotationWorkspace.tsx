@@ -39,6 +39,7 @@ import { CollaborationBar } from './CollaborationBar'
 import { HistorySidebar } from './HistorySidebar'
 import { ActivitySidebar } from './ActivitySidebar'
 import QuotationLibraryModal from './QuotationLibraryModal'
+import { exportToExcel } from './utils/excelExport'
 import '../../pages/quotation/QuotationApp.css'
 import '../../pages/Quotation.css'
 
@@ -564,6 +565,21 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitChat
   ])
 
+  const handleExportExcel = () => {
+    exportToExcel({
+      quotNo,
+      clientName: effClient.company,
+      clientContact: effClient.contact,
+      clientAddress: effClient.address,
+      clientTel: effClient.phone,
+      clientRef: effQuotDetails.referenceNo,
+      date: effQuotDetails.date,
+      tasks: effTasks,
+      grandTotal: effBilling.grandTotal,
+      preparedBy: effSignatures.preparedBy
+    })
+  }
+
   return (
     <CollaborationProvider value={collValue}>
       <div className="quot-app-root">
@@ -606,6 +622,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
               userName={myEffectiveName}
               quotNo={quotNo}
               isSyncing={isSyncing}
+              onExportExcel={handleExportExcel}
             />
             <button className="btn" onClick={newInvoice} title="Create new quotation">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

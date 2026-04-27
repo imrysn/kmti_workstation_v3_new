@@ -103,3 +103,49 @@
   background: var(--border-subtle);
   margin: 0 12px;
 }
+
+.collab-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.collab-bar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.collab-bar-btn:hover {
+  background: var(--bg-primary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.collab-bar-btn--excel {
+  border-color: rgba(16, 124, 65, 0.2);
+}
+
+.collab-bar-btn--excel:hover {
+  background: rgba(16, 124, 65, 0.05);
+  border-color: #107c41;
+  color: #107c41;
+  box-shadow: 0 2px 8px rgba(16, 124, 65, 0.1);
+}
+
+.collab-bar-btn svg {
+  opacity: 0.8;
+}
+
+.collab-bar-btn:hover svg {
+  opacity: 1;
+}
