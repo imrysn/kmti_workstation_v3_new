@@ -33,7 +33,7 @@
       "description": "",
       "referenceNumber": "",
       "hours": 12,
-      "minutes": 0,
+      "minutes": 23,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
@@ -85,5 +85,5 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-23T09:01:29.077Z"
+  "savedAt": "2026-04-27T00:10:35.344Z"
 }

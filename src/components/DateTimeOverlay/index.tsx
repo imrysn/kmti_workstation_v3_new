@@ -6,6 +6,7 @@ import { GalacticCanvas } from './components/GalacticCanvas';
 import { ClockDisplay } from './components/ClockDisplay';
 import { StopwatchDisplay } from './components/StopwatchDisplay';
 import { ControlCenter } from './components/ControlCenter';
+import StopwatchLibraryModal from './components/StopwatchLibraryModal';
 import { COLOR_PALETTES, STORAGE_KEY } from './constants';
 import { SettingsV6 } from './types';
 import './DateTimeOverlay.css'; // Path will be updated if we move the CSS
@@ -20,6 +21,7 @@ const DateTimeOverlay: React.FC = () => {
   
   const [lastActivity, setLastActivity] = useState(Date.now());
   const [dragging, setDragging] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const { handleMouseDown } = useDragging(
@@ -124,6 +126,7 @@ const DateTimeOverlay: React.FC = () => {
       return {
         bg: settings.bgPaletteIndex !== null ? `rgba(${hexToRgbStr(COLOR_PALETTES[settings.bgPaletteIndex].hex)}, ${settings.bgOpacity})` : settings.theme.bg,
         text: '#ffffff',
+        sub: 'rgba(255, 255, 255, 0.6)',
         border: 'rgba(255, 120, 30, 0.4)',
         isLight: false,
         contrastRgb: '255, 255, 255'
@@ -201,6 +204,17 @@ const DateTimeOverlay: React.FC = () => {
           setBgOpacity={settings.setBgOpacity}
           renameRecord={stopwatch.renameRecord}
           deleteRecord={stopwatch.deleteRecord}
+          onOpenLibrary={() => setShowLibrary(true)}
+          accentColor={accentColor}
+        />
+      )}
+
+      {showLibrary && (
+        <StopwatchLibraryModal 
+          onClose={() => setShowLibrary(false)} 
+          accentColor={accentColor}
+          themeClass={settings.theme.className}
+          activeColors={activeColors}
         />
       )}
     </div>

@@ -104,7 +104,12 @@ export default function CharacterSearch() {
     return () => clearTimeout(timer)
   }, [query])
 
-  const templates = ['φ×-', '□×', '××', '××-', 'φ×', '×φ', 'φ', '□', '×', '-']
+  const templateGroups = [
+    { name: 'PIPE', items: ['φ×-', '××-'] },
+    { name: 'BAR', items: ['□×', 'φ×'] },
+    { name: 'PLATE', items: ['××', '×φ'] },
+    { name: 'INDIVIDUAL', items: ['φ', '□', '×', '-'] },
+  ]
 
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
@@ -293,21 +298,28 @@ export default function CharacterSearch() {
             <h2 className="char-templates-title">
               Drafting Templates
             </h2>
-            <div className="char-templates-grid">
-              {templates.map((tpl, i) => (
-                <button
-                  key={i}
-                  className={`char-tpl-btn ${copiedId === `tpl-${i}` ? 'copied copied-glow' : ''}`}
-                  onClick={() => handleCopy(tpl, `tpl-${i}`)}
-                  title={`Copy ${tpl}`}
-                >
-                  {tpl}
-                </button>
+            <div className="char-templates-container">
+              {templateGroups.map((group) => (
+                <div key={group.name} className="char-template-group">
+                  <div className="char-group-label">{group.name}</div>
+                  <div className="char-group-items">
+                    {group.items.map((tpl, i) => (
+                      <button
+                        key={`${group.name}-${i}`}
+                        className={`char-tpl-btn ${copiedId === `tpl-${group.name}-${i}` ? 'copied copied-glow' : ''}`}
+                        onClick={() => handleCopy(tpl, `tpl-${group.name}-${i}`)}
+                        title={`Copy ${tpl}`}
+                      >
+                        {tpl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
             <div className="char-pro-tip" style={{ marginTop: 24, padding: 16, background: 'var(--bg-surface)', borderRadius: 10, border: '1px solid var(--border)' }}>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                <strong>Pro Tip:</strong> Click any symbol to copy it instantly. These templates are optimized for standard CAD and drafting software.
+                <strong>Pro Tip:</strong> Click any symbol to copy it.
               </p>
             </div>
           </div>

@@ -16,6 +16,8 @@ interface ControlCenterProps {
   setBgOpacity: (val: number) => void;
   renameRecord: (id: string, name: string) => void;
   deleteRecord: (id: string) => void;
+  onOpenLibrary: () => void;
+  accentColor: string;
 }
 
 export const ControlCenter: React.FC<ControlCenterProps> = ({
@@ -30,7 +32,9 @@ export const ControlCenter: React.FC<ControlCenterProps> = ({
   setBgPaletteIndex,
   setBgOpacity,
   renameRecord,
-  deleteRecord
+  deleteRecord,
+  onOpenLibrary,
+  accentColor
 }) => {
   const [showMoreThemes, setShowMoreThemes] = useState(false);
   const [showMoreColors, setShowMoreColors] = useState(false);
@@ -127,8 +131,11 @@ export const ControlCenter: React.FC<ControlCenterProps> = ({
         <div className="findr-cc-group">
           <div className="findr-cc-header">
             <div className="findr-cc-label">RECORDS ({swRecords.length})</div>
-            <button className="findr-sw-icon-btn" style={{ opacity: 0.6 }} onClick={(e) => { e.stopPropagation(); (window as any).electronAPI?.openStopwatchFolder(); }} title="Open Recording Folder">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+            <button className="findr-sw-icon-btn" style={{ opacity: 0.6 }} onClick={(e) => { e.stopPropagation(); onOpenLibrary(); }} title="Open Stopwatch Library">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              </svg>
             </button>
           </div>
           <div className="findr-sw-records">
@@ -141,6 +148,7 @@ export const ControlCenter: React.FC<ControlCenterProps> = ({
                   record={r}
                   renameRecord={renameRecord}
                   deleteRecord={deleteRecord}
+                  accentColor={accentColor}
                 />
               ))
             )}

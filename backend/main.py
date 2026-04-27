@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch
 import time
 import logging
 import os
@@ -21,7 +21,7 @@ START_TIME = time.time()
 from core.config import IS_FROZEN, BASE_DIR, LOG_DIR
 
 from db.database import engine, Base
-from models import telemetry as telemetry_model, broadcast as broadcast_model # Ensure models are registered for metadata
+from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model # Ensure models are registered for metadata
 try:
     from core.nas_indexer import indexer
 except ImportError:
@@ -112,6 +112,7 @@ app.include_router(broadcast.router, prefix="/api/broadcast", tags=["Broadcast M
 app.include_router(librarian.router, prefix="/api/librarian", tags=["Technical Librarian"])
 app.include_router(designers.router, prefix="/api/designers", tags=["Designers"])
 app.include_router(quotations.router, prefix="/api/quotations", tags=["Shared Quotations"])
+app.include_router(stopwatch.router, prefix="/api/stopwatch", tags=["Stopwatch Records"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
 # IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE

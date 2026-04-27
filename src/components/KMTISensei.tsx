@@ -129,7 +129,7 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
       <button
         className={`sensei-audio-btn ${isSpeaking ? 'speaking' : ''}`}
         onClick={speak}
-        title={isSpeaking ? 'Stop Speaking' : 'Speak'}
+        title={isSpeaking ? 'Stop Listening' : 'Listen'}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           {isSpeaking ? (

@@ -316,6 +316,7 @@ app.whenReady().then(() => {
   })
 
   // --- Stopwatch File System Handlers ---
+  /* --- Stopwatch File System Handlers (LEGACY - MIGRATED TO MYSQL) ---
   const { exec } = require('child_process')
   const XLSX = require('xlsx')
   const stopwatchDir = path.join(app.getPath('documents'), 'Stopwatch Recordings')
@@ -362,6 +363,7 @@ app.whenReady().then(() => {
       return { success: false, error: err.message } 
     }
   })
+  */
 
   ipcMain.handle('open-stopwatch-folder', async () => {
     if (!fs.existsSync(stopwatchDir)) fs.mkdirSync(stopwatchDir, { recursive: true })

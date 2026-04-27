@@ -19,6 +19,8 @@ export interface StopwatchRecord {
   name: string;
   time: string;
   timestamp: number;
+  workstation?: string;
+  user_name?: string;
 }
 
 export interface SettingsV6 {

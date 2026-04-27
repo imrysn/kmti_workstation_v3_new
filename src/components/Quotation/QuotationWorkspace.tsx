@@ -37,6 +37,7 @@ import {
 } from './index'
 import { CollaborationBar } from './CollaborationBar'
 import { HistorySidebar } from './HistorySidebar'
+import { ActivitySidebar } from './ActivitySidebar'
 import QuotationLibraryModal from './QuotationLibraryModal'
 import '../../pages/quotation/QuotationApp.css'
 import '../../pages/Quotation.css'
@@ -168,6 +169,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitPatch,
     emitBatchPatch,
     emitSnapshot,
+    emitChat,
     leaveRoom
   } = useCollaboration({
     quotId: quotId ?? null,
@@ -186,7 +188,13 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         notify(`${u.name} left the session`, 'info')
       }
     },
+    onChatReceived: (msg) => {
+      window.dispatchEvent(new CustomEvent('kmti:remote-chat', { detail: msg }))
+    },
     onRemotePatch: (patch: { path: string; value: any }, sid: string) => {
+      // Notify components about activity
+      window.dispatchEvent(new CustomEvent('kmti:remote-patch', { detail: { patch, sid } }))
+      
       const userColor = remoteUsers[sid]?.color || '#4A90D9'
       if (patch.path !== '__full_restore__') {
         setRecentEdits(prev => ({
@@ -458,8 +466,9 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitSelection,
     emitPatch,
     emitBatchPatch,
-    emitSnapshot
-  }), [isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch, emitBatchPatch, emitSnapshot])
+    emitSnapshot,
+    emitChat
+  }), [isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch, emitBatchPatch, emitSnapshot, emitChat])
 
   return (
     <CollaborationProvider value={collValue}>
@@ -653,6 +662,12 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
               </div>
             </div>
           </div>
+
+          <ActivitySidebar 
+            remoteUsers={remoteUsers}
+            userName={myEffectiveName}
+            myColor={myColor}
+          />
         </div>
 
         {/* ── Modals & Overlays ────────────────────────────────── */}

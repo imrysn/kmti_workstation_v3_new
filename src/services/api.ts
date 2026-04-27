@@ -209,6 +209,18 @@ export const quotationApi = {
     api.get<any>(`/quotations/${qId}/history/${hId}`),
 }
 
+// --- Stopwatch Records ---
+export const stopwatchApi = {
+  list: (workstation?: string, user_name?: string, limit: number = 50) =>
+    api.get<any[]>('/stopwatch/', { params: { workstation, user_name, limit } }),
+  create: (data: { name: string; time: string; workstation?: string; user_name?: string }) =>
+    api.post('/stopwatch/', data),
+  update: (id: string, name: string) =>
+    api.patch(`/stopwatch/${id}`, { name }),
+  delete: (id: string) =>
+    api.delete(`/stopwatch/${id}`),
+}
+
 // --- Librarian AI Assistant ---
 export const librarianApi = {
   getSessions: () => api.get('/librarian/sessions'),

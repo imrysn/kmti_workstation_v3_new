@@ -341,6 +341,22 @@ async def leave_doc(sid: str, data: dict):
                 await session.commit()
 
 @sio.event
+async def chat_message(sid: str, data: dict):
+    """Broadcast a chat message to the workspace."""
+    q_id = data.get("quot_id")
+    message = data.get("message")
+    if not q_id or not message: return
+    
+    user_info = _active_users.get(q_id, {}).get(sid, {})
+    await sio.emit("remote_chat", {
+        "sid": sid,
+        "name": user_info.get("name", "User"),
+        "color": user_info.get("color", "#4A90D9"),
+        "message": message,
+        "time": datetime.now().strftime("%H:%M")
+    }, room=f"quot_{q_id}")
+
+@sio.event
 async def focus_selection(sid: str, data: dict):
     q_id = data.get("quot_id")
     await sio.emit("remote_selection", data, room=f"quot_{q_id}", skip_sid=sid)

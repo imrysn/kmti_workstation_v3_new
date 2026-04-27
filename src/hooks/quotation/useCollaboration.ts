@@ -35,6 +35,7 @@ interface UseCollaborationOptions {
   onAuditEntry?: (entry: any) => void
   onUserJoined?: (user: RemoteUser) => void
   onUserLeft?: (user: RemoteUser) => void
+  onChatReceived?: (msg: { sid: string, name: string, color: string, message: string, time: string }) => void
   onRequestState?: () => any
   onError?: (message: string) => void
 }
@@ -49,6 +50,7 @@ export function useCollaboration({
   onAuditEntry,
   onUserJoined,
   onUserLeft,
+  onChatReceived,
   onRequestState,
   onError,
 }: UseCollaborationOptions): CollaborationState & {
@@ -58,6 +60,7 @@ export function useCollaboration({
   emitPatch: (patch: { path: string; value: any }, fullState?: any) => void
   emitBatchPatch: (patches: Array<{ path: string; value: any }>, fullState?: any) => void
   emitSnapshot: (fullState: any, label?: string) => void
+  emitChat: (message: string) => void
   leaveRoom: () => void
 } {
   const socketRef = useRef<Socket | null>(null)
@@ -80,10 +83,12 @@ export function useCollaboration({
 
   const joinHandlerRef = useRef(onUserJoined)
   const leftHandlerRef = useRef(onUserLeft)
+  const chatHandlerRef = useRef(onChatReceived)
   useEffect(() => {
     joinHandlerRef.current = onUserJoined
     leftHandlerRef.current = onUserLeft
-  }, [onUserJoined, onUserLeft])
+    chatHandlerRef.current = onChatReceived
+  }, [onUserJoined, onUserLeft, onChatReceived])
 
   const errorHandlerRef = useRef(onError)
   useEffect(() => {
@@ -279,6 +284,10 @@ export function useCollaboration({
       errorHandlerRef.current?.(err.message)
     })
 
+    socket.on('remote_chat', (msg: any) => {
+      chatHandlerRef.current?.(msg)
+    })
+
     socket.on('history_updated', () => {
       // Small delay to ensure DB is written before sidebar refetches
       setTimeout(() => {
@@ -369,6 +378,14 @@ export function useCollaboration({
     })
   }, [])
 
+  const emitChat = useCallback((message: string) => {
+    if (!socketRef.current || !currentQuotIdRef.current) return
+    socketRef.current.emit('chat_message', {
+      quot_id: currentQuotIdRef.current,
+      message
+    })
+  }, [])
+
   return { 
     isConnected, 
     remoteUsers, 
@@ -381,6 +398,7 @@ export function useCollaboration({
     emitPatch, 
     emitBatchPatch,
     emitSnapshot,
+    emitChat,
     leaveRoom
   }
 }

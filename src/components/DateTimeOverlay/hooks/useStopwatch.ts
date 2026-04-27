@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { StopwatchRecord } from '../types';
 import { STORAGE_KEY } from '../constants';
+import { stopwatchApi } from '../../../services/api';
 
 /**
  * Persist just the stopwatch fields into the existing settings blob.
@@ -43,11 +44,18 @@ export const useStopwatch = (initialSettings: any) => {
 
   // Load Records on Init
   useEffect(() => {
-    (window as any).electronAPI?.getStopwatchRecords().then((res: { success: boolean, data: StopwatchRecord[], error?: string }) => {
-      if (res?.success && res.data) {
-        setSwRecords(res.data);
+    const loadRecords = async () => {
+      try {
+        const info = await (window as any).electronAPI?.getWorkstationInfo();
+        const res = await stopwatchApi.list(info?.computerName, info?.username, 5);
+        if (res.data) {
+          setSwRecords(res.data);
+        }
+      } catch (err) {
+        console.error('[useStopwatch] Failed to load records from MySQL:', err);
       }
-    });
+    };
+    loadRecords();
   }, []);
 
   // Tick for Stopwatch
@@ -115,27 +123,39 @@ export const useStopwatch = (initialSettings: any) => {
   };
 
   const saveRecord = async () => {
-    const newRecord: StopwatchRecord = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: `Record ${swRecords.length + 1}`,
-      time: formatStopwatch(swCurrent),
-      timestamp: Date.now()
-    };
-    const updated = [newRecord, ...swRecords].slice(0, 50);
-    setSwRecords(updated);
-    await (window as any).electronAPI?.saveStopwatchRecords(updated);
+    try {
+      const info = await (window as any).electronAPI?.getWorkstationInfo();
+      const res = await stopwatchApi.create({
+        name: `Record ${swRecords.length + 1}`,
+        time: formatStopwatch(swCurrent),
+        workstation: info?.computerName,
+        user_name: info?.username
+      });
+      
+      if (res.data) {
+        setSwRecords(prev => [res.data, ...prev].slice(0, 5));
+      }
+    } catch (err) {
+      console.error('[useStopwatch] Failed to save record to MySQL:', err);
+    }
   };
 
   const deleteRecord = async (id: string) => {
-    const updated = swRecords.filter(r => r.id !== id);
-    setSwRecords(updated);
-    await (window as any).electronAPI?.saveStopwatchRecords(updated);
+    try {
+      await stopwatchApi.delete(id);
+      setSwRecords(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      console.error('[useStopwatch] Failed to delete record from MySQL:', err);
+    }
   };
 
   const renameRecord = async (id: string, newName: string) => {
-    const updated = swRecords.map(r => r.id === id ? { ...r, name: newName } : r);
-    setSwRecords(updated);
-    await (window as any).electronAPI?.saveStopwatchRecords(updated);
+    try {
+      await stopwatchApi.update(id, newName);
+      setSwRecords(prev => prev.map(r => r.id === id ? { ...r, name: newName } : r));
+    } catch (err) {
+      console.error('[useStopwatch] Failed to rename record in MySQL:', err);
+    }
   };
 
   return {

@@ -5,15 +5,17 @@ interface RecordItemProps {
   record: StopwatchRecord;
   renameRecord: (id: string, name: string) => void;
   deleteRecord: (id: string) => void;
+  accentColor: string;
 }
 
-export const RecordItem: React.FC<RecordItemProps> = ({ record, renameRecord, deleteRecord }) => {
+export const RecordItem: React.FC<RecordItemProps> = ({ record, renameRecord, deleteRecord, accentColor }) => {
   return (
     <div className="findr-sw-record-item">
       <div className="findr-sw-record-info">
         <input
           className="findr-sw-record-name"
           defaultValue={record.name}
+          style={{ color: accentColor }}
           onBlur={(e) => renameRecord(record.id, e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -21,7 +23,7 @@ export const RecordItem: React.FC<RecordItemProps> = ({ record, renameRecord, de
             }
           }}
         />
-        <div className="findr-sw-record-time">{record.time}</div>
+        <div className="findr-sw-record-time" style={{ color: accentColor, opacity: 0.8 }}>{record.time}</div>
       </div>
       <div className="findr-sw-record-actions">
         <button className="findr-sw-action-btn" title="Rename" onClick={(e) => {
