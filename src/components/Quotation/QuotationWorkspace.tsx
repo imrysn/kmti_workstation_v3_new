@@ -86,7 +86,8 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     updateCompanyInfo, updateClientInfo, updateQuotationDetails, updateBillingDetails,
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures,
-    setSelectedMainTaskId, updateManualOverrides, setCollapsedTaskIds, resetToNew, loadData, getSaveData,
+    setSelectedMainTaskId, updateManualOverrides, setCollapsedTaskIds, updateChatLog, chatLog,
+    resetToNew, loadData, getSaveData,
     markSaved, setHasUnsavedChanges,
   } = useInvoiceState()
 
@@ -170,7 +171,10 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitBatchPatch,
     emitSnapshot,
     emitChat,
-    leaveRoom
+    emitChatEdit,
+    emitChatRead,
+    leaveRoom,
+    mySessionId
   } = useCollaboration({
     quotId: quotId ?? null,
     quotNo,
@@ -189,7 +193,26 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       }
     },
     onChatReceived: (msg) => {
+      // 1. Immediate UI update via event
       window.dispatchEvent(new CustomEvent('kmti:remote-chat', { detail: msg }))
+      
+      // 2. Visual & Taskbar Alert if not me
+      if (msg.sid !== mySessionId) {
+        // Use the existing Modal-based Dynamic Island (NotificationToast)
+        notify(`${msg.name}: ${msg.message}`, 'info')
+
+        // Flash Taskbar for Electron users
+        if (window.electronAPI?.flashWindow) {
+          window.electronAPI.flashWindow(true)
+        }
+      }
+      
+      // 3. Persist to document state (for DB saving)
+      updateChatLog(prev => {
+        const enrichedMsg = { ...msg, id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` }
+        if (prev.find(m => m.id === enrichedMsg.id)) return prev
+        return [...prev, enrichedMsg].slice(-100)
+      })
     },
     onRemotePatch: (patch: { path: string; value: any }, sid: string) => {
       // Notify components about activity
@@ -243,6 +266,14 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         removeTask(patch.value)
       } else if (patch.path === 'tasks.reorder') {
         reorderTasks(patch.value.draggedId, patch.value.targetId)
+      } else if (patch.path === 'chat.delete' || patch.path === 'chatLog.delete') {
+        updateChatLog(prev => prev.map(m => m.id === patch.value ? { ...m, isDeleted: true, message: '' } : m))
+      } else if (patch.path === 'chat.full_sync' || patch.path === 'chatLog.full_sync') {
+        updateChatLog(() => patch.value)
+      } else if (patch.path === 'chat.edit' || patch.path === 'chatLog.edit') {
+        updateChatLog(prev => prev.map(m => m.id === patch.value.id ? { ...m, message: patch.value.message, isEdited: patch.value.isEdited } : m))
+      } else if (patch.path === 'chat.read' || patch.path === 'chatLog.read') {
+        updateChatLog(prev => prev.map(m => m.id === patch.value.id ? { ...m, readBy: Array.from(new Set([...(m.readBy || []), patch.value.name])) } : m))
       }
     },
     onRequestState: getSaveData,
@@ -331,6 +362,21 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     updateBaseRate(field, value)
     emitPatch({ path: `baseRates.${field}`, value }, getSaveData())
   }, [updateBaseRate, emitPatch, getSaveData])
+
+  const syncDeleteChat = useCallback((msgId: string) => {
+    updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, isDeleted: true, message: '' } : m))
+    emitPatch({ path: 'chatLog.delete', value: msgId }, getSaveData())
+  }, [updateChatLog, emitPatch, getSaveData])
+
+  const syncEditChat = useCallback((msgId: string, newMessage: string) => {
+    updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, message: newMessage, isEdited: true } : m))
+    emitChatEdit(msgId, newMessage)
+  }, [updateChatLog, emitChatEdit])
+
+  const syncReadChat = useCallback((msgId: string) => {
+    updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, readBy: Array.from(new Set([...(m.readBy || []), myEffectiveName])) } : m))
+    emitChatRead(msgId, myEffectiveName)
+  }, [updateChatLog, emitChatRead, myEffectiveName])
 
   // Sync window title with document identity + unsaved state
   useEffect(() => {
@@ -468,7 +514,19 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitBatchPatch,
     emitSnapshot,
     emitChat
-  }), [isConnected, remoteUsers, myColor, recentEdits, emitFocus, emitBlur, emitSelection, emitPatch, emitBatchPatch, emitSnapshot, emitChat])
+  }), [
+    isConnected,
+    remoteUsers,
+    myColor,
+    recentEdits,
+    emitFocus,
+    emitBlur,
+    emitSelection,
+    emitPatch,
+    emitBatchPatch,
+    emitSnapshot,
+    emitChat
+  ])
 
   return (
     <CollaborationProvider value={collValue}>
@@ -664,9 +722,12 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
           </div>
 
           <ActivitySidebar 
-            remoteUsers={remoteUsers}
             userName={myEffectiveName}
             myColor={myColor}
+            chatLog={chatLog}
+            onDeleteChat={isPreview ? undefined : syncDeleteChat}
+            onEditChat={isPreview ? undefined : syncEditChat}
+            onReadChat={isPreview ? undefined : syncReadChat}
           />
         </div>
 

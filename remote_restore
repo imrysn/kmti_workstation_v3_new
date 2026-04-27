@@ -13,7 +13,7 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260423-678",
+    "quotationNo": "KMTE-260423-12345",
     "referenceNo": "",
     "date": "2026-04-23"
   },
@@ -29,89 +29,11 @@
   },
   "tasks": [
     {
-      "id": 1776902813342,
+      "id": 1776934829807,
       "description": "",
       "referenceNumber": "",
-      "hours": 24,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776902823929,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 23,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776902824098,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 23,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776902824250,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 23,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776905952669,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 2,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776905952822,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 3,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
-    },
-    {
-      "id": 1776905952973,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 4,
-      "minutes": 0,
+      "hours": 12,
+      "minutes": 23,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
@@ -163,5 +85,42 @@
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-23T00:59:16.026Z"
+  "chatLog": [
+    {
+      "sid": "3hDa3a_w7FDk9amCAABT",
+      "name": "User",
+      "color": "#C0392B",
+      "message": "hey bro",
+      "time": "08:47",
+      "id": "1777250822557-4it0iww7h",
+      "isEdited": true
+    },
+    {
+      "sid": "3hDa3a_w7FDk9amCAABT",
+      "name": "User",
+      "color": "#C0392B",
+      "message": "",
+      "time": "08:47",
+      "id": "1777250828572-sws4k2tx8",
+      "isDeleted": true
+    },
+    {
+      "sid": "aVFgwXfdRwIGjB2JAACX",
+      "name": "Tiger",
+      "color": "#E05C6B",
+      "message": "",
+      "time": "09:07",
+      "id": "1777252066836-lhp5pox6u",
+      "isDeleted": true
+    },
+    {
+      "sid": "aVFgwXfdRwIGjB2JAACX",
+      "name": "Tiger",
+      "color": "#E05C6B",
+      "message": "awdwa",
+      "time": "09:08",
+      "id": "1777252090961-tdb0ds6si"
+    }
+  ],
+  "savedAt": "2026-04-27T01:13:10.983Z"
 }

@@ -17,6 +17,18 @@ export interface RemoteUser {
   selection?: { start: number; end: number } | null
 }
 
+export interface ChatMsg {
+  id?: string
+  sid: string
+  name: string
+  color: string
+  message: string
+  time: string
+  isEdited?: boolean
+  isDeleted?: boolean
+  readBy?: string[]
+}
+
 export interface CollaborationState {
   isConnected: boolean
   remoteUsers: Record<string, RemoteUser>
@@ -35,7 +47,7 @@ interface UseCollaborationOptions {
   onAuditEntry?: (entry: any) => void
   onUserJoined?: (user: RemoteUser) => void
   onUserLeft?: (user: RemoteUser) => void
-  onChatReceived?: (msg: { sid: string, name: string, color: string, message: string, time: string }) => void
+  onChatReceived?: (msg: ChatMsg) => void
   onRequestState?: () => any
   onError?: (message: string) => void
 }
@@ -61,6 +73,8 @@ export function useCollaboration({
   emitBatchPatch: (patches: Array<{ path: string; value: any }>, fullState?: any) => void
   emitSnapshot: (fullState: any, label?: string) => void
   emitChat: (message: string) => void
+  emitChatEdit: (msgId: string, newMessage: string) => void
+  emitChatRead: (msgId: string, name: string) => void
   leaveRoom: () => void
 } {
   const socketRef = useRef<Socket | null>(null)
@@ -386,6 +400,14 @@ export function useCollaboration({
     })
   }, [])
 
+  const emitChatEdit = useCallback((msgId: string, newMessage: string) => {
+    emitPatch({ path: 'chatLog.edit', value: { id: msgId, message: newMessage, isEdited: true } })
+  }, [emitPatch])
+
+  const emitChatRead = useCallback((msgId: string, name: string) => {
+    emitPatch({ path: 'chatLog.read', value: { id: msgId, name } })
+  }, [emitPatch])
+
   return { 
     isConnected, 
     remoteUsers, 
@@ -399,6 +421,8 @@ export function useCollaboration({
     emitBatchPatch,
     emitSnapshot,
     emitChat,
+    emitChatEdit,
+    emitChatRead,
     leaveRoom
   }
 }

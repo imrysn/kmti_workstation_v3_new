@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import TitleBar from './components/TitleBar'
 import SessionExpiredModal from './components/SessionExpiredModal'
@@ -73,6 +73,9 @@ function ModuleGuard({
 function WorkstationShell() {
   const { hasRole, isLoggingOut } = useAuth()
   const { flags } = useFlags()
+  const location = useLocation()
+
+  const isQuotationPage = location.pathname.startsWith('/quotation')
 
   // Activate real-time telemetry heartbeat
   useHeartbeat()
@@ -220,7 +223,7 @@ function WorkstationShell() {
       <WhatsNewModal />
       <DateTimeOverlay />
       <SessionExpiredModal />
-      <FeedbackWidget />
+      {!isQuotationPage && <FeedbackWidget />}
       <BroadcastOverlay />
       <BroadcastFAB />
       <MandatoryUpdateOverlay />

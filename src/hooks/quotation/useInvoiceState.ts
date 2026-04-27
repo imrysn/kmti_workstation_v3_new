@@ -99,6 +99,18 @@ export interface ManualOverrides {
   footer: FooterOverrides
 }
 
+export interface ChatMsg {
+  id: string
+  sid: string
+  name: string
+  color: string
+  message: string
+  time: string
+  isEdited?: boolean
+  isDeleted?: boolean
+  readBy?: string[]
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
@@ -312,6 +324,7 @@ export function useInvoiceState() {
     ns,
   )
   const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'collapsed', ns)
+  const [chatLog, setChatLog] = useStickyState<ChatMsg[]>([], 'chatLog', ns)
 
   const debouncedQuotationUpdate = useDebounceCallback((date: string) => {
     const newQuotationNo = generateQuotationNumber(date)
@@ -457,6 +470,11 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [setManualOverrides, setHasUnsavedChanges])
 
+  const updateChatLog = useCallback((updater: (prev: ChatMsg[]) => ChatMsg[]) => {
+    setChatLog(prev => updater(prev))
+    setHasUnsavedChanges(true)
+  }, [setChatLog, setHasUnsavedChanges])
+
   const resetToNew = useCallback((forcedQuotNo?: string) => {
     const newToday = new Date().toISOString().split('T')[0]
     const newQuotNo = forcedQuotNo || generateQuotationNumber(newToday)
@@ -476,6 +494,7 @@ export function useInvoiceState() {
       signatures: DEFAULT_SIGNATURES,
       manualOverrides: EMPTY_MANUAL_OVERRIDES,
       collapsed: [],
+      chatLog: [],
       filePath: null,
       unsaved: false,
     })
@@ -489,6 +508,7 @@ export function useInvoiceState() {
     setSignatures(DEFAULT_SIGNATURES)
     setManualOverrides(EMPTY_MANUAL_OVERRIDES)
     setCollapsedTaskIds([])
+    setChatLog([])
     setCurrentFilePath(null)
     setHasUnsavedChanges(false)
   }, [])
@@ -519,6 +539,7 @@ export function useInvoiceState() {
     }
     const resolvedOverrides = migrateLegacyOverrides(data.manualOverrides)
     const resolvedCollapsed = data.collapsedTaskIds || []
+    const resolvedChatLog = data.chatLog || []
 
     // ── Critical: pre-seed sessionStorage under the new namespace BEFORE
     // calling setNs(). useStickyState's resync useEffect fires on the next
@@ -535,6 +556,7 @@ export function useInvoiceState() {
         signatures:      resolvedSigs,
         manualOverrides: resolvedOverrides,
         collapsed:       resolvedCollapsed,
+        chatLog:         resolvedChatLog,
         filePath:        fileName,
         unsaved:         false,
       })
@@ -553,6 +575,7 @@ export function useInvoiceState() {
     setSignatures(resolvedSigs)
     setManualOverrides(resolvedOverrides)
     setCollapsedTaskIds(resolvedCollapsed)
+    setChatLog(resolvedChatLog)
     setCurrentFilePath(fileName)
     setHasUnsavedChanges(false)
   }, [])
@@ -567,8 +590,9 @@ export function useInvoiceState() {
     signatures,
     manualOverrides,
     collapsedTaskIds,
+    chatLog,
     savedAt: new Date().toISOString(),
-  }), [companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds])
+  }), [companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds, chatLog])
 
   const markSaved = useCallback((filePath: string) => {
     setCurrentFilePath(filePath)
@@ -582,7 +606,7 @@ export function useInvoiceState() {
     updateCompanyInfo, updateClientInfo, updateQuotationDetails, updateBillingDetails,
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures, setSelectedMainTaskId,
-    updateManualOverrides, setCollapsedTaskIds,
+    updateManualOverrides, setCollapsedTaskIds, updateChatLog, chatLog,
     resetToNew, loadData, getSaveData, markSaved, setHasUnsavedChanges,
   }
 }
