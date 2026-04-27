@@ -1,7 +1,9 @@
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
+import type { Task, BaseRates, ManualOverrides, Signatures, ClientInfo, QuotationDetails } from '../../../hooks/quotation'
+import { calculateTaskTotal, calculateOverhead, getUnitPageCount } from '../../../utils/quotation'
 
-// Helper: medium border side
+// Border helpers
 const M: Partial<ExcelJS.Border> = { style: 'medium' }
 const T: Partial<ExcelJS.Border> = { style: 'thin' }
 
@@ -20,11 +22,36 @@ function applyBorder(
   }
 }
 
+export interface ExcelExportData {
+  quotNo: string
+  clientInfo: ClientInfo
+  quotationDetails: QuotationDetails
+  tasks: Task[]
+  baseRates: BaseRates
+  manualOverrides: ManualOverrides
+  signatures: Signatures
+}
+
 /**
  * High-Fidelity Excel Export for KMTI Quotations
+ * Uses the same calculation pipeline as PrintPage/PrintPreviewModal.
  * Layout source: Quotation_KMTE-260423-12345_2026-04-27.xlsx
  */
-export async function exportToExcel(quotationData: any) {
+export async function exportToExcel(data: ExcelExportData) {
+  const { quotNo, clientInfo, quotationDetails, tasks, baseRates, manualOverrides, signatures } = data
+
+  // ─── Compute totals (mirrors PrintPreviewModal logic) ─────────────────────
+  const mainTasks = tasks.filter(t => t.isMainTask)
+  const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides).total)
+  const subtotal = taskTotals.reduce((s, t) => s + t, 0)
+  const footer = manualOverrides?.footer || {}
+  const overheadTotal = footer.overhead !== undefined
+    ? footer.overhead
+    : calculateOverhead(subtotal, baseRates.overheadPercentage)
+  const showAdmin = baseRates.overheadPercentage > 0
+  const grandTotal = subtotal + overheadTotal + (footer.adjustment || 0)
+  const metaDate = quotationDetails.date || new Date().toISOString().slice(0, 10)
+
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet('Quotation', {
     pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0, right: 0, top: 0, bottom: 0, header: 0, footer: 0 }, printArea: 'A1:G50' },
@@ -119,33 +146,32 @@ export async function exportToExcel(quotationData: any) {
 
   sheet.mergeCells('A10:C10')
   const clientName = sheet.getCell('A10')
-  clientName.value = quotationData.clientName || ''
+  clientName.value = clientInfo.company
   clientName.font = { name: 'Arial', size: 11, bold: true }
 
   sheet.mergeCells('A11:C11')
   const clientContact = sheet.getCell('A11')
-  clientContact.value = quotationData.clientContact || ''
+  clientContact.value = clientInfo.contact
   clientContact.font = { name: 'Arial', size: 11, bold: true }
 
   sheet.mergeCells('A12:D12')
   const clientAddr = sheet.getCell('A12')
-  clientAddr.value = quotationData.clientAddress || ''
+  clientAddr.value = clientInfo.address
   clientAddr.font = { name: 'Arial', size: 10 }
   clientAddr.alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
 
   sheet.mergeCells('A13:D13')
   const clientTel = sheet.getCell('A13')
-  clientTel.value = `TEL: ${quotationData.clientTel || ''} FAX: ${quotationData.clientFax || ''}`
+  clientTel.value = `TEL: ${clientInfo.phone || ''}`
   clientTel.font = { name: 'Arial', size: 10 }
   clientTel.alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
 
   // ─── 8. Document Details (E10:G12) ────────────────────────────────────────
   // Labels in E; values in F:G merged
-  const metaDate = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
   const metaRows = [
-    { row: 10, label: 'Quotation NO.:',  value: quotationData.quotNo   || '', bold: true },
-    { row: 11, label: 'REFERENCE NO.:', value: quotationData.clientRef || '', bold: false },
-    { row: 12, label: 'DATE:',          value: quotationData.date      || metaDate, bold: false },
+    { row: 10, label: 'Quotation NO.:',  value: quotNo,                        bold: true },
+    { row: 11, label: 'REFERENCE NO.:', value: quotationDetails.referenceNo || '', bold: false },
+    { row: 12, label: 'DATE:',          value: metaDate,                       bold: false },
   ]
   metaRows.forEach(({ row, label, value, bold }) => {
     const labelCell = sheet.getCell(`E${row}`)
@@ -203,32 +229,33 @@ export async function exportToExcel(quotationData: any) {
   //   Remaining rows up to row 25: empty bordered rows
   //   Row 26: Total
 
-  const tasks = quotationData.tasks || []
   const TABLE_START = 16
   const TABLE_END = 25      // last data row before total
 
   // Row border helper for table body rows
   function applyTableRowBorders(r: number) {
-    applyBorder(sheet.getCell(r, 1), T, T, M, T)  // A
-    applyBorder(sheet.getCell(r, 2), T, T, undefined, T)  // B (merged B:C)
-    applyBorder(sheet.getCell(r, 4), T, T, T, T)  // D
-    applyBorder(sheet.getCell(r, 5), T, T, T, T)  // E
-    applyBorder(sheet.getCell(r, 6), T, T, T)      // F
-    applyBorder(sheet.getCell(r, 7), T, T, T, M)  // G
+    applyBorder(sheet.getCell(r, 1), T, T, M, T)
+    applyBorder(sheet.getCell(r, 2), T, T, undefined, T)
+    applyBorder(sheet.getCell(r, 4), T, T, T, T)
+    applyBorder(sheet.getCell(r, 5), T, T, T, T)
+    applyBorder(sheet.getCell(r, 6), T, T, T)
+    applyBorder(sheet.getCell(r, 7), T, T, T, M)
   }
 
   let currentRow = TABLE_START
 
-  // Task rows
-  tasks.forEach((task: any, idx: number) => {
-    if (currentRow > TABLE_END - 2) return // guard: leave room for Overhead + NothingFollow
+  // Task rows — main tasks only, same as PrintPage
+  mainTasks.forEach((task, idx) => {
+    if (currentRow > TABLE_END - 2) return // guard: room for Overhead + NothingFollow
     sheet.mergeCells(`B${currentRow}:C${currentRow}`)
+
+    const unitPage = getUnitPageCount(task.id, tasks, manualOverrides)
 
     sheet.getCell(`A${currentRow}`).value = idx + 1
     sheet.getCell(`A${currentRow}`).font = { name: 'Arial', size: 11 }
     sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
 
-    sheet.getCell(`B${currentRow}`).value = task.refNo || ''
+    sheet.getCell(`B${currentRow}`).value = task.referenceNumber || ''
     sheet.getCell(`B${currentRow}`).font = { name: 'Arial', size: 11 }
     sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
 
@@ -236,15 +263,15 @@ export async function exportToExcel(quotationData: any) {
     sheet.getCell(`D${currentRow}`).font = { name: 'Arial', size: 11 }
     sheet.getCell(`D${currentRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
 
-    sheet.getCell(`E${currentRow}`).value = task.qty ?? 1
+    sheet.getCell(`E${currentRow}`).value = unitPage
     sheet.getCell(`E${currentRow}`).font = { name: 'Arial', size: 11 }
     sheet.getCell(`E${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
 
-    sheet.getCell(`F${currentRow}`).value = task.type || ''
+    sheet.getCell(`F${currentRow}`).value = task.type || '3D'
     sheet.getCell(`F${currentRow}`).font = { name: 'Arial', size: 11 }
     sheet.getCell(`F${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
 
-    sheet.getCell(`G${currentRow}`).value = task.total ?? 0
+    sheet.getCell(`G${currentRow}`).value = taskTotals[idx]
     sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 11 }
     sheet.getCell(`G${currentRow}`).numFmt = '"¥"#,##0'
     sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
@@ -253,12 +280,18 @@ export async function exportToExcel(quotationData: any) {
     currentRow++
   })
 
-  // Admin Overhead row (A blank, B:C merged with label, rest empty but bordered)
+  // Admin Overhead row — only when overheadPercentage > 0, mirrors PrintPage showAdmin
   const overheadRow = currentRow
   sheet.mergeCells(`B${overheadRow}:C${overheadRow}`)
-  sheet.getCell(`B${overheadRow}`).value = 'Administrative Overhead'
-  sheet.getCell(`B${overheadRow}`).font = { name: 'Arial', size: 11 }
-  sheet.getCell(`B${overheadRow}`).alignment = { horizontal: 'center' }
+  if (showAdmin) {
+    sheet.getCell(`B${overheadRow}`).value = 'Administrative Overhead'
+    sheet.getCell(`B${overheadRow}`).font = { name: 'Arial', size: 11 }
+    sheet.getCell(`B${overheadRow}`).alignment = { horizontal: 'center' }
+    sheet.getCell(`G${overheadRow}`).value = overheadTotal
+    sheet.getCell(`G${overheadRow}`).font = { name: 'Arial', size: 11 }
+    sheet.getCell(`G${overheadRow}`).numFmt = '"¥"#,##0'
+    sheet.getCell(`G${overheadRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
+  }
   applyTableRowBorders(overheadRow)
   currentRow++
 
@@ -287,7 +320,7 @@ export async function exportToExcel(quotationData: any) {
   applyBorder(totalLabel, M, M, M, T)
 
   const totalVal = sheet.getCell('G26')
-  totalVal.value = quotationData.grandTotal ?? 0
+  totalVal.value = grandTotal
   totalVal.font = { name: 'Arial', size: 11, bold: true }
   totalVal.numFmt = '"¥"#,##0'
   totalVal.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -312,7 +345,7 @@ export async function exportToExcel(quotationData: any) {
   })
 
   sheet.mergeCells('A37:C37')
-  sheet.getCell('A37').value = quotationData.preparedBy || 'MR. MICHAEL PEÑANO'
+  sheet.getCell('A37').value = signatures.quotation.preparedBy.name || 'MR. MICHAEL PEÑANO'
   sheet.getCell('A37').font = { name: 'Arial', size: 10, bold: true }
   sheet.getCell('A37').alignment = { horizontal: 'center' }
 
@@ -331,12 +364,12 @@ export async function exportToExcel(quotationData: any) {
   })
 
   sheet.mergeCells('A44:C44')
-  sheet.getCell('A44').value = 'MR. YUICHIRO MAENO'
+  sheet.getCell('A44').value = signatures.quotation.approvedBy.name || 'MR. YUICHIRO MAENO'
   sheet.getCell('A44').font = { name: 'Arial', size: 10, bold: true }
   sheet.getCell('A44').alignment = { horizontal: 'center' }
 
   sheet.mergeCells('A45:C45')
-  sheet.getCell('A45').value = 'President'
+  sheet.getCell('A45').value = signatures.quotation.approvedBy.title || 'President'
   sheet.getCell('A45').font = { name: 'Arial', size: 9 }
   sheet.getCell('A45').alignment = { horizontal: 'center' }
 
@@ -350,7 +383,7 @@ export async function exportToExcel(quotationData: any) {
   })
 
   sheet.mergeCells('E44:F44')
-  sheet.getCell('E44').value = '(Signature Over Printed Name)'
+  sheet.getCell('E44').value = signatures.quotation.receivedBy.label || '(Signature Over Printed Name)'
   sheet.getCell('E44').font = { name: 'Arial', size: 10, bold: true }
   sheet.getCell('E44').alignment = { horizontal: 'center' }
 
@@ -364,5 +397,5 @@ export async function exportToExcel(quotationData: any) {
   // ─── 15. Save ─────────────────────────────────────────────────────────────
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-  saveAs(blob, `Quotation_${quotationData.quotNo || 'Draft'}_${metaDate}.xlsx`)
+  saveAs(blob, `Quotation_${quotNo || 'Draft'}_${metaDate}.xlsx`)
 }

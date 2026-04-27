@@ -568,15 +568,12 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   const handleExportExcel = () => {
     exportToExcel({
       quotNo,
-      clientName: effClient.company,
-      clientContact: effClient.contact,
-      clientAddress: effClient.address,
-      clientTel: effClient.phone,
-      clientRef: effQuotDetails.referenceNo,
-      date: effQuotDetails.date,
+      clientInfo: effClient,
+      quotationDetails: effQuotDetails,
       tasks: effTasks,
-      grandTotal: effBilling.grandTotal,
-      preparedBy: effSignatures.preparedBy
+      baseRates: effBaseRates,
+      manualOverrides: effOverrides,
+      signatures: effSignatures,
     })
   }
 
