@@ -57,6 +57,7 @@
         "to": "backend/dist",
         "filter": [
           "server.exe",
+          "data/**/*",
           "*.json"
         ]
       }

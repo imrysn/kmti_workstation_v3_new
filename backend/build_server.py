@@ -44,4 +44,15 @@ PyInstaller.__main__.run([
     '--distpath=dist',
 ])
 
+# --- Post-Build: Copy Data folder for external template management ---
+import shutil
+dist_data_path = os.path.join(base_dir, 'dist', 'data')
+source_data_path = os.path.join(base_dir, 'data')
+
+if os.path.exists(dist_data_path):
+    shutil.rmtree(dist_data_path)
+
+print(f">>> Copying external data templates to {dist_data_path}...")
+shutil.copytree(source_data_path, dist_data_path)
+
 print("\n>>> Backend GUI build complete. Executable located in backend/dist/server.exe")

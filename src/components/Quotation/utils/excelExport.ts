@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import type { Task, BaseRates, ManualOverrides, Signatures, ClientInfo, QuotationDetails, BillingDetails } from '../../../hooks/quotation'
 import { calculateTaskTotal, calculateOverhead, getUnitPageCount } from '../../../utils/quotation'
+import { API_BASE } from '../../../services/api'
 
 export interface ExcelExportData {
   mode: 'quotation' | 'billing'
@@ -38,7 +39,7 @@ export async function exportToExcel(data: ExcelExportData) {
 
   // ── 2. Fetch template from backend ────────────────────────────────────────
   const templateKey = mode === 'billing' ? 'billing' : 'quotation'
-  const templateRes = await fetch(`http://localhost:8000/api/quotations/templates/${templateKey}`)
+  const templateRes = await fetch(`${API_BASE}/quotations/templates/${templateKey}`)
   if (!templateRes.ok) throw new Error(`Failed to load ${templateKey} template: ${templateRes.status}`)
   const templateBuffer = await templateRes.arrayBuffer()
 

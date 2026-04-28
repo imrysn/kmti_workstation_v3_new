@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { helpApi } from '../services/api';
+import { helpApi, SERVER_BASE } from '../services/api';
 import helpCenterIcon from '../assets/help-center-icon.png';
 import './FeedbackWidget.css';
 
@@ -29,8 +29,6 @@ export interface Ticket {
   updated_at: string;
   messages?: TicketMsg[];
 }
-
-export const SERVER_BASE = import.meta.env.DEV ? 'http://localhost:8000' : 'http://192.168.200.105:8000';
 
 function dataURLToBlob(dataURL: string): Blob {
   const [header, base64Data] = dataURL.split(';base64,');
