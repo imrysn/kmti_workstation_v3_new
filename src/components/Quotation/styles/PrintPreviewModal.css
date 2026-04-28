@@ -2175,7 +2175,7 @@ body:has(.print-preview-modal) .broadcast-fab {
 .preview-content .detail-label-visual {
   font-weight: bold !important;
   font-size: 12px !important;
-  width: 140px !important;
+  width: 95px !important;
   text-align: left !important;
 }
 

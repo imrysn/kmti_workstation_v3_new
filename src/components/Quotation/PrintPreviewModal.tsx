@@ -254,28 +254,40 @@ const PrintPreviewModal = memo(({
         : (quotationDetails.quotationNo || 'Draft')
       const defaultName = `${docType}_${docNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
 
+      // Show save dialog first — before injecting print styles
+      const dialogResult = await el.showSaveDialog({
+        title: 'Save PDF',
+        defaultPath: defaultName,
+        filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
+      })
+
+      // User cancelled
+      if (dialogResult.canceled || !dialogResult.filePath) return
+
+      const savePath = dialogResult.filePath
+
+      // Inject print styles
       styleEl = document.createElement('style')
       styleEl.id = '__kmti-pdf-print-override'
       styleEl.textContent = buildPrintStyleContent()
       document.head.appendChild(styleEl)
       await new Promise(r => setTimeout(r, 300))
 
-      const savePath = await el.showSaveDialog({
-        title: 'Save PDF',
-        defaultPath: defaultName,
-        filters: [{ name: 'PDF Files', extensions: ['pdf'] }]
-      })
-
-      if (!savePath) return
-
-      const pdfData = await el.printToPDF({
+      // Generate PDF
+      const pdfResult = await el.printToPDF({
         printBackground: true,
         pageSize: 'A4',
         landscape: false,
         margins: { marginType: 'none' }
       })
 
-      await el.writeFile(savePath, pdfData)
+      if (!pdfResult.success || !pdfResult.data) {
+        console.error('PDF generation failed:', pdfResult.error)
+        return
+      }
+
+      // Write to disk
+      await el.writeFile(savePath, pdfResult.data)
     } catch (err) {
       console.error('PDF export failed:', err)
     } finally {
