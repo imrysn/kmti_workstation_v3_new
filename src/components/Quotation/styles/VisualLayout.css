@@ -607,21 +607,135 @@
   padding: 3.5px;
 }
 
-/* Header Section - Original Quotation Layout */
+/* =====================================================================
+   QUOTATION HEADER  —  logo left | text CENTERED over full width | address right
+   The center block uses absolute positioning so it's truly centered
+   on the page regardless of logo/address column widths.
+   ===================================================================== */
+
 .header-visual {
-  display: block;
-  position: relative;
-  margin-bottom: 25px;
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px;
   margin-top: 0;
-  min-height: 150px;
+  position: relative;
+  min-height: 140px;
 }
 
-/* Original logo positioning for quotation */
-.logo-visual {
+/* Col A-C: Logo block — left anchor in flex row */
+.qh-logo {
+  flex-shrink: 0;
+  width: 140px;
+  height: 140px;
+  z-index: 1;
+}
+
+.qh-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Center block — absolutely centered over the full header width */
+.qh-center {
   position: absolute;
   left: 0;
+  right: 0;
   top: 0;
-  /* Aligned to top */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  z-index: 0;
+  padding-left: 70px;
+  /* offset logo width so text centers over remaining space */
+}
+
+.qh-company-name {
+  font-size: 28px;
+  font-weight: bold;
+  white-space: nowrap;
+  line-height: 1.2;
+  margin-bottom: 2px;
+  margin-top: 4px;
+}
+
+.qh-title {
+  font-size: 20px;
+  font-weight: bold;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+/* Col E-G: Right panel — address only */
+.qh-right {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: 80px;
+  /* push address down to ~row 5 level */
+  z-index: 1;
+}
+
+.qh-address-block {
+  text-align: right;
+  line-height: 1.45;
+}
+
+.qh-addr-name {
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.qh-addr-line {
+  font-size: 10px;
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+/* Meta block — absolute within quotation-visual-exact, aligned with client info */
+.qh-meta-block {
+  position: absolute;
+  right: 8mm;
+  top: 240px;
+  width: 230px;
+}
+
+.qh-meta-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.qh-meta-label {
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  text-align: left;
+  width: 90px;
+}
+
+.qh-meta-value {
+  font-size: 10px;
+  font-weight: normal;
+  border-bottom: 1px solid black;
+  flex: 1;
+  text-align: center;
+  height: 13px;
+  line-height: 13px;
+  display: inline-block;
+}
+
+/* Keep legacy classes working for billing details block in PrintPage */
+.logo-visual {
+  flex-shrink: 0;
   width: 125px;
   height: 140px;
 }
@@ -632,135 +746,68 @@
   object-fit: contain;
 }
 
-/* Original center text for quotation */
-.center-text-visual {
-  position: absolute;
-  left: 50%;
-  /* Pure horizontal center */
-  top: 0;
-  /* Aligned to top */
-  transform: translateX(-50%);
-  /* Removed vertical translate centering */
-  text-align: center;
-  white-space: pre-line;
-  z-index: 2;
-  width: 100%;
-  max-width: 380px;
-  /* Constrained to avoid side-text collision */
-}
-
-.company-name-visual {
-  font-size: 22px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  line-height: 1.1;
-  white-space: pre-line;
-  max-width: 400px;
-  /* Prevent overlap with right details */
-  /* Allow BR tags for quotation */
-}
-
-.quotation-title-visual {
-  font-size: 26px;
-  font-weight: bold;
-  margin-top: 45px;
-  /* Spaced below the company name */
-  white-space: nowrap;
-}
-
-/* Original right details for quotation */
+/* Legacy — only used by billing body details block now */
 .right-details-visual {
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 270px;
-  /* Restored width to prevent text wrapping */
+  flex-shrink: 0;
+  width: 245px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   min-height: 150px;
 }
 
-/* Billing Statement - Simple Clean Header Layout */
+/* company-info-visual: kept for backward compat, now unused in header */
+.company-info-visual {
+  display: none;
+}
+
+/* =====================================================================
+   BILLING HEADER  —  logo left + centered text column
+   ===================================================================== */
+
 .header-visual.billing-header {
-  min-height: 100px;
+  min-height: 110px;
   margin-bottom: 10px;
-  padding-bottom: 0;
-  border-bottom: none;
-  display: flex;
   align-items: flex-start;
-  justify-content: center;
-  position: relative;
+  justify-content: flex-start;
+  gap: 16px;
 }
 
 .billing-header .logo-visual {
-  position: absolute;
-  left: 50px;
-  /* 50px from left edge */
-  top: 10px;
-  /* 10px from top */
+  flex-shrink: 0;
   width: 100px;
-  /* Logo width */
   height: 100px;
-  /* Logo height */
+  position: static;
 }
 
-.billing-header .center-text-visual {
-  position: static;
-  text-align: center;
-  transform: none;
-  margin-top: 10px;
-  /* 10px from top */
-  margin-left: 25px;
-  /* 25px left adjustment for logo space */
-  width: 100%;
-  max-width: 100% !important;
+.billing-center-block {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  text-align: center;
+  padding-top: 4px;
 }
 
-.billing-header .company-name-visual {
+.billing-company-name {
   font-size: 20px;
-  /* Company name font size */
   font-weight: bold;
-  margin-bottom: 8px;
-  /* 8px space below company name */
-  line-height: 1.2;
-  color: #000;
   white-space: nowrap;
-  /* Single line */
-}
-
-.billing-header .company-address-visual {
-  font-size: 11px;
-  /* Address font size - matches template */
-  line-height: 1.4;
-  color: #000;
+  line-height: 1.2;
   margin-bottom: 4px;
-  /* Small gap before VAT line */
-  text-align: center;
-  font-weight: normal;
-  max-width: 100%;
 }
 
-.billing-header .company-vat-visual {
-  font-size: 11px;
-  line-height: 1.4;
+.billing-address-line {
+  font-size: 10.5px;
+  line-height: 1.45;
   color: #000;
-  margin-bottom: 12px;
-  /* Gap before BILLING STATEMENT title */
-  text-align: center;
   font-weight: normal;
 }
 
-.billing-header .quotation-title-visual {
+.billing-title {
   font-size: 20px;
-  /* Larger, matches 'BILLING STATEMENT' template style */
-  font-weight: bold;
-  /* Bold in new template */
-  margin-top: 0;
-  color: #000;
+  margin-top: 10px;
+  white-space: nowrap;
 }
 
 /* Billing Details Positioning - now handled by :has() rule below .quotation-details-visual */
@@ -783,6 +830,7 @@
   font-weight: bold;
   margin-bottom: 0px;
   min-height: auto;
+  white-space: nowrap;
 }
 
 .quotation-details-visual {
@@ -790,7 +838,7 @@
   position: absolute;
   top: 216px;
   right: 0;
-  width: 300px;
+  width: 245px;
 }
 
 /* Billing mode override — moves details block down so Invoice No. aligns with client name */
@@ -804,7 +852,7 @@
 .detail-row-visual {
   display: flex;
   justify-content: flex-end;
-  gap: 20px;
+  gap: 10px;
   margin-bottom: 6px;
   align-items: center;
   min-height: 20px;
@@ -812,16 +860,16 @@
 
 .detail-label-visual {
   font-weight: bold;
-  font-size: 12px;
-  width: 140px;
-  /* Adjust width to fit the longest label and align starts */
+  font-size: 11px;
+  width: 120px;
   text-align: left;
+  white-space: nowrap;
 }
 
 .detail-value-visual {
   border-bottom: 1px solid black;
-  width: 130px;
-  min-width: 130px;
+  width: 110px;
+  min-width: 110px;
   padding-bottom: 0px;
   margin-bottom: 0px;
   text-align: center;
@@ -830,6 +878,7 @@
   line-height: 14px;
   display: inline-block;
   vertical-align: bottom;
+  font-weight: normal;
 }
 
 
@@ -870,6 +919,7 @@
 
 .client-person-name {
   font-weight: bold;
+  text-decoration: underline;
 }
 
 /* ===== CLEAN TABLE STRUCTURE - SIMPLE BORDER CONTROL ===== */
@@ -936,6 +986,7 @@
 
 .table-visual .col-reference {
   width: 18%;
+  font-family: 'MS PGothic', 'MS Gothic', 'MS PMincho', sans-serif;
 }
 
 .table-visual .col-description {
@@ -959,6 +1010,7 @@
 .table-visual .description-cell {
   text-align: left;
   padding-left: 8px;
+  font-family: 'MS PGothic', 'MS Gothic', 'MS PMincho', sans-serif;
 }
 
 .table-visual .price-cell {
@@ -1017,7 +1069,7 @@
   font-size: 13px;
   margin-bottom: 15px;
   text-align: left;
-  /* Left-align all labels including 'Received by' */
+  font-weight: bold;
 }
 
 .sig-line-visual {
@@ -1033,14 +1085,12 @@
   font-size: 14px;
   text-align: center;
   width: 250px;
-  /* Match longer line width */
 }
 
 .sig-title-visual {
   font-size: 11px;
   text-align: center;
   width: 250px;
-  /* Match longer line width */
   font-style: italic;
 }
 

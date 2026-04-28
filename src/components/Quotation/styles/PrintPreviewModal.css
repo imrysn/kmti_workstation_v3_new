@@ -1981,29 +1981,103 @@ body:has(.print-preview-modal) .broadcast-fab {
 
 /* Original Quotation Header Styles for Preview */
 .preview-content .header-visual {
-  display: block !important;
+  display: flex !important;
+  align-items: flex-start !important;
   position: relative !important;
-  margin-bottom: 25px !important;
+  margin-bottom: 20px !important;
   margin-top: 0 !important;
-  min-height: 150px !important;
-  /* PERFORMANCE: GPU acceleration */
+  min-height: 140px !important;
   will-change: transform;
   transform: translateZ(0);
 }
 
-.preview-content .logo-visual {
-  position: absolute !important;
-  left: 0 !important;
-  top: 0 !important;
-  /* Aligned to top */
-  width: 125px !important;
+/* Logo — left anchor, stay in flow */
+.preview-content .qh-logo {
+  position: static !important;
+  flex-shrink: 0 !important;
+  width: 140px !important;
   height: 140px !important;
+  z-index: 1 !important;
 }
 
-.preview-content .logo-visual img {
+.preview-content .qh-logo img {
   width: 100% !important;
   height: 100% !important;
   object-fit: contain !important;
+}
+
+.preview-content .qh-center {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+  padding-left: 70px !important;
+}
+
+.preview-content .qh-company-name {
+  font-size: 28px !important;
+  font-weight: bold !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+  margin-top: 4px !important;
+  margin-bottom: 2px !important;
+}
+
+.preview-content .qh-title {
+  font-size: 22px !important;
+  font-weight: bold !important;
+  white-space: nowrap !important;
+  margin-top: 6px !important;
+}
+
+/* Right panel — address only, margin-left: auto pushes it right */
+.preview-content .qh-right {
+  position: static !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+  width: 230px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  padding-top: 70px !important;
+  z-index: 1 !important;
+}
+
+.preview-content .qh-meta-block {
+  position: absolute !important;
+  right: 8mm !important;
+  top: 240px !important;
+  bottom: auto !important;
+  width: 230px !important;
+  margin-top: 0 !important;
+}
+
+.preview-content .qh-meta-row {
+  justify-content: flex-start !important;
+}
+
+.preview-content .qh-meta-label {
+  text-align: left !important;
+  width: 90px !important;
+}
+
+.preview-content .qh-meta-value {
+  flex: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+
+.preview-content .qh-title {
+  font-size: 20px !important;
+  font-weight: bold !important;
+  white-space: nowrap !important;
+  margin-top: 6px !important;
 }
 
 .preview-content .center-text-visual {

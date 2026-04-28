@@ -52,12 +52,12 @@ interface Props {
 }
 
 const BANK_LABEL_MAP: Array<{ key: keyof BillingDetails; label: string }> = [
-  { key: 'bankName',      label: 'BANK NAME:' },
-  { key: 'accountName',   label: 'SAVINGS ACCOUNT NAME:' },
+  { key: 'bankName', label: 'BANK NAME:' },
+  { key: 'accountName', label: 'SAVINGS ACCOUNT NAME:' },
   { key: 'accountNumber', label: 'SAVINGS ACCOUNT NUMBER:' },
-  { key: 'bankAddress',   label: 'BANK ADDRESS:' },
-  { key: 'swiftCode',     label: 'SWIFT CODE:' },
-  { key: 'branchCode',    label: 'BRANCH CODE:' },
+  { key: 'bankAddress', label: 'BANK ADDRESS:' },
+  { key: 'swiftCode', label: 'SWIFT CODE:' },
+  { key: 'branchCode', label: 'BRANCH CODE:' },
 ]
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ const PrintPage = memo(({
 
   const showAdmin = isLastPage && baseRates.overheadPercentage > 0
   const contentRowsCount = pageTasks.length + (showAdmin ? 1 : 0) + 1 // Tasks + Admin? + Nothing Follow
-  
+
   // How many blank filler rows to add below the task list on the last page.
   // Enforcement: 1st page must have 10 rows minimum INCLUDING computed tasks.
   // If tasks are >= 10, we add 0 filler rows on the last page to prioritize signature space,
@@ -104,7 +104,7 @@ const PrintPage = memo(({
             <th className="col-no">NO.</th>
             <th className="col-reference">REFERENCE NO.</th>
             <th className="col-description">DESCRIPTION</th>
-            <th className="col-unitpage">UNIT (PAGE)</th>
+            <th className="col-unitpage">UNIT<br />(PAGE)</th>
             <th className="col-type">TYPE</th>
             <th className="col-price">PRICE</th>
           </tr>
@@ -137,7 +137,7 @@ const PrintPage = memo(({
               {showAdmin && (
                 <tr>
                   <td />
-                  <td>Administrative overhead</td>
+                  <td>Administrative Overhead</td>
                   <td className="description-cell" />
                   <td /><td />
                   <td className="price-cell">{fmt(overheadTotal)}</td>
@@ -145,8 +145,8 @@ const PrintPage = memo(({
               )}
               <tr>
                 <td /><td />
-                <td className="description-cell nothing-follow" style={{ color: '#888', fontStyle: 'italic' }}>
-                  --- NOTHING FOLLOW ---
+                <td className="description-cell nothing-follow" style={{ color: '#888', fontStyle: 'italic', textAlign: 'center' }}>
+  ……NOTHING FOLLOW ……
                 </td>
                 <td /><td /><td />
               </tr>
@@ -175,7 +175,7 @@ const PrintPage = memo(({
           textAlign: 'center', color: '#888', fontWeight: 'bold',
           fontStyle: 'italic', padding: '50px 0', letterSpacing: '1px', fontSize: '11px',
         }}>
-          --- CONTINUED ON NEXT PAGE ---
+  ……CONTINUED ON NEXT PAGE ……
         </div>
       )}
     </>
@@ -272,7 +272,7 @@ const PrintPage = memo(({
         `mode-${printMode}`,
         `task-count-${pageTasks.length}`,
         isContinuation ? 'page-break' : '',
-        isCompressed   ? 'compressed' : '',
+        isCompressed ? 'compressed' : '',
       ].filter(Boolean).join(' ')}
       style={{ display: 'flex', flexDirection: 'column' }}
     >
@@ -283,6 +283,24 @@ const PrintPage = memo(({
           quotationDetails={quotationDetails}
           isSecondPage={isContinuation}
         />
+
+        {/* Quotation meta block — right-aligned, absolutely positioned to align with client info */}
+        {printMode === 'quotation' && isFirstPage && (
+          <div className="qh-meta-block">
+            <div className="qh-meta-row">
+              <span className="qh-meta-label">Quotation NO.:</span>
+              <span className="qh-meta-value">{quotationDetails.quotationNo || ''}</span>
+            </div>
+            <div className="qh-meta-row">
+              <span className="qh-meta-label">REFERENCE NO.:</span>
+              <span className="qh-meta-value">{quotationDetails.referenceNo || ''}</span>
+            </div>
+            <div className="qh-meta-row">
+              <span className="qh-meta-label">DATE:</span>
+              <span className="qh-meta-value">{quotationDetails.date || ''}</span>
+            </div>
+          </div>
+        )}
 
         {/* Billing details block — first page only */}
         {printMode === 'billing' && isFirstPage && (
