@@ -5,7 +5,7 @@ import './MaterialCalculator.css'
 
 export default function MaterialCalculator() {
   const { notify } = useModal()
-  
+
   // ── Core State ──────────────────────────────────────────────────
   const [input, setInput] = useState(() => localStorage.getItem('material_calc_input') || '')
   const [results, setResults] = useState<{ value: string, isError: boolean }[]>(() => {
@@ -66,17 +66,37 @@ export default function MaterialCalculator() {
     return processed
   }, [])
 
+  const lastErrorCount = useRef(0)
+
   // ── Real-time Engine (Debounced) ───────────────────────────────
   useEffect(() => {
     const timer = setTimeout(() => {
       const processed = performCalculation(input)
+      const currentErrors = processed.filter(r => r.isError && r.value !== '').length
+
       if (processed.length > 0 && input.trim()) {
-        const text = processed.map(r => r.value).join('\n')
-        navigator.clipboard.writeText(text).catch(() => {}) // Silently catch clipboard errors
+        if (currentErrors === 0) {
+          // Success Path
+          const text = processed.map(r => r.value).join('\n')
+          navigator.clipboard.writeText(text).catch(() => { })
+
+          // Notify on success transition or significant change
+          if (lastErrorCount.current > 0 || !lastErrorCount.current) {
+            notify('Calculated & Copied!', 'success')
+          }
+        } else {
+          // Error Path - Only notify if count changed to avoid spam
+          if (currentErrors !== lastErrorCount.current) {
+            notify(`Found ${currentErrors} invalid line(s)`, 'warning')
+          }
+        }
+        lastErrorCount.current = currentErrors
+      } else if (!input.trim()) {
+        lastErrorCount.current = 0
       }
-    }, 300)
+    }, 400) // Slightly longer debounce for real-time notifications
     return () => clearTimeout(timer)
-  }, [input, performCalculation])
+  }, [input, performCalculation, notify])
 
   // ── Handlers ───────────────────────────────────────────────────
   const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -97,10 +117,10 @@ export default function MaterialCalculator() {
     }).join('\n')
 
     e.preventDefault()
-    
+
     // Use execCommand to preserve Undo/Redo stack
     const success = document.execCommand('insertText', false, formatted);
-    
+
     // Fallback if execCommand fails
     if (!success) {
       const start = inputRef.current?.selectionStart || 0
@@ -207,18 +227,24 @@ export default function MaterialCalculator() {
             {errorCount > 0 ? (
               <span className="error-text">{errorCount} line(s) have invalid input.</span>
             ) : (
-              <span>Real-time calculation active. Paste from Excel.</span>
+              <span>Paste input data from Excel.</span>
             )}
           </div>
-          
+
           <div className="action-group">
-            <button 
-              className="btn btn-primary" 
-              onClick={() => { 
-                const processed = performCalculation(input); 
-                const text = processed.map(r => r.value).join('\n');
-                navigator.clipboard.writeText(text);
-                notify('Calculated & Copied!', 'success'); 
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                const processed = performCalculation(input);
+                const errors = processed.filter(r => r.isError && r.value !== '');
+
+                if (errors.length > 0) {
+                  notify(`Found ${errors.length} invalid line(s). Please check red-highlighted rows.`, 'warning');
+                } else {
+                  const text = processed.map(r => r.value).join('\n');
+                  navigator.clipboard.writeText(text);
+                  notify('Calculated & Copied!', 'success');
+                }
               }}
               disabled={!input.trim()}
             >
@@ -234,7 +260,7 @@ export default function MaterialCalculator() {
               </svg>
               Copy Results
             </button>
-            
+
             <button className="btn btn-ghost btn-clear" onClick={() => { setInput(''); setResults([]); }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
