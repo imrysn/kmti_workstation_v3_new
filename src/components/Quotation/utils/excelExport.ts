@@ -144,10 +144,10 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   sheet.getCell('A15').value = `TEL: ${clientInfo.phone || ''}`
   sheet.getCell('A15').font = { name: 'Arial', size: 10 }
 
-  // ── Document meta ─────────────────────────────────────────────────────────
-  ;['E12', 'E13', 'E14'].forEach(cell => {
-    sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: true }
-  })
+    // ── Document meta ─────────────────────────────────────────────────────────
+    ;['E12', 'E13', 'E14'].forEach(cell => {
+      sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: true }
+    })
   sheet.getCell('F12').value = quotNo
   sheet.getCell('F12').font = { name: 'Arial', size: 10 }
   sheet.getCell('F13').value = quotationDetails.referenceNo || ''
@@ -216,13 +216,23 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   currentRow++
 
   // ── Grand total ───────────────────────────────────────────────────────────
-  // In the 10-row template the total row is at 28 (= TABLE_END + 1 row admin/nf + 1).
-  // After insertion it shifts to currentRow + 1 (the template has one blank spacer
-  // row between "NOTHING FOLLOW" and the total border row).
-  const totalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2  // +2: nf row + spacer
-  sheet.getCell(`G${totalRow}`).value = grandTotal
-  sheet.getCell(`G${totalRow}`).numFmt = '"¥"#,##0'
-  sheet.getCell(`G${totalRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  // The user wants the Grand Total to be displayed in the "Total Amount" cell.
+  // In the template, this is the row immediately following the task table area.
+  const totalAmountRow = TABLE_END + extraRows + 1
+  sheet.getCell(`G${totalAmountRow}`).value = grandTotal
+  sheet.getCell(`G${totalAmountRow}`).numFmt = '"¥"#,##0'
+  sheet.getCell(`G${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`G${totalAmountRow}`).font = { name: 'Arial', size: 10, bold: true }
+
+  // Align the "Total Amount" label row
+  sheet.getCell(`B${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+
+  // Clear the secondary total row (30 in original template) to avoid confusion
+  const secondaryTotalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2
+  if (secondaryTotalRow !== totalAmountRow) {
+    sheet.getCell(`G${secondaryTotalRow}`).value = null
+    sheet.getCell(`B${secondaryTotalRow}`).value = null
+  }
 
   // ── Signatures (shift by extraRows) ──────────────────────────────────────
   const s = extraRows  // signature row offset
@@ -244,10 +254,10 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   sheet.getCell(`E${46 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`E${46 + s}`).font = { name: 'Arial', size: 10, bold: true }
 
-  // Un-bold TIN in header
-  ;['D5', 'E5', 'F5'].forEach(cell => {
-    sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: false }
-  })
+    // Un-bold TIN in header
+    ;['D5', 'E5', 'F5'].forEach(cell => {
+      sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: false }
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -283,10 +293,10 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
     overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
   } = d
 
-  // ── Document meta ─────────────────────────────────────────────────────────
-  ;(['E9', 'E10', 'E11', 'E12'] as const).forEach(cell => {
-    sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: true }
-  })
+    // ── Document meta ─────────────────────────────────────────────────────────
+    ; (['E9', 'E10', 'E11', 'E12'] as const).forEach(cell => {
+      sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: true }
+    })
   sheet.getCell('F9').value = metaDate
   sheet.getCell('F9').font = { name: 'Arial', size: 10 }
   sheet.getCell('F10').value = billingDetails.invoiceNo || ''
@@ -296,10 +306,10 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   sheet.getCell('F12').value = billingDetails.jobOrderNo || ''
   sheet.getCell('F12').font = { name: 'Arial', size: 10 }
 
-  // Un-bold TIN line
-  ;['D5', 'E5', 'F5'].forEach(cell => {
-    sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: false }
-  })
+    // Un-bold TIN line
+    ;['D5', 'E5', 'F5'].forEach(cell => {
+      sheet.getCell(cell).font = { name: 'Arial', size: 10 }
+    })
 
   // ── Column header override: ensure UNIT/(PAGE) label is set correctly ──────
   sheet.getCell('E15').value = 'UNIT\n(PAGE)'
@@ -375,10 +385,19 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   currentRow++
 
   // ── Grand total ───────────────────────────────────────────────────────────
-  const totalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2  // +2: nf row + spacer
-  sheet.getCell(`G${totalRow}`).value = grandTotal
-  sheet.getCell(`G${totalRow}`).numFmt = '"¥"#,##0'
-  sheet.getCell(`G${totalRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  const totalAmountRow = TABLE_END + extraRows + 1
+  sheet.getCell(`G${totalAmountRow}`).value = grandTotal
+  sheet.getCell(`G${totalAmountRow}`).numFmt = '"¥"#,##0'
+  sheet.getCell(`G${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`G${totalAmountRow}`).font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell(`B${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+
+  // Clear secondary total row if any
+  const secondaryTotalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2
+  if (secondaryTotalRow !== totalAmountRow) {
+    sheet.getCell(`G${secondaryTotalRow}`).value = null
+    sheet.getCell(`B${secondaryTotalRow}`).value = null
+  }
 
   // ── Signatures (shift by extraRows) ──────────────────────────────────────
   const s = extraRows

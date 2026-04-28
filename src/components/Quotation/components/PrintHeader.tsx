@@ -29,7 +29,7 @@ const PrintHeader = memo(({ printMode, companyInfo, quotationDetails, isSecondPa
           <div className="billing-company-name">KUSAKABE &amp; MAENO TECH., INC.</div>
           <div className="billing-address-line">Unit 2-B Building B, Vital Industrial Properties Inc., First Cavite Industrial Estates,</div>
           <div className="billing-address-line">(FCIE) PEZA Zone, Dasmarinas City, Cavite Philippines</div>
-          <div className="billing-address-line" style={{ fontWeight: 'normal' }}>Vat Reg. TIN: 008-883-390-000</div>
+          <div className="billing-address-line" style={{ fontWeight: 'normal !important' }}>Vat Reg. TIN: 008-883-390-000</div>
           <div className="billing-title">BILLING STATEMENT</div>
         </div>
       </div>

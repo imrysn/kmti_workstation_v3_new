@@ -768,7 +768,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                 <BillingDetailsCard
                   billingDetails={effBilling}
                   onUpdateBilling={isPreview ? undefined : syncBillingDetails}
-                  onUpdateQuotation={isPreview ? undefined : syncQuotationDetails}
                 />
 
                 <div className="quot-bottom-spacer" style={{ height: '40px' }} />

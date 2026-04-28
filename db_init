@@ -13,9 +13,9 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260423-12345",
+    "quotationNo": "KMTE-260428-609",
     "referenceNo": "",
-    "date": "2026-04-23"
+    "date": "2026-04-28"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -29,11 +29,37 @@
   },
   "tasks": [
     {
-      "id": 1776934829807,
+      "id": 1777345632207,
       "description": "",
       "referenceNumber": "",
-      "hours": 12,
-      "minutes": 23,
+      "hours": 999,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1777345635881,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 999,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null
+    },
+    {
+      "id": 1777345636249,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 999,
+      "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
@@ -82,8 +108,11 @@
   },
   "manualOverrides": {
     "tasks": {},
-    "footer": {}
+    "footer": {
+      "adjustment": 289720
+    }
   },
   "collapsedTaskIds": [],
-  "savedAt": "2026-04-27T00:10:35.344Z"
+  "chatLog": [],
+  "savedAt": "2026-04-28T03:50:14.786Z"
 }

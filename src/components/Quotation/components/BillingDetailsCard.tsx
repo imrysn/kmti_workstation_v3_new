@@ -43,7 +43,7 @@ const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => 
           </div>
         )}
 
-        {(onUpdateBilling || onUpdateQuotation) && (
+        {onUpdateBilling && (
           <button
             className="info-card-edit-btn"
             onClick={() => setIsEditing(e => !e)}

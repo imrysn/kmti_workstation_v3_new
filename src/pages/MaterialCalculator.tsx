@@ -1,145 +1,158 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { calculateExcelBatchWeight } from '../utils/materialMath'
 import { useModal } from '../components/ModalContext'
 import './MaterialCalculator.css'
 
 export default function MaterialCalculator() {
   const { notify } = useModal()
+  
+  // ── Core State ──────────────────────────────────────────────────
   const [input, setInput] = useState(() => localStorage.getItem('material_calc_input') || '')
   const [results, setResults] = useState<{ value: string, isError: boolean }[]>(() => {
     const saved = localStorage.getItem('material_calc_results')
     return saved ? JSON.parse(saved) : []
   })
+
   const [activeLineIndex, setActiveLineIndex] = useState<number | null>(null)
+
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const outputRef = useRef<HTMLTextAreaElement>(null)
   const inputBackdropRef = useRef<HTMLDivElement>(null)
   const outputBackdropRef = useRef<HTMLDivElement>(null)
 
-  // Persistence
+  // ── Persistence ────────────────────────────────────────────────
   useEffect(() => {
     localStorage.setItem('material_calc_input', input)
     localStorage.setItem('material_calc_results', JSON.stringify(results))
   }, [input, results])
 
+  // ── Calculation Logic ──────────────────────────────────────────
+  const performCalculation = useCallback((rawInput: string) => {
+    const lines = rawInput.split('\n')
+    const processed: { value: string, isError: boolean }[] = []
+
+    for (const line of lines) {
+      const cleanLine = line.trim()
+      if (!cleanLine) {
+        processed.push({ value: '', isError: false })
+        continue
+      }
+
+      const parts = cleanLine.replace(/\t/g, ' ').replace(/\s+/g, ' ').split(' ')
+      let qty = 1
+      let actualSpec = cleanLine
+
+      if (parts.length > 1) {
+        const last = parts[parts.length - 1]
+        const lastNum = parseFloat(last)
+        if (!isNaN(lastNum)) {
+          qty = lastNum
+          actualSpec = parts.slice(0, -1).join(' ')
+        }
+      }
+
+      const materialPart = parts[0]
+      const specPart = actualSpec.replace(materialPart, '').trim()
+      const lineWeight = calculateExcelBatchWeight(materialPart, specPart, qty)
+
+      const valStr = lineWeight > 0
+        ? lineWeight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        : '0.00'
+
+      processed.push({ value: valStr, isError: lineWeight <= 0 })
+    }
+
+    setResults(processed)
+    return processed
+  }, [])
+
+  // ── Real-time Engine (Debounced) ───────────────────────────────
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const processed = performCalculation(input)
+      if (processed.length > 0 && input.trim()) {
+        const text = processed.map(r => r.value).join('\n')
+        navigator.clipboard.writeText(text).catch(() => {}) // Silently catch clipboard errors
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [input, performCalculation])
+
+  // ── Handlers ───────────────────────────────────────────────────
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const pastedText = e.clipboardData.getData('text')
+    if (!pastedText) return
+
+    const lines = pastedText.split('\n')
+    const formatted = lines.map(line => {
+      const trimmed = line.trim()
+      if (!trimmed) return ''
+      const parts = trimmed.split(/\s+/)
+      if (parts.length >= 3) {
+        return `${parts[0]}\t${parts[1]}\t${parts[2]}`
+      } else if (parts.length === 2) {
+        return `${parts[0]}\t${parts[1]}`
+      }
+      return trimmed
+    }).join('\n')
+
+    e.preventDefault()
+    
+    // Use execCommand to preserve Undo/Redo stack
+    const success = document.execCommand('insertText', false, formatted);
+    
+    // Fallback if execCommand fails
+    if (!success) {
+      const start = inputRef.current?.selectionStart || 0
+      const end = inputRef.current?.selectionEnd || 0
+      const newVal = input.substring(0, start) + formatted + input.substring(end)
+      setInput(newVal)
+    }
+  }
+
   const syncScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
-    const { scrollTop } = e.currentTarget;
-    if (inputRef.current) inputRef.current.scrollTop = scrollTop;
-    if (outputRef.current) outputRef.current.scrollTop = scrollTop;
-    if (inputBackdropRef.current) inputBackdropRef.current.scrollTop = scrollTop;
-    if (outputBackdropRef.current) outputBackdropRef.current.scrollTop = scrollTop;
+    const { scrollTop } = e.currentTarget
+    if (inputRef.current) inputRef.current.scrollTop = scrollTop
+    if (outputRef.current) outputRef.current.scrollTop = scrollTop
+    if (inputBackdropRef.current) inputBackdropRef.current.scrollTop = scrollTop
+    if (outputBackdropRef.current) outputBackdropRef.current.scrollTop = scrollTop
   }
 
   const updateActiveLine = () => {
     if (inputRef.current) {
-      const textBefore = inputRef.current.value.substring(0, inputRef.current.selectionStart);
-      const lines = textBefore.split('\n');
-      setActiveLineIndex(lines.length - 1);
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const pastedText = e.clipboardData.getData('text');
-    if (!pastedText) return;
-
-    const lines = pastedText.split('\n');
-    const formatted = lines.map(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return '';
-      const parts = trimmed.split(/\s+/);
-      if (parts.length >= 3) {
-        return `${parts[0]}\t${parts[1]}\t${parts[2]}`;
-      } else if (parts.length === 2) {
-        return `${parts[0]}\t${parts[1]}`;
-      }
-      return trimmed;
-    }).join('\n');
-
-    e.preventDefault();
-    const start = inputRef.current?.selectionStart || 0;
-    const end = inputRef.current?.selectionEnd || 0;
-    const currentVal = input;
-    const newVal = currentVal.substring(0, start) + formatted + currentVal.substring(end);
-    setInput(newVal);
-  };
-
-  const handleProcess = () => {
-    const lines = input.split('\n');
-    const processed: { value: string, isError: boolean }[] = [];
-
-    for (const line of lines) {
-      const cleanLine = line.trim();
-      if (!cleanLine) {
-        processed.push({ value: '', isError: false });
-        continue;
-      }
-
-      let lineWeight = 0;
-      let qty = 1;
-
-      // Basic cleanup for splitting
-      const parts = cleanLine.replace(/\t/g, ' ').replace(/\s+/g, ' ').split(' ');
-
-      // Heuristic for Qty (last part if numeric)
-      let actualSpec = cleanLine;
-      if (parts.length > 1) {
-        const last = parts[parts.length - 1];
-        const lastNum = parseFloat(last);
-        if (!isNaN(lastNum)) {
-          qty = lastNum;
-          actualSpec = parts.slice(0, -1).join(' ');
-        }
-      }
-
-      const materialPart = parts[0];
-      const specPart = actualSpec.replace(materialPart, '').trim();
-
-      lineWeight = calculateExcelBatchWeight(materialPart, specPart, qty);
-
-      const valStr = lineWeight > 0
-        ? lineWeight.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-        : '0.00';
-
-      processed.push({ value: valStr, isError: lineWeight <= 0 });
-    }
-
-    setResults(processed);
-
-    if (processed.length > 0) {
-      const clipboardText = processed.map(p => p.value).join('\n');
-      navigator.clipboard.writeText(clipboardText);
-      notify('Calculated & Copied to clipboard!', 'success');
+      const textBefore = inputRef.current.value.substring(0, inputRef.current.selectionStart)
+      const lines = textBefore.split('\n')
+      setActiveLineIndex(lines.length - 1)
     }
   }
 
   const copyToClipboard = () => {
-    if (results.length === 0) return;
-    const text = results.map(r => r.value).join('\n');
-    navigator.clipboard.writeText(text);
-    notify('Calculated weights copied to clipboard!', 'success');
+    if (results.length === 0) return
+    const text = results.map(r => r.value).join('\n')
+    navigator.clipboard.writeText(text)
+    notify('Results copied to clipboard!', 'success')
   }
 
-  const errorCount = results.filter(r => r.isError && r.value !== '').length;
-
-  // Backdrop rendering logic to handle varying line counts
   const renderHighlightLines = () => {
-    const lines = input.split('\n');
+    const lines = input.split('\n')
     return lines.map((_, i) => {
-      const result = results[i];
-      const isError = result?.isError && result?.value !== '';
-      const isActive = activeLineIndex === i;
+      const result = results[i]
+      const isError = result?.isError && result?.value !== ''
+      const isActive = activeLineIndex === i
       return (
         <div
           key={i}
           className={`highlight-line ${isError ? 'error' : ''} ${isActive ? 'active' : ''}`}
         />
-      );
-    });
-  };
+      )
+    })
+  }
+
+  const errorCount = results.filter(r => r.isError && r.value !== '').length
 
   return (
     <div className="page-container calc-page">
-      <div className="scratchpad-container glass-panel">
+      <div className="glass-panel">
         <div className="scratchpad-grid">
           <div className="box-label input-label">
             <span>INPUT MATERIAL</span>
@@ -175,7 +188,7 @@ export default function MaterialCalculator() {
             <textarea
               ref={outputRef}
               className="scratchpad-textarea readonly"
-              value={results.map((r: { value: string }) => r.value).join('\n')}
+              value={results.map(r => r.value).join('\n')}
               readOnly
               onScroll={syncScroll}
               placeholder="Results..."
@@ -192,15 +205,21 @@ export default function MaterialCalculator() {
               </svg>
             </div>
             {errorCount > 0 ? (
-              <span className="error-text">{errorCount} line(s) have invalid input or unknown profiles.</span>
+              <span className="error-text">{errorCount} line(s) have invalid input.</span>
             ) : (
-              <span>Please paste input from Excel.</span>
+              <span>Real-time calculation active. Paste from Excel.</span>
             )}
           </div>
+          
           <div className="action-group">
-            <button
-              className="btn btn-primary btn-large"
-              onClick={handleProcess}
+            <button 
+              className="btn btn-primary" 
+              onClick={() => { 
+                const processed = performCalculation(input); 
+                const text = processed.map(r => r.value).join('\n');
+                navigator.clipboard.writeText(text);
+                notify('Calculated & Copied!', 'success'); 
+              }}
               disabled={!input.trim()}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -208,24 +227,19 @@ export default function MaterialCalculator() {
               </svg>
               Calculate
             </button>
-            <button
-              className="btn btn-ghost btn-large btn-clear"
-              onClick={() => { setInput(''); setResults([]); }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              Clear
-            </button>
-            <button
-              className="btn btn-ghost btn-large"
-              onClick={copyToClipboard}
-              disabled={results.length === 0}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+
+            <button className="btn btn-ghost" onClick={copyToClipboard} disabled={results.length === 0}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
               Copy Results
+            </button>
+            
+            <button className="btn btn-ghost btn-clear" onClick={() => { setInput(''); setResults([]); }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Clear All
             </button>
           </div>
         </div>
