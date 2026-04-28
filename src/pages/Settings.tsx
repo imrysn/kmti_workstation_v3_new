@@ -36,7 +36,7 @@ export default function Settings() {
   const { confirm, alert, notify } = useModal()
 
   useEffect(() => {
-    settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res.data }))
+    settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res }))
   }, [])
 
   const handleCheck = async () => {

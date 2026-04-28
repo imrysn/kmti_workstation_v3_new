@@ -74,7 +74,7 @@ export function FlagsProvider({ children }: { children: ReactNode }) {
     if (!background) setIsLoading(true)
     try {
       const res = await flagsApi.getAll()
-      setFlags({ ...DEFAULT_FLAGS, ...res.data })
+      setFlags({ ...DEFAULT_FLAGS, ...res })
     } catch {
       // Non-fatal: fall back to defaults if fetch fails
     } finally {

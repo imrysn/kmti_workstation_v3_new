@@ -32,7 +32,7 @@ export default function Users() {
   const fetchUsers = () => {
     setLoading(true)
     usersApi.getAll()
-      .then(res => setUsers(res.data))
+      .then(res => setUsers(res))
       .finally(() => setLoading(false))
   }
 

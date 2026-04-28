@@ -49,8 +49,8 @@ export default function Quotation() {
     try {
       // Fetch the quotation to get its real quotNo and displayName before entering
       const res = await quotationApi.get(id)
-      const quotNo = res.data?.quotationDetails?.quotationNo || `KMTE-${id}`
-      const displayName = res.data?.quotationDetails?.quotationNo || quotNo
+      const quotNo = res?.quotationDetails?.quotationNo || `KMTE-${id}`
+      const displayName = res?.quotationDetails?.quotationNo || quotNo
       setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'join' })
     } catch (e) {
       notify?.('Failed to join session.', 'error')
@@ -82,7 +82,7 @@ export default function Quotation() {
         password,
         workstation 
       })
-      const { id } = res.data
+      const { id } = res
 
       setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create' })
     } catch (e: any) {

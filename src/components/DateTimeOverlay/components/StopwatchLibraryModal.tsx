@@ -33,7 +33,7 @@ export default function StopwatchLibraryModal({ onClose, accentColor, themeClass
     setLoading(true);
     try {
       const res = await stopwatchApi.list(ws, un, 100);
-      setRecords(res.data || []);
+      setRecords(res || []);
     } catch (e) {
       console.error('[sw-library] Failed to fetch records:', e);
     } finally {

@@ -9,7 +9,7 @@
  * read-only when the parent is in preview mode (onUpdate === undefined).
  */
 
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback } from 'react'
 import type { Task } from '../../../hooks/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'

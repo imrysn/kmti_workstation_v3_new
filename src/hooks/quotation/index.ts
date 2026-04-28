@@ -14,4 +14,4 @@ export type {
   FooterOverrides,
   SignaturePerson,
   ReceivedBy,
-} from './useInvoiceState'
+} from '../../types'

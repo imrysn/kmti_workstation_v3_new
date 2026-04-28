@@ -99,7 +99,7 @@ const BroadcastFAB: React.FC = () => {
       // silently fetch the fresh data so it updates in real-time.
       if (e.detail && e.detail.id === ackingId) {
         broadcastApi.getAcks(e.detail.id).then(res => {
-          setAcksMap(prev => ({ ...prev, [e.detail.id]: res.data.data }))
+          setAcksMap(prev => ({ ...prev, [e.detail.id]: res.data }))
         }).catch(() => {})
       }
     }
@@ -127,7 +127,7 @@ const BroadcastFAB: React.FC = () => {
     setIsLoadingHistory(true)
     try {
       const res = await broadcastApi.list()
-      setHistory(res.data.data)
+      setHistory(res.data)
     } catch (err) {
       console.error('Failed to fetch history:', err)
     } finally {
@@ -247,7 +247,7 @@ const BroadcastFAB: React.FC = () => {
     try {
       // Force fetching fresh data every time we open the dropdown
       const res = await broadcastApi.getAcks(id)
-      setAcksMap(prev => ({ ...prev, [id]: res.data.data }))
+      setAcksMap(prev => ({ ...prev, [id]: res.data }))
       setAckingId(id)
     } catch (e) {
       notify("Failed to fetch acknowledgments", "error")

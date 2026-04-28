@@ -119,9 +119,9 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             return
           }
 
-          if (res.data && res.data.quotationDetails) {
-            loadData(res.data, 'db_init')
-            setQuotNo(res.data.quotationDetails.quotationNo || initialQuotNo)
+          if (res && res.quotationDetails) {
+            loadData(res, 'db_init')
+            setQuotNo(res.quotationDetails.quotationNo || initialQuotNo)
           } else {
             // Fresh DB record, populate with defaults
             resetToNew(initialQuotNo)
@@ -442,8 +442,8 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         notify?.('Quotation updated in database', 'success')
       } else {
         const res = await quotationApi.create(data)
-        if (res.data.success) {
-          setQuotId(res.data.id)
+        if (res.success) {
+          setQuotId(res.id)
           notify?.('New quotation saved to database', 'success')
         }
       }

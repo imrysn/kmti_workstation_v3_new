@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useUpdate } from '../context/UpdateContext'
 import { useAuth } from '../context/AuthContext'
 import './MandatoryUpdateOverlay.css'
@@ -14,7 +14,7 @@ export default function MandatoryUpdateOverlay() {
     checkForUpdate
   } = useUpdate()
 
-  const { hasRole, user } = useAuth()
+  const { user } = useAuth()
   const [show, setShow] = useState(false)
   const [bypassed, setBypassed] = useState(false)
 
@@ -40,7 +40,7 @@ export default function MandatoryUpdateOverlay() {
 
   if (!show || !user) return null
 
-  const isIT = hasRole('it', 'admin')
+  // const isIT = hasRole('it', 'admin')
 
   return (
     <div className="mandatory-update-overlay">

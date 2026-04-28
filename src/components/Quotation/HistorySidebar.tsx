@@ -99,7 +99,7 @@ export function HistorySidebar({ quotId, onRestore, onPreview, previewingTs }: P
 
     try {
       const res = await quotationApi.getHistory(quotId)
-      setSnapshots(res.data.history || [])
+      setSnapshots(res.history || [])
     } catch (err) {
       console.error('[history] Failed to fetch:', err)
       setSnapshots([])

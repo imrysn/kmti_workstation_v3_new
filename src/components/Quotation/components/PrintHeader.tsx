@@ -17,7 +17,7 @@ interface Props {
  *
  * BILLING layout: logo left + centered text block (no right panel).
  */
-const PrintHeader = memo(({ printMode, companyInfo, quotationDetails, isSecondPage = false }: Props) => {
+const PrintHeader = memo(({ printMode, companyInfo }: Props) => {
 
   if (printMode === 'billing') {
     return (

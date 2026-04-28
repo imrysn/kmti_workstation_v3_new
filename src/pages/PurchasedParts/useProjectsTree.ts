@@ -41,8 +41,8 @@ export function useProjectsTree() {
   const loadProjects = useCallback(async (category?: string) => {
     try {
       const res = await partsApi.getProjects(category);
-      setProjects(res.data);
-      const alreadyScanning = res.data.find((p: IProject) => p.isScanning);
+      setProjects(res);
+      const alreadyScanning = res.find((p: IProject) => p.isScanning);
       if (alreadyScanning && !progressState.isOpen) {
         showProgress(`Resuming index of '${alreadyScanning.name}'...`, alreadyScanning.id);
       }
@@ -66,10 +66,10 @@ export function useProjectsTree() {
     const name = (segments[segments.length - 1] || 'NEW PROJECT').toUpperCase();
     try {
       const res = await partsApi.addProject(name, path, activeSideTab);
-      setProjects(prev => [...prev, res.data]);
-      setSelectedProject(res.data);
+      setProjects(prev => [...prev, res]);
+      setSelectedProject(res);
       notify(`Added ${name} to ${activeSideTab}`, 'success');
-      if (res.data?.id) showProgress('Indexing Progress...', res.data.id);
+      if (res?.id) showProgress('Indexing Progress...', res.id);
     } catch (err: any) {
       if (err.response?.status === 403) alert("Access Restricted to Administrators.", "Access Restricted", "restricted");
       else alert(err.response?.data?.detail || "Failed to add project", "Error");
@@ -127,7 +127,7 @@ export function useProjectsTree() {
       setLoadingNodes(prev => new Set(prev).add(path));
       try {
         const res = await partsApi.getTree(selectedProject.id, path);
-        const newNodes = res.data.map((n: any) => ({
+        const newNodes = res.map((n: any) => ({
           ...n,
           depth: (path.split('/').length - selectedProject.rootPath.replace(/\\/g, '/').split('/').length + 1)
         }));
@@ -156,10 +156,10 @@ export function useProjectsTree() {
     setSelectedTreePath(''); setExpandedFolders(new Set()); setRawTreeNodes([]);
     if (selectedProject) {
       partsApi.getTree(selectedProject.id).then(res => {
-        setRawTreeNodes(res.data);
+        setRawTreeNodes(res);
         setLoadedNodes(new Set());
-        if (res.data.length > 0 && res.data[0]) {
-          const rootPath = res.data[0].path.replace(/\\/g, '/');
+        if (res.length > 0 && res[0]) {
+          const rootPath = res[0].path.replace(/\\/g, '/');
           setExpandedFolders(new Set([rootPath])); setSelectedTreePath(rootPath); toggleFolder(rootPath, true);
         }
       }).catch(() => { });

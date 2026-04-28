@@ -99,7 +99,7 @@ const BroadcastOverlay: React.FC = () => {
   const fetchBroadcasts = useCallback(async () => {
     try {
       const res = await broadcastApi.getActive()
-      const data = res.data.data
+      const data = res.data
       
       if (!data) {
         setBroadcasts([])

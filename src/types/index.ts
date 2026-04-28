@@ -94,3 +94,111 @@ export interface IQuotationHistory {
   author: string
   timestamp: string
 }
+
+// ── Quotation Internal Structure ──────────────────────────────────────────────
+
+export interface Task {
+  id: number
+  description: string
+  referenceNumber: string
+  hours: number
+  minutes: number
+  overtimeHours: number
+  softwareUnits: number
+  type: string
+  unitType: string
+  isMainTask: boolean
+  parentId: number | null
+}
+
+export interface BaseRates {
+  timeChargeRate2D: number
+  timeChargeRate3D: number
+  timeChargeRateOthers: number
+  otHoursMultiplier: number
+  overtimeRate: number
+  softwareRate: number
+  overheadPercentage: number
+}
+
+export interface CompanyInfo {
+  name: string
+  address: string
+  city: string
+  location: string
+  phone: string
+}
+
+export interface ClientInfo {
+  company: string
+  contact: string
+  address: string
+  phone: string
+}
+
+export interface QuotationDetails {
+  quotationNo: string
+  referenceNo: string
+  date: string
+}
+
+export interface BillingDetails {
+  invoiceNo: string
+  jobOrderNo: string
+  bankName: string
+  accountName: string
+  accountNumber: string
+  bankAddress: string
+  swiftCode: string
+  branchCode: string
+}
+
+export interface SignaturePerson {
+  name: string
+  title: string
+}
+
+export interface ReceivedBy {
+  label: string
+  title?: string
+}
+
+export interface Signatures {
+  quotation: {
+    preparedBy: SignaturePerson
+    approvedBy: SignaturePerson
+    receivedBy: ReceivedBy
+  }
+  billing: {
+    preparedBy: SignaturePerson
+    approvedBy: SignaturePerson
+    finalApprover: SignaturePerson
+  }
+}
+
+export interface FooterOverrides {
+  overhead?: number
+  adjustment?: number
+}
+
+export interface TaskOverrides {
+  total?: number
+  unitPage?: number
+}
+
+export interface ManualOverrides {
+  tasks: Record<number, TaskOverrides>
+  footer: FooterOverrides
+}
+
+export interface ChatMsg {
+  id: string
+  sid: string
+  name: string
+  color: string
+  message: string
+  time: string
+  isEdited?: boolean
+  isDeleted?: boolean
+  readBy?: string[]
+}

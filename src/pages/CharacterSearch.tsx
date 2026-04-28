@@ -78,14 +78,14 @@ export default function CharacterSearch() {
       const res = await charsApi.search(q, limit, offset)
 
       if (isAppend) {
-        setResults(prev => [...prev, ...res.data])
+        setResults(prev => [...prev, ...res])
         setPage(p => p + 1)
       } else {
-        setResults(res.data)
+        setResults(res)
         setPage(0)
       }
 
-      setHasMore(res.data.length === limit)
+      setHasMore(res.length === limit)
     } catch {
       if (!isAppend) setResults([])
       setHasMore(false)

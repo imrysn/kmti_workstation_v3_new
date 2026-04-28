@@ -51,7 +51,7 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
         }
 
         const res = await librarianApi.getSessions()
-        const sessList = res.data
+        const sessList = res
         setSessions(sessList)
 
         if (sessList.length > 0) {
@@ -95,7 +95,7 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
     setIsLoading(true)
     try {
       const res = await librarianApi.getHistory(sid)
-      setMessages(res.data)
+      setMessages(res)
     } finally {
       setIsLoading(false)
       setTimeout(scrollToBottom, 50)
@@ -113,7 +113,7 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
     try {
       setIsLoading(true)
       const res = await librarianApi.createSession("New Chat")
-      const newSess = res.data
+      const newSess = res
       setSessions(prev => [newSess, ...prev])
       setActiveSessionId(newSess.id)
       setMessages([])
@@ -195,9 +195,9 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
 
       // After streaming, refresh session list to pick up auto-title if it was "New Chat"
       const sessRes = await librarianApi.getSessions()
-      setSessions(sessRes.data)
-      if (!sid && sessRes.data.length > 0) {
-        setActiveSessionId(sessRes.data[0].id)
+      setSessions(sessRes)
+      if (!sid && sessRes.length > 0) {
+        setActiveSessionId(sessRes[0].id)
       }
 
     } catch (err) {

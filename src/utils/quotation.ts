@@ -1,4 +1,4 @@
-import type { Task, BaseRates, ManualOverrides } from '../hooks/quotation/useInvoiceState'
+import type { Task, BaseRates, ManualOverrides } from '../types'
 
 export interface CalculatedSubtotals {
   basicLabor: number

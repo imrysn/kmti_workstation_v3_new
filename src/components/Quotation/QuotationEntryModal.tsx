@@ -45,7 +45,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onClose, mand
     setErrorMessage(null)
     try {
       const res = await quotationApi.getSessions()
-      setSessions(res.data.sessions || [])
+      setSessions(res.sessions || [])
     } catch (e: any) {
       console.error('Failed to fetch active sessions')
       setErrorMessage('Server connection failed. Is the backend running?')

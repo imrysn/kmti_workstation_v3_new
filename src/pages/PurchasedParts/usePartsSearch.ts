@@ -94,7 +94,7 @@ export function usePartsSearch(selectedProjectId?: number) {
         currentOffset
       );
       
-      const payload = res.data;
+      const payload = res;
       const items = Array.isArray(payload) ? payload : (payload.items ?? []);
       const total = Array.isArray(payload) ? payload.length : (payload.total ?? 0);
       const capped = !Array.isArray(payload) && !!payload.capped;

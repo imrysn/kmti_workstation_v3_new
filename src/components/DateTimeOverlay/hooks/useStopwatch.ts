@@ -48,8 +48,8 @@ export const useStopwatch = (initialSettings: any) => {
       try {
         const info = await (window as any).electronAPI?.getWorkstationInfo();
         const res = await stopwatchApi.list(info?.computerName, info?.username, 5);
-        if (res.data) {
-          setSwRecords(res.data);
+        if (res) {
+          setSwRecords(res);
         }
       } catch (err) {
         console.error('[useStopwatch] Failed to load records from MySQL:', err);
@@ -132,8 +132,8 @@ export const useStopwatch = (initialSettings: any) => {
         user_name: info?.username
       });
       
-      if (res.data) {
-        setSwRecords(prev => [res.data, ...prev].slice(0, 5));
+      if (res) {
+        setSwRecords(prev => [res, ...prev].slice(0, 5));
       }
     } catch (err) {
       console.error('[useStopwatch] Failed to save record to MySQL:', err);

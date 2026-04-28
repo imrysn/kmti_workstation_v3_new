@@ -34,7 +34,7 @@ export default function HeatTreatment() {
   // Load categories once
   useEffect(() => {
     charsApi.getHeatTreatmentCategories().then(res => {
-      const sorted = (res.data as string[]).sort((a, b) => a.localeCompare(b))
+      const sorted = (res as string[]).sort((a, b) => a.localeCompare(b))
       setCategories(sorted)
     })
   }, [])
@@ -69,13 +69,13 @@ export default function HeatTreatment() {
       const res = await charsApi.getHeatTreatment(selectedCategory || undefined, query || undefined, limit, offset)
       
       if (isAppend) {
-        setResults(prev => [...prev, ...res.data])
+        setResults(prev => [...prev, ...res])
         setPage(p => p + 1)
       } else {
-        setResults(res.data)
+        setResults(res)
         setPage(0)
       }
-      setHasMore(res.data.length === limit)
+      setHasMore(res.length === limit)
     } catch { 
       if (!isAppend) setResults([])
       setHasMore(false)

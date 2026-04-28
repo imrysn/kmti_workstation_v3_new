@@ -112,22 +112,14 @@ async def join_doc(sid: str, data: dict):
     
     if not q_id: return
 
-    # Verify ID and password in DB
+    # Verify ID and password in DB via Service
     from db.database import AsyncSessionLocal
     async with AsyncSessionLocal() as session:
-        stmt = select(Quotation).where(Quotation.id == q_id)
-        result = await session.execute(stmt)
-        quot = result.scalar_one_or_none()
+        quot = await QuotationService.get_by_id(session, q_id)
         
         if not quot:
             await sio.emit("join_error", {"message": "Quotation not found."}, to=sid)
             return
-        
-        # ── Password / Ownership Bypass (Method 3) ──────────────────
-        # Entry is allowed IF:
-        # 1. No password is set
-        # 2. OR the provided password is correct
-        # 3. OR the user is the original owner (recognized by workstation name)
         
         is_owner = (user_name and quot.workstation == user_name)
         
@@ -147,75 +139,36 @@ async def join_doc(sid: str, data: dict):
     if q_id not in _active_users:
         _active_users[q_id] = {}
 
-    # Unique user identity: use sid to allow same-name users (common on cloned workstation images)
     _active_users[q_id][sid] = {"name": user_name, "color": color}
     
-    # Broadcast join
     await sio.emit("joined", {"sid": sid, "color": color, "users": _active_users[q_id]}, to=sid)
     await sio.emit("user_joined", {"sid": sid, "name": user_name, "color": color, "users": _active_users[q_id]}, room=room_name, skip_sid=sid)
 
-    # NEW: If others are already in the room, request the latest unsaved state from the first one
-    # to ensure the new joiner is immediately up to date without waiting for a manual save.
     existing_sids = [s for s in list(_active_users[q_id].keys()) if s != sid]
     if existing_sids:
         leader_sid = existing_sids[0]
-        print(f"[COLLAB] Requesting live state from {leader_sid} for new joiner {sid}")
         await sio.emit("sync_state_request", {"target_sid": sid}, to=leader_sid)
-    else:
-        print(f"[COLLAB] No existing users in room 'quot_{q_id}' to sync from.")
-
-# ─── Internal Helpers ────────────────────────────────────────────────────────
-async def _sync_metadata(q_id: int, data: dict, db: AsyncSession):
-    """Synchronizes DB columns with the inner JSON data blob."""
-    stmt = select(Quotation).where(Quotation.id == q_id)
-    res = await db.execute(stmt)
-    quot = res.scalar_one_or_none()
-    if not quot: return
-    
-    qd = data.get("quotationDetails", {})
-    new_q_no = qd.get("quotationNo", quot.quotation_no)
-    
-    # Sync Logic: If display_name matches old q_no, or is empty, sync to new q_no
-    new_display = quot.display_name
-    if not quot.display_name or quot.display_name == quot.quotation_no:
-        new_display = new_q_no
-        
-    await db.execute(
-        update(Quotation)
-        .where(Quotation.id == q_id)
-        .values(
-            data=json.dumps(data, ensure_ascii=False),
-            quotation_no=new_q_no,
-            display_name=new_display,
-            updated_at=datetime.now(timezone.utc),
-            client_name=data.get("clientInfo", {}).get("company", ""),
-            designer_name=data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
-        )
-    )
-    await db.commit()
 
 @sio.event
 async def update_field(sid: str, data: dict):
-    """Partial state update. Persists to DB after debounced broadcast."""
+    """Partial state update. Persists to DB via Service."""
     q_id = data.get("quot_id")
     patch = data.get("patch")
-    full_state = data.get("full_state") # Optional optimized save
+    full_state = data.get("full_state")
     
     if not q_id or not patch: return
     room_name = f"quot_{q_id}"
 
-    # 1. Immediate Broadcast to other editors
     await sio.emit("remote_patch", {"sid": sid, "patch": patch}, room=room_name, skip_sid=sid)
     
-    # 2. Persist to DB (Debounced logic could be added here, but for now direct)
     if full_state:
         from db.database import AsyncSessionLocal
         async with AsyncSessionLocal() as session:
-            await _sync_metadata(q_id, full_state, session)
+            await QuotationService.update(session, q_id, full_state)
 
 @sio.event
 async def update_fields(sid: str, data: dict):
-    """Batched state updates. Broadcasts each patch to peers."""
+    """Batched state updates."""
     q_id = data.get("quot_id")
     patches = data.get("patches", [])
     full_state = data.get("full_state")
@@ -223,25 +176,19 @@ async def update_fields(sid: str, data: dict):
     if not q_id or not patches: return
     room_name = f"quot_{q_id}"
 
-    # 1. Immediate Broadcast each patch to other editors
-    # (Peers handle them sequentially in their local state)
     for patch in patches:
         await sio.emit("remote_patch", {"sid": sid, "patch": patch}, room=room_name, skip_sid=sid)
     
-    # 2. Persist metadata once for the whole batch if full_state is provided
     if full_state:
         from db.database import AsyncSessionLocal
         async with AsyncSessionLocal() as session:
-            await _sync_metadata(q_id, full_state, session)
+            await QuotationService.update(session, q_id, full_state)
 
 @sio.event
 async def sync_state_response(sid: str, data: dict):
-    """Relay the full state from an existing editor to a new joiner."""
     target_sid = data.get("target_sid")
     full_state = data.get("full_state")
     if target_sid and full_state:
-        print(f"[COLLAB] Relaying live state from {sid} to {target_sid}")
-        # Send only to the joiner who requested it
         await sio.emit("remote_patch", {
             "sid": sid, 
             "patch": {"path": "__full_restore__", "value": full_state}
@@ -249,7 +196,7 @@ async def sync_state_response(sid: str, data: dict):
 
 @sio.event
 async def trigger_snapshot(sid: str, data: dict):
-    """Explicitly create a history version in DB."""
+    """Create a history version in DB via Service."""
     q_id = data.get("quot_id")
     full_state = data.get("full_state")
     label = data.get("label")
@@ -261,14 +208,7 @@ async def trigger_snapshot(sid: str, data: dict):
 
     from db.database import AsyncSessionLocal
     async with AsyncSessionLocal() as session:
-        history = QuotationHistory(
-            quotation_id=q_id,
-            label=label or "Manual Save",
-            author=author,
-            data=json.dumps(full_state, ensure_ascii=False)
-        )
-        session.add(history)
-        await session.commit()
+        await QuotationService.add_history(session, q_id, label or "Manual Save", author, full_state)
     
     await sio.emit("history_updated", {"quot_id": q_id}, room=f"quot_{q_id}")
 
@@ -290,72 +230,41 @@ async def blur_field(sid: str, data: dict):
 
 @sio.event
 async def disconnect(sid: str):
-    """Cleanup presence on socket disconnect."""
     for q_id, users in list(_active_users.items()):
         if sid in users:
             user_info = users.pop(sid)
             room_name = f"quot_{q_id}"
+            await sio.emit("user_left", {"sid": sid, "name": user_info.get("name", "Unknown"), "users": users}, room=room_name)
             
-            # Broadcast to others in the room
-            await sio.emit(
-                "user_left",
-                {"sid": sid, "name": user_info.get("name", "Unknown"), "users": users},
-                room=room_name,
-            )
-            
-            # If last user left, cleanup in-memory presence and deactivate in DB
             if not users:
-                if q_id in _active_users:
-                    del _active_users[q_id]
-                
-                # Sync DB status
+                if q_id in _active_users: del _active_users[q_id]
                 from db.database import AsyncSessionLocal
-                try:
-                    async with AsyncSessionLocal() as session:
-                        await session.execute(
-                            update(Quotation).where(Quotation.id == q_id).values(is_active=False)
-                        )
-                        await session.commit()
-                except Exception as e:
-                    print(f"[COLLAB] Failed to deactivate session {q_id} on disconnect: {e}")
+                async with AsyncSessionLocal() as session:
+                    await session.execute(update(Quotation).where(Quotation.id == q_id).values(is_active=False))
+                    await session.commit()
             break
-    print(f"[Socket] Client disconnected: {sid}")
 
 @sio.event
 async def leave_doc(sid: str, data: dict):
-    """Explicitly leave a room."""
     q_id = data.get("quot_id")
-    if not q_id: return
-    
     if q_id in _active_users and sid in _active_users[q_id]:
         user_info = _active_users[q_id].pop(sid)
         room_name = f"quot_{q_id}"
         await sio.leave_room(sid, room_name)
-        
-        # Broadcast to others in the room
-        await sio.emit(
-            "user_left",
-            {"sid": sid, "name": user_info.get("name", "Unknown"), "users": _active_users.get(q_id, {})},
-            room=room_name,
-        )
+        await sio.emit("user_left", {"sid": sid, "name": user_info.get("name", "Unknown"), "users": _active_users.get(q_id, {})}, room=room_name)
         
         if not _active_users.get(q_id):
-            if q_id in _active_users:
-                del _active_users[q_id]
+            if q_id in _active_users: del _active_users[q_id]
             from db.database import AsyncSessionLocal
             async with AsyncSessionLocal() as session:
-                await session.execute(
-                    update(Quotation).where(Quotation.id == q_id).values(is_active=False)
-                )
+                await session.execute(update(Quotation).where(Quotation.id == q_id).values(is_active=False))
                 await session.commit()
 
 @sio.event
 async def chat_message(sid: str, data: dict):
-    """Broadcast a chat message to the workspace."""
     q_id = data.get("quot_id")
     message = data.get("message")
     if not q_id or not message: return
-    
     user_info = _active_users.get(q_id, {}).get(sid, {})
     await sio.emit("remote_chat", {
         "sid": sid,
@@ -372,9 +281,11 @@ async def focus_selection(sid: str, data: dict):
 
 # ─── REST API ───────────────────────────────────────────────────────────────
 
+from services.quotation_service import QuotationService
+from models.quotation_schemas import QuotationListResponse, QuotationResponseSchema
+
 router = APIRouter()
 
-# ─── Template File Endpoint ──────────────────────────────────────────────────
 _TEMPLATE_MAP = {
     "quotation": "Quotation Template.xlsx",
     "billing":   "Billing Template.xlsx",
@@ -382,27 +293,13 @@ _TEMPLATE_MAP = {
 
 @router.get("/templates/{template_name}")
 async def get_template(template_name: str):
-    """Serve an Excel template file from backend/data/.
-    
-    Used by the frontend Excel export to load a pixel-perfect base template
-    rather than building layout from scratch with ExcelJS.
-    template_name: 'quotation' | 'billing'
-    """
     filename = _TEMPLATE_MAP.get(template_name)
-    if not filename:
-        raise HTTPException(status_code=404, detail=f"Unknown template: '{template_name}'")
-    
+    if not filename: raise HTTPException(status_code=404, detail=f"Unknown template: '{template_name}'")
     file_path = os.path.join(BASE_DIR, "data", filename)
-    if not os.path.isfile(file_path):
-        raise HTTPException(status_code=404, detail=f"Template file not found on disk: {filename}")
-    
-    return FileResponse(
-        path=file_path,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        filename=filename,
-    )
+    if not os.path.isfile(file_path): raise HTTPException(status_code=404, detail=f"Template file not found on disk: {filename}")
+    return FileResponse(path=file_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=filename)
 
-@router.get("/")
+@router.get("/", response_model=QuotationListResponse)
 async def list_quotations(
     q: Optional[str] = None, 
     designer: Optional[str] = None,
@@ -411,57 +308,34 @@ async def list_quotations(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """List quotations from DB with filtering."""
-    stmt = select(Quotation).order_by(desc(Quotation.updated_at))
-    
-    if q:
-        stmt = stmt.where(or_(
-            Quotation.quotation_no.ilike(f"%{q}%"),
-            Quotation.client_name.ilike(f"%{q}%")
-        ))
-    if designer:
-        stmt = stmt.where(Quotation.designer_name.ilike(f"%{designer}%"))
-    
-    stmt = stmt.limit(limit).offset(offset)
-    result = await db.execute(stmt)
-    items = result.scalars().all()
-    
+    items, total = await QuotationService.get_all(db, skip=offset, limit=limit, search=q, designer=designer)
     is_admin = current_user.role in [UserRole.admin, UserRole.it]
     
-    return {
-        "quotations": [
-            {
-                "id": i.id,
-                "quotationNo": i.quotation_no,
-                "clientName": i.client_name,
-                "designerName": i.designer_name,
-                "workstation": i.workstation,
-                "date": i.date.strftime("%Y-%m-%d") if i.date else None,
-                "modifiedAt": i.updated_at.isoformat() + "Z" if i.updated_at else None,
-                "isActive": i.is_active,
-                "hasPassword": bool(i.password),
-                "password": i.password if is_admin else None, # Elevated view for recovery
-                "displayName": i.display_name or i.quotation_no
-            } for i in items
-        ]
-    }
+    quotations = []
+    for i in items:
+        quotations.append(QuotationResponseSchema(
+            id=i.id,
+            quotationNo=i.quotation_no,
+            clientName=i.client_name,
+            designerName=i.designer_name,
+            workstation=i.workstation,
+            date=i.date,
+            modifiedAt=i.updated_at,
+            is_active=i.is_active,
+            hasPassword=bool(i.password),
+            password=i.password if is_admin else None,
+            display_name=i.display_name or i.quotation_no
+        ))
+    return {"quotations": quotations, "total": total}
 
 @router.get("/sessions")
 async def list_active_sessions(db: AsyncSession = Depends(get_db)):
-    """Returns list of quotations that are currently active.
-    
-    Cross-references the database 'is_active' flag with the live Socket.IO presence.
-    This provides a resilient list that doesn't disappear if the socket hasn't 
-    finished handshaking or if the server recently restarted.
-    """
-    # 1. Start with all quotations marked active in DB
     stmt = select(Quotation).where(Quotation.is_active == True).order_by(desc(Quotation.updated_at))
     result = await db.execute(stmt)
     items = result.scalars().all()
 
     sessions = []
     for i in items:
-        # 2. Add live user info from memory
         users = _active_users.get(i.id, {})
         sessions.append({
             "id": i.id,
@@ -472,96 +346,44 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
             "hasPassword": bool(i.password),
             "workstation": i.workstation
         })
-    
     return {"sessions": sessions}
 
 @router.post("/")
 async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
-    """Create a new quotation record in the database.
-    
-    Supports two modes:
-      Lightweight:  { quot_no, display_name?, password? }  — workspace-first creation
-      Full:         { quotationDetails, clientInfo, ... }  — save from within editor
-    """
-    workstation = data.get("workstation")
-    
-    # ── Lightweight workspace-first creation ──────────────────────
+    # Support both Lightweight and Full creation via Service
     if "quot_no" in data:
-        q_no = data["quot_no"]
-        display = data.get("display_name") or q_no
-        password = data.get("password")
-        
-        # Check for duplicate
-        stmt = select(Quotation).where(Quotation.quotation_no == q_no)
+        # Lightweight check duplicate
+        stmt = select(Quotation).where(Quotation.quotation_no == data["quot_no"])
         res = await db.execute(stmt)
-        if res.scalar_one_or_none():
-            raise HTTPException(status_code=400, detail="Quotation number already exists")
+        if res.scalar_one_or_none(): raise HTTPException(status_code=400, detail="Quotation number already exists")
         
-        # Create a blank record — document data will be populated on first save
-        new_q = Quotation(
-            quotation_no=q_no,
-            display_name=display,
-            password=password,
-            workstation=workstation,
-            is_active=True,  # Set to true immediately so it shows in lobby
-            data=json.dumps({}, ensure_ascii=False),  # empty, will be filled on first save
-        )
-        db.add(new_q)
-        await db.commit()
-        await db.refresh(new_q)
-        return {"success": True, "id": new_q.id, "quotNo": q_no, "displayName": display}
+        new_q = await QuotationService.create(db, {"quotationDetails": {"quotationNo": data["quot_no"]}}, workstation=data.get("workstation"))
+        if data.get("password"):
+            new_q.password = data["password"]
+            await db.commit()
+        return {"success": True, "id": new_q.id, "quotNo": new_q.quotation_no, "displayName": new_q.display_name}
 
-    # ── Full document save (from within editor) ───────────────────
-    qd = data.get("quotationDetails", {})
-    ci = data.get("clientInfo", {})
-    sig = data.get("signatures", {}).get("quotation", {}).get("preparedBy", {})
-    
-    q_no = qd.get("quotationNo")
-    if not q_no:
-        raise HTTPException(status_code=400, detail="Quotation number is required")
-        
-    # Check if exists
-    stmt = select(Quotation).where(Quotation.quotation_no == q_no)
-    res = await db.execute(stmt)
-    if res.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Quotation number already exists")
-    
-    new_q = Quotation(
-        quotation_no=q_no,
-        client_name=ci.get("company", ""),
-        designer_name=sig.get("name", ""),
-        workstation=workstation,
-        data=json.dumps(data, ensure_ascii=False),
-        display_name=q_no
-    )
-    db.add(new_q)
-    await db.commit()
-    await db.refresh(new_q)
-    return {"success": True, "id": new_q.id}
-
-
+    # Full document save
+    try:
+        new_q = await QuotationService.create(db, data, workstation=data.get("workstation"))
+        return {"success": True, "id": new_q.id}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/{q_id}")
 async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
-    stmt = select(Quotation).where(Quotation.id == q_id)
-    result = await db.execute(stmt)
-    quot = result.scalar_one_or_none()
-    if not quot:
-        raise HTTPException(status_code=404, detail="Quotation not found")
+    quot = await QuotationService.get_by_id(db, q_id)
+    if not quot: raise HTTPException(status_code=404, detail="Quotation not found")
     return json.loads(quot.data)
 
 @router.patch("/{q_id}")
 async def update_quotation(q_id: int, data: dict, db: AsyncSession = Depends(get_db)):
-    """Full update of quotation data."""
-    await _sync_metadata(q_id, data, db)
+    await QuotationService.update(db, q_id, data)
     return {"success": True}
 
 @router.get("/{q_id}/history")
 async def get_history(q_id: int, db: AsyncSession = Depends(get_db)):
-    stmt = select(QuotationHistory).where(QuotationHistory.quotation_id == q_id).order_by(desc(QuotationHistory.created_at))
-    result = await db.execute(stmt)
-    items = result.scalars().all()
-    
+    items = await QuotationService.get_history(db, q_id)
     return {
         "history": [
             {
@@ -578,8 +400,7 @@ async def restore_history(q_id: int, h_id: int, db: AsyncSession = Depends(get_d
     stmt = select(QuotationHistory).where(QuotationHistory.id == h_id, QuotationHistory.quotation_id == q_id)
     result = await db.execute(stmt)
     history = result.scalar_one_or_none()
-    if not history:
-        raise HTTPException(status_code=404, detail="History entry not found")
+    if not history: raise HTTPException(status_code=404, detail="History entry not found")
     return json.loads(history.data)
 
 @router.delete("/{q_id}")
@@ -589,35 +410,15 @@ async def delete_quotation(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Permanently delete a quotation and its history.
+    quot = await QuotationService.get_by_id(db, q_id)
+    if not quot: raise HTTPException(status_code=404, detail="Quotation not found")
     
-    Authorization:
-    - Admin/IT roles can delete any record.
-    - Regular users can only delete records owned by their current workstation.
-    """
-    # 1. Fetch quotation to check ownership
-    stmt = select(Quotation).where(Quotation.id == q_id)
-    res = await db.execute(stmt)
-    quot = res.scalar_one_or_none()
-    
-    if not quot:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quotation not found")
-        
-    # 2. Authorization Check
     is_admin = current_user.role in [UserRole.admin, UserRole.it]
-    # Match workstation hostname for ownership (Shared Account scenario)
     is_owner = workstation and quot.workstation == workstation
 
     if not is_admin and not is_owner:
         owner_label = quot.workstation if quot.workstation else "Legacy/Unknown"
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Deletion Denied: This record belongs to workstation '{owner_label}'. Only the owner or an administrator can delete it."
-        )
+        raise HTTPException(status_code=403, detail=f"Deletion Denied: Owner workstation is '{owner_label}'.")
 
-    # 3. Perform Deletion (with history cleanup)
-    await db.execute(delete(QuotationHistory).where(QuotationHistory.quotation_id == q_id))
-    await db.execute(delete(Quotation).where(Quotation.id == q_id))
-    await db.commit()
-    
+    await QuotationService.delete(db, q_id)
     return {"success": True}

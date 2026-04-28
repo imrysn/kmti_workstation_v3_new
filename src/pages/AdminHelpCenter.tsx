@@ -161,7 +161,7 @@ export default function AdminHelpCenter() {
   const fetchWorkstations = async () => {
     try {
       const res = await telemetryApi.getStatuses()
-      setActiveWorkstations(res.data.data)
+      setActiveWorkstations(res.data)
     } catch (err) {
       console.error('Failed to fetch workstation statuses:', err)
     }
@@ -232,7 +232,7 @@ export default function AdminHelpCenter() {
     try {
       const res = await helpApi.getTickets()
 
-      const rawTickets = res.data as Ticket[];
+      const rawTickets = res as Ticket[];
       const urgencyRank: Record<string, number> = {
         'critical': 4,
         'high': 3,
@@ -260,7 +260,7 @@ export default function AdminHelpCenter() {
       // but to optimize we could just rely on manual refresh. We'll do a quick silent fetch if active.
       if (activeId) {
         const tReq = await helpApi.getTicketDetails(activeId)
-        setActiveTicket(tReq.data)
+        setActiveTicket(tReq)
       }
     } catch (err) {
       console.error('Failed to fetch tickets:', err)
@@ -273,7 +273,7 @@ export default function AdminHelpCenter() {
     setActiveId(id)
     try {
       const res = await helpApi.getTicketDetails(id)
-      setActiveTicket(res.data)
+      setActiveTicket(res)
       // Visual clearance of unread
       setTickets(prev => prev.map(t => t.id === id ? { ...t, has_unread_admin: false } : t))
     } catch (err) {
@@ -311,7 +311,7 @@ export default function AdminHelpCenter() {
 
       // Reload ticket specifics
       const res = await helpApi.getTicketDetails(activeId)
-      setActiveTicket(res.data)
+      setActiveTicket(res)
       fetchTickets(false)
 
     } catch (err) {

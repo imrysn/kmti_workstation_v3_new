@@ -34,7 +34,7 @@ export default function Designers() {
   const fetchCategories = React.useCallback(async () => {
     try {
       const res = await designersApi.getCategories()
-      const sorted = (res.data as string[]).sort((a, b) => a.localeCompare(b))
+      const sorted = (res as string[]).sort((a, b) => a.localeCompare(b))
       setCategories(sorted)
     } catch {
       setCategories([])
@@ -70,13 +70,13 @@ export default function Designers() {
       const res = await designersApi.list(selectedCategory || undefined, query || undefined, limit, offset)
 
       if (isAppend) {
-        setResults(prev => [...prev, ...res.data])
+        setResults(prev => [...prev, ...res])
         setPage(p => p + 1)
       } else {
-        setResults(res.data)
+        setResults(res)
         setPage(0)
       }
-      setHasMore(res.data.length === limit)
+      setHasMore(res.length === limit)
     } catch {
       if (!isAppend) setResults([])
       setHasMore(false)

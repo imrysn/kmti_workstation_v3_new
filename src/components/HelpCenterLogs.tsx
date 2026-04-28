@@ -23,7 +23,7 @@ export default function HelpCenterLogs({ onOpenLogsCountChange, isTerminalMode =
     setIsLoadingLogs(true)
     try {
       const res = await helpApi.getTickets() // IT gets all
-      const data: Ticket[] = res.data
+      const data: Ticket[] = res
       setTickets(data)
       const openCount = data.filter(l => l.status === 'open').length
       onOpenLogsCountChange?.(openCount)
@@ -44,7 +44,7 @@ export default function HelpCenterLogs({ onOpenLogsCountChange, isTerminalMode =
     setExpandedId(id)
     try {
       const res = await helpApi.getTicketDetails(id)
-      setExpandedTicket(res.data)
+      setExpandedTicket(res)
     } catch (err) {
       console.error(err)
     }
@@ -74,7 +74,7 @@ export default function HelpCenterLogs({ onOpenLogsCountChange, isTerminalMode =
       setReplyMessage('')
       // Reload thread
       const res = await helpApi.getTicketDetails(id)
-      setExpandedTicket(res.data)
+      setExpandedTicket(res)
       // fetchLogs not fully needed unless status changed, but safe to call
       fetchLogs()
     } catch (err) {

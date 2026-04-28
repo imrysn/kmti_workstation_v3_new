@@ -13,7 +13,7 @@ class Project(Base):
     __tablename__ = "projects"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), unique=True, index=True)
-    root_path = Column(String(1024))
+    root_path = Column(String(1024), index=True)
     category = Column(String(50), default="PROJECTS", index=True)
     total_files = Column(Integer, default=0)
     cad_files = Column(Integer, default=0)
@@ -44,8 +44,8 @@ class CharSearch(Base):
     __tablename__ = "char_search"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    eng_char = Column(String(1000), nullable=False)
-    jp_char = Column(String(1000), nullable=False)
+    eng_char = Column(String(1000), nullable=False, index=True)
+    jp_char = Column(String(1000), nullable=False, index=True)
 
 
 class HeatTreatment(Base):
@@ -53,9 +53,9 @@ class HeatTreatment(Base):
     __tablename__ = "heat_trmnt"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    category = Column(String(255))
-    eng_char = Column(String(255))
-    jp_char = Column(String(255))
+    category = Column(String(255), index=True)
+    eng_char = Column(String(255), index=True)
+    jp_char = Column(String(255), index=True)
 
 
 class Designer(Base):

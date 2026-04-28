@@ -23,7 +23,7 @@ interface Props {
  */
 export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const { hasRole } = useAuth()
-  const { notify, confirm, alert } = useModal()
+  const { notify, confirm } = useModal()
 
   // ── State ───────────────────────────────────────────────────────
   const [quotations, setQuotations] = useState<IQuotation[]>([])
@@ -36,8 +36,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
     setLoading(true)
     try {
       const res = await quotationApi.list({ limit: 100 })
-      const data = res.data as unknown as { quotations: IQuotation[] }
-      setQuotations(data.quotations || [])
+      setQuotations(res.quotations || [])
     } catch (e) {
       console.error('[library] Failed to fetch records:', e)
       notify?.('Failed to load library. Please check your connection.', 'error')
