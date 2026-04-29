@@ -1,0 +1,29 @@
+END USER LICENSE AGREEMENT (EULA)
+
+This End User License Agreement ("Agreement") is a legal agreement between you and Kusakabe & Maeno Tech Inc ("KMTI") for the KMTI Workstation software.
+
+1. LICENSE GRANT
+KMTI grants you a non-exclusive, non-transferable license to use the KMTI Workstation software on authorized workstations within your organization.
+
+2. RESTRICTIONS
+You may not:
+- Reverse engineer, decompile, or disassemble the software.
+- Modify or create derivative works based on the software.
+- Rent, lease, or lend the software to third parties.
+
+3. OWNERSHIP
+KMTI retains all right, title, and interest in and to the software, including all intellectual property rights.
+
+4. NO WARRANTY
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. KMTI DISCLAIMS ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
+
+5. LIMITATION OF LIABILITY
+IN NO EVENT SHALL KMTI BE LIABLE FOR ANY SPECIAL, INCIDENTAL, INDIRECT, OR CONSEQUENTIAL DAMAGES WHATSOEVER ARISING OUT OF THE USE OF OR INABILITY TO USE THE SOFTWARE.
+
+6. TERMINATION
+This license is effective until terminated. Your rights under this license will terminate automatically without notice from KMTI if you fail to comply with any term(s) of this license.
+
+7. GOVERNING LAW
+This Agreement shall be governed by and construed in accordance with the laws of the jurisdiction in which KMTI is headquartered.
+
+By installing or using the KMTI Workstation software, you agree to be bound by the terms of this Agreement.

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react'
 
 export type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error'
 
@@ -21,6 +21,12 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   const [updateInfo, setUpdateInfo] = useState<any>(null)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [updateError, setUpdateError] = useState<string | null>(null)
+  
+  // Use a ref to keep track of the current status without causing callback re-creations
+  const statusRef = useRef<UpdateStatus>(updateStatus)
+  useEffect(() => {
+    statusRef.current = updateStatus
+  }, [updateStatus])
 
   useEffect(() => {
     const api = window.electronAPI
@@ -56,7 +62,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const checkForUpdate = useCallback(async () => {
-    if (updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'ready') return
+    if (statusRef.current === 'checking' || statusRef.current === 'downloading' || statusRef.current === 'ready') return
 
     // In dev, we skip the real check to avoid console spam, 
     // unless explicitly triggered (handled by the button calling simulate)
@@ -73,7 +79,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       setUpdateStatus('error')
       setUpdateError(err.message || 'Failed to check for updates')
     }
-  }, [updateStatus])
+  }, [])
 
   const downloadUpdate = useCallback(async () => {
     setUpdateError(null)

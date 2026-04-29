@@ -30,7 +30,7 @@
     "win": {
       "target": "nsis",
       "icon": "src/assets/kmti.ico",
-      "artifactName": "${productName}_Setup_${version}.${ext}"
+      "artifactName": "KMTI_Workstation_Setup_v${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -41,8 +41,13 @@
       "installerIcon": "src/assets/kmti.ico",
       "uninstallerIcon": "src/assets/kmti.ico",
       "installerHeaderIcon": "src/assets/kmti.ico",
+      "installerSidebar": "src/assets/installer_sidebar.bmp",
+      "installerHeader": "src/assets/installer_header.bmp",
+      "uninstallDisplayName": "KMTI Workstation ${version}",
+      "shortcutName": "KMTI Workstation",
+      "license": "LICENSE.txt",
       "runAfterFinish": true,
-      "perMachine": false,
+      "perMachine": true,
       "deleteAppDataOnUninstall": false
     },
     "publish": {

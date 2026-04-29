@@ -243,14 +243,23 @@ function AppContent() {
     setApiToken(token)
   }, [token])
 
-  // Trigger update check after login / session restoration (Production only)
+  // Trigger update check once per day (Production only)
   useEffect(() => {
     if (user && import.meta.env.PROD) {
-      // Small delay to let initial UI settle
-      const timer = setTimeout(() => {
+      const LAST_CHECK_KEY = 'kmti_last_update_check'
+      const now = Date.now()
+      const lastCheck = localStorage.getItem(LAST_CHECK_KEY)
+      const oneDay = 24 * 60 * 60 * 1000
+
+      // If we haven't checked today, or if it's the first time
+      if (!lastCheck || (now - parseInt(lastCheck)) > oneDay) {
+        console.log('>>> [UPDATE] Performing daily update check...')
         checkForUpdate()
-      }, 1000)
-      return () => clearTimeout(timer)
+        localStorage.setItem(LAST_CHECK_KEY, now.toString())
+      } else {
+        const hoursLeft = Math.round((oneDay - (now - parseInt(lastCheck))) / (60 * 60 * 1000))
+        console.log(`>>> [UPDATE] Last check was recent. Next auto-check in ~${hoursLeft}h.`)
+      }
     }
   }, [user, checkForUpdate])
 

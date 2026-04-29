@@ -149,12 +149,19 @@ function killBackend() {
       if (process.platform === 'win32') {
         execSync(`taskkill /F /T /PID ${pythonProcess.pid}`, { stdio: 'ignore' })
       } else {
-        pythonProcess.kill()
+        pythonProcess.kill('SIGKILL')
       }
     } catch (err) {
       console.warn('>>> Backend was already terminated or could not be killed:', err.message)
     }
     pythonProcess = null
+  }
+
+  if (logStream) {
+    try {
+      logStream.end()
+      logStream = null
+    } catch (e) {}
   }
 }
 
@@ -381,7 +388,11 @@ app.whenReady().then(() => {
   })
   ipcMain.handle('install-and-restart', () => {
     if (!autoUpdater) return
-    autoUpdater.quitAndInstall()
+    // Ensure all local child processes are dead before starting the installer
+    // to prevent "File in Use" prompts on server.exe
+    killBackend()
+    // isSilent: false (shows a simple progress bar), isForceRunAfter: true (ensures restart)
+    autoUpdater.quitAndInstall(false, true)
   })
 
   createWindow()
