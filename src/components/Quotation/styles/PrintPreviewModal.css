@@ -227,6 +227,27 @@ body:has(.print-preview-modal) .broadcast-fab {
   cursor: not-allowed;
 }
 
+.ppm-action-btn.tutorial-trigger {
+  background: var(--bg-primary);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.ppm-action-btn.tutorial-trigger:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.dark-theme .ppm-action-btn.tutorial-trigger {
+  background: var(--bg-surface-hover);
+}
+
+.ppm-export-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Close button */
 .ppm-close-btn {
   display: flex;

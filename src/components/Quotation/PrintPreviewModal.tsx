@@ -7,6 +7,8 @@ import { LAYOUT } from './constants'
 import PrintPage from './components/PrintPage'
 import { exportToExcel } from './utils/excelExport'
 
+import { PrintTutorial } from './PrintTutorial'
+
 import './styles/PrintPreviewModal.css'
 import './styles/VisualLayout.css'
 
@@ -24,6 +26,8 @@ interface Props {
   signatures: Signatures
   manualOverrides: ManualOverrides
   onManualOverrideChange: (updater: (prev: ManualOverrides) => ManualOverrides) => void
+  autoStartTutorial?: boolean
+  onCompleteTutorial?: () => void
 }
 
 /** A single page slice produced by computePages(). */
@@ -98,11 +102,13 @@ const PrintPreviewModal = memo(({
   isOpen, onClose,
   companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
   manualOverrides, onManualOverrideChange,
+  autoStartTutorial, onCompleteTutorial
 }: Props) => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [printMode, setPrintMode] = useState<'quotation' | 'billing'>('quotation')
   const [baseScale, setBaseScale] = useState(1)
   const [zoomMode, setZoomMode] = useState<'fit' | number>('fit')
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false)
   const actualScale = zoomMode === 'fit' ? baseScale : zoomMode
 
   const previewRef = useRef<HTMLDivElement>(null)
@@ -123,6 +129,13 @@ const PrintPreviewModal = memo(({
     ro.observe(el)
     return () => ro.disconnect()
   }, [isOpen])
+
+  // Auto-start tutorial if requested
+  useEffect(() => {
+    if (isOpen && autoStartTutorial) {
+      setIsTutorialOpen(true)
+    }
+  }, [isOpen, autoStartTutorial])
 
   // ── Per-task total calculation ─────────────────────────────────
   const calculateTaskTotal = useCallback(
@@ -397,32 +410,34 @@ const PrintPreviewModal = memo(({
 
             <div className="ppm-sep" />
 
-            <button id="ppm-btn-print" className="ppm-action-btn primary" onClick={handlePrint} disabled={isProcessing}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9" />
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                <rect x="6" y="14" width="12" height="8" />
-              </svg>
-              {isProcessing ? 'Processing…' : 'Print'}
-            </button>
+            <div className="ppm-export-group">
+              <button id="ppm-btn-print" className="ppm-action-btn primary" onClick={handlePrint} disabled={isProcessing}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                {isProcessing ? 'Processing…' : 'Print'}
+              </button>
 
-            <button id="ppm-btn-pdf" className="ppm-action-btn export-pdf" onClick={handleDownloadPDF} disabled={isProcessing}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              PDF
-            </button>
+              <button id="ppm-btn-pdf" className="ppm-action-btn export-pdf" onClick={handleDownloadPDF} disabled={isProcessing}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                PDF
+              </button>
 
-            <button id="ppm-btn-excel" className="ppm-action-btn export-excel" onClick={handleExportExcel} disabled={isProcessing}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <line x1="3" y1="9" x2="21" y2="9" />
-                <line x1="9" y1="21" x2="9" y2="9" />
-              </svg>
-              Excel
-            </button>
+              <button id="ppm-btn-excel" className="ppm-action-btn export-excel" onClick={handleExportExcel} disabled={isProcessing}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="3" y1="9" x2="21" y2="9" />
+                  <line x1="9" y1="21" x2="9" y2="9" />
+                </svg>
+                Excel
+              </button>
+            </div>
 
             <button id="ppm-btn-close" className="ppm-close-btn" onClick={onClose}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -492,6 +507,12 @@ const PrintPreviewModal = memo(({
           </div>
         </div>
       </div>
+
+      <PrintTutorial 
+        isOpen={isTutorialOpen} 
+        onClose={() => setIsTutorialOpen(false)} 
+        onComplete={onCompleteTutorial}
+      />
     </div>
   )
 })

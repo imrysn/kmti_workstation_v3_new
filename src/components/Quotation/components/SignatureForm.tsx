@@ -399,7 +399,7 @@ const SignatureForm = memo(({ signatures, onUpdate }: Props) => {
   }, [])
 
   return (
-    <div className="sig-cards-layout" ref={containerRef}>
+    <div className="sig-cards-layout signature-form-root" ref={containerRef}>
       <QuotationSignaturesCard signatures={safe} onUpdate={onUpdate} />
       <BillingSignaturesCard signatures={safe} onUpdate={onUpdate} />
     </div>

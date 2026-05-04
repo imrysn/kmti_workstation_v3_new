@@ -38,6 +38,7 @@ import {
 import { CollaborationBar } from './CollaborationBar'
 import { HistorySidebar } from './HistorySidebar'
 import { ActivitySidebar } from './ActivitySidebar'
+import { QuotationTutorial } from './QuotationTutorial'
 import QuotationLibraryModal from './QuotationLibraryModal'
 import '../../pages/quotation/QuotationApp.css'
 import '../../pages/Quotation.css'
@@ -58,9 +59,10 @@ interface Props extends WorkspaceSession {
   /** Called when user clicks "Workspace" to return to the lobby. */
   onLeave: () => void
   onSwitchSession: (session: any) => void
+  autoStartTutorial?: boolean
 }
 
-export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession }: Props) {
+export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial }: Props) {
   const { notify, confirm: showConfirm } = useModal()
   const { user } = useAuth()
 
@@ -72,6 +74,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false)
   const [isBaseRatesPanelOpen, setIsBaseRatesPanelOpen] = useState(false)
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
+  const [isTutorialOpen, setIsTutorialOpen] = useState(!!autoStartTutorial)
   const [recentEdits, setRecentEdits] = useState<Record<string, { color: string; timestamp: number }>>({})
   const [previewData, setPreviewData] = useState<any | null>(null)
   const [activePreviewTs, setActivePreviewTs] = useState<string | null>(null)
@@ -110,7 +113,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       if (initialQuotId) {
         try {
           const res = await quotationApi.get(initialQuotId)
-          
+
           // CRITICAL: If we already received a more up-to-date buffer from 
           // a collaborative peer while we were waiting for the DB, 
           // don't overwrite the peer's state with the old DB state.
@@ -195,7 +198,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     onChatReceived: (msg) => {
       // 1. Immediate UI update via event
       window.dispatchEvent(new CustomEvent('kmti:remote-chat', { detail: msg }))
-      
+
       // 2. Visual & Taskbar Alert if not me
       if (msg.sid !== mySessionId) {
         // Use the existing Modal-based Dynamic Island (NotificationToast)
@@ -206,7 +209,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
           window.electronAPI.flashWindow(true)
         }
       }
-      
+
       // 3. Persist to document state (for DB saving)
       updateChatLog(prev => {
         const enrichedMsg = { ...msg, id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` }
@@ -217,7 +220,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     onRemotePatch: (patch: { path: string; value: any }, sid: string) => {
       // Notify components about activity
       window.dispatchEvent(new CustomEvent('kmti:remote-patch', { detail: { patch, sid } }))
-      
+
       const userColor = remoteUsers[sid]?.color || '#4A90D9'
       if (patch.path !== '__full_restore__') {
         setRecentEdits(prev => ({
@@ -291,7 +294,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
 
   const debouncedSyncDb = useCallback(() => {
     if (dbSyncTimerRef.current) clearTimeout(dbSyncTimerRef.current)
-    
+
     dbSyncTimerRef.current = setTimeout(async () => {
       if (!isConnected) return
       setIsSyncing(true)
@@ -425,7 +428,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   // Reset preview and logs when switching quotations
   useEffect(() => {
     handleExitPreview()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quotationDetails.quotationNo])
 
   const formatToolbarDate = useCallback((dateStr: string) => {
@@ -447,13 +450,13 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
           notify?.('New quotation saved to database', 'success')
         }
       }
-      
+
       // Successfully saved to DB -> clear unsaved flag
       setHasUnsavedChanges(false)
-      
+
       // Secondary backup: still allow file-system save if configured
-      await saveInvoice(true) 
-      
+      await saveInvoice(true)
+
       emitSnapshot(getSaveData(), 'Manual Save')
     } catch (e) {
       console.error('Save failed:', e)
@@ -466,7 +469,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     // Only auto-save if we are the primary "connected" workstation
     // and there are actual changes to save.
     if (!isConnected) return
-    
+
     const interval = setInterval(async () => {
       if (hasUnsavedChanges) {
         const savedPath = await saveInvoice(true) // silent auto-save
@@ -526,6 +529,23 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       switchSession()
     }
   }
+
+  const handleTutorialClose = useCallback(async () => {
+    setIsTutorialOpen(false)
+    if (autoStartTutorial && quotId) {
+      try {
+        notify?.('Tutorial complete.', 'info')
+        // We use a small delay to ensure the tutorial overlay fade-out doesn't stutter
+        setTimeout(async () => {
+          await quotationApi.delete(quotId)
+          onLeave() // Go back to lobby
+        }, 1000)
+      } catch (e) {
+        console.error('[tutorial] Failed to cleanup training session:', e)
+        onLeave()
+      }
+    }
+  }, [autoStartTutorial, quotId, onLeave, notify])
 
   // Calculate effective data for rendering (preview vs live)
   const isPreview = !!previewData
@@ -613,19 +633,26 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             <div className="toolbar-divider" />
 
             {/* 2. Workspace */}
-            <button 
+            <button
               type="button"
-              className="btn" 
+              className="btn"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
-                const message = hasUnsavedChanges 
+
+                const message = hasUnsavedChanges
                   ? 'You have unsaved changes. Leave the workspace anyway?'
                   : 'Return to the workspace lobby? Your session will remain active for others.'
 
-                const doLeave = () => {
+                const doLeave = async () => {
                   leaveRoom();
+                  if (autoStartTutorial && quotId) {
+                    try {
+                      await quotationApi.delete(quotId);
+                    } catch (e) {
+                      console.error('[tutorial] Failed to delete session on exit:', e);
+                    }
+                  }
                   onLeave();
                 };
 
@@ -637,11 +664,11 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                   'Return to Lobby?',
                   hasUnsavedChanges ? 'Leave without saving' : 'Return to Lobby'
                 )
-              }} 
+              }}
               title="Return to lobby"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
               </svg>
               Workspace
             </button>
@@ -651,19 +678,19 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             {/* 3. New ; Load ; Save */}
             <button className="btn" onClick={newInvoice} title="Create new quotation">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
               </svg>
               New
             </button>
             <button className="btn" onClick={() => setIsLibraryOpen(true)} title="Load from library">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
               Load
             </button>
             <button className="btn btn-primary btn-save-themed" onClick={handleSave} title="Save changes to database">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
               </svg>
               Save
             </button>
@@ -671,14 +698,14 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             <div className="toolbar-divider" />
 
             {/* 4. Print / Export */}
-            <button 
-              className="btn btn-primary" 
-              onClick={() => setIsPrintPreviewOpen(true)} 
-              disabled={isPreview} 
+            <button
+              className="btn btn-primary"
+              onClick={() => setIsPrintPreviewOpen(true)}
+              disabled={isPreview}
               title="Open Print Center"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+                <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
               </svg>
               Print / Export
             </button>
@@ -703,7 +730,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
               <div className="history-preview-banner">
                 <div className="history-preview-banner__content">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                    <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                   </svg>
                   <span>Reviewing history version from <strong>{activePreviewTs}</strong>. This view is read-only.</span>
                 </div>
@@ -775,7 +802,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             </div>
           </div>
 
-          <ActivitySidebar 
+          <ActivitySidebar
             userName={myEffectiveName}
             myColor={myColor}
             chatLog={chatLog}
@@ -806,15 +833,23 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             signatures={signatures}
             manualOverrides={manualOverrides}
             onManualOverrideChange={updateManualOverrides}
+            autoStartTutorial={isTutorialOpen}
+            onCompleteTutorial={handleTutorialClose}
           />
         )}
 
         {isLibraryOpen && (
-          <QuotationLibraryModal 
+          <QuotationLibraryModal
             onSelect={handleSelectLibraryItem}
             onClose={() => setIsLibraryOpen(false)}
           />
         )}
+        {/* ── Tutorial Overlay ────────────────────────────────────── */}
+        <QuotationTutorial
+          isOpen={isTutorialOpen && !isPrintPreviewOpen}
+          onClose={handleTutorialClose}
+          onOpenPrintCenter={() => setIsPrintPreviewOpen(true)}
+        />
       </div>
     </CollaborationProvider>
   )

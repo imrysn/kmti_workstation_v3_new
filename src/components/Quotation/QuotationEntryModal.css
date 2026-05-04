@@ -538,3 +538,55 @@ body.dark-theme .quot-entry-form .form-input {
   font-weight: 700;
   font-size: 15px;
 }
+
+/* ���� Help Link ������������������������������������������������������������������������������������������������������ */
+.quot-entry-help-link {
+  margin-top: 32px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: qe-help-fade 1s ease-out;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+@keyframes qe-help-fade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.quot-entry-help-link span {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.quot-entry-help-link:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.quot-entry-help-link:hover span {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.quot-entry-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 680px;
+}

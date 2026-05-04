@@ -23,7 +23,7 @@ export function CollaborationBar({ remoteUsers, myColor, userName, quotNo, isSyn
   const others = Object.values(remoteUsers)
 
   return (
-    <div className="collab-bar-mini">
+    <div className="collab-bar-mini collaboration-bar-root">
       {/* Sync Status */}
       <div className={`collab-sync-status ${isSyncing ? 'collab-sync-status--active' : ''}`}>
         {isSyncing ? (

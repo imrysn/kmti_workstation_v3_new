@@ -8,23 +8,21 @@
 }
 
 .sensei-text-wrapper {
-  flex: initial;
-  width: fit-content;
+  flex: 1;
   min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-wrap: break-word;
   font-size: inherit;
-  line-height: 1.4;
+  line-height: 1.6;
 }
 
 .sensei-text-container {
-  display: inline-flex;
+  display: inline;
 }
 
 .sensei-char {
   transition: all 0.2s ease;
-  display: inline-block;
+  display: inline;
   position: relative;
 }
 

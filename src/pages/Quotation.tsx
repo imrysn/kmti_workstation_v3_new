@@ -29,6 +29,7 @@ export default function Quotation() {
     password?: string
     displayName?: string
     mode: 'join' | 'create'
+    autoStartTutorial?: boolean
   } | null>(() => {
     const saved = sessionStorage.getItem('kmti_quot_current_session')
     return saved ? JSON.parse(saved) : null
@@ -91,6 +92,42 @@ export default function Quotation() {
     }
   }, [notify])
 
+  const handleStartTutorial = useCallback(async () => {
+    try {
+      // For tutorial, we create a temporary "Training Room" 
+      const today = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2)
+      const quotNo = `TRAIN-${today}-${Math.floor(Math.random() * 100)}`
+      const displayName = "Interactive Tutorial Session"
+
+      // 1. Fetch workstation/hostname
+      let workstation = ''
+      try {
+        const info = await (window as any).electronAPI?.getWorkstationInfo?.()
+        workstation = info?.computerName || ''
+      } catch (e) {
+        console.warn('[lobby] Failed to fetch workstation info for tutorial')
+      }
+
+      // 2. Create a DB record
+      const res = await quotationApi.create({ 
+        quot_no: quotNo, 
+        display_name: displayName,
+        workstation
+      })
+      const { id } = res.data
+
+      setActiveSession({ 
+        quotId: id, 
+        quotNo, 
+        displayName, 
+        mode: 'create',
+        autoStartTutorial: true 
+      })
+    } catch (e) {
+      notify?.('Failed to initialize tutorial.', 'error')
+    }
+  }, [notify])
+
   const handleLobbyClose = useCallback(() => {
     navigate('/parts')
   }, [navigate])
@@ -110,6 +147,7 @@ export default function Quotation() {
       <QuotationEntryModal
         onJoin={handleJoinSession}
         onCreateNew={handleCreateNew}
+        onStartTutorial={handleStartTutorial}
         onClose={handleLobbyClose}
         mandatory
       />

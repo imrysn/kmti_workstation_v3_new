@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import './KMTISensei.css';
 
 interface KMTISenseiProps {
@@ -8,6 +8,8 @@ interface KMTISenseiProps {
   rate?: number;
   pitch?: number;
   className?: string;
+  autoSpeak?: boolean;
+  disableKaraoke?: boolean;
 }
 
 /**
@@ -17,37 +19,56 @@ interface KMTISenseiProps {
 export const KMTISensei: React.FC<KMTISenseiProps> = ({
   text,
   query = '',
-  lang = 'ja-JP',
+  lang = 'en-US',
   rate = 1.2,
   pitch = 1.25,
-  className = ''
+  className = '',
+  autoSpeak = false,
+  disableKaraoke = false
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [activeCharIndex, setActiveCharIndex] = useState(-1);
   const [activeCharLength, setActiveCharLength] = useState(0);
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
 
-  // Load best available Japanese voice
+  // Load best available English female voice
   useEffect(() => {
     const loadVoice = () => {
       const voices = window.speechSynthesis.getVoices();
-      const jaVoices = voices.filter(v => v.lang.includes('ja-JP') || v.lang.includes('ja_JP'));
-      if (jaVoices.length > 0) {
-        const best = jaVoices.find(v =>
-          v.name.includes('Google') ||
-          v.name.includes('Ayumi') ||
-          v.name.includes('Kyoko') ||
-          v.name.includes('Haruka')
-        ) || jaVoices[0];
-        setVoice(best);
+      
+      if (lang.startsWith('ja')) {
+        const jaVoices = voices.filter(v => v.lang.includes('ja-JP') || v.lang.includes('ja_JP'));
+        if (jaVoices.length > 0) {
+          const best = jaVoices.find(v =>
+            v.name.includes('Google') ||
+            v.name.includes('Ayumi') ||
+            v.name.includes('Kyoko') ||
+            v.name.includes('Haruka')
+          ) || jaVoices[0];
+          setVoice(best);
+        }
+      } else {
+        const enVoices = voices.filter(v => v.lang.includes('en-US') || v.lang.includes('en_US') || v.lang.includes('en-GB'));
+        if (enVoices.length > 0) {
+          const best = enVoices.find(v =>
+            v.name.includes('Google US English') ||
+            v.name.includes('Microsoft Zira') ||
+            v.name.includes('Samantha') ||
+            v.name.includes('Female')
+          ) || enVoices[0];
+          setVoice(best);
+        }
       }
     };
     loadVoice();
     window.speechSynthesis.onvoiceschanged = loadVoice;
-  }, []);
+    
+    // Cleanup synthesis on unmount
+    return () => window.speechSynthesis.cancel();
+  }, [lang]);
 
-  const speak = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const speak = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     window.speechSynthesis.cancel();
 
     if (isSpeaking) {
@@ -86,13 +107,28 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
     };
 
     window.speechSynthesis.speak(utterance);
-  };
+  }, [text, voice, lang, rate, pitch]);
+
+  // Handle autoSpeak
+  useEffect(() => {
+    if (autoSpeak && text) {
+      // Delay slightly to ensure UI has settled (important for some browsers)
+      const timer = setTimeout(() => {
+        speak();
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [text, autoSpeak, speak]);
 
   // Render text with karaoke + search highlights
   const renderedContent = useMemo(() => {
     if (!text) return null;
 
     if (!isSpeaking && !query.trim()) {
+      return <span>{text}</span>;
+    }
+
+    if (disableKaraoke && !query.trim()) {
       return <span>{text}</span>;
     }
 
@@ -112,7 +148,7 @@ export const KMTISensei: React.FC<KMTISenseiProps> = ({
               key={index}
               className={`sensei-char ${isKaraokeActive ? 'karaoke-glow' : ''} ${isSearchMatch ? 'search-match' : ''}`}
             >
-              {char}
+              {char === ' ' ? '\u00A0' : char}
             </span>
           );
         })}
