@@ -15,32 +15,26 @@ export default function MandatoryUpdateOverlay() {
   } = useUpdate()
 
   const { hasRole, user } = useAuth()
-  const [show, setShow] = useState(false)
   const [bypassed, setBypassed] = useState(false)
 
   const NAS_PATH = '\\\\KMTI-NAS\\Shared\\Public\\APP DEVELOPMENT\\KMTI Workstation'
 
   const handleOpenNAS = () => {
-    window.electronAPI.openFolder(NAS_PATH)
+    if (window.electronAPI?.openFolder) {
+      window.electronAPI.openFolder(NAS_PATH)
+    }
   }
 
-  // Only show if an update is available or ready, and not bypassed
-  useEffect(() => {
-    if (bypassed) {
-      setShow(false)
-      return
-    }
+  const isIT = hasRole?.('it', 'admin') || false;
 
-    if (updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'ready' || (updateStatus === 'error' && updateInfo)) {
-      setShow(true)
-    } else {
-      setShow(false)
-    }
-  }, [updateStatus, bypassed, updateInfo])
+  // Decide if we should show the overlay directly in the render cycle
+  const shouldShow = !bypassed && 
+    (updateStatus === 'available' || 
+     updateStatus === 'downloading' || 
+     updateStatus === 'ready' || 
+     (updateStatus === 'error' && updateInfo));
 
-  if (!show || !user) return null
-
-  const isIT = hasRole('it', 'admin')
+  if (!shouldShow || !user) return null;
 
   return (
     <div className="mandatory-update-overlay">

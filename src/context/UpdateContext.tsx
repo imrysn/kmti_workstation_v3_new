@@ -105,7 +105,8 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   const simulateUpdate = useCallback((status: UpdateStatus) => {
     setUpdateStatus(status)
     if (status === 'available') {
-      setUpdateInfo({ version: `${__APP_VERSION__}`, releaseDate: new Date().toISOString() })
+      const version = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
+      setUpdateInfo({ version: version, releaseDate: new Date().toISOString() })
     }
     if (status === 'downloading') setDownloadProgress(45)
     if (status === 'error') setUpdateError('MOCK_ERROR: Connection timed out (Simulated)')

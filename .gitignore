@@ -67,3 +67,4 @@ backend/scripts/diagnostics/
 *.zip
 *.json
 *.wav
+backend/models/tts/*
