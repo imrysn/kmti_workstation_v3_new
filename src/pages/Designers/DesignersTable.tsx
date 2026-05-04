@@ -117,7 +117,7 @@ export default function DesignersTable({
                     style={{ cursor: 'pointer' }}
                     title="Click to copy"
                   >
-                    <KMTISensei text={row.japaneseName} query={query} />
+                    <KMTISensei text={row.japaneseName} query={query} useNeural={false} />
                   </td>
                   <td onClick={() => handleCopy(row.email)} className="designer-email">
                     <Highlight text={row.email} query={query} />

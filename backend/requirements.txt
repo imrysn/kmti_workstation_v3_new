@@ -13,3 +13,7 @@ pymupdf
 groq
 python-socketio
 python-engineio
+kokoro-onnx
+onnxruntime
+mecab-python3
+unidic-lite

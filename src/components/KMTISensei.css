@@ -1,19 +1,19 @@
 .kmti-sensei-cell {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  width: 100%;
-  justify-content: start;
+  gap: 12px;
+  max-width: 100%;
+  justify-content: flex-start;
   transition: all 0.3s ease;
+  vertical-align: middle;
 }
 
 .sensei-text-wrapper {
-  flex: 1;
   min-width: 0;
   white-space: normal;
   word-wrap: break-word;
   font-size: inherit;
-  line-height: 1.6;
+  line-height: 1.2;
 }
 
 .sensei-text-container {

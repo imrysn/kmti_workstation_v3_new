@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts
 import time
 import logging
 import os
@@ -44,7 +44,7 @@ logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(">>> KMTI Workstation Backend v3.7.0 Starting Up...")
+    logger.info(">>> KMTI Workstation Backend v3.7.1 Starting Up...")
     try:
         # Robust DB Initialization (Handle busy connections during restarts)
         async with engine.begin() as conn:
@@ -64,6 +64,10 @@ async def lifespan(app: FastAPI):
     # Start the background polling task
     asyncio.create_task(sync_service.poll_github())
 
+    # 4. Warm up TTS Engine (heavy ONNX load)
+    from services.tts_engine import tts_engine
+    asyncio.create_task(asyncio.to_thread(tts_engine.initialize_model))
+
     yield  # Application runs here
 
     # --- Shutdown ---
@@ -74,7 +78,7 @@ async def lifespan(app: FastAPI):
         except:
             pass
 
-app = FastAPI(title="KMTI Workstation v3.7.0", version="3.7.0", lifespan=lifespan)
+app = FastAPI(title="KMTI Workstation v3.7.1", version="3.7.1", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -113,6 +117,7 @@ app.include_router(librarian.router, prefix="/api/librarian", tags=["Technical L
 app.include_router(designers.router, prefix="/api/designers", tags=["Designers"])
 app.include_router(quotations.router, prefix="/api/quotations", tags=["Shared Quotations"])
 app.include_router(stopwatch.router, prefix="/api/stopwatch", tags=["Stopwatch Records"])
+app.include_router(tts.router, prefix="/api/tts", tags=["TTS"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
 # IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE
@@ -137,7 +142,7 @@ else:
 def health_check():
     return {
         "status": "ok", 
-        "version": "3.7.0", 
+        "version": "3.7.1", 
         "uptime_seconds": time.time() - START_TIME
     }   
 

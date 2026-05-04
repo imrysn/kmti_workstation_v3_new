@@ -60,9 +60,10 @@ interface Props extends WorkspaceSession {
   onLeave: () => void
   onSwitchSession: (session: any) => void
   autoStartTutorial?: boolean
+  workstation?: string
 }
 
-export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial }: Props) {
+export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial, workstation }: Props) {
   const { notify, confirm: showConfirm } = useModal()
   const { user } = useAuth()
 
@@ -533,19 +534,19 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   const handleTutorialClose = useCallback(async () => {
     setIsTutorialOpen(false)
     if (autoStartTutorial && quotId) {
-      try {
-        notify?.('Tutorial complete.', 'info')
-        // We use a small delay to ensure the tutorial overlay fade-out doesn't stutter
-        setTimeout(async () => {
-          await quotationApi.delete(quotId)
+      notify?.('Tutorial complete. Cleaning up training session...', 'info')
+      // We use a delay to ensure the tutorial overlay fade-out doesn't stutter
+      setTimeout(async () => {
+        try {
+          await quotationApi.delete(quotId, workstation || '')
           onLeave() // Go back to lobby
-        }, 1000)
-      } catch (e) {
-        console.error('[tutorial] Failed to cleanup training session:', e)
-        onLeave()
-      }
+        } catch (e) {
+          console.error('[tutorial] Failed to cleanup training session:', e)
+          onLeave() // Leave anyway
+        }
+      }, 1000)
     }
-  }, [autoStartTutorial, quotId, onLeave, notify])
+  }, [autoStartTutorial, quotId, workstation, onLeave, notify])
 
   // Calculate effective data for rendering (preview vs live)
   const isPreview = !!previewData
@@ -648,7 +649,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                   leaveRoom();
                   if (autoStartTutorial && quotId) {
                     try {
-                      await quotationApi.delete(quotId);
+                      await quotationApi.delete(quotId, workstation);
                     } catch (e) {
                       console.error('[tutorial] Failed to delete session on exit:', e);
                     }

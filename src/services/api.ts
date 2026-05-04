@@ -232,6 +232,12 @@ export const librarianApi = {
     api.post('/librarian/feedback', data),
 }
 
+// --- TTS (Kokoro-82M) ---
+export const ttsApi = {
+  getGenerateUrl: (text: string, voice: string = 'af_heart', speed: number = 1.0) => 
+    `${API_BASE}/tts/generate?text=${encodeURIComponent(text)}&voice=${voice}&speed=${speed}`
+}
+
 // --- Production Resiliency Interceptor ---
 // Automatically retry transient errors (503, 504) once before giving up.
 api.interceptors.response.use(

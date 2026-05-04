@@ -258,7 +258,7 @@ export default function CharacterSearch() {
                           style={{ cursor: 'pointer' }}
                           title="Click to copy"
                         >
-                          <KMTISensei text={r.japaneseChar} query={query} />
+                          <KMTISensei text={r.japaneseChar} query={query} useNeural={false} />
                         </td>
                         <td className="actions-col" style={{ width: '15%', minWidth: 90, textAlign: 'center' }}>
                           <div className="char-actions">

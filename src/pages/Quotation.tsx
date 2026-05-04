@@ -30,6 +30,7 @@ export default function Quotation() {
     displayName?: string
     mode: 'join' | 'create'
     autoStartTutorial?: boolean
+    workstation?: string
   } | null>(() => {
     const saved = sessionStorage.getItem('kmti_quot_current_session')
     return saved ? JSON.parse(saved) : null
@@ -52,7 +53,8 @@ export default function Quotation() {
       const res = await quotationApi.get(id)
       const quotNo = res.data?.quotationDetails?.quotationNo || `KMTE-${id}`
       const displayName = res.data?.quotationDetails?.quotationNo || quotNo
-      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'join' })
+      const workstation = res.data?.workstation || ''
+      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'join', workstation })
     } catch (e) {
       notify?.('Failed to join session.', 'error')
     }
@@ -85,7 +87,7 @@ export default function Quotation() {
       })
       const { id } = res.data
 
-      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create' })
+      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create', workstation })
     } catch (e: any) {
       const msg = e?.response?.data?.detail || 'Failed to create workspace.'
       notify?.(msg, 'error')
@@ -121,7 +123,8 @@ export default function Quotation() {
         quotNo, 
         displayName, 
         mode: 'create',
-        autoStartTutorial: true 
+        autoStartTutorial: true,
+        workstation
       })
     } catch (e) {
       notify?.('Failed to initialize tutorial.', 'error')

@@ -22,6 +22,15 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.1',
+    date: 'May 4, 2026',
+    entries: [
+      { type: 'new', text: 'Quotation Tutorial — A feature that will train you on how to use the quotation feature.' },
+      { type: 'improvement', text: 'Real-time Calculations — Updates calculation results instantly as you paste or input values.' },
+      { type: 'fix', text: 'Fixed aggressive updater on Settings' },
+    ],
+  },
+  {
     version: '3.7.0',
     date: 'April 24, 2026',
     entries: [

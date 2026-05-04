@@ -125,7 +125,7 @@ const HeatTreatmentTable: React.FC<HeatTreatmentTableProps> = memo(({
                       style={{ cursor: 'pointer' }}
                       title="Click to copy"
                     >
-                      <KMTISensei text={r.japaneseChar} query={query} />
+                      <KMTISensei text={r.japaneseChar} query={query} useNeural={false} />
                     </td>
                     {canManage && (
                       <td className="actions-cell">
