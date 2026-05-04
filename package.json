@@ -63,6 +63,7 @@
         "filter": [
           "server.exe",
           "data/**/*",
+          "models/**/*",
           "*.json"
         ]
       }
