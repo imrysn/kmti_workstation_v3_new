@@ -396,7 +396,11 @@ app.whenReady().then(() => {
   })
 
   createWindow()
-  startBackend()
+  // Only spawn local backend in development. 
+  // In production, the client connects to the central server PC (192.168.200.105).
+  if (isDev) {
+    startBackend()
+  }
   
   if (!isDev) {
     // Check for updates on startup in production

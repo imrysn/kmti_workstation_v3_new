@@ -53,67 +53,42 @@ export default function MandatoryUpdateOverlay() {
         </div>
 
         <div className="update-body">
-          {updateStatus === 'available' && (
+          {(updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'ready' || updateStatus === 'error') && (
             <div className="update-action-zone">
-              <button className="update-btn primary" onClick={downloadUpdate}>
-                <span>Download & Install Now</span>
-              </button>
-              <button className="update-link-btn" onClick={handleOpenNAS}>
-                Can't see update? Click here to install
-              </button>
-              <p className="update-hint">The application will restart automatically after download.</p>
-            </div>
-          )}
-
-          {updateStatus === 'downloading' && (
-            <div className="update-progress-zone">
-              <div className="progress-container">
-                <div className="progress-track">
-                  <div className="progress-fill" style={{ width: `${downloadProgress}%` }}></div>
-                </div>
-                <div className="progress-labels">
-                  <span>Downloading security patches...</span>
-                  <span>{downloadProgress}%</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {updateStatus === 'ready' && (
-            <div className="update-action-zone">
-              <div className="success-badge">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
+              <button className="update-btn primary" onClick={handleOpenNAS}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 20 }}>
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
-                <span>Download Complete</span>
-              </div>
-              <button className="update-btn success" onClick={installAndRestart}>
-                <span>Restart to Apply Update</span>
+                <span>Install Update</span>
               </button>
-            </div>
-          )}
 
-          {updateStatus === 'error' && (
-            <div className="update-error-zone">
-              <div className="error-box">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
-                <span>{updateError || 'Update download failed. Please check your internet connection.'}</span>
+              <div className="update-instruction-box">
+                <div className="instruction-step">
+                  <span className="step-num">1</span>
+                  <p>Click the button above to open the network distribution folder.</p>
+                </div>
+                <div className="instruction-step">
+                  <span className="step-num">2</span>
+                  <p>Uninstall old version of <strong>KMTI Workstation</strong> in Control Panel.</p>
+                </div>
+                <div className="instruction-step">
+                  <span className="step-num">3</span>
+                  <p>Run <strong>KMTI_Workstation_Setup.exe</strong> to start the installation.</p>
+                </div>
+                <div className="instruction-step">
+                  <span className="step-num">4</span>
+                  <p>The application will close and update to <strong>v{updateInfo?.version || 'New'}</strong>.</p>
+                </div>
               </div>
-              <div className="update-error-actions">
-                <button className="update-btn ghost" onClick={checkForUpdate}>
-                  <span>Retry Connection</span>
-                </button>
-                <button className="update-btn ghost" onClick={handleOpenNAS}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 16 }}>
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+
+              {updateStatus === 'error' && updateError && (
+                <div className="update-error-mini">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14 }}>
+                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                   </svg>
-                  <span>Open NAS Folder</span>
-                </button>
-              </div>
+                  <span>Auto-check error: {updateError}</span>
+                </div>
+              )}
             </div>
           )}
         </div>

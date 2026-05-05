@@ -148,42 +148,39 @@ export default function Settings() {
             </div>
           )}
 
-          <div className="sett-conn-row" style={{ marginTop: 8 }}>
-            {(updateStatus === 'idle' || updateStatus === 'checking' || updateStatus === 'error') && (
-              <button className="btn btn-ghost" onClick={handleCheck} disabled={updateStatus === 'checking'}>
-                {updateStatus === 'checking' ? 'Please wait...' : 'Check for Updates'}
-              </button>
-            )}
-
-            {!import.meta.env.PROD && (
-              <div style={{ display: 'flex', gap: 8, margin: '8px 0' }}>
-                <button className="btn btn-ghost" style={{ borderColor: 'var(--accent-primary)', color: 'var(--accent-primary)', fontSize: 11 }} onClick={() => simulateUpdate('available')}>
-                  DEBUG: SIMULATE UPDATE
-                </button>
-                {updateStatus !== 'idle' && (
-                  <button className="btn btn-ghost" style={{ fontSize: 11 }} onClick={resetUpdateState}>
-                    RESET
+          <div className="sett-update-actions">
+            {(updateStatus === 'idle' || updateStatus === 'checking' || updateStatus === 'error' || updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'ready') && (
+              <div className="update-buttons-stack">
+                <div className="update-main-row">
+                  <button className="btn-update-check" onClick={handleCheck} disabled={updateStatus === 'checking'}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`update-icon ${updateStatus === 'checking' ? 'spinning' : ''}`}>
+                      <path d="M23 4v6h-6M1 20v-6h6" />
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    <span>{updateStatus === 'checking' ? 'Checking...' : 'Check for Updates'}</span>
                   </button>
+                  
+                  <button className="btn-update-nas" onClick={() => window.electronAPI?.openFolder('\\\\KMTI-NAS\\Shared\\Public\\APP DEVELOPMENT\\KMTI Workstation')}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                    </svg>
+                    <span>Manual Update via NAS</span>
+                  </button>
+                </div>
+
+                {!import.meta.env.PROD && (
+                  <div className="debug-update-zone">
+                    <button className="btn-debug-mini" onClick={() => simulateUpdate('available')}>
+                      SIMULATE UPDATE
+                    </button>
+                    {updateStatus !== 'idle' && (
+                      <button className="btn-debug-mini" onClick={resetUpdateState}>
+                        RESET
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-
-            {updateStatus === 'available' && (
-              <button className="btn btn-primary" onClick={handleDownload}>
-                Download Update (v{updateInfo?.version})
-              </button>
-            )}
-
-            {updateStatus === 'downloading' && (
-              <button className="btn btn-ghost" disabled>
-                Downloading...
-              </button>
-            )}
-
-            {updateStatus === 'ready' && (
-              <button className="btn btn-success" onClick={handleInstall}>
-                Install & Restart Now
-              </button>
             )}
           </div>
         </div>

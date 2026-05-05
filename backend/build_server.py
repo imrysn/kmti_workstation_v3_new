@@ -70,12 +70,12 @@ print(f">>> Copying external data templates to {dist_data_path}...")
 shutil.copytree(source_data_path, dist_data_path)
 
 # 2. Copy ONLY the TTS models (binary assets) to keep server.exe small and source code private
-dist_tts_path = os.path.join(base_dir, 'dist', 'models', 'tts')
-source_tts_path = os.path.join(base_dir, 'models', 'tts')
-
-if os.path.exists(dist_tts_path):
-    shutil.rmtree(dist_tts_path)
-print(f">>> Copying external TTS models to {dist_tts_path}...")
-shutil.copytree(source_tts_path, dist_tts_path)
+# dist_tts_path = os.path.join(base_dir, 'dist', 'models', 'tts')
+# source_tts_path = os.path.join(base_dir, 'models', 'tts')
+# 
+# if os.path.exists(dist_tts_path):
+#     shutil.rmtree(dist_tts_path)
+# print(f">>> Copying external TTS models to {dist_tts_path}...")
+# shutil.copytree(source_tts_path, dist_tts_path)
 
 print("\n>>> Backend GUI build complete. Executable located in backend/dist/server.exe")

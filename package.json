@@ -55,19 +55,7 @@
       "owner": "imrysn",
       "repo": "kmti_workstation_v3_new",
       "releaseType": "release"
-    },
-    "extraResources": [
-      {
-        "from": "backend/dist",
-        "to": "backend/dist",
-        "filter": [
-          "server.exe",
-          "data/**/*",
-          "models/**/*",
-          "*.json"
-        ]
-      }
-    ]
+    }
   },
   "dependencies": {
     "@types/react-virtualized-auto-sizer": "^1.0.4",
