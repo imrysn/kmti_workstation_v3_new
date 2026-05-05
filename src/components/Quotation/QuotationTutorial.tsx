@@ -42,7 +42,7 @@ const STEPS: TutorialStep[] = [
   },
   {
     title: 'Information Cards',
-    content: 'Fill in the company and client details here. These sections are collaborative—you can see peer cursors in real-time if someone else is editing these fields.',
+    content: 'Fill in the company and client details here. These sections are collaborative—you can see their highlights in real-time if someone else is editing these fields.',
     targetSelector: '.quot-info-row',
     placement: 'bottom'
   },

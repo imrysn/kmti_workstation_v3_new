@@ -246,9 +246,9 @@ class KMTIServerGUI(ctk.CTk):
         tk.messagebox.showinfo("Restart Service", f"Backend Stability v{VERSION} active. The server logic has been notified. If features are not reflecting, please close and reopen the app.")
 
     def open_logs_folder(self):
-        log_path = os.path.join(os.getcwd(), "logs")
-        if os.path.exists(log_path):
-            os.startfile(log_path)
+        from core.config import LOG_DIR
+        if os.path.exists(LOG_DIR):
+            os.startfile(LOG_DIR)
             
     def on_closing(self):
         if tk.messagebox.askokcancel("Quit", "Shut down KMTI Backend Services?"):

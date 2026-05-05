@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useUpdate } from '../context/UpdateContext'
 import { useAuth } from '../context/AuthContext'
 import './MandatoryUpdateOverlay.css'
@@ -25,14 +25,12 @@ export default function MandatoryUpdateOverlay() {
     }
   }
 
-  const isIT = hasRole?.('it', 'admin') || false;
-
   // Decide if we should show the overlay directly in the render cycle
-  const shouldShow = !bypassed && 
-    (updateStatus === 'available' || 
-     updateStatus === 'downloading' || 
-     updateStatus === 'ready' || 
-     (updateStatus === 'error' && updateInfo));
+  const shouldShow = !bypassed &&
+    (updateStatus === 'available' ||
+      updateStatus === 'downloading' ||
+      updateStatus === 'ready' ||
+      (updateStatus === 'error' && updateInfo));
 
   if (!shouldShow || !user) return null;
 

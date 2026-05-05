@@ -35,6 +35,12 @@ const STEPS: TutorialStep[] = [
     placement: 'left'
   },
   {
+    title: 'Unit Adjustment',
+    content: 'The "UNIT (PAGE)" column is fully editable. You can manually override the automatically calculated page counts for specific line items directly in this preview to ensure the document perfectly matches your requirements.',
+    targetSelector: '.ppm-unit-input',
+    placement: 'right'
+  },
+  {
     title: 'Export Actions',
     content: 'Ready to share? You can send the document directly to a printer, download it as a PDF, or export it to a professional Excel file for further customization.',
     targetSelector: '.ppm-export-group',

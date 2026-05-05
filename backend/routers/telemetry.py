@@ -15,6 +15,7 @@ async def heartbeat(
     module: str = Form("idle"),
     user_name: str = Form(None),
     version: str = Form(None),
+    computer_name: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     """Update current workstation status."""
@@ -31,6 +32,7 @@ async def heartbeat(
     status.active_module = module
     status.current_user = user_name
     status.version = version
+    status.computer_name = computer_name
     status.last_ping = datetime.now()
     
     await db.commit()
@@ -46,4 +48,16 @@ async def get_all_status(db: AsyncSession = Depends(get_db)):
         .order_by(WorkstationStatus.last_ping.desc())
     )
     statuses = result.scalars().all()
-    return {"data": statuses}
+    return {
+        "data": [
+            {
+                "ip_address": s.ip_address,
+                "computer_name": s.computer_name or s.ip_address,
+                "current_user": s.current_user,
+                "active_module": s.active_module,
+                "version": s.version,
+                "last_ping": s.last_ping.isoformat() if s.last_ping else None,
+            }
+            for s in statuses
+        ]
+    }

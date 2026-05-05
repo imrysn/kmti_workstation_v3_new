@@ -26,6 +26,9 @@ class TTSEngine:
 
     def initialize_model(self):
         """Lazy load the Kokoro model to save startup time if not used."""
+        if self.kokoro:
+            return
+
         if not os.path.exists(TTS_MODEL_PATH) or not os.path.exists(TTS_VOICES_PATH):
             logger.warning(f"TTS Model files not found at {TTS_MODEL_PATH}. Local synthesis disabled.")
             return
@@ -46,16 +49,29 @@ class TTSEngine:
             if not self.kokoro:
                 raise Exception("TTS Engine not available")
 
-        # Caching logic
+        # Caching logic: NAS (Shared) -> Local -> Generate
         import hashlib
         cache_key = hashlib.md5(f"{text}_{voice}_{speed}".encode()).hexdigest()
-        cache_dir = os.path.join(os.path.dirname(TTS_MODEL_PATH), ".cache")
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_path = os.path.join(cache_dir, f"{cache_key}.wav")
+        from core.config import NAS_TTS_CACHE_DIR
+        
+        local_cache_dir = os.path.join(os.path.dirname(TTS_MODEL_PATH), ".cache")
+        os.makedirs(local_cache_dir, exist_ok=True)
+        local_cache_path = os.path.join(local_cache_dir, f"{cache_key}.wav")
+        nas_cache_path = os.path.join(NAS_TTS_CACHE_DIR, f"{cache_key}.wav")
 
-        if os.path.exists(cache_path):
-            logger.info(f"Serving TTS from cache: {cache_key}")
-            with open(cache_path, "rb") as f:
+        # 1. Check NAS (Shared Cache)
+        try:
+            if os.path.exists(nas_cache_path):
+                logger.info(f"Serving TTS from NAS cache: {cache_key}")
+                with open(nas_cache_path, "rb") as f:
+                    return f.read()
+        except Exception as e:
+            logger.warning(f"NAS cache unreachable: {e}")
+
+        # 2. Check Local (Failover Cache)
+        if os.path.exists(local_cache_path):
+            logger.info(f"Serving TTS from local cache: {cache_key}")
+            with open(local_cache_path, "rb") as f:
                 return f.read()
 
         try:
@@ -115,9 +131,21 @@ class TTSEngine:
 
             audio_data = buffer.getvalue()
             
-            # Save to cache
-            with open(cache_path, "wb") as f:
-                f.write(audio_data)
+            # Save to caches
+            try:
+                if not os.path.exists(NAS_TTS_CACHE_DIR):
+                    os.makedirs(NAS_TTS_CACHE_DIR, exist_ok=True)
+                with open(nas_cache_path, "wb") as f:
+                    f.write(audio_data)
+                logger.info(f"Saved TTS to NAS cache: {cache_key}")
+            except Exception as e:
+                logger.warning(f"Failed to save to NAS cache: {e}")
+
+            try:
+                with open(local_cache_path, "wb") as f:
+                    f.write(audio_data)
+            except Exception as e:
+                logger.warning(f"Failed to save to local cache: {e}")
                 
             return audio_data
         except Exception as e:

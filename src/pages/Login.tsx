@@ -240,7 +240,7 @@ export default function Login() {
                 onClick={() => setShowChangelog(true)}
                 title="What's new in this version?"
                 style={{ userSelect: 'none' }}
-              >VER {__APP_VERSION__}</span>
+              >VER {typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '3.7.1'}</span>
               <span className="copyright">© 2026 KMTI</span>
             </div>
             <div className="system-readout">
