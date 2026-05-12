@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { broadcastApi } from '../services/api'
+import { broadcastApi, ttsApi } from '../services/api'
 import megaphoneIcon from '../assets/megaphone-icon.png'
 import { useAuth } from '../context/AuthContext'
 import './BroadcastOverlay.css'
@@ -25,16 +25,57 @@ const BroadcastOverlay: React.FC = () => {
   const [exitingId, setExitingId] = useState<number | null>(null)
   const lastAlertedId = useRef<number | null>(null)
 
-  const speakBroadcast = (message: string) => {
+  const speakBroadcast = (message: string, severity: string) => {
+    // Prefix based on severity for immediate context
+    let prefix = 'Attention: '
+    if (severity === 'danger') prefix = 'Attention: Urgent Announcement. '
+    if (severity === 'warning') prefix = 'System Alert. '
+    const fullText = prefix + message
+
+    // 1. Try Kokoro-82M (High-Quality AI Voice)
+    try {
+      const url = ttsApi.getGenerateUrl(fullText, 'af_heart')
+      const audio = new Audio(url)
+      
+      // If we are already speaking natively, cancel it
+      if (window.speechSynthesis) window.speechSynthesis.cancel()
+      
+      audio.play().catch(() => {
+        // Fallback to native if Kokoro server fails
+        speakNatively(fullText, severity)
+      })
+    } catch (e) {
+      speakNatively(fullText, severity)
+    }
+  }
+
+  const speakNatively = (fullText: string, severity: string) => {
     if (!window.speechSynthesis) return
-    
-    // Safety: don't shout in early development, but ensure voice is clear
-    const utterance = new SpeechSynthesisUtterance(message)
-    utterance.volume = 0.8
-    utterance.rate = 1.0
-    
-    // Cancel any current speech (don't stack alerts)
     window.speechSynthesis.cancel()
+
+    const utterance = new SpeechSynthesisUtterance(fullText)
+    
+    // Pitch/Rate adjustments for urgency
+    if (severity === 'danger') {
+      utterance.pitch = 1.2
+      utterance.rate = 1.1
+      utterance.volume = 1.0
+    } else {
+      utterance.pitch = 1.0
+      utterance.rate = 1.0
+      utterance.volume = 0.8
+    }
+
+    const voices = window.speechSynthesis.getVoices()
+    if (voices.length > 0) {
+      const preferred = voices.find(v => 
+        (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Premium')) && 
+        v.lang.startsWith('en')
+      )
+      if (preferred) utterance.voice = preferred
+    }
+
+    utterance.lang = 'en-US'
     window.speechSynthesis.speak(utterance)
   }
 
@@ -123,7 +164,7 @@ const BroadcastOverlay: React.FC = () => {
         triggerFlash()
         
         // Native High-Fidelity TTS
-        speakBroadcast(data.message)
+        speakBroadcast(data.message, data.severity)
       }
 
       setBroadcasts([data]) 

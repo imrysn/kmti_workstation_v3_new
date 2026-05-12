@@ -56,13 +56,38 @@ export function ActivitySidebar({ userName, chatLog, onDeleteChat, onEditChat, o
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const lastChatCountRef = useRef(chatLog.length)
 
-  // Tracking unread messages
+  // ── Notification Sound (Pop) ──────────────────────────────────
+  const playNotificationSound = () => {
+    try {
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
+      audio.volume = 0.5
+      audio.play().catch(() => {})
+    } catch (e) {}
+  }
+
+  // Tracking unread messages and triggering notifications
   useEffect(() => {
-    if (!expanded && chatLog.length > lastChatCountRef.current) {
-      setUnreadChat(v => v + (chatLog.length - lastChatCountRef.current))
+    if (chatLog.length > lastChatCountRef.current) {
+      const latest = chatLog[chatLog.length - 1]
+      const isRemote = latest.name !== userName && latest.sid !== 'me'
+      
+      if (isRemote) {
+        // 1. Sound
+        playNotificationSound()
+
+        // 2. Flash Window (if blurred or sidebar closed)
+        if (!expanded || document.hidden) {
+          (window as any).electronAPI?.flashWindow(true)
+        }
+
+        // 3. Increment Badge
+        if (!expanded) {
+          setUnreadChat(v => v + 1)
+        }
+      }
     }
     lastChatCountRef.current = chatLog.length
-  }, [chatLog, expanded])
+  }, [chatLog, expanded, userName])
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -75,6 +100,8 @@ export function ActivitySidebar({ userName, chatLog, onDeleteChat, onEditChat, o
   useEffect(() => {
     if (expanded) {
       setUnreadChat(0)
+      // Stop flashing when user opens the chat
+      ;(window as any).electronAPI?.flashWindow(false)
     }
   }, [expanded])
 

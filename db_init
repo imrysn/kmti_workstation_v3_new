@@ -13,9 +13,9 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260428-609",
+    "quotationNo": "KMTE-612131",
     "referenceNo": "",
-    "date": "2026-04-28"
+    "date": "2026-05-05"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -29,43 +29,84 @@
   },
   "tasks": [
     {
-      "id": 1777345632207,
-      "description": "",
+      "id": 1778547039804,
+      "description": "中継箱組立図",
       "referenceNumber": "",
-      "hours": 999,
+      "hours": 2,
       "minutes": 0,
-      "overtimeHours": 0,
+      "overtimeHours": 1,
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
       "isMainTask": true,
-      "parentId": null
+      "parentId": null,
+      "engineer": "Bryan",
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#8E44AD"
     },
     {
-      "id": 1777345635881,
-      "description": "",
+      "id": 1778548087334,
+      "description": "中継箱組立図",
       "referenceNumber": "",
-      "hours": 999,
+      "hours": 3,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null
+      "isMainTask": false,
+      "parentId": 1778547039804,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#4A90D9",
+      "engineer": "Bergonia"
     },
     {
-      "id": 1777345636249,
+      "id": 1778548087678,
       "description": "",
       "referenceNumber": "",
-      "hours": 999,
+      "hours": 4,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778547039804,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#4A90D9",
+      "engineer": "John Vincent"
+    },
+    {
+      "id": 1778548087846,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 2,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778547039804,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#4A90D9",
+      "engineer": "sdas"
+    },
+    {
+      "id": 1778548088934,
+      "description": "サイドガイド組立図",
+      "referenceNumber": "",
+      "hours": 121,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
       "isMainTask": true,
-      "parentId": null
+      "parentId": null,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#4A90D9",
+      "engineer": "FASd"
     }
   ],
   "baseRates": {
@@ -108,11 +149,18 @@
   },
   "manualOverrides": {
     "tasks": {},
-    "footer": {
-      "adjustment": 289720
-    }
+    "footer": {}
   },
   "collapsedTaskIds": [],
-  "chatLog": [],
-  "savedAt": "2026-04-28T03:50:14.786Z"
+  "chatLog": [
+    {
+      "sid": "MSFAiQQGvMH78AdFAABh",
+      "name": "Tiger",
+      "color": "#C0392B",
+      "message": "adawdaw",
+      "time": "09:12",
+      "id": "1778548324894-yd0zmirdg"
+    }
+  ],
+  "savedAt": "2026-05-12T03:13:03.346Z"
 }

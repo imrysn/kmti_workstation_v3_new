@@ -159,6 +159,35 @@
   -webkit-app-region: drag;
 }
 
+.login-close-btn {
+  position: absolute;
+  top: 44px;
+  right: 18px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #e20000;
+  cursor: pointer;
+  z-index: 100;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.login-close-btn:hover {
+  background: rgba(226, 0, 0, 0.08);
+  color: #e20000;
+}
+
+.login-close-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
 @keyframes workstationEnter {
   from {
     opacity: 0;
@@ -212,8 +241,15 @@
 }
 
 @keyframes errorSlideUp {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Refined Branding Header */
@@ -438,7 +474,8 @@
 .login-footer {
   display: flex;
   justify-content: space-between;
-  align-items: center; /* V-align fix */
+  align-items: center;
+  /* V-align fix */
   margin-top: 64px;
   padding-top: 32px;
   border-top: 1px dashed #e2e8f0;
@@ -496,8 +533,13 @@
 }
 
 @keyframes lcl-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .login-changelog-drawer {
@@ -509,13 +551,20 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 32px 64px -12px rgba(0,0,0,0.35);
+  box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.35);
   animation: lcl-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @keyframes lcl-pop {
-  from { opacity: 0; transform: scale(0.92) translateY(16px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .login-changelog-header {
@@ -546,9 +595,9 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -558,7 +607,7 @@
 }
 
 .login-changelog-close:hover {
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
 }
 
@@ -634,21 +683,21 @@
 }
 
 .login-changelog-badge.new {
-  background: rgba(16,185,129,0.1);
+  background: rgba(16, 185, 129, 0.1);
   color: #059669;
-  border: 1px solid rgba(16,185,129,0.2);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .login-changelog-badge.fix {
-  background: rgba(2,132,199,0.1);
+  background: rgba(2, 132, 199, 0.1);
   color: #0284c7;
-  border: 1px solid rgba(2,132,199,0.2);
+  border: 1px solid rgba(2, 132, 199, 0.2);
 }
 
 .login-changelog-badge.improvement {
-  background: rgba(245,158,11,0.1);
+  background: rgba(245, 158, 11, 0.1);
   color: #d97706;
-  border: 1px solid rgba(245,158,11,0.2);
+  border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
 .login-changelog-text {

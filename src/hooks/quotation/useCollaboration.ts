@@ -116,9 +116,23 @@ export function useCollaboration({
         const info = await (window as any).electronAPI?.getWorkstationInfo?.()
         if (info?.computerName) {
           setMyEffectiveName(info.computerName)
+        } else {
+          // Fallback for browser-based dev testing: use sessionStorage to persist name across refreshes
+          let storedName = sessionStorage.getItem('kmti_dev_name')
+          if (!storedName) {
+            storedName = `Browser-User-${Math.floor(Math.random() * 1000)}`
+            sessionStorage.setItem('kmti_dev_name', storedName)
+          }
+          setMyEffectiveName(storedName)
         }
       } catch (e) {
         console.warn('[COLLAB] Failed to fetch host info:', e)
+        let storedName = sessionStorage.getItem('kmti_dev_name')
+        if (!storedName) {
+          storedName = `Browser-User-${Math.floor(Math.random() * 1000)}`
+          sessionStorage.setItem('kmti_dev_name', storedName)
+        }
+        setMyEffectiveName(storedName)
       }
     }
     fetchHost()

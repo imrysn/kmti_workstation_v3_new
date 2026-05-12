@@ -11,9 +11,26 @@ export function useHeartbeat() {
 
   // Fetch hostname once on mount via Electron IPC — cached in ref, not re-fetched every heartbeat
   useEffect(() => {
-    window.electronAPI.getWorkstationInfo()
-      .then(info => { computerNameRef.current = info.computerName; })
-      .catch(() => {});
+    if ((window as any).electronAPI?.getWorkstationInfo) {
+      (window as any).electronAPI.getWorkstationInfo()
+        .then((info: any) => { computerNameRef.current = info.computerName; })
+        .catch(() => {
+          let storedName = sessionStorage.getItem('kmti_dev_name')
+          if (!storedName) {
+            storedName = `Browser-User-${Math.floor(Math.random() * 1000)}`
+            sessionStorage.setItem('kmti_dev_name', storedName)
+          }
+          computerNameRef.current = storedName
+        });
+    } else {
+      // Dev mode browser fallback
+      let storedName = sessionStorage.getItem('kmti_dev_name')
+      if (!storedName) {
+        storedName = `Browser-User-${Math.floor(Math.random() * 1000)}`
+        sessionStorage.setItem('kmti_dev_name', storedName)
+      }
+      computerNameRef.current = storedName
+    }
   }, []);
 
   useEffect(() => {

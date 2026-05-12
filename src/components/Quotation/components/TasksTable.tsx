@@ -15,6 +15,7 @@ import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
 import { TaskRow } from './TaskRow'
 import type { TaskSubtotals } from './TaskRow'
+import { EngineerBookmark } from './EngineerBookmark'
 
 type NotificationType = 'success' | 'error' | 'info' | 'warning'
 
@@ -61,6 +62,44 @@ const TasksTable = memo(({
   const [editingGrandTotal, setEditingGrandTotal] = useState(false)
   const [overheadDraft, setOverheadDraft] = useState<string>('')
   const [grandTotalDraft, setGrandTotalDraft] = useState<string>('')
+
+  // ── Engineer bookmark row refs & positions ─────────────────────
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const [bookmarkPositions, setBookmarkPositions] = useState<Record<number, { top: number; height: number }>>({})
+
+  const recomputeBookmarks = useCallback(() => {
+    const section = sectionRef.current
+    if (!section) return
+    const sectionTop = section.getBoundingClientRect().top
+    const next: Record<number, { top: number; height: number }> = {}
+    rowRefs.current.forEach((el, taskId) => {
+      const rect = el.getBoundingClientRect()
+      next[taskId] = {
+        top: rect.top - sectionTop,
+        height: rect.height,
+      }
+    })
+    setBookmarkPositions(next)
+  }, [])
+
+  // Recompute on tasks/collapse change and on scroll
+  useEffect(() => {
+    recomputeBookmarks()
+  }, [tasks, collapsedTasks, recomputeBookmarks])
+
+  useEffect(() => {
+    const body = bodyRef.current
+    if (!body) return
+    body.addEventListener('scroll', recomputeBookmarks, { passive: true })
+    return () => body.removeEventListener('scroll', recomputeBookmarks)
+  }, [recomputeBookmarks])
+
+  const setRowRef = useCallback((taskId: number, el: HTMLTableRowElement | null) => {
+    if (el) rowRefs.current.set(taskId, el)
+    else rowRefs.current.delete(taskId)
+  }, [])
 
   // ── Collapse / expand ──────────────────────────────────────────
   const toggleCollapse = useCallback((e: React.MouseEvent, taskId: number) => {
@@ -151,6 +190,10 @@ const TasksTable = memo(({
     setEditedValues({})
     setModifiedFields({})
   }, [])
+
+  const handleEngineerChange = useCallback((taskId: number, value: string) => {
+    onTaskUpdate?.(taskId, 'engineer' as keyof Task, value)
+  }, [onTaskUpdate])
 
   const handleEditToggle = useCallback((taskId: number) => {
     if (editingTaskId === taskId) {
@@ -244,7 +287,7 @@ const TasksTable = memo(({
 
   // ── Render ─────────────────────────────────────────────────────
   return (
-    <div className="computation-section">
+    <div className="computation-section" ref={sectionRef} style={{ position: 'relative' }}>
       <div className="computation-header">
         <div className="section-header" style={{ height: '32px' }}>
           <div className="section-icon computation">
@@ -305,7 +348,7 @@ const TasksTable = memo(({
           </table>
         </div>
 
-        <div className="tasks-table-body">
+        <div className="tasks-table-body" ref={bodyRef}>
           <table className="tasks-table">
             <tbody>
               {tasks.map((task, index) => {
@@ -342,6 +385,8 @@ const TasksTable = memo(({
                     isCollapsed={collapsedTasks.has(task.id)}
                     onToggleCollapse={toggleCollapse}
                     onCancelEdit={handleCancelEdit}
+                    onEngineerChange={handleEngineerChange}
+                    trRef={(el: HTMLTableRowElement | null) => setRowRef(task.id, el)}
                   />
                 )
               })}
@@ -355,6 +400,38 @@ const TasksTable = memo(({
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Engineer Bookmark gutter — floats over the right edge of the table, */}
+      {/* positioned relative to .computation-section. Zero layout impact.   */}
+      <div
+        className="eng-bookmark-gutter"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: 52,
+          bottom: 0,
+          pointerEvents: 'none',
+          zIndex: 20,
+        }}
+      >
+        {tasks.map(task => {
+          const pos = bookmarkPositions[task.id]
+          if (!pos) return null
+          return (
+            <EngineerBookmark
+              key={task.id}
+              taskId={task.id}
+              engineer={task.engineer}
+              top={pos.top}
+              height={pos.height}
+              lastEditorName={task.lastEditorName}
+              lastEditorColor={task.lastEditorColor}
+              onChange={handleEngineerChange}
+            />
+          )
+        })}
       </div>
 
       {/* ── Footer: Totals ───────────────────────────────────────── */}

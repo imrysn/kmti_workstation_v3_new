@@ -53,6 +53,12 @@ const STEPS: TutorialStep[] = [
     placement: 'top'
   },
   {
+    title: 'Engineer Tag Ownership',
+    content: 'This is the Tag Ownership. It is used to assign specific engineers to tasks using these color-coded bookmarks. They dynamically update based on who last edited the row, providing a clear visual record of progress and ownership.',
+    targetSelector: '.eng-bookmark',
+    placement: 'left'
+  },
+  {
     title: 'Rate Settings',
     content: 'Configure the base rates for labor and software charges. These settings determine the hourly rates used for all calculations in this document.',
     targetSelector: '.rate-settings-btn',

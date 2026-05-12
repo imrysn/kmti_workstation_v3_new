@@ -42,6 +42,7 @@ import { QuotationTutorial } from './QuotationTutorial'
 import QuotationLibraryModal from './QuotationLibraryModal'
 import '../../pages/quotation/QuotationApp.css'
 import '../../pages/Quotation.css'
+import './styles/QuotationTable.css'
 
 export interface WorkspaceSession {
   quotNo: string
@@ -252,7 +253,13 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         const parts = patch.path.split('.')
         const taskId = parseInt(parts[1])
         const field = parts[2] as any
-        updateTask(taskId, field, patch.value)
+        if (parts.length > 2) {
+          updateTask(taskId, field, patch.value)
+        } else {
+          // It's a batch patch object for a task (though emitPatch doesn't usually do this,
+          // it's good to handle if we ever use it that way)
+          updateTask(taskId, patch.value)
+        }
       } else if (patch.path.startsWith('footer.')) {
         const footerKey = patch.path.split('.')[1]
         updateManualOverrides(prev => ({
@@ -293,6 +300,9 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   const [isSyncing, setIsSyncing] = useState(false)
   const dbSyncTimerRef = useRef<NodeJS.Timeout | null>(null)
 
+  const latestGetSaveData = useRef(getSaveData)
+  latestGetSaveData.current = getSaveData
+
   const debouncedSyncDb = useCallback(() => {
     if (dbSyncTimerRef.current) clearTimeout(dbSyncTimerRef.current)
 
@@ -300,15 +310,13 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       if (!isConnected) return
       setIsSyncing(true)
       try {
-        // We use emitPatch with a special 'sync' path or just any update
-        // but including the full_state ensures the backend persists it.
-        emitPatch({ path: '__sync__', value: Date.now() }, getSaveData())
+        const state = latestGetSaveData.current()
+        emitPatch({ path: '__sync__', value: Date.now() }, state)
       } finally {
-        // Brief delay to show the "Synced" state
-        setTimeout(() => setIsSyncing(false), 800)
+        setTimeout(() => setIsSyncing(false), 500)
       }
-    }, 2000) // 2 second debounce for DB writes
-  }, [isConnected, emitPatch, getSaveData])
+    }, 500)
+  }, [isConnected, emitPatch])
 
   // ── Wrapped Update Handlers for Sync ───────────────────────────
   const syncCompanyInfo = useCallback((updates: typeof companyInfo) => {
@@ -346,17 +354,22 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   }, [updateSignatures, emitPatch, debouncedSyncDb])
 
   const syncUpdateTask = useCallback((id: number, field: any, value: any) => {
-    updateTask(id, field, value)
-    emitPatch({ path: `task.${id}.${field}`, value })
+    const updates = { [field]: value, lastEditorName: myEffectiveName, lastEditorColor: myColor }
+    updateTask(id, updates)
+    emitBatchPatch([
+      { path: `task.${id}.${field}`, value },
+      { path: `task.${id}.lastEditorName`, value: myEffectiveName },
+      { path: `task.${id}.lastEditorColor`, value: myColor }
+    ])
     debouncedSyncDb()
-  }, [updateTask, emitPatch, debouncedSyncDb])
+  }, [updateTask, emitBatchPatch, myEffectiveName, myColor, debouncedSyncDb])
 
   const syncAddTask = useCallback(() => {
-    const newTask = makeBlankTask()
+    const newTask = { ...makeBlankTask(), lastEditorName: myEffectiveName, lastEditorColor: myColor }
     addTask(newTask)
     emitPatch({ path: 'tasks.add', value: newTask })
     debouncedSyncDb()
-  }, [addTask, emitPatch, debouncedSyncDb])
+  }, [addTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb])
 
   const syncAddSubTask = useCallback((mainTaskId: number | null) => {
     if (!mainTaskId) {
@@ -366,12 +379,14 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     const newSubTask = {
       ...makeBlankTask(),
       isMainTask: false,
-      parentId: mainTaskId
+      parentId: mainTaskId,
+      lastEditorName: myEffectiveName,
+      lastEditorColor: myColor
     }
     addSubTask(mainTaskId, notify, newSubTask)
     emitPatch({ path: 'tasks.add_sub', value: newSubTask })
     debouncedSyncDb()
-  }, [addSubTask, emitPatch, debouncedSyncDb, notify])
+  }, [addSubTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb, notify])
 
   const syncRemoveTask = useCallback((id: number) => {
     removeTask(id)
@@ -563,6 +578,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     isConnected,
     remoteUsers,
     myColor,
+    myName: myEffectiveName,
     recentEdits,
     emitFocus,
     emitBlur,
@@ -575,6 +591,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     isConnected,
     remoteUsers,
     myColor,
+    myEffectiveName,
     recentEdits,
     emitFocus,
     emitBlur,

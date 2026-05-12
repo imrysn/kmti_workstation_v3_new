@@ -9,7 +9,7 @@
  * read-only when the parent is in preview mode (onUpdate === undefined).
  */
 
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useCallback, useMemo, useState, useRef } from 'react'
 import type { Task } from '../../../hooks/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
@@ -47,6 +47,8 @@ export interface TaskRowProps {
   isCollapsed?: boolean
   onToggleCollapse?: (e: React.MouseEvent, id: number) => void
   onCancelEdit?: () => void
+  onEngineerChange?: (id: number, value: string) => void
+  trRef?: React.Ref<HTMLTableRowElement>
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -58,7 +60,7 @@ export const TaskRow = memo(({
   isDragging, isDragOver,
   onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
   hasSubTasks, isCollapsed, onToggleCollapse,
-  onCancelEdit,
+  onCancelEdit, onEngineerChange, trRef,
 }: TaskRowProps) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
 
@@ -85,6 +87,7 @@ export const TaskRow = memo(({
 
   return (
     <tr
+      ref={trRef}
       className={[
         task.isMainTask ? 'main-task-row' : 'sub-task-row',
         isSelected   ? 'selected-main-task' : '',

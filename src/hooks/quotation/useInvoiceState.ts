@@ -17,6 +17,9 @@ export interface Task {
   unitType: string
   isMainTask: boolean
   parentId: number | null
+  engineer?: string
+  lastEditorName?: string
+  lastEditorColor?: string
 }
 
 export interface BaseRates {
@@ -414,8 +417,14 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [])
 
-  const updateTask = useCallback((id: number, field: keyof Task, value: any) => {
-    setTasks(prev => prev.map(task => task.id !== id ? task : { ...task, [field]: value }))
+  const updateTask = useCallback((id: number, fieldOrUpdates: keyof Task | Partial<Task>, value?: any) => {
+    setTasks(prev => prev.map(task => {
+      if (task.id !== id) return task
+      if (typeof fieldOrUpdates === 'object') {
+        return { ...task, ...fieldOrUpdates }
+      }
+      return { ...task, [fieldOrUpdates]: value }
+    }))
     setHasUnsavedChanges(true)
   }, [setHasUnsavedChanges])
 

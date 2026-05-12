@@ -12,6 +12,7 @@ interface CollaborationContextValue {
   isConnected: boolean
   remoteUsers: Record<string, RemoteUser>
   myColor: string
+  myName: string
   recentEdits: Record<string, { color: string; timestamp: number }>
   emitFocus: (fieldKey: string) => void
   emitBlur: (fieldKey: string) => void
@@ -45,6 +46,7 @@ export function useCollaborationContext() {
       isConnected: false,
       remoteUsers: {},
       myColor: '#94a3b8',
+      myName: 'User',
       recentEdits: {},
       emitFocus: () => {},
       emitBlur: () => {},
