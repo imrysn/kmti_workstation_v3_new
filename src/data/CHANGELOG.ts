@@ -25,7 +25,7 @@ export const CHANGELOG: VersionChangelog[] = [
     version: '3.7.2',
     date: 'May 12, 2026',
     entries: [
-      { type: 'new', text: 'Engineering Bookmark — Refined the bookmark targeting system for better interaction and ownership tracking.' },
+      { type: 'new', text: 'Engineering Bookmark — Bookmark targeting system for better interaction and ownership tracking.' },
       { type: 'new', text: 'Excel Sheet 2 Export — Added a "Details" sheet to the Excel export for a comprehensive breakdown of quotation tasks and computations.' },
       { type: 'improvement', text: 'Login Close Button — Added a dedicated close button to the login card for easier application exit.' },
 
