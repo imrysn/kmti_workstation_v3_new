@@ -1,0 +1,258 @@
+/* BILLING STATEMENT SPECIFIC STYLES */
+.header-visual.billing-header {
+  min-height: 90px;
+  margin-bottom: 5px;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.billing-header .logo-visual {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  position: static;
+}
+
+.billing-header .logo-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.billing-center-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 4px;
+}
+
+.billing-company-name {
+  font-size: 20px;
+  font-weight: bold;
+  white-space: nowrap;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.billing-address-line {
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #000;
+  font-weight: normal;
+}
+
+.billing-title {
+  font-size: 20px;
+  margin-top: 10px;
+  white-space: nowrap;
+}
+
+/* Billing Mode - Alignment */
+.mode-billing .contact-section-visual {
+  min-height: 80px !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-top: 5px;
+}
+
+/* Bank Details Section */
+.bank-details-section {
+  margin-top: 6%;
+  margin-bottom: 20px;
+  font-size: 11px;
+  color: #000;
+  border: 2px solid #000;
+  padding: 8px !important;
+}
+
+.bank-details-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  font-size: 12px;
+  color: #000;
+  text-decoration: underline;
+}
+
+.bank-details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 10px;
+}
+
+.bank-details-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bank-label {
+  font-weight: bold;
+  min-width: 130px;
+  font-size: 11px;
+}
+
+.bank-value {
+  font-weight: normal;
+  font-size: 11px;
+}
+
+/* Responsive bottom content for Billing */
+.quotation-visual-exact.mode-billing {
+  height: 297mm !important;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 10mm !important;
+}
+
+.quotation-visual-exact.mode-billing .q-bottom-content {
+  margin-top: 25px;
+}
+
+/* Compact signatures for Billing */
+.mode-billing .signature-row-visual {
+  min-height: 80px !important;
+  margin-bottom: 15px !important;
+}
+
+/* Hide terms in billing mode */
+.mode-billing .terms-visual {
+  display: none !important;
+}
+
+/* ── Print Preview Overrides (Scoped to Modal) ── */
+
+.ppm-container .preview-content .header-visual.billing-header {
+  min-height: 100px;
+  margin-bottom: 10px;
+  padding-bottom: 0;
+  border-bottom: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  position: relative;
+}
+
+.ppm-container .preview-content .billing-header .logo-visual {
+  position: absolute;
+  left: 50px;
+  top: 10px;
+  width: 100px;
+  height: 100px;
+}
+
+.ppm-container .preview-content .billing-header .logo-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ppm-container .preview-content .billing-header .billing-center-block {
+  position: static;
+  text-align: center;
+  transform: none;
+  margin-top: 10px;
+  margin-left: 25px;
+  width: 100%;
+  max-width: 58%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ppm-container .preview-content .billing-header .billing-company-name {
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  line-height: 1.2;
+  color: #000;
+  white-space: nowrap;
+}
+
+.ppm-container .preview-content .billing-header .billing-address-line {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #000;
+  margin-bottom: 4px;
+  text-align: center;
+  font-weight: normal;
+  max-width: 100%;
+}
+
+.ppm-container .preview-content .billing-header .billing-title {
+  font-size: 20px;
+  margin-top: 0;
+  color: #000;
+}
+
+.ppm-container .preview-content .billing-header .right-details-visual {
+  display: none;
+}
+
+.ppm-container .preview-content .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
+  position: absolute;
+  right: 8mm;
+  top: 185px;
+  width: 70mm;
+  max-width: 70mm;
+  height: auto;
+  display: block;
+  flex-direction: unset;
+  justify-content: unset;
+}
+
+.ppm-container .preview-content .billing-header .company-info-visual,
+.ppm-container .preview-content .billing-header .quotation-details-visual {
+  display: none;
+}
+
+.ppm-container .preview-content .quotation-visual-exact:has(.billing-header) .contact-section-visual {
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.ppm-container .preview-content .quotation-visual-exact:has(.billing-header) .terms-visual {
+  display: none;
+}
+
+
+@media print {
+  .quotation-visual-exact:has(.billing-header) {
+    padding-bottom: 11mm !important;
+  }
+
+  .quotation-visual-exact:has(.billing-header) .billing-header {
+    min-height: 80px !important;
+    margin-bottom: 5px !important;
+  }
+
+  .quotation-visual-exact:has(.billing-header) .billing-header .logo-visual {
+    top: 5px !important;
+    width: 90px !important;
+    height: 90px !important;
+  }
+
+  .quotation-visual-exact:has(.billing-header) .company-address-visual {
+    margin-bottom: 5px !important;
+    font-size: 11.5px !important;
+  }
+
+  .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
+    top: 155px !important;
+  }
+
+  .quotation-visual-exact:has(.billing-header) .q-bottom-content {
+    gap: 3px !important;
+  }
+
+  .quotation-visual-exact:has(.billing-header) .bank-details-section {
+    margin-top: 5mm !important;
+    box-sizing: border-box !important;
+  }
+}

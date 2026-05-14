@@ -6,6 +6,7 @@ import { CollaborativeField } from './CollaborativeField'
 interface Props {
   billingDetails: BillingDetails
   onUpdateBilling?: (updates: Partial<BillingDetails>) => void
+  layoutVariant?: 'special' | 'kemco'
 }
 
 const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder: string }> = [
@@ -17,7 +18,7 @@ const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder
   { key: 'branchCode',    label: 'Branch Code',         placeholder: 'e.g. 358' },
 ]
 
-const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => {
+const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling, layoutVariant }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 
@@ -43,7 +44,7 @@ const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => 
           </div>
         )}
 
-        {onUpdateBilling && (
+        {onUpdateBilling && layoutVariant !== 'kemco' && (
           <button
             className="info-card-edit-btn"
             onClick={() => setIsEditing(e => !e)}

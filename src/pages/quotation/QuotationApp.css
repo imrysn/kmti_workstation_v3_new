@@ -7,7 +7,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Arimo:wght@400;600;700&display=swap');
 @import '../../components/Quotation/styles/QuotationTable.css';
 @import '../../components/Quotation/styles/PrintPreviewModal.css';
-@import '../../components/Quotation/styles/VisualLayout.css';
+@import '../../components/Quotation/styles/layouts/BaseLayout.css';
+@import '../../components/Quotation/styles/layouts/QuotationLayout.css';
+@import '../../components/Quotation/styles/layouts/BillingLayout.css';
+@import '../../components/Quotation/styles/layouts/QuotationSpecial.css';
+@import '../../components/Quotation/styles/layouts/QuotationKemco.css';
+@import '../../components/Quotation/styles/layouts/CompressionLogic.css';
 
 /* ── Professional Design System Variables ─────────────────── */
 :root {

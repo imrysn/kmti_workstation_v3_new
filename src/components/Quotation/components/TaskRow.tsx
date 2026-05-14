@@ -9,7 +9,7 @@
  * read-only when the parent is in preview mode (onUpdate === undefined).
  */
 
-import { memo, useCallback, useMemo, useState, useRef } from 'react'
+import { memo, useCallback } from 'react'
 import type { Task } from '../../../hooks/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
@@ -47,8 +47,8 @@ export interface TaskRowProps {
   isCollapsed?: boolean
   onToggleCollapse?: (e: React.MouseEvent, id: number) => void
   onCancelEdit?: () => void
-  onEngineerChange?: (id: number, value: string) => void
   trRef?: React.Ref<HTMLTableRowElement>
+  layoutVariant?: 'special' | 'kemco'
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -60,7 +60,8 @@ export const TaskRow = memo(({
   isDragging, isDragOver,
   onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
   hasSubTasks, isCollapsed, onToggleCollapse,
-  onCancelEdit, onEngineerChange, trRef,
+  onCancelEdit, trRef,
+  layoutVariant = 'special',
 }: TaskRowProps) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
 
@@ -82,8 +83,9 @@ export const TaskRow = memo(({
     [handleEditToggle, onCancelEdit],
   )
   const handleMainTaskClick = useCallback(() => {
-    if (task.isMainTask && onMainTaskSelect) onMainTaskSelect(task.id)
-  }, [task.isMainTask, task.id, onMainTaskSelect])
+    const isSelectable = task.isMainTask || layoutVariant === 'kemco'
+    if (isSelectable && onMainTaskSelect) onMainTaskSelect(task.id)
+  }, [task.isMainTask, task.id, onMainTaskSelect, layoutVariant])
 
   return (
     <tr
@@ -93,241 +95,453 @@ export const TaskRow = memo(({
         isSelected   ? 'selected-main-task' : '',
         isDragging   ? 'dragging'  : '',
         isDragOver   ? 'drag-over' : '',
+        layoutVariant === 'kemco' && task.level === 0 ? 'assembly-header-row' : '',
+        layoutVariant === 'kemco' && isSelected ? 'kemco-selected-row' : '',
+        layoutVariant === 'kemco' ? `kemco-level-${task.level}` : '',
       ].filter(Boolean).join(' ')}
       onClick={handleMainTaskClick}
-      style={{ cursor: task.isMainTask ? 'pointer' : 'default' }}
+      style={{ cursor: (task.isMainTask || layoutVariant === 'kemco') ? 'pointer' : 'default' }}
       draggable={task.isMainTask}
       onDragStart={e => onDragStart?.(e, task.id)}
       onDragOver={e => onDragOver?.(e, task.id)}
       onDragLeave={onDragLeave}
       onDrop={e => onDrop?.(e, task.id)}
       onDragEnd={onDragEnd}
-    >
-      {/* NO. */}
-      <td className="row-number-cell">
-        <div className="row-number-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-          {task.isMainTask && hasSubTasks && (
-            <button
-              className="collapse-toggle-btn"
-              onClick={e => onToggleCollapse?.(e, task.id)}
-              title={isCollapsed ? 'Expand parts' : 'Collapse parts'}
-            >
-              <svg
-                width="14" height="14" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" strokeWidth="2.5"
-                strokeLinecap="round" strokeLinejoin="round"
-                style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
-              >
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </button>
-          )}
-          <span className="row-number">{rowNumber}</span>
-        </div>
-      </td>
+     >
+       {layoutVariant === 'kemco' ? (
+         <>
+           {/* NO. */}
+           <td className="row-number-cell">
+             <div className="row-number-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+               {task.level! < 2 && hasSubTasks && (
+                 <button
+                   className="collapse-toggle-btn"
+                   onClick={e => onToggleCollapse?.(e, task.id)}
+                   title={isCollapsed ? 'Expand' : 'Collapse'}
+                 >
+                   <svg
+                     width="14" height="14" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" strokeWidth="2.5"
+                     strokeLinecap="round" strokeLinejoin="round"
+                     style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                   >
+                     <polyline points="6 9 12 15 18 9" />
+                   </svg>
+                 </button>
+               )}
+               <span className="row-number">{rowNumber}</span>
+             </div>
+           </td>
 
-      {/* REFERENCE NO */}
-      <td className="reference-cell">
-        <CollaborativeField
-          fieldKey={`task.${task.id}.referenceNumber`}
-          remoteUsers={remoteUsers}
-          onFocus={() => emitFocus(`task.${task.id}.referenceNumber`)}
-          onBlur={() => emitBlur(`task.${task.id}.referenceNumber`)}
-        >
-          <input
-            type="text" value={task.referenceNumber || ''}
-            onChange={e => handleUpdate('referenceNumber', e.target.value)}
-            className="table-input reference-input" placeholder="Ref No"
-          />
-        </CollaborativeField>
-      </td>
+           {/* CONSTRUCTION NO */}
+           <td className="reference-cell">
+              {task.level === 0 && (
+                <CollaborativeField
+                  fieldKey={`task.${task.id}.referenceNumber`}
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus(`task.${task.id}.referenceNumber`)}
+                  onBlur={() => emitBlur(`task.${task.id}.referenceNumber`)}
+                >
+                  <input
+                    type="text" value={task.referenceNumber || ''}
+                    onChange={e => handleUpdate('referenceNumber', e.target.value)}
+                    className="table-input reference-input" placeholder="Const No"
+                    style={{ textAlign: 'center', fontWeight: '700' }}
+                  />
+                </CollaborativeField>
+              )}
+            </td>
 
-      {/* DESCRIPTION */}
-      <td className="description-cell">
-        <div className={`description-container ${!task.isMainTask ? 'sub-task-description' : ''}`}>
-          {!task.isMainTask && (
-            <span className="sub-task-indicator" style={{ color: '#9ca3af', fontWeight: 'bold' }}>↳</span>
-          )}
-          <CollaborativeField
-            fieldKey={`task.${task.id}.description`}
-            remoteUsers={remoteUsers}
-            onFocus={() => emitFocus(`task.${task.id}.description`)}
-            onBlur={() => emitBlur(`task.${task.id}.description`)}
-            className="full-width-collab"
-          >
-            <input
-              type="text" value={task.description}
-              onChange={e => handleUpdate('description', e.target.value)}
-              className={`table-input description-input ${!task.isMainTask ? 'sub-task-input' : ''}`}
-              placeholder={task.isMainTask ? 'Assembly Name' : "Part's name"}
-            />
-          </CollaborativeField>
-        </div>
-      </td>
+           {/* MACHINE CODE */}
+            <td>
+              {task.level === 0 && (
+                <CollaborativeField
+                  fieldKey={`task.${task.id}.machineCode`}
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus(`task.${task.id}.machineCode`)}
+                  onBlur={() => emitBlur(`task.${task.id}.machineCode`)}
+                >
+                  <input
+                    type="text" value={task.machineCode || ''}
+                    onChange={e => handleUpdate('machineCode', e.target.value)}
+                    className="table-input" placeholder="Code"
+                    style={{ textAlign: 'center' }}
+                  />
+                </CollaborativeField>
+              )}
+            </td>
 
-      {/* HOURS */}
-      <td>
-        <CollaborativeField
-          fieldKey={`task.${task.id}.hours`}
-          remoteUsers={remoteUsers}
-          onFocus={() => emitFocus(`task.${task.id}.hours`)}
-          onBlur={() => emitBlur(`task.${task.id}.hours`)}
-        >
-          <input
-            type="text"
-            inputMode="decimal"
-            value={task.hours || ''}
-            onChange={e => handleUpdate('hours', Math.min(999, Math.max(0, parseFloat(e.target.value) || 0)))}
-            className="table-input number-input"
-          />
-        </CollaborativeField>
-      </td>
+            {/* UNIT CODE */}
+            <td>
+              {task.level === 1 && (
+                <CollaborativeField
+                  fieldKey={`task.${task.id}.unitCode`}
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus(`task.${task.id}.unitCode`)}
+                  onBlur={() => emitBlur(`task.${task.id}.unitCode`)}
+                >
+                  <input
+                    type="text" value={task.unitCode || ''}
+                    onChange={e => handleUpdate('unitCode', e.target.value)}
+                    className="table-input" placeholder="Unit"
+                    style={{ textAlign: 'center' }}
+                  />
+                </CollaborativeField>
+              )}
+            </td>
 
-      {/* MINUTES */}
-      <td>
-        <CollaborativeField
-          fieldKey={`task.${task.id}.minutes`}
-          remoteUsers={remoteUsers}
-          onFocus={() => emitFocus(`task.${task.id}.minutes`)}
-          onBlur={() => emitBlur(`task.${task.id}.minutes`)}
-        >
-          <input
-            type="text"
-            inputMode="numeric"
-            value={task.minutes || ''}
-            onChange={e => handleUpdate('minutes', Math.min(59, Math.max(0, parseFloat(e.target.value) || 0)))}
-            className="table-input number-input"
-          />
-        </CollaborativeField>
-      </td>
+            {/* DWG No. */}
+            <td>
+              {task.level === 2 && (
+                <CollaborativeField
+                  fieldKey={`task.${task.id}.dwgNo`}
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus(`task.${task.id}.dwgNo`)}
+                  onBlur={() => emitBlur(`task.${task.id}.dwgNo`)}
+                >
+                  <input
+                    type="text" value={task.dwgNo || ''}
+                    onChange={e => handleUpdate('dwgNo', e.target.value)}
+                    className="table-input" placeholder="DWG No"
+                    style={{ textAlign: 'center' }}
+                  />
+                </CollaborativeField>
+              )}
+            </td>
 
-      {/* TIME CHARGE (calculated - read only) */}
-      <td className="calculated-cell time-charge-bg">
-        {formatCurrency(subtotals.basicLabor)}
-      </td>
-
-      {/* OT RATE (hours input) */}
-      <td>
-        <CollaborativeField
-          fieldKey={`task.${task.id}.overtimeHours`}
-          remoteUsers={remoteUsers}
-          onFocus={() => emitFocus(`task.${task.id}.overtimeHours`)}
-          onBlur={() => emitBlur(`task.${task.id}.overtimeHours`)}
-        >
-          <input
-            type="text"
-            inputMode="decimal"
-            value={task.overtimeHours || ''}
-            onChange={e => handleUpdate('overtimeHours', parseFloat(e.target.value) || 0)}
-            className="table-input number-input"
-          />
-        </CollaborativeField>
-      </td>
-
-      {/* OVERTIME (calculated - read only) */}
-      <td className="calculated-cell overtime-bg">
-        {formatCurrency(subtotals.overtime)}
-      </td>
-
-      {/* SOFTWARE (units input + calculated total) */}
-      <td className="software-cell">
-        <div className="software-input-container">
-          <CollaborativeField
-            fieldKey={`task.${task.id}.softwareUnits`}
-            remoteUsers={remoteUsers}
-            onFocus={() => emitFocus(`task.${task.id}.softwareUnits`)}
-            onBlur={() => emitBlur(`task.${task.id}.softwareUnits`)}
-            className="software-collab-wrapper"
-          >
-            <input
-              type="text"
-              inputMode="decimal"
-              value={task.softwareUnits || ''}
-              onChange={e => handleUpdate('softwareUnits', parseFloat(e.target.value) || 0)}
-              className="table-input number-input software-units-input"
-            />
-          </CollaborativeField>
-          <span className="software-total">{formatCurrency(subtotals.software)}</span>
-        </div>
-      </td>
-
-      {/* TYPE */}
-      <td className="type-cell">
-          <CollaborativeField
-            fieldKey={`task.${task.id}.type`}
-            remoteUsers={remoteUsers}
-            onFocus={() => emitFocus(`task.${task.id}.type`)}
-            onBlur={() => emitBlur(`task.${task.id}.type`)}
-            className="type-collab-wrapper"
-          >
-            {task.type === '2D' || task.type === '3D' || !task.type ? (
-              <select
-                value={task.type || '3D'}
-                onChange={e => handleUpdate('type', e.target.value === 'Others' ? 'Custom' : e.target.value)}
-                className="table-input type-select"
-              >
-                <option value="2D">2D</option>
-                <option value="3D">3D</option>
-                <option value="Others">Others...</option>
-              </select>
-            ) : (
-              <div className="custom-type-container">
-                <input
-                  type="text" value={task.type === 'Custom' ? '' : task.type}
-                  onChange={e => handleUpdate('type', e.target.value)}
-                  className="table-input custom-type-input" placeholder="Specify type" autoFocus
-                />
-                <button type="button" onClick={() => handleUpdate('type', '3D')} className="reset-type-button" title="Back to dropdown">↺</button>
+            {/* DESCRIPTION */}
+            <td className="description-cell">
+              <div className="description-container" style={{ paddingLeft: `${(task.level || 0) * 16}px` }}>
+                {task.level! > 0 && (
+                  <span className="sub-task-indicator" style={{ color: '#9ca3af', fontWeight: 'bold', marginRight: '4px' }}>↳</span>
+                )}
+                <CollaborativeField
+                  fieldKey={`task.${task.id}.description`}
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus(`task.${task.id}.description`)}
+                  onBlur={() => emitBlur(`task.${task.id}.description`)}
+                  className="full-width-collab"
+                >
+                  <input
+                    type="text" value={task.description}
+                    onChange={e => handleUpdate('description', e.target.value)}
+                    className="table-input description-input"
+                    placeholder={task.level === 0 ? 'Assembly' : task.level === 1 ? 'Sub-Assembly' : 'Part'}
+                  />
+                </CollaborativeField>
               </div>
-            )}
-          </CollaborativeField>
-      </td>
+            </td>
 
-      {/* TOTAL (calculated / editable) */}
-      <td className="total-cell">
-        {isEditing ? (
-          <CollaborativeField
-            fieldKey={`task.${task.id}.manualTotal`}
-            remoteUsers={remoteUsers}
-            onFocus={() => emitFocus(`task.${task.id}.manualTotal`)}
-            onBlur={() => emitBlur(`task.${task.id}.manualTotal`)}
-          >
-            <input
-              type="text"
-              inputMode="decimal"
-              value={subtotals.total}
-              onChange={e => handleEditValueChange('total', e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="table-input number-input edit-calculated-input"
-            />
-          </CollaborativeField>
-        ) : formatCurrency(subtotals.total)}
-      </td>
+           {/* START DATE */}
+           <td>
+              <CollaborativeField
+                fieldKey={`task.${task.id}.startDate`}
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus(`task.${task.id}.startDate`)}
+                onBlur={() => emitBlur(`task.${task.id}.startDate`)}
+              >
+                <input
+                  type="date" value={task.startDate || ''}
+                  onChange={e => handleUpdate('startDate', e.target.value)}
+                  className="table-input date-input"
+                />
+              </CollaborativeField>
+            </td>
 
-      {/* ACTION */}
-      <td className="action-cell">
-        <div className="action-buttons-container">
-          <button
-            onClick={handleEditToggle}
-            className={`edit-task-button ${isEditing ? 'editing' : ''}`}
-            title={isEditing ? 'Save changes' : 'Edit values'}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="edit-icon">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>
-          </button>
-          <button onClick={handleRemove} className="remove-task-button" title="Remove task">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="remove-icon">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" /><path d="M14 11v6" />
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            </svg>
-          </button>
-        </div>
-      </td>
-    </tr>
+            {/* FINISHED (END DATE) */}
+            <td>
+              <CollaborativeField
+                fieldKey={`task.${task.id}.endDate`}
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus(`task.${task.id}.endDate`)}
+                onBlur={() => emitBlur(`task.${task.id}.endDate`)}
+              >
+                <input
+                  type="date" value={task.endDate || ''}
+                  onChange={e => handleUpdate('endDate', e.target.value)}
+                  className="table-input date-input"
+                />
+              </CollaborativeField>
+            </td>
+
+            {/* TIME */}
+            <td>
+              <CollaborativeField
+                fieldKey={`task.${task.id}.time`}
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus(`task.${task.id}.time`)}
+                onBlur={() => emitBlur(`task.${task.id}.time`)}
+              >
+                <input
+                  type="text" inputMode="decimal" value={task.time || ''}
+                  onChange={e => handleUpdate('time', parseFloat(e.target.value) || 0)}
+                  className="table-input number-input"
+                />
+              </CollaborativeField>
+            </td>
+
+            {/* TYPE */}
+            <td>
+              <CollaborativeField
+                fieldKey={`task.${task.id}.type`}
+                remoteUsers={remoteUsers}
+                onFocus={() => emitFocus(`task.${task.id}.type`)}
+                onBlur={() => emitBlur(`task.${task.id}.type`)}
+              >
+                <select
+                  value={task.type || '3D'}
+                  onChange={e => handleUpdate('type', e.target.value)}
+                  className="table-input type-select"
+                >
+                  <option value="2D">2D</option>
+                  <option value="3D">3D</option>
+                  <option value="Others">Others</option>
+                </select>
+              </CollaborativeField>
+            </td>
+
+           {/* AMOUNT hidden for KEMCO */}
+
+            {/* ACTION */}
+            <td className="action-cell">
+              <div className="action-buttons-container">
+                <button onClick={handleRemove} className="remove-task-button" title="Remove row">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                  </svg>
+                </button>
+              </div>
+            </td>
+         </>
+       ) : (
+         <>
+           {/* NO. */}
+           <td className="row-number-cell">
+             <div className="row-number-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+               {task.isMainTask && hasSubTasks && (
+                 <button
+                   className="collapse-toggle-btn"
+                   onClick={e => onToggleCollapse?.(e, task.id)}
+                   title={isCollapsed ? 'Expand parts' : 'Collapse parts'}
+                 >
+                   <svg
+                     width="14" height="14" viewBox="0 0 24 24"
+                     fill="none" stroke="currentColor" strokeWidth="2.5"
+                     strokeLinecap="round" strokeLinejoin="round"
+                     style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
+                   >
+                     <polyline points="6 9 12 15 18 9" />
+                   </svg>
+                 </button>
+               )}
+               <span className="row-number">{rowNumber}</span>
+             </div>
+           </td>
+
+           {/* REFERENCE NO */}
+           <td className="reference-cell">
+             <CollaborativeField
+               fieldKey={`task.${task.id}.referenceNumber`}
+               remoteUsers={remoteUsers}
+               onFocus={() => emitFocus(`task.${task.id}.referenceNumber`)}
+               onBlur={() => emitBlur(`task.${task.id}.referenceNumber`)}
+             >
+               <input
+                 type="text" value={task.referenceNumber || ''}
+                 onChange={e => handleUpdate('referenceNumber', e.target.value)}
+                 className="table-input reference-input" placeholder="Ref No"
+               />
+             </CollaborativeField>
+           </td>
+
+           {/* DESCRIPTION */}
+           <td className="description-cell">
+             <div className={`description-container ${!task.isMainTask ? 'sub-task-description' : ''}`}>
+               {!task.isMainTask && (
+                 <span className="sub-task-indicator" style={{ color: '#9ca3af', fontWeight: 'bold' }}>↳</span>
+               )}
+               <CollaborativeField
+                 fieldKey={`task.${task.id}.description`}
+                 remoteUsers={remoteUsers}
+                 onFocus={() => emitFocus(`task.${task.id}.description`)}
+                 onBlur={() => emitBlur(`task.${task.id}.description`)}
+                 className="full-width-collab"
+               >
+                 <input
+                   type="text" value={task.description}
+                   onChange={e => handleUpdate('description', e.target.value)}
+                   className={`table-input description-input ${!task.isMainTask ? 'sub-task-input' : ''}`}
+                   placeholder={task.isMainTask ? 'Assembly Name' : "Part's name"}
+                 />
+               </CollaborativeField>
+             </div>
+           </td>
+
+           {/* HOURS */}
+           <td>
+             <CollaborativeField
+               fieldKey={`task.${task.id}.hours`}
+               remoteUsers={remoteUsers}
+               onFocus={() => emitFocus(`task.${task.id}.hours`)}
+               onBlur={() => emitBlur(`task.${task.id}.hours`)}
+             >
+               <input
+                 type="text"
+                 inputMode="decimal"
+                 value={task.hours || ''}
+                 onChange={e => handleUpdate('hours', Math.min(999, Math.max(0, parseFloat(e.target.value) || 0)))}
+                 className="table-input number-input"
+               />
+             </CollaborativeField>
+           </td>
+
+           {/* MINUTES */}
+           <td>
+             <CollaborativeField
+               fieldKey={`task.${task.id}.minutes`}
+               remoteUsers={remoteUsers}
+               onFocus={() => emitFocus(`task.${task.id}.minutes`)}
+               onBlur={() => emitBlur(`task.${task.id}.minutes`)}
+             >
+               <input
+                 type="text"
+                 inputMode="numeric"
+                 value={task.minutes || ''}
+                 onChange={e => handleUpdate('minutes', Math.min(59, Math.max(0, parseFloat(e.target.value) || 0)))}
+                 className="table-input number-input"
+               />
+             </CollaborativeField>
+           </td>
+
+           {/* TIME CHARGE (calculated - read only) */}
+           <td className="calculated-cell time-charge-bg">
+             {formatCurrency(subtotals.basicLabor)}
+           </td>
+
+           {/* OT RATE (hours input) */}
+           <td>
+             <CollaborativeField
+               fieldKey={`task.${task.id}.overtimeHours`}
+               remoteUsers={remoteUsers}
+               onFocus={() => emitFocus(`task.${task.id}.overtimeHours`)}
+               onBlur={() => emitBlur(`task.${task.id}.overtimeHours`)}
+             >
+               <input
+                 type="text"
+                 inputMode="decimal"
+                 value={task.overtimeHours || ''}
+                 onChange={e => handleUpdate('overtimeHours', parseFloat(e.target.value) || 0)}
+                 className="table-input number-input"
+               />
+             </CollaborativeField>
+           </td>
+
+           {/* OVERTIME (calculated - read only) */}
+           <td className="calculated-cell overtime-bg">
+             {formatCurrency(subtotals.overtime)}
+           </td>
+
+           {/* SOFTWARE (units input + calculated total) */}
+           <td className="software-cell">
+             <div className="software-input-container">
+               <CollaborativeField
+                 fieldKey={`task.${task.id}.softwareUnits`}
+                 remoteUsers={remoteUsers}
+                 onFocus={() => emitFocus(`task.${task.id}.softwareUnits`)}
+                 onBlur={() => emitBlur(`task.${task.id}.softwareUnits`)}
+                 className="software-collab-wrapper"
+               >
+                 <input
+                   type="text"
+                   inputMode="decimal"
+                   value={task.softwareUnits || ''}
+                   onChange={e => handleUpdate('softwareUnits', parseFloat(e.target.value) || 0)}
+                   className="table-input number-input software-units-input"
+                 />
+               </CollaborativeField>
+               <span className="software-total">{formatCurrency(subtotals.software)}</span>
+             </div>
+           </td>
+
+           {/* TYPE */}
+           <td className="type-cell">
+             <CollaborativeField
+                 fieldKey={`task.${task.id}.type`}
+                 remoteUsers={remoteUsers}
+                 onFocus={() => emitFocus(`task.${task.id}.type`)}
+                 onBlur={() => emitBlur(`task.${task.id}.type`)}
+                 className="type-collab-wrapper"
+               >
+                 {task.type === '2D' || task.type === '3D' || !task.type ? (
+                   <select
+                     value={task.type || '3D'}
+                     onChange={e => handleUpdate('type', e.target.value === 'Others' ? 'Custom' : e.target.value)}
+                     className="table-input type-select"
+                   >
+                     <option value="2D">2D</option>
+                     <option value="3D">3D</option>
+                     <option value="Others">Others...</option>
+                   </select>
+                 ) : (
+                   <div className="custom-type-container">
+                     <input
+                       type="text" value={task.type === 'Custom' ? '' : task.type}
+                       onChange={e => handleUpdate('type', e.target.value)}
+                       className="table-input custom-type-input" placeholder="Specify type" autoFocus
+                     />
+                     <button type="button" onClick={() => handleUpdate('type', '3D')} className="reset-type-button" title="Back to dropdown">↺</button>
+                   </div>
+                 )}
+               </CollaborativeField>
+           </td>
+
+           {/* TOTAL (calculated / editable) */}
+           <td className="total-cell">
+             {isEditing ? (
+               <CollaborativeField
+                 fieldKey={`task.${task.id}.manualTotal`}
+                 remoteUsers={remoteUsers}
+                 onFocus={() => emitFocus(`task.${task.id}.manualTotal`)}
+                 onBlur={() => emitBlur(`task.${task.id}.manualTotal`)}
+               >
+                 <input
+                   type="text"
+                   inputMode="decimal"
+                   value={subtotals.total}
+                   onChange={e => handleEditValueChange('total', e.target.value)}
+                   onKeyDown={handleKeyDown}
+                   className="table-input number-input edit-calculated-input"
+                 />
+               </CollaborativeField>
+             ) : formatCurrency(subtotals.total)}
+           </td>
+
+           {/* ACTION */}
+           <td className="action-cell">
+             <div className="action-buttons-container">
+               <button
+                 onClick={handleEditToggle}
+                 className={`edit-task-button ${isEditing ? 'editing' : ''}`}
+                 title={isEditing ? 'Save changes' : 'Edit values'}
+               >
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="edit-icon">
+                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                 </svg>
+               </button>
+               <button onClick={handleRemove} className="remove-task-button" title="Remove task">
+                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="remove-icon">
+                   <polyline points="3 6 5 6 21 6" />
+                   <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                   <path d="M10 11v6" /><path d="M14 11v6" />
+                   <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                 </svg>
+               </button>
+             </div>
+           </td>
+         </>
+       )}
+     </tr>
   )
 })
 

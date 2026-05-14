@@ -28,6 +28,7 @@ interface TasksTableProps {
   onTaskUpdate?: (id: number, field: keyof Task, value: any) => void
   onTaskAdd?: () => void
   onSubTaskAdd?: (mainTaskId: number | null, notify?: (msg: string, type?: NotificationType) => void) => void
+  onChildTaskAdd?: (parentId: number, level: number) => void
   onTaskRemove?: (id: number) => void
   onTaskReorder?: (draggedId: number, targetId: number) => void
   onMainTaskSelect?: (id: number) => void
@@ -39,6 +40,7 @@ interface TasksTableProps {
   onFooterUpdate?: (key: string, value: any) => void
   collapsedTasks?: Set<number>
   onCollapsedTasksChange?: (collapsed: Set<number>) => void
+  layoutVariant?: 'special' | 'kemco'
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -49,6 +51,8 @@ const TasksTable = memo(({
   onMainTaskSelect, onBaseRateUpdate: _onBaseRateUpdate, onOpenRateSettings, notify,
   manualOverrides, setManualOverrides, onFooterUpdate,
   collapsedTasks = new Set(), onCollapsedTasksChange,
+  layoutVariant = 'special',
+  onChildTaskAdd,
 }: TasksTableProps) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
 
@@ -64,20 +68,22 @@ const TasksTable = memo(({
   const [grandTotalDraft, setGrandTotalDraft] = useState<string>('')
 
   // ── Engineer bookmark row refs & positions ─────────────────────
-  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
   const bodyRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef<HTMLDivElement>(null)
+
+  // ── Engineer bookmark row refs & positions ─────────────────────
   const [bookmarkPositions, setBookmarkPositions] = useState<Record<number, { top: number; height: number }>>({})
+  const rowRefs = useRef<Map<number, HTMLTableRowElement>>(new Map())
 
   const recomputeBookmarks = useCallback(() => {
-    const section = sectionRef.current
-    if (!section) return
-    const sectionTop = section.getBoundingClientRect().top
+    const body = bodyRef.current
+    if (!body) return
+    const bodyRect = body.getBoundingClientRect()
     const next: Record<number, { top: number; height: number }> = {}
     rowRefs.current.forEach((el, taskId) => {
       const rect = el.getBoundingClientRect()
       next[taskId] = {
-        top: rect.top - sectionTop,
+        top: (rect.top - bodyRect.top) + body.scrollTop,
         height: rect.height,
       }
     })
@@ -89,12 +95,6 @@ const TasksTable = memo(({
     recomputeBookmarks()
   }, [tasks, collapsedTasks, recomputeBookmarks])
 
-  useEffect(() => {
-    const body = bodyRef.current
-    if (!body) return
-    body.addEventListener('scroll', recomputeBookmarks, { passive: true })
-    return () => body.removeEventListener('scroll', recomputeBookmarks)
-  }, [recomputeBookmarks])
 
   const setRowRef = useCallback((taskId: number, el: HTMLTableRowElement | null) => {
     if (el) rowRefs.current.set(taskId, el)
@@ -285,6 +285,44 @@ const TasksTable = memo(({
 
   const handleDragEnd = useCallback(() => { setDraggedTaskId(null); setDragOverTaskId(null) }, [])
 
+  // ── Helper to sync column widths ─────────────────────────────
+  const renderColGroup = () => (
+    <colgroup>
+      {layoutVariant === 'kemco' ? (
+        <>
+          <col style={{ width: '4%' }} />
+          <col style={{ width: '6%' }} />
+          <col style={{ width: '6%' }} />
+          <col style={{ width: '6%' }} />
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '19%' }} />
+          <col style={{ width: '9%' }} />
+          <col style={{ width: '9%' }} />
+          <col style={{ width: '7%' }} />
+          <col style={{ width: '7%' }} />
+          {/* Amount hidden for KEMCO */}
+          <col style={{ width: '0%', display: 'none' }} />
+          <col style={{ width: '9%' }} />
+        </>
+      ) : (
+        <>
+          <col style={{ width: '4%' }} />
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '20%' }} />
+          <col style={{ width: '6%' }} />
+          <col style={{ width: '6%' }} />
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '8%' }} />
+          <col style={{ width: '8%' }} />
+        </>
+      )}
+    </colgroup>
+  )
+
   // ── Render ─────────────────────────────────────────────────────
   return (
     <div className="computation-section" ref={sectionRef} style={{ position: 'relative' }}>
@@ -312,7 +350,7 @@ const TasksTable = memo(({
             </button>
           )}
           <button
-            className="add-button primary" onClick={onTaskAdd}
+            className={`add-button ${layoutVariant === 'kemco' ? 'primary' : 'primary'}`} onClick={onTaskAdd}
             disabled={mainTaskCount >= 99}
             title={mainTaskCount >= 99 ? 'Maximum tasks reached' : 'Add assembly task'}
           >
@@ -321,44 +359,120 @@ const TasksTable = memo(({
             </svg>
             Add Assembly
           </button>
-          <button
-            className="add-button secondary"
-            onClick={() => onSubTaskAdd?.(selectedMainTaskId, notify)}
-            disabled={!selectedMainTaskId}
-            title={!selectedMainTaskId ? 'Select a main task first' : 'Add sub-task'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="add-icon">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Add Parts
-          </button>
+          {layoutVariant === 'kemco' ? (
+            <div className="kemco-add-buttons-group">
+              <button
+                className="add-button secondary"
+                onClick={() => {
+                  if (selectedMainTaskId) {
+                    const task = tasks.find(t => t.id === selectedMainTaskId)
+                    if (task?.level === 0) {
+                      onChildTaskAdd?.(selectedMainTaskId, 1)
+                    } else if (notify) {
+                      notify('Select an Assembly to add a Unit (Sub-Assembly)', 'warning')
+                    }
+                  } else if (notify) {
+                    notify('Select an Assembly first', 'warning')
+                  }
+                }}
+                disabled={!selectedMainTaskId || tasks.find(t => t.id === selectedMainTaskId)?.level !== 0}
+                title="Add Unit to selected Assembly"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="add-icon">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Unit
+              </button>
+              <button
+                className="add-button primary"
+                onClick={() => {
+                  if (selectedMainTaskId) {
+                    const task = tasks.find(t => t.id === selectedMainTaskId)
+                    if (task?.level === 1) {
+                      onChildTaskAdd?.(selectedMainTaskId, 2)
+                    } else if (notify) {
+                      notify('Select a Unit to add Parts', 'warning')
+                    }
+                  } else if (notify) {
+                    notify('Select a Unit first', 'warning')
+                  }
+                }}
+                disabled={!selectedMainTaskId || tasks.find(t => t.id === selectedMainTaskId)?.level !== 1}
+                title="Add Parts to selected Unit"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="add-icon">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Parts
+              </button>
+            </div>
+          ) : (
+            <button
+              className="add-button secondary"
+              onClick={() => onSubTaskAdd?.(selectedMainTaskId, notify)}
+              disabled={!selectedMainTaskId}
+              title={!selectedMainTaskId ? 'Select a main task first' : 'Add sub-task'}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="add-icon">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Parts
+            </button>
+          )}
         </div>
       </div>
-
       <div className="tasks-table-container">
         <div className="tasks-table-header">
-          <table className="tasks-table">
+          <table className={`tasks-table tasks-table--${layoutVariant}`}>
+            {renderColGroup()}
             <thead>
               <tr>
-                <th>NO.</th><th>REFERENCE NO</th><th>DESCRIPTION</th><th>HOURS</th><th>MINUTES</th>
-                <th>TIME CHARGE</th><th>OT RATE</th><th>OVERTIME</th><th>SOFTWARE</th>
-                <th>TYPE</th><th>TOTAL</th><th>ACTION</th>
+                {layoutVariant === 'kemco' ? (
+                  <>
+                    <th style={{ width: '4%' }}>NO.</th>
+                    <th style={{ width: '6%' }}>CONSTRUCTION NO</th>
+                    <th style={{ width: '6%' }}>MACHINE CODE</th>
+                    <th style={{ width: '6%' }}>UNIT CODE</th>
+                    <th style={{ width: '18%' }}>DWG No.</th>
+                    <th style={{ width: '21%' }}>DESCRIPTION</th>
+                    <th style={{ width: '9%' }}>START DATE</th>
+                    <th style={{ width: '9%' }}>FINISHED</th>
+                    <th style={{ width: '7%' }}>TIME</th>
+                    <th style={{ width: '7%' }}>TYPE</th>
+                    {/* Amount hidden for KEMCO */}
+                    <th style={{ width: '7%' }}>ACTION</th>
+                  </>
+                ) : (
+                  <>
+                    <th>NO.</th><th>REFERENCE NO</th><th>DESCRIPTION</th><th>HOURS</th><th>MINUTES</th>
+                    <th>TIME CHARGE</th><th>OT RATE</th><th>OVERTIME</th><th>SOFTWARE</th>
+                    <th>TYPE</th><th>TOTAL</th><th>ACTION</th>
+                  </>
+                )}
               </tr>
             </thead>
           </table>
         </div>
 
+        {/* Engineer Bookmark gutter — floats over the right edge of the table content */}
         <div className="tasks-table-body" ref={bodyRef}>
-          <table className="tasks-table">
+          <table className={`tasks-table tasks-table--${layoutVariant}`}>
+            {renderColGroup()}
             <tbody>
               {tasks.map((task, index) => {
-                if (!task.isMainTask && collapsedTasks.has(task.parentId!)) return null
+                // Check if any ancestor is collapsed
+                let currParentId = task.parentId
+                while (currParentId) {
+                  if (collapsedTasks.has(currParentId)) return null
+                  const parent = tasks.find(t => t.id === currParentId)
+                  currParentId = parent?.parentId || null
+                }
 
                 const rowNumber = task.isMainTask
                   ? tasks.slice(0, index).filter(t => t.isMainTask).length + 1
                   : tasks.slice(0, index).filter(t => t.parentId === task.parentId).length + 1
 
-                const hasSubTasks = task.isMainTask && tasks.some(t => t.parentId === task.id)
+                const hasSubTasks = tasks.some(t => t.parentId === task.id)
 
                 return (
                   <TaskRow
@@ -368,7 +482,7 @@ const TasksTable = memo(({
                     onUpdate={onTaskUpdate}
                     onRemove={onTaskRemove}
                     formatCurrency={formatCurrency}
-                    isSelected={task.isMainTask && task.id === selectedMainTaskId}
+                    isSelected={layoutVariant === 'kemco' ? (task.id === selectedMainTaskId) : (task.isMainTask && task.id === selectedMainTaskId)}
                     onMainTaskSelect={onMainTaskSelect}
                     rowNumber={rowNumber}
                     isEditing={editingTaskId === task.id}
@@ -385,7 +499,7 @@ const TasksTable = memo(({
                     isCollapsed={collapsedTasks.has(task.id)}
                     onToggleCollapse={toggleCollapse}
                     onCancelEdit={handleCancelEdit}
-                    onEngineerChange={handleEngineerChange}
+                    layoutVariant={layoutVariant}
                     trRef={(el: HTMLTableRowElement | null) => setRowRef(task.id, el)}
                   />
                 )
@@ -399,124 +513,127 @@ const TasksTable = memo(({
               )}
             </tbody>
           </table>
-        </div>
-      </div>
 
-      {/* Engineer Bookmark gutter — floats over the right edge of the table, */}
-      {/* positioned relative to .computation-section. Zero layout impact.   */}
-      <div
-        className="eng-bookmark-gutter"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: 52,
-          bottom: 0,
-          pointerEvents: 'none',
-          zIndex: 20,
-        }}
-      >
-        {tasks.map(task => {
-          const pos = bookmarkPositions[task.id]
-          if (!pos) return null
-          return (
-            <EngineerBookmark
-              key={task.id}
-              taskId={task.id}
-              engineer={task.engineer}
-              top={pos.top}
-              height={pos.height}
-              lastEditorName={task.lastEditorName}
-              lastEditorColor={task.lastEditorColor}
-              onChange={handleEngineerChange}
-            />
-          )
-        })}
-      </div>
-
-      {/* ── Footer: Totals ───────────────────────────────────────── */}
-      <div className="grand-total-section">
-        <div className="grand-total-row">
-          <div className="grand-total-label">Total:</div>
-          <div className="grand-total-value">{formatCurrency(subtotal)}</div>
-        </div>
-
-        <div className="grand-total-row">
-          <div className="grand-total-label">Administrative Overhead:</div>
-          <div className="grand-total-value">
-            {editingOverhead ? (
-              <div className="footer-input-wrapper">
-                <span className="footer-currency-symbol">¥</span>
-                <CollaborativeField
-                  fieldKey="footer.overhead"
-                  remoteUsers={remoteUsers}
-                  onFocus={() => emitFocus('footer.overhead')}
-                  onBlur={() => emitBlur('footer.overhead')}
-                >
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={overheadDraft}
-                    onChange={e => setOverheadDraft(e.target.value)}
-                    onBlur={e => handleOverheadBlur(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleOverheadBlur((e.target as HTMLInputElement).value)
-                      if (e.key === 'Escape') setEditingOverhead(false)
-                    }}
-                    className="footer-input amount-input" autoFocus
-                  />
-                </CollaborativeField>
-              </div>
-            ) : (
-              <span
-                className="footer-value-display"
-                onClick={() => { setOverheadDraft(formatValue(overheadTotal)); setEditingOverhead(true) }}
-                title="Click to edit"
-              >
-                {formatCurrency(overheadTotal)}
-              </span>
-            )}
+          {/* Engineer Bookmark gutter — now inside the scrollable body to handle clipping automatically */}
+          <div
+            className="eng-bookmark-gutter"
+            style={{
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: 52,
+              bottom: 0,
+              pointerEvents: 'none',
+              zIndex: 20,
+            }}
+          >
+            {tasks.map(task => {
+              const pos = bookmarkPositions[task.id]
+              if (!pos) return null
+              return (
+                <EngineerBookmark
+                  key={task.id}
+                  taskId={task.id}
+                  engineer={task.engineer}
+                  top={pos.top}
+                  height={pos.height}
+                  lastEditorName={task.lastEditorName}
+                  lastEditorColor={task.lastEditorColor}
+                  onChange={handleEngineerChange}
+                />
+              )
+            })}
           </div>
         </div>
 
-        <div className="grand-total-row grand-total-final">
-          <div className="grand-total-label">Grand Total:</div>
-          <div className="grand-total-value">
-            {editingGrandTotal ? (
-              <div className="footer-input-wrapper final-total">
-                <span className="footer-currency-symbol">¥</span>
-                <CollaborativeField
-                  fieldKey="footer.adjustment"
-                  remoteUsers={remoteUsers}
-                  onFocus={() => emitFocus('footer.adjustment')}
-                  onBlur={() => emitBlur('footer.adjustment')}
+      </div>
+
+
+      {/* ── Footer: Totals (Hidden for KEMCO) ─────────────────────── */}
+      {layoutVariant !== 'kemco' && (
+        <div className="grand-total-section">
+          <div className="grand-total-row">
+            <div className="grand-total-label">Total:</div>
+            <div className="grand-total-value">{formatCurrency(subtotal)}</div>
+          </div>
+
+          <div className="grand-total-row">
+            <div className="grand-total-label">Administrative Overhead:</div>
+            <div className="grand-total-value">
+              {editingOverhead ? (
+                <div className="footer-input-wrapper">
+                  <span className="footer-currency-symbol">¥</span>
+                  <CollaborativeField
+                    fieldKey="footer.overhead"
+                    remoteUsers={remoteUsers}
+                    onFocus={() => emitFocus('footer.overhead')}
+                    onBlur={() => emitBlur('footer.overhead')}
+                  >
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={overheadDraft}
+                      onChange={e => setOverheadDraft(e.target.value)}
+                      onBlur={e => handleOverheadBlur(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleOverheadBlur((e.target as HTMLInputElement).value)
+                        if (e.key === 'Escape') setEditingOverhead(false)
+                      }}
+                      className="footer-input amount-input" autoFocus
+                    />
+                  </CollaborativeField>
+                </div>
+              ) : (
+                <span
+                  className="footer-value-display"
+                  onClick={() => { setOverheadDraft(formatValue(overheadTotal)); setEditingOverhead(true) }}
+                  title="Click to edit"
                 >
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={grandTotalDraft}
-                    onChange={e => setGrandTotalDraft(e.target.value)}
-                    onBlur={e => handleGrandTotalBlur(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') handleGrandTotalBlur((e.target as HTMLInputElement).value)
-                      if (e.key === 'Escape') setEditingGrandTotal(false)
-                    }}
-                    className="footer-input amount-input total-input" autoFocus
-                  />
-                </CollaborativeField>
-              </div>
-            ) : (
-              <span
-                className="footer-value-display grand-total-display"
-                onClick={() => { setGrandTotalDraft(formatValue(grandTotal)); setEditingGrandTotal(true) }}
-                title="Click to edit"
-              >
-                {formatCurrency(grandTotal)}
-              </span>
-            )}
+                  {formatCurrency(overheadTotal)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grand-total-row grand-total-final">
+            <div className="grand-total-label">Grand Total:</div>
+            <div className="grand-total-value">
+              {editingGrandTotal ? (
+                <div className="footer-input-wrapper final-total">
+                  <span className="footer-currency-symbol">¥</span>
+                  <CollaborativeField
+                    fieldKey="footer.adjustment"
+                    remoteUsers={remoteUsers}
+                    onFocus={() => emitFocus('footer.adjustment')}
+                    onBlur={() => emitBlur('footer.adjustment')}
+                  >
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={grandTotalDraft}
+                      onChange={e => setGrandTotalDraft(e.target.value)}
+                      onBlur={e => handleGrandTotalBlur(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleGrandTotalBlur((e.target as HTMLInputElement).value)
+                        if (e.key === 'Escape') setEditingGrandTotal(false)
+                      }}
+                      className="footer-input amount-input total-input" autoFocus
+                    />
+                  </CollaborativeField>
+                </div>
+              ) : (
+                <span
+                  className="footer-value-display grand-total-display"
+                  onClick={() => { setGrandTotalDraft(formatValue(grandTotal)); setEditingGrandTotal(true) }}
+                  title="Click to edit"
+                >
+                  {formatCurrency(grandTotal)}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 })

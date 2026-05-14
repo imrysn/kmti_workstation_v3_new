@@ -34,6 +34,7 @@
   display: block;
   scrollbar-gutter: stable;
   background: var(--bg-secondary);
+  position: relative;
 }
 
 .tasks-table-body table {
@@ -107,7 +108,7 @@
   color: var(--text-primary);
 }
 
-/* 笏笏 Header Styles 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Header Styles ── */
 .tasks-table th {
   background-color: var(--bg-surface);
   color: var(--text-primary);
@@ -130,7 +131,7 @@
   border-right: none;
 }
 
-/* 笏笏 Cell Styles 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Cell Styles ── */
 .tasks-table td {
   padding: 6px 4px;
   border-bottom: 1px solid var(--border-subtle);
@@ -144,7 +145,7 @@
   border-right: none;
 }
 
-/* 笏笏 Inputs Inside Table 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Inputs Inside Table ── */
 .table-input {
   width: 100%;
   height: 34px;
@@ -207,7 +208,7 @@
   text-transform: uppercase;
 }
 
-/* 笏笏 Description Alignment 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Description Alignment ── */
 .description-container {
   display: flex;
   align-items: center;
@@ -240,7 +241,7 @@
   color: var(--text-secondary);
 }
 
-/* 笏笏 Highlighted Calculated Columns 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Highlighted Calculated Columns ── */
 .tasks-table .calculated-cell {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -273,7 +274,7 @@
   padding-right: 12px !important;
 }
 
-/* 笏笏 Software Column 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Software Column ── */
 .software-input-container {
   display: flex;
   align-items: center;
@@ -298,7 +299,7 @@
   text-align: right;
 }
 
-/* 笏笏 Type Dropdown 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Type Dropdown ── */
 .type-select {
   text-align: center;
   cursor: pointer;
@@ -337,7 +338,7 @@
   color: var(--text-primary);
 }
 
-/* 笏笏 Action Buttons 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Action Buttons ── */
 .action-buttons-container {
   display: flex;
   gap: 6px;
@@ -377,7 +378,7 @@
   border-color: #fca5a5;
 }
 
-/* 笏笏 Visual Overrides for Rows 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Visual Overrides for Rows ── */
 .row-number-cell {
   font-weight: 700;
   color: #cbd5e1;
@@ -411,88 +412,22 @@
   border-color: var(--accent) !important;
 }
 
-/* 笏笏 Fixed Column Widths for Header and Body Synchronization 笏 */
-/* Sum of widths = 100% */
-.tasks-table th:nth-child(1),
-.tasks-table td:nth-child(1) {
-  width: 5%;
-}
+/* ── Fixed Column Widths (Special Layout) ── */
+.tasks-table--special th:nth-child(1), .tasks-table--special td:nth-child(1) { width: 4%; }
+.tasks-table--special th:nth-child(2), .tasks-table--special td:nth-child(2) { width: 8%; }
+.tasks-table--special th:nth-child(3), .tasks-table--special td:nth-child(3) { width: 20%; }
+.tasks-table--special th:nth-child(4), .tasks-table--special td:nth-child(4) { width: 6%; }
+.tasks-table--special th:nth-child(5), .tasks-table--special td:nth-child(5) { width: 6%; }
+.tasks-table--special th:nth-child(6), .tasks-table--special td:nth-child(6) { width: 8%; }
+.tasks-table--special th:nth-child(7), .tasks-table--special td:nth-child(7) { width: 8%; }
+.tasks-table--special th:nth-child(8), .tasks-table--special td:nth-child(8) { width: 8%; }
+.tasks-table--special th:nth-child(9), .tasks-table--special td:nth-child(9) { width: 8%; }
+.tasks-table--special th:nth-child(10), .tasks-table--special td:nth-child(10) { width: 8%; }
+.tasks-table--special th:nth-child(11), .tasks-table--special td:nth-child(11) { width: 8%; }
+.tasks-table--special th:nth-child(12), .tasks-table--special td:nth-child(12) { width: 8%; }
+.tasks-table--special th:nth-child(13), .tasks-table--special td:nth-child(13) { width: 6%; }
 
-/* REF NO */
-.tasks-table th:nth-child(2),
-.tasks-table td:nth-child(2) {
-  width: 7%;
-}
-
-/* DESCRIPTION */
-.tasks-table th:nth-child(3),
-.tasks-table td:nth-child(3) {
-  width: 21%;
-}
-
-/* DESCRIPTION */
-.tasks-table th:nth-child(4),
-.tasks-table td:nth-child(4) {
-  width: 5.5%;
-}
-
-/* HOURS */
-.tasks-table th:nth-child(5),
-.tasks-table td:nth-child(5) {
-  width: 5.5%;
-}
-
-/* MINUTES */
-.tasks-table th:nth-child(6),
-.tasks-table td:nth-child(6) {
-  width: 8.5%;
-}
-
-/* TIME CHARGE */
-.tasks-table th:nth-child(7),
-.tasks-table td:nth-child(7) {
-  width: 5.5%;
-}
-
-/* OT RATE */
-.tasks-table th:nth-child(8),
-.tasks-table td:nth-child(8) {
-  width: 8%;
-}
-
-/* OVERTIME */
-.tasks-table th:nth-child(9),
-.tasks-table td:nth-child(9) {
-  width: 10%;
-}
-
-/* SOFTWARE */
-.tasks-table th:nth-child(10),
-.tasks-table td:nth-child(10) {
-  width: 8%;
-}
-
-/* OH */
-.tasks-table th:nth-child(11),
-.tasks-table td:nth-child(11) {
-  width: 6%;
-}
-
-/* TYPE */
-.tasks-table th:nth-child(12),
-.tasks-table td:nth-child(12) {
-  width: 10%;
-}
-
-/* TOTAL */
-.tasks-table th:nth-child(13),
-.tasks-table td:nth-child(13) {
-  width: 5%;
-}
-
-/* ACTION */
-
-/* 笏笏 Expand/Collapse 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Expand/Collapse ── */
 .collapse-toggle-btn {
   background: var(--bg-secondary);
   border: 1px solid var(--border-subtle);
@@ -515,7 +450,7 @@
   color: var(--text-primary);
 }
 
-/* 笏笏 Footer Editable Inputs 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏 */
+/* ── Footer Editable Inputs ── */
 .footer-input {
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -581,9 +516,10 @@
 
 .footer-input[type=number] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
-/* ── Footer Value Display (edit-on-click) ──────────────────
+/* ── Footer Value Display (edit-on-click) ──
  */
 .footer-value-display {
   display: inline-flex;
@@ -619,7 +555,7 @@
   letter-spacing: 0.01em;
 }
 
-/* ─── Engineer Badge ─────────────────────────────────────────────────────── */
+/* ── Engineer Badge ── */
 
 .engineer-badge-wrapper {
   display: inline-flex;
@@ -689,7 +625,7 @@
   font-weight: 400;
 }
 
-/* ─── Engineer Bookmark (gutter tab + pointer) ──────────────────── */
+/* ── Engineer Bookmark (gutter tab + pointer) ── */
 
 .eng-bookmark {
   display: flex;
@@ -827,3 +763,100 @@
   color: white;
   text-transform: uppercase;
 }
+
+/* ── KEMCO Hierarchy Refinements ── */
+
+.assembly-header-row {
+  background-color: var(--bg-surface) !important;
+}
+
+.dark-theme .assembly-header-row {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+.assembly-header-row td {
+  border-bottom: 2px solid var(--border) !important;
+  height: 52px !important;
+}
+
+.assembly-header-row .reference-input {
+  font-size: 14px !important;
+  color: var(--accent) !important;
+  letter-spacing: 0.05em;
+}
+
+.calculated-total {
+  font-weight: 800;
+  color: var(--accent);
+  font-size: 1.05em;
+}
+
+/* Subtle indentation for sub-tasks in KEMCO */
+.sub-task-row td:first-child {
+  padding-left: 8px;
+}
+
+.kemco-add-buttons-group {
+  display: flex;
+  gap: 6px;
+  padding-left: 10px;
+  margin-left: 10px;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.kemco-add-buttons-group {
+  display: flex;
+  gap: 6px;
+  padding-left: 10px;
+  margin-left: 10px;
+  border-left: 1px solid var(--border-subtle);
+}
+
+
+
+
+
+/* ── KEMCO Hierarchical Colors (High Contrast) ── */
+.kemco-level-0 {
+  background-color: #dbeafe !important; /* Blue 100 - Very visible foundation */
+  border-left: 5px solid #2563eb !important;
+}
+.kemco-level-0 td {
+  font-weight: 700;
+  color: #1e40af; /* Darker blue text for readability */
+}
+.kemco-level-1 {
+  background-color: #f1f5f9 !important; /* Slate 100 - Clear grey */
+  border-left: 5px solid #64748b !important;
+}
+.kemco-level-2 {
+  background-color: #ffffff !important; /* Stay white for clarity */
+}
+
+/* Fix input backgrounds on colored rows for better contrast */
+.kemco-level-0 .table-input,
+.kemco-level-1 .table-input {
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Dark mode refinements for high contrast */
+.dark-theme .kemco-level-0 {
+  background-color: rgba(37, 99, 235, 0.15) !important;
+  border-left-color: #3b82f6 !important;
+}
+.dark-theme .kemco-level-1 {
+  background-color: rgba(148, 163, 184, 0.12) !important;
+  border-left-color: #94a3b8 !important;
+}
+
+.kemco-selected-row {
+  background-color: #fef08a !important; /* Vivid Yellow 200 for selection */
+  border-left: 6px solid #eab308 !important;
+  box-shadow: inset 6px 0 0 -2px #eab308;
+}
+.dark-theme .kemco-selected-row {
+  background-color: rgba(234, 179, 8, 0.2) !important;
+  border-left-color: #facc15 !important;
+}
+

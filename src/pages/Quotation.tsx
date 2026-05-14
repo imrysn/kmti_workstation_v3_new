@@ -29,6 +29,7 @@ export default function Quotation() {
     password?: string
     displayName?: string
     mode: 'join' | 'create'
+    variant?: 'special' | 'kemco'
     autoStartTutorial?: boolean
     workstation?: string
   } | null>(() => {
@@ -60,7 +61,7 @@ export default function Quotation() {
     }
   }, [notify])
 
-  const handleCreateNew = useCallback(async (name: string, password?: string) => {
+  const handleCreateNew = useCallback(async (name: string, variant: 'special' | 'kemco', password?: string) => {
     try {
       // 1. Fetch workstation/hostname (The true Owner ID)
       let workstation = ''
@@ -87,7 +88,7 @@ export default function Quotation() {
       })
       const { id } = res.data
 
-      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create', workstation })
+      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create', variant, workstation })
     } catch (e: any) {
       const msg = e?.response?.data?.detail || 'Failed to create workspace.'
       notify?.(msg, 'error')

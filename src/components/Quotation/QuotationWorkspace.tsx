@@ -62,9 +62,10 @@ interface Props extends WorkspaceSession {
   onSwitchSession: (session: any) => void
   autoStartTutorial?: boolean
   workstation?: string
+  variant?: 'special' | 'kemco'
 }
 
-export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial, workstation }: Props) {
+export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial, workstation, variant }: Props) {
   const { notify, confirm: showConfirm } = useModal()
   const { user } = useAuth()
 
@@ -90,10 +91,12 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     currentFilePath, hasUnsavedChanges, selectedMainTaskId,
     updateCompanyInfo, updateClientInfo, updateQuotationDetails, updateBillingDetails,
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
-    updateBaseRate, updateSignatures,
-    setSelectedMainTaskId, updateManualOverrides, setCollapsedTaskIds, updateChatLog, chatLog,
+    updateBaseRate, updateSignatures, setSelectedMainTaskId,
+    updateManualOverrides, setCollapsedTaskIds, updateChatLog, chatLog,
+    layoutVariant, setLayoutVariant,
     resetToNew, loadData, getSaveData,
     markSaved, setHasUnsavedChanges,
+    addChildTask,
   } = useInvoiceState()
 
   const getQuotationNo = useCallback(() => quotationDetails.quotationNo, [quotationDetails.quotationNo])
@@ -129,7 +132,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             setQuotNo(res.data.quotationDetails.quotationNo || initialQuotNo)
           } else {
             // Fresh DB record, populate with defaults
-            resetToNew(initialQuotNo)
+            resetToNew(initialQuotNo, variant || 'special')
           }
         } catch (e) {
           console.error('DB Hydration failed:', e)
@@ -138,7 +141,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         }
       } else if (mode === 'create') {
         // Fallback for edge cases where ID wasn't provisioned
-        resetToNew(initialQuotNo)
+        resetToNew(initialQuotNo, variant || 'special')
       }
     }
     hydrate()
@@ -213,9 +216,9 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       }
 
       // 3. Persist to document state (for DB saving)
-      updateChatLog(prev => {
+      updateChatLog((prev: any[]) => {
         const enrichedMsg = { ...msg, id: msg.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}` }
-        if (prev.find(m => m.id === enrichedMsg.id)) return prev
+        if (prev.find((m: any) => m.id === enrichedMsg.id)) return prev
         return [...prev, enrichedMsg].slice(-100)
       })
     },
@@ -262,7 +265,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         }
       } else if (patch.path.startsWith('footer.')) {
         const footerKey = patch.path.split('.')[1]
-        updateManualOverrides(prev => ({
+        updateManualOverrides((prev: any) => ({
           ...prev,
           footer: { ...prev.footer, [footerKey]: patch.value }
         }))
@@ -273,18 +276,22 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         addTask(patch.value)
       } else if (patch.path === 'tasks.add_sub') {
         addSubTask(patch.value.parentId, undefined, patch.value)
+      } else if (patch.path === 'tasks.add_child') {
+        addChildTask(patch.value.parentId, patch.value.level, patch.value)
       } else if (patch.path === 'tasks.remove') {
         removeTask(patch.value)
       } else if (patch.path === 'tasks.reorder') {
         reorderTasks(patch.value.draggedId, patch.value.targetId)
       } else if (patch.path === 'chat.delete' || patch.path === 'chatLog.delete') {
-        updateChatLog(prev => prev.map(m => m.id === patch.value ? { ...m, isDeleted: true, message: '' } : m))
+        updateChatLog((prev: any[]) => prev.map((m: any) => m.id === patch.value ? { ...m, isDeleted: true, message: '' } : m))
       } else if (patch.path === 'chat.full_sync' || patch.path === 'chatLog.full_sync') {
         updateChatLog(() => patch.value)
       } else if (patch.path === 'chat.edit' || patch.path === 'chatLog.edit') {
-        updateChatLog(prev => prev.map(m => m.id === patch.value.id ? { ...m, message: patch.value.message, isEdited: patch.value.isEdited } : m))
+        updateChatLog((prev: any[]) => prev.map((m: any) => m.id === patch.value.id ? { ...m, message: patch.value.message, isEdited: patch.value.isEdited } : m))
       } else if (patch.path === 'chat.read' || patch.path === 'chatLog.read') {
-        updateChatLog(prev => prev.map(m => m.id === patch.value.id ? { ...m, readBy: Array.from(new Set([...(m.readBy || []), patch.value.name])) } : m))
+        updateChatLog((prev: any[]) => prev.map((m: any) => m.id === patch.value.id ? { ...m, readBy: Array.from(new Set([...(m.readBy || []), patch.value.name])) } : m))
+      } else if (patch.path === 'layoutVariant') {
+        setLayoutVariant(patch.value)
       }
     },
     onRequestState: getSaveData,
@@ -377,9 +384,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       return
     }
     const newSubTask = {
-      ...makeBlankTask(),
-      isMainTask: false,
-      parentId: mainTaskId,
+      ...makeBlankTask(1, mainTaskId),
       lastEditorName: myEffectiveName,
       lastEditorColor: myColor
     }
@@ -387,6 +392,17 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     emitPatch({ path: 'tasks.add_sub', value: newSubTask })
     debouncedSyncDb()
   }, [addSubTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb, notify])
+
+  const syncAddChildTask = useCallback((parentId: number, level: number) => {
+    const newTask = {
+      ...makeBlankTask(level, parentId),
+      lastEditorName: myEffectiveName,
+      lastEditorColor: myColor
+    }
+    addChildTask(parentId, level, newTask)
+    emitPatch({ path: 'tasks.add_child', value: newTask })
+    debouncedSyncDb()
+  }, [addChildTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb])
 
   const syncRemoveTask = useCallback((id: number) => {
     removeTask(id)
@@ -401,7 +417,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   }, [reorderTasks, emitPatch, debouncedSyncDb])
 
   const syncUpdateFooter = useCallback((key: string, value: any) => {
-    updateManualOverrides(prev => ({
+    updateManualOverrides((prev: any) => ({
       ...prev,
       footer: { ...prev.footer, [key]: value }
     }))
@@ -416,19 +432,19 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   }, [updateBaseRate, emitPatch, debouncedSyncDb])
 
   const syncDeleteChat = useCallback((msgId: string) => {
-    updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, isDeleted: true, message: '' } : m))
+    updateChatLog((prev: any[]) => prev.map((m: any) => m.id === msgId ? { ...m, isDeleted: true, message: '' } : m))
     emitPatch({ path: 'chatLog.delete', value: msgId })
     debouncedSyncDb()
   }, [updateChatLog, emitPatch, debouncedSyncDb])
 
   const syncEditChat = useCallback((msgId: string, newMessage: string) => {
-    updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, message: newMessage, isEdited: true } : m))
+    updateChatLog((prev: any[]) => prev.map((m: any) => m.id === msgId ? { ...m, message: newMessage, isEdited: true } : m))
     emitChatEdit(msgId, newMessage)
     debouncedSyncDb()
   }, [updateChatLog, emitChatEdit, debouncedSyncDb])
 
   const syncReadChat = useCallback((msgId: string) => {
-    updateChatLog(prev => prev.map(m => m.id === msgId ? { ...m, readBy: Array.from(new Set([...(m.readBy || []), myEffectiveName])) } : m))
+    updateChatLog((prev: any[]) => prev.map((m: any) => m.id === msgId ? { ...m, readBy: Array.from(new Set([...(m.readBy || []), myEffectiveName])) } : m))
     emitChatRead(msgId, myEffectiveName)
     debouncedSyncDb()
   }, [updateChatLog, emitChatRead, myEffectiveName, debouncedSyncDb])
@@ -786,18 +802,20 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                   />
                 </div>
 
-                <TasksTable
-                  tasks={effTasks}
-                  baseRates={effBaseRates}
-                  selectedMainTaskId={selectedMainTaskId}
-                  onMainTaskSelect={setSelectedMainTaskId}
-                  onTaskAdd={isPreview ? undefined : syncAddTask}
-                  onSubTaskAdd={isPreview ? undefined : syncAddSubTask}
-                  onTaskRemove={isPreview ? undefined : syncRemoveTask}
-                  onTaskUpdate={isPreview ? undefined : syncUpdateTask}
-                  onTaskReorder={isPreview ? undefined : syncReorderTasks}
-                  manualOverrides={effOverrides}
-                  setManualOverrides={isPreview ? undefined : updateManualOverrides}
+                  <TasksTable
+                    tasks={effTasks}
+                    baseRates={effBaseRates}
+                    layoutVariant={layoutVariant}
+                    selectedMainTaskId={selectedMainTaskId}
+                    onMainTaskSelect={setSelectedMainTaskId}
+                    onTaskAdd={isPreview ? undefined : syncAddTask}
+                    onSubTaskAdd={isPreview ? undefined : syncAddSubTask}
+                    onChildTaskAdd={isPreview ? undefined : syncAddChildTask}
+                    onTaskRemove={isPreview ? undefined : syncRemoveTask}
+                    onTaskUpdate={isPreview ? undefined : syncUpdateTask}
+                    onTaskReorder={isPreview ? undefined : syncReorderTasks}
+                    manualOverrides={effOverrides}
+                    setManualOverrides={isPreview ? undefined : updateManualOverrides}
                   onFooterUpdate={isPreview ? undefined : syncUpdateFooter}
                   collapsedTasks={new Set(collapsedTaskIds)}
                   onCollapsedTasksChange={(set) => setCollapsedTaskIds(Array.from(set))}
@@ -808,11 +826,13 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                 <SignatureForm
                   signatures={effSignatures}
                   onUpdate={isPreview ? undefined : syncSignatures}
+                  layoutVariant={layoutVariant}
                 />
 
                 <BillingDetailsCard
                   billingDetails={effBilling}
                   onUpdateBilling={isPreview ? undefined : syncBillingDetails}
+                  layoutVariant={layoutVariant}
                 />
 
                 <div className="quot-bottom-spacer" style={{ height: '40px' }} />
@@ -853,6 +873,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             onManualOverrideChange={updateManualOverrides}
             autoStartTutorial={isTutorialOpen}
             onCompleteTutorial={handleTutorialClose}
+            layoutVariant={layoutVariant}
           />
         )}
 

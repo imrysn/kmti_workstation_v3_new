@@ -14,6 +14,7 @@ export interface ExcelExportData {
   baseRates: BaseRates
   manualOverrides: ManualOverrides
   signatures: Signatures
+  layoutVariant?: 'special' | 'kemco'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ export async function exportToExcel(data: ExcelExportData) {
   const {
     mode, quotNo, clientInfo, quotationDetails, billingDetails,
     tasks, baseRates, manualOverrides, signatures,
+    layoutVariant = 'special',
   } = data
 
   // ── 1. Compute totals ─────────────────────────────────────────────────────
@@ -61,7 +63,7 @@ export async function exportToExcel(data: ExcelExportData) {
 
     // ── SHEET 2: Detailed Breakdown ─────────────────────────────────────────
     let breakdownSheet = workbook.worksheets[1] || workbook.addWorksheet('Details')
-    _fillBreakdownSheet(breakdownSheet, { tasks, baseRates, manualOverrides })
+    _fillBreakdownSheet(breakdownSheet, { tasks, baseRates, manualOverrides, layoutVariant })
   } else {
     _fillBilling(sheet, {
       quotNo, clientInfo, billingDetails, mainTasks, taskTotals,
@@ -76,34 +78,47 @@ export async function exportToExcel(data: ExcelExportData) {
   saveAs(blob, `${docType}_${quotNo}_${metaDate}.xlsx`)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BREAKDOWN SHEET FILLER (Sheet 2)
-// ─────────────────────────────────────────────────────────────────────────────
 function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
-  tasks: Task[]
-  baseRates: BaseRates
-  manualOverrides: ManualOverrides
+  tasks: Task[],
+  baseRates: BaseRates,
+  manualOverrides: ManualOverrides,
+  layoutVariant?: 'special' | 'kemco'
 }) {
-  const { tasks, baseRates } = d
+  const { tasks, baseRates, manualOverrides, layoutVariant = 'special' } = d
 
   // 1. Column Widths (A-L)
   const WIDE_WIDTH = 27
   const UNIFORM_WIDTH = 12
 
-  sheet.columns = [
-    { header: 'No.', key: 'no', width: 6 },
-    { header: 'Reference No.', key: 'ref', width: 20 },
-    { header: 'Description', key: 'desc', width: WIDE_WIDTH },
-    { header: 'Hours', key: 'hrs', width: UNIFORM_WIDTH },
-    { header: 'Minutes', key: 'min', width: UNIFORM_WIDTH },
-    { header: 'Time Charge', key: 'charge', width: UNIFORM_WIDTH },
-    { header: 'OT Hrs', key: 'otHrs', width: UNIFORM_WIDTH },
-    { header: 'Overtime', key: 'otAmt', width: UNIFORM_WIDTH },
-    { header: 'Software', key: 'swUnits', width: UNIFORM_WIDTH },
-    { header: 'Type', key: 'type', width: UNIFORM_WIDTH },
-    { header: 'Engineer', key: 'eng', width: 16 },
-    { header: 'Amount', key: 'amount', width: 20 },
-  ]
+  if (layoutVariant === 'kemco') {
+    sheet.columns = [
+      { header: 'No.', key: 'no', width: 6 },
+      { header: 'Construction No.', key: 'ref', width: 20 },
+      { header: 'Machine Code', key: 'mCode', width: 15 },
+      { header: 'Unit Code', key: 'uCode', width: 15 },
+      { header: 'Description', key: 'desc', width: WIDE_WIDTH },
+      { header: 'Start Date', key: 'sDate', width: 15 },
+      { header: 'End Date', key: 'eDate', width: 15 },
+      { header: 'Time', key: 'time', width: UNIFORM_WIDTH },
+      { header: 'Type', key: 'type', width: UNIFORM_WIDTH },
+      { header: 'Amount', key: 'amount', width: 20 },
+    ]
+  } else {
+    sheet.columns = [
+      { header: 'No.', key: 'no', width: 6 },
+      { header: 'Reference No.', key: 'ref', width: 20 },
+      { header: 'Description', key: 'desc', width: WIDE_WIDTH },
+      { header: 'Hours', key: 'hrs', width: UNIFORM_WIDTH },
+      { header: 'Minutes', key: 'min', width: UNIFORM_WIDTH },
+      { header: 'Time Charge', key: 'charge', width: UNIFORM_WIDTH },
+      { header: 'OT Hrs', key: 'otHrs', width: UNIFORM_WIDTH },
+      { header: 'Overtime', key: 'otAmt', width: UNIFORM_WIDTH },
+      { header: 'Software', key: 'swUnits', width: UNIFORM_WIDTH },
+      { header: 'Type', key: 'type', width: UNIFORM_WIDTH },
+      { header: 'Engineer', key: 'eng', width: 16 },
+      { header: 'Amount', key: 'amount', width: 20 },
+    ]
+  }
 
   // 2. Main Header Style (A-L)
   const headerRow = sheet.getRow(1)
@@ -137,7 +152,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   CONST_HEADER.getCell(16).value = 'Software Rate'
   CONST_HEADER.getCell(17).value = 'Overhead %'
   CONST_HEADER.getCell(18).value = 'Overhead Amt'
-  CONST_HEADER.eachCell({ includeEmpty: true }, (cell, col) => {
+  CONST_HEADER.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, col: number) => {
     if (col < 14 || col > 18) return
     cell.font = { bold: true, size: 9 }
     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
@@ -157,10 +172,10 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   CONST_DATA.getCell(17).numFmt = '0%'
   CONST_DATA.getCell(18).value = {
     formula: `SUM(L2:L${lastTaskRow}) * Q17`,
-    result: (tasks.reduce((sum, t) => sum + (t.isMainTask ? 1 : 0), 0)) * 0.2
+    result: (tasks.reduce((sum: number, t: Task) => sum + (t.isMainTask ? 1 : 0), 0)) * 0.2
   }
   CONST_DATA.getCell(18).numFmt = '"¥"#,##0'
-  CONST_DATA.eachCell({ includeEmpty: true }, (cell, col) => {
+  CONST_DATA.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, col: number) => {
     if (col < 14 || col > 18) return
     cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
     cell.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -171,67 +186,105 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
     const rowIdx = idx + 2
     const row = sheet.getRow(rowIdx)
 
-    const rate = 2700
-    const timeCharge = (task.hours + task.minutes / 60) * rate
-    const otAmt = (task.overtimeHours || 0) * (rate * 1.3)
-    const swUnits = task.softwareUnits || 0
-    const totalAmt = timeCharge + otAmt + (swUnits * baseRates.softwareRate)
+    if (layoutVariant === 'kemco') {
+      const indent = '    '.repeat(task.level || 0)
 
-    let subTaskRange = ''
-    if (task.isMainTask) {
-      let lastSubIdx = idx
-      for (let j = idx + 1; j < tasks.length; j++) {
-        if (tasks[j].isMainTask) break
-        lastSubIdx = j
+      row.getCell(1).value = idx + 1
+      row.getCell(2).value = task.referenceNumber || ''
+      row.getCell(3).value = task.machineCode || ''
+      row.getCell(4).value = task.unitCode || ''
+      row.getCell(5).value = (task.level! > 0 ? '↳ ' : '') + indent + (task.description || '')
+      row.getCell(6).value = task.startDate || ''
+      row.getCell(7).value = task.endDate || ''
+      row.getCell(8).value = task.time || 0
+      row.getCell(9).value = task.type || '3D'
+
+      // Calculation logic for KEMCO total
+      const { total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides)
+      row.getCell(10).value = total
+
+      row.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, colNumber: number) => {
+        if (colNumber > 10) return
+        cell.font = { name: 'Arial', size: 9 }
+        cell.alignment = { horizontal: 'center', vertical: 'middle' }
+        if (colNumber === 5) cell.alignment = { horizontal: 'left', vertical: 'middle' }
+        if (colNumber === 10) {
+          cell.alignment = { horizontal: 'right', vertical: 'middle' }
+          cell.numFmt = '"¥"#,##0'
+        }
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+        
+        if (task.level === 0) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF99CC' } }
+          cell.font = { ...cell.font, bold: true }
+        } else if (task.level === 1) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } }
+        }
+      })
+    } else {
+      // Original Special Logic
+      const rate = 2700
+      const timeCharge = (task.hours + task.minutes / 60) * rate
+      const otAmt = (task.overtimeHours || 0) * (rate * 1.3)
+      const swUnits = task.softwareUnits || 0
+      const totalAmt = timeCharge + otAmt + (swUnits * baseRates.softwareRate)
+
+      let subTaskRange = ''
+      if (task.isMainTask) {
+        let lastSubIdx = idx
+        for (let j = idx + 1; j < tasks.length; j++) {
+          if (tasks[j].isMainTask) break
+          lastSubIdx = j
+        }
+        if (lastSubIdx > idx) {
+          subTaskRange = `L${idx + 3}:L${lastSubIdx + 2}`
+        }
       }
-      if (lastSubIdx > idx) {
-        subTaskRange = `L${idx + 3}:L${lastSubIdx + 2}`
+
+      row.getCell(1).value = idx + 1
+      row.getCell(2).value = task.referenceNumber || ''
+      row.getCell(3).value = task.description || ''
+      row.getCell(4).value = task.hours || 0
+      row.getCell(5).value = task.minutes || 0
+      row.getCell(6).value = { formula: `(D${rowIdx} + E${rowIdx}/60) * $N$17`, result: timeCharge }
+      row.getCell(7).value = task.overtimeHours || 0
+      row.getCell(8).value = { formula: `G${rowIdx} * $O$17`, result: otAmt }
+      row.getCell(9).value = swUnits
+      row.getCell(10).value = task.type || '3D'
+      row.getCell(11).value = task.engineer || ''
+
+      const baseFormula = `F${rowIdx} + H${rowIdx} + (I${rowIdx} * $P$17)`
+      const finalFormula = subTaskRange ? `(${baseFormula}) + SUM(${subTaskRange})` : baseFormula
+
+      let subSum = 0
+      if (task.isMainTask) {
+        tasks.filter(t => !t.isMainTask && t.parentId === task.id).forEach(sub => {
+          const subRate = 2700
+          subSum += (sub.hours + sub.minutes / 60) * subRate + (sub.overtimeHours || 0) * (subRate * 1.3) + (sub.softwareUnits || 0) * baseRates.softwareRate
+        })
       }
-    }
 
-    row.getCell(1).value = idx + 1
-    row.getCell(2).value = task.referenceNumber || ''
-    row.getCell(3).value = task.description || ''
-    row.getCell(4).value = task.hours || 0
-    row.getCell(5).value = task.minutes || 0
-    row.getCell(6).value = { formula: `(D${rowIdx} + E${rowIdx}/60) * $N$17`, result: timeCharge }
-    row.getCell(7).value = task.overtimeHours || 0
-    row.getCell(8).value = { formula: `G${rowIdx} * $O$17`, result: otAmt }
-    row.getCell(9).value = swUnits
-    row.getCell(10).value = task.type || '3D'
-    row.getCell(11).value = task.engineer || ''
+      row.getCell(12).value = { formula: finalFormula, result: totalAmt + subSum }
 
-    const baseFormula = `F${rowIdx} + H${rowIdx} + (I${rowIdx} * $P$17)`
-    const finalFormula = subTaskRange ? `(${baseFormula}) + SUM(${subTaskRange})` : baseFormula
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        if (col > 12) return
+        cell.font = { name: 'Arial', size: 9 }
 
-    let subSum = 0
-    if (task.isMainTask) {
-      tasks.filter(t => !t.isMainTask && t.parentId === task.id).forEach(sub => {
-        const subRate = 2700
-        subSum += (sub.hours + sub.minutes / 60) * subRate + (sub.overtimeHours || 0) * (subRate * 1.3) + (sub.softwareUnits || 0) * baseRates.softwareRate
+        let horizontal: ExcelJS.Alignment['horizontal'] = 'center'
+        if (col === 2 || col === 3) horizontal = 'left'
+        if (col === 12) horizontal = 'right'
+
+        cell.alignment = { horizontal, vertical: 'middle' }
+        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+
+        if ([6, 8, 12].includes(col)) cell.numFmt = '"¥"#,##0'
+
+        if (task.isMainTask) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF99CC' } }
+          cell.font = { ...cell.font, bold: true }
+        }
       })
     }
-
-    row.getCell(12).value = { formula: finalFormula, result: totalAmt + subSum }
-
-    row.eachCell({ includeEmpty: true }, (cell, col) => {
-      if (col > 12) return
-      cell.font = { name: 'Arial', size: 9 }
-
-      let horizontal: ExcelJS.Alignment['horizontal'] = 'center'
-      if (col === 2 || col === 3) horizontal = 'left'
-      if (col === 12) horizontal = 'right'
-
-      cell.alignment = { horizontal, vertical: 'middle' }
-      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
-
-      if ([6, 8, 12].includes(col)) cell.numFmt = '"¥"#,##0'
-
-      if (task.isMainTask) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF99CC' } }
-        cell.font = { ...cell.font, bold: true }
-      }
-    })
   })
 
   // 5. Add Medium Outside Border to Main Table (A-L)

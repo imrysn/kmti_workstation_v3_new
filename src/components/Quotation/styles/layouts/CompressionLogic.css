@@ -1,0 +1,224 @@
+/* DYNAMIC COMPRESSION LOGIC */
+.quotation-visual-exact {
+  &.compressed {
+    padding: 6mm 8mm;
+  }
+  &.task-count-11,
+  &.task-count-12 {
+    padding: 7mm 8mm;
+  }
+  &.task-count-13,
+  &.task-count-14,
+  &.task-count-15 {
+    padding: 7mm 8mm;
+  }
+}
+
+/* Progressive Billing Compression (8-14 tasks) */
+
+.quotation-visual-exact.mode-billing.task-count-9 .signature-row-visual,
+.quotation-visual-exact.mode-billing.task-count-10 .signature-row-visual,
+.quotation-visual-exact.mode-billing.task-count-11 .signature-row-visual,
+.quotation-visual-exact.mode-billing.task-count-12 .signature-row-visual,
+.quotation-visual-exact.mode-billing.task-count-13 .signature-row-visual,
+.quotation-visual-exact.mode-billing.task-count-14 .signature-row-visual {
+  min-height: 70px !important;
+  margin-bottom: 20px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-11 .billing-header .company-address-visual,
+.quotation-visual-exact.mode-billing.task-count-12 .billing-header .company-address-visual {
+  margin-bottom: 5px !important;
+}
+
+
+.quotation-visual-exact.mode-billing.task-count-11 .contact-section-visual,
+.quotation-visual-exact.mode-billing.task-count-12 .contact-section-visual {
+  margin-bottom: 15px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-11 .signature-row-visual,
+.quotation-visual-exact.mode-billing.task-count-12 .signature-row-visual {
+  min-height: 60px !important;
+  margin-bottom: 5px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-13 .billing-header .company-address-visual {
+  margin-bottom: 2px !important;
+}
+
+
+.quotation-visual-exact.mode-billing.task-count-13 .detail-row-visual {
+  min-height: 18px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-13 .contact-section-visual {
+  margin-bottom: 10px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-13 .signature-row-visual {
+  min-height: 55px !important;
+  margin-bottom: 2px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-13 .table-visual td,
+.quotation-visual-exact.mode-billing.task-count-13 .table-visual th {
+  padding: 3px 2px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .billing-header .company-address-visual {
+  margin-bottom: 1px !important;
+}
+
+
+.quotation-visual-exact.mode-billing.task-count-14 .detail-row-visual {
+  min-height: 18px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .contact-section-visual {
+  margin-top: 0 !important;
+  margin-bottom: 15px !important;
+  min-height: 100px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .signature-row-visual {
+  min-height: 50px !important;
+  margin-bottom: 1px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .table-visual {
+  font-size: 10px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .table-visual td,
+.quotation-visual-exact.mode-billing.task-count-14 .table-visual th {
+  padding: 3.8px 2px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .signature-row-visual {
+  min-height: 60px !important;
+  margin-bottom: 10px !important;
+}
+
+.quotation-visual-exact.mode-billing.task-count-14 .bank-details-section {
+  font-size: 8.5px !important;
+  padding: 5px !important;
+  margin-top: 8px !important;
+}
+
+/* QUOTATION MODE - Compression logic */
+.quotation-visual-exact.mode-quotation.task-count-9 .signature-row-visual,
+.quotation-visual-exact.mode-quotation.task-count-10 .signature-row-visual {
+  min-height: 70px !important;
+  margin-bottom: 15px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-11 .signature-row-visual {
+  min-height: 70px !important;
+  margin-bottom: 15px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-11 .terms-visual {
+  margin-top: 25px !important;
+  margin-bottom: 25px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-12 .signature-row-visual {
+  min-height: 65px !important;
+  margin-bottom: 12px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-12 .terms-visual {
+  margin-top: 20px !important;
+  margin-bottom: 20px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-13 .signature-row-visual {
+  min-height: 60px !important;
+  margin-bottom: 8px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-13 .terms-visual {
+  margin-top: 15px !important;
+  margin-bottom: 15px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .header-visual {
+  margin-bottom: 10px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .contact-section-visual {
+  margin-bottom: 15px !important;
+  min-height: auto !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .terms-visual {
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+  font-size: 11px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .signature-row-visual {
+  min-height: 60px !important;
+  margin-bottom: 5px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .sig-label-visual {
+  margin-bottom: 8px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .sig-line-visual {
+  height: 20px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .sig-name-visual {
+  font-size: 13px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .table-visual {
+  font-size: 10px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .table-visual th,
+.quotation-visual-exact.mode-quotation.task-count-14 .table-visual td {
+  padding: 3px 2px !important;
+}
+
+.quotation-visual-exact.mode-quotation.task-count-14 .footer-visual {
+  margin-top: 5px !important;
+}
+
+/* Progressive Table Padding */
+.quotation-visual-exact.task-count-11 .table-visual th,
+.quotation-visual-exact.task-count-11 .table-visual td {
+  padding: 4.5px 3px !important;
+}
+
+.quotation-visual-exact.task-count-12 .table-visual th,
+.quotation-visual-exact.task-count-12 .table-visual td {
+  padding: 4px 2.5px !important;
+}
+
+.quotation-visual-exact.task-count-13 .table-visual th,
+.quotation-visual-exact.task-count-13 .table-visual td {
+  padding: 3.5px 2px !important;
+}
+
+.quotation-visual-exact.task-count-14 .table-visual th,
+.quotation-visual-exact.task-count-14 .table-visual td {
+  padding: 3px 2px !important;
+}
+
+.quotation-visual-exact.task-count-15 .table-visual th,
+.quotation-visual-exact.task-count-15 .table-visual td {
+  padding: 4px 2px !important;
+}
+
+/* ── Task-Count Specific Print Padding ── */
+@media print {
+  .quotation-visual-exact.task-count-14,
+  .quotation-visual-exact.task-count-15,
+  .quotation-visual-exact.task-count-16 {
+    padding: 5mm !important;
+  }
+}

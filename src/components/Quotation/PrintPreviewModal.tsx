@@ -28,6 +28,7 @@ interface Props {
   onManualOverrideChange: (updater: (prev: ManualOverrides) => ManualOverrides) => void
   autoStartTutorial?: boolean
   onCompleteTutorial?: () => void
+  layoutVariant?: 'special' | 'kemco'
 }
 
 /** A single page slice produced by computePages(). */
@@ -38,7 +39,7 @@ interface PageSlice {
   startIndex: number
 }
 
-const { A4_W_PX, A4_H_PX, TASKS_PER_PAGE_QUOTATION, TASKS_PER_PAGE_BILLING_STANDARD, TASKS_PER_PAGE_BILLING_FINAL } = LAYOUT
+const { A4_W_PX, A4_H_PX, TASKS_PER_PAGE_BILLING_STANDARD, TASKS_PER_PAGE_BILLING_FINAL, TASKS_PER_PAGE_QUOTATION_STANDARD, TASKS_PER_PAGE_QUOTATION_FINAL } = LAYOUT
 
 // ── Pagination engine ──────────────────────────────────────────────────────
 
@@ -54,8 +55,8 @@ function computePages(
   calculateTotal: (task: Task) => number,
   mode: 'quotation' | 'billing',
 ): PageSlice[] {
-  const finalLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_FINAL : TASKS_PER_PAGE_QUOTATION
-  const standardLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_STANDARD : TASKS_PER_PAGE_QUOTATION
+  const finalLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_FINAL : TASKS_PER_PAGE_QUOTATION_FINAL
+  const standardLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_STANDARD : TASKS_PER_PAGE_QUOTATION_STANDARD
 
   // Case 1: Simple one-page fit
   if (mainTasks.length <= finalLimit) {
@@ -102,7 +103,8 @@ const PrintPreviewModal = memo(({
   isOpen, onClose,
   companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
   manualOverrides, onManualOverrideChange,
-  autoStartTutorial, onCompleteTutorial
+  autoStartTutorial, onCompleteTutorial,
+  layoutVariant = 'special'
 }: Props) => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [printMode, setPrintMode] = useState<'quotation' | 'billing'>('quotation')
@@ -144,7 +146,7 @@ const PrintPreviewModal = memo(({
   )
 
   // ── Pagination ─────────────────────────────────────────────────
-  const { pages, grandTotal, overheadTotal } = useMemo(() => {
+  const { pages, grandTotal, overheadTotal, lastAssemblyId } = useMemo(() => {
     const mainTasks = tasks.filter(t => t.isMainTask)
     const slices = computePages(mainTasks, calculateTaskTotal, printMode)
 
@@ -155,8 +157,11 @@ const PrintPreviewModal = memo(({
       : calculateOverhead(subtotal, baseRates.overheadPercentage)
     const grand = subtotal + overhead + (footer.adjustment || 0)
 
-    return { pages: slices, grandTotal: grand, overheadTotal: overhead }
-  }, [tasks, baseRates, calculateTaskTotal, manualOverrides])
+    const lastAssembly = tasks.slice().reverse().find(t => t.level === 0)
+    const lastAssemblyId = lastAssembly?.id
+
+    return { pages: slices, grandTotal: grand, overheadTotal: overhead, lastAssemblyId }
+  }, [tasks, baseRates, calculateTaskTotal, manualOverrides, printMode])
 
   const totalPages = pages.length
 
@@ -212,6 +217,7 @@ const PrintPreviewModal = memo(({
       page-break-after: avoid !important; break-after: avoid !important;
     }
     .quotation-visual-exact * { color: #000 !important; }
+    .quotation-visual-exact .text-red { color: red !important; }
     .quotation-visual-exact .nothing-follow { color: #888 !important; }
     .quotation-visual-exact .contact-header,
     .quotation-visual-exact .table-header th,
@@ -322,6 +328,7 @@ const PrintPreviewModal = memo(({
         baseRates,
         manualOverrides,
         signatures,
+        layoutVariant,
       })
     } catch (err) {
       console.error('Excel export failed:', err)
@@ -374,6 +381,7 @@ const PrintPreviewModal = memo(({
   const sharedPageProps = {
     printMode, companyInfo, clientInfo, quotationDetails, billingDetails,
     signatures, manualOverrides, baseRates, grandTotal, overheadTotal,
+    layoutVariant, lastAssemblyId,
   }
 
   return (
@@ -394,19 +402,29 @@ const PrintPreviewModal = memo(({
 
           <div className="ppm-header-actions">
             <div className="ppm-mode-toggle">
-              <button id="ppm-btn-quotation" className={`ppm-mode-btn${printMode === 'quotation' ? ' active' : ''}`} onClick={() => setPrintMode('quotation')}>
+              <div className={`ppm-mode-slider ${printMode}`} />
+              <button
+                id="ppm-btn-quotation"
+                className={`ppm-mode-btn${printMode === 'quotation' ? ' active' : ''}`}
+                onClick={() => setPrintMode('quotation')}
+              >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                 </svg>
                 Quotation Preview
               </button>
-              <button id="ppm-btn-billing" className={`ppm-mode-btn${printMode === 'billing' ? ' active' : ''}`} onClick={() => setPrintMode('billing')}>
+              <button
+                id="ppm-btn-billing"
+                className={`ppm-mode-btn${printMode === 'billing' ? ' active' : ''}`}
+                onClick={() => setPrintMode('billing')}
+              >
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
                 </svg>
-                Billing Statement Preview
+                Billing Preview
               </button>
             </div>
+
 
             <div className="ppm-sep" />
 
@@ -458,6 +476,9 @@ const PrintPreviewModal = memo(({
                 <div ref={previewRef} className="preview-content">
                   {pages.map((page, pageIndex) => {
                     const isLastPage = pageIndex === pages.length - 1
+                    const finalLimit = printMode === 'billing' ? TASKS_PER_PAGE_BILLING_FINAL : TASKS_PER_PAGE_QUOTATION_FINAL
+                    const showAdmin = manualOverrides.footer?.showAdmin !== false
+
                     return (
                       <div key={pageIndex}>
                         {pageIndex > 0 && (
@@ -465,12 +486,25 @@ const PrintPreviewModal = memo(({
                         )}
                         <PrintPage
                           {...sharedPageProps}
-                          pageIndex={pageIndex}
+                          isFirstPage={pageIndex === 0}
+                          isContinuation={pageIndex > 0}
                           pageTasks={page.tasks.map(t => ({ ...t, unitPage: resolveUnitPage(t) }))}
                           pageTotals={page.totals}
                           startIndex={page.startIndex}
                           isLastPage={isLastPage}
                           onUnitEdit={handleUnitEdit}
+                          showAdmin={showAdmin}
+                          fillerRowCount={(() => {
+                            // Strictly ensure exactly 10 rows total (or 14 for billing):
+                            // Tasks + Admin + Nothing Follow + Fillers = finalLimit
+                            const isKemco = layoutVariant === 'kemco'
+                            const overheadCount = (!isKemco && showAdmin) ? 1 : 0
+                            const nothingFollowCount = isKemco ? 0 : 1
+                            const totalSoFar = page.tasks.length + overheadCount + nothingFollowCount
+
+                            // Return exactly how many fillers are needed to hit the limit
+                            return Math.max(0, finalLimit - totalSoFar)
+                          })()}
                         />
                       </div>
                     )
@@ -508,9 +542,9 @@ const PrintPreviewModal = memo(({
         </div>
       </div>
 
-      <PrintTutorial 
-        isOpen={isTutorialOpen} 
-        onClose={() => setIsTutorialOpen(false)} 
+      <PrintTutorial
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
         onComplete={onCompleteTutorial}
       />
     </div>

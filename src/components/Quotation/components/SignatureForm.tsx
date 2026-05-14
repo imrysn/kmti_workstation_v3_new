@@ -6,6 +6,7 @@ import { CollaborativeField } from './CollaborativeField'
 interface Props {
   signatures: Signatures
   onUpdate?: (type: keyof Signatures, field: string, value: any) => void
+  layoutVariant?: 'special' | 'kemco'
 }
 
 // Shared props to force input interactivity inside Electron
@@ -65,9 +66,11 @@ function SigPersonDisplay({ role, name, title }: { role: string; name: string; t
 const QuotationSignaturesCard = memo(({
   signatures,
   onUpdate,
+  layoutVariant,
 }: {
   signatures: Signatures
   onUpdate?: (type: keyof Signatures, field: string, value: any) => void
+  layoutVariant?: 'special' | 'kemco'
 }) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
@@ -84,7 +87,7 @@ const QuotationSignaturesCard = memo(({
           </svg>
         </div>
         <h2 className="section-title">Quotation Signatures</h2>
-        {onUpdate && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
+        {onUpdate && layoutVariant !== 'kemco' && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
       </div>
 
       <div className="card-content">
@@ -119,6 +122,36 @@ const QuotationSignaturesCard = memo(({
                 </CollaborativeField>
               </div>
             </div>
+            {/* Checked by */}
+            <div className="signature-column">
+              <div className="input-group">
+                <label>Checked by — Name</label>
+                <CollaborativeField
+                  fieldKey="signatures.quotation.checkedBy.name"
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus('signatures.quotation.checkedBy.name')}
+                  onBlur={() => emitBlur('signatures.quotation.checkedBy.name')}
+                >
+                  <input type="text" value={sig.checkedBy.name}
+                    onChange={e => onUpdate?.('quotation', 'checkedBy', { ...sig.checkedBy, name: e.target.value })}
+                    className="form-input" placeholder="Enter name" {...forceInputProps} />
+                </CollaborativeField>
+              </div>
+              <div className="input-group">
+                <label>Title</label>
+                <CollaborativeField
+                  fieldKey="signatures.quotation.checkedBy.title"
+                  remoteUsers={remoteUsers}
+                  onFocus={() => emitFocus('signatures.quotation.checkedBy.title')}
+                  onBlur={() => emitBlur('signatures.quotation.checkedBy.title')}
+                >
+                  <input type="text" value={sig.checkedBy.title}
+                    onChange={e => onUpdate?.('quotation', 'checkedBy', { ...sig.checkedBy, title: e.target.value })}
+                    className="form-input" placeholder="Enter title" {...forceInputProps} />
+                </CollaborativeField>
+              </div>
+            </div>
+
             {/* Approved by */}
             <div className="signature-column">
               <div className="input-group">
@@ -182,6 +215,8 @@ const QuotationSignaturesCard = memo(({
           <div className="sig-display-row">
             <SigPersonDisplay role="Prepared by" name={sig.preparedBy.name} title={sig.preparedBy.title} />
             <div className="sig-display-divider" />
+            <SigPersonDisplay role="Checked by" name={sig.checkedBy.name} title={sig.checkedBy.title} />
+            <div className="sig-display-divider" />
             <SigPersonDisplay role="Approved by" name={sig.approvedBy.name} title={sig.approvedBy.title} />
             <div className="sig-display-divider" />
             <SigPersonDisplay role="Received by" name={sig.receivedBy.label} title={sig.receivedBy.title || ''} />
@@ -198,9 +233,11 @@ QuotationSignaturesCard.displayName = 'QuotationSignaturesCard'
 const BillingSignaturesCard = memo(({
   signatures,
   onUpdate,
+  layoutVariant,
 }: {
   signatures: Signatures
   onUpdate?: (type: keyof Signatures, field: string, value: any) => void
+  layoutVariant?: 'special' | 'kemco'
 }) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
@@ -217,7 +254,7 @@ const BillingSignaturesCard = memo(({
           </svg>
         </div>
         <h2 className="section-title">Billing Statement Signatures</h2>
-        {onUpdate && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
+        {onUpdate && layoutVariant !== 'kemco' && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
       </div>
 
       <div className="card-content">
@@ -335,6 +372,10 @@ function safeSignatures(signatures: Signatures): Signatures {
         name: signatures?.quotation?.preparedBy?.name ?? '', 
         title: signatures?.quotation?.preparedBy?.title ?? '' 
       },
+      checkedBy: { 
+        name: signatures?.quotation?.checkedBy?.name ?? '', 
+        title: signatures?.quotation?.checkedBy?.title ?? '' 
+      },
       approvedBy: { 
         name: signatures?.quotation?.approvedBy?.name ?? '', 
         title: signatures?.quotation?.approvedBy?.title ?? '' 
@@ -362,7 +403,7 @@ function safeSignatures(signatures: Signatures): Signatures {
 }
 
 // ── Main export — renders both cards ─────────────────────────────────────────
-const SignatureForm = memo(({ signatures, onUpdate }: Props) => {
+const SignatureForm = memo(({ signatures, onUpdate, layoutVariant }: Props) => {
   const safe = safeSignatures(signatures)
   const containerRef = useRef<HTMLDivElement>(null)
   // Force Electron window refocus once when an input is focused to ensure interactivity
@@ -400,8 +441,8 @@ const SignatureForm = memo(({ signatures, onUpdate }: Props) => {
 
   return (
     <div className="sig-cards-layout signature-form-root" ref={containerRef}>
-      <QuotationSignaturesCard signatures={safe} onUpdate={onUpdate} />
-      <BillingSignaturesCard signatures={safe} onUpdate={onUpdate} />
+      <QuotationSignaturesCard signatures={safe} onUpdate={onUpdate} layoutVariant={layoutVariant} />
+      <BillingSignaturesCard signatures={safe} onUpdate={onUpdate} layoutVariant={layoutVariant} />
     </div>
   )
 })

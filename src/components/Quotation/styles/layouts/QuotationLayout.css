@@ -1,0 +1,517 @@
+/* SHARED QUOTATION STRUCTURE */
+.header-visual {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  margin-top: 0;
+  position: relative;
+  min-height: 140px;
+}
+
+.qh-logo {
+  flex-shrink: 0;
+  width: 140px;
+  height: 140px;
+  z-index: 1;
+}
+
+.qh-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.qh-center {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  z-index: 0;
+  padding-left: 70px;
+}
+
+.qh-company-name {
+  font-size: 28px;
+  font-weight: bold;
+  white-space: nowrap;
+  line-height: 1.2;
+  margin-bottom: 2px;
+  margin-top: 4px;
+}
+
+.qh-title {
+  font-size: 20px;
+  font-weight: bold;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.qh-right {
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: 80px;
+  z-index: 1;
+}
+
+.qh-address-block {
+  text-align: right;
+  line-height: 1.45;
+}
+
+.qh-addr-name {
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.qh-addr-line {
+  font-size: 10px;
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.qh-meta-block {
+  position: absolute;
+  right: 8mm;
+  top: 240px;
+  width: 230px;
+}
+
+.qh-meta-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.qh-meta-label {
+  font-size: 10px;
+  font-weight: bold;
+  white-space: nowrap;
+  text-align: left;
+  width: 90px;
+}
+
+.qh-meta-value {
+  font-size: 10px;
+  font-weight: normal;
+  border-bottom: 1px solid black;
+  flex: 1;
+  text-align: center;
+  height: 13px;
+  line-height: 13px;
+  display: inline-block;
+}
+
+/* Contact Section */
+.contact-section-visual {
+  margin-bottom: 20px;
+  margin-top: 0px;
+  min-height: 80px;
+}
+
+.quotation-to-visual {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+  min-height: 22px;
+}
+
+.client-details-visual {
+  font-size: 12px;
+  line-height: 1.5;
+  min-height: 60px;
+}
+
+.client-company-name {
+  font-weight: bold;
+}
+
+.client-person-name {
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+/* Table Structure */
+.table-visual {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  font-size: 11px;
+  border: 2px solid #000;
+}
+
+.table-visual th,
+.table-visual td {
+  padding: 4px 3px;
+  text-align: center;
+  vertical-align: middle;
+  border: none;
+}
+
+.table-visual th:not(:last-child),
+.table-visual td:not(:last-child) {
+  border-right: 1px solid #000;
+}
+
+.table-visual thead th {
+  font-weight: bold;
+  background-color: transparent;
+  font-size: 12px;
+  border-bottom: 2px solid #000;
+}
+
+.table-visual tbody tr:not(:last-child) td {
+  border-bottom: 1px solid #ccc;
+}
+
+
+
+.table-visual .description-cell {
+  text-align: left;
+  padding-left: 8px;
+  font-family: 'MS PGothic', 'MS Gothic', 'MS PMincho', sans-serif;
+}
+
+.table-visual .price-cell {
+  text-align: right;
+  padding-right: 8px;
+}
+
+.table-visual .nothing-follow-row td {
+  border-right: 1px solid #000 !important;
+  border-top: 1px solid #000 !important;
+}
+
+.table-visual .nothing-follow-row td:last-child {
+  border-right: none !important;
+}
+
+.table-visual .nothing-follow {
+  text-align: center !important;
+  font-weight: bold;
+  font-style: italic;
+  color: #000;
+  letter-spacing: 1px;
+  height: 24px;
+  padding: 10px 0 !important;
+}
+
+.table-visual .admin-overhead-row td {
+  border-right: 1px solid #000 !important;
+  border-bottom: 1px solid #ccc !important;
+}
+
+.table-visual .admin-overhead-row td:last-child {
+  border-right: none !important;
+}
+
+
+
+.continuation-note {
+  text-align: center !important;
+  font-weight: bold;
+  font-style: italic;
+  color: #888;
+  letter-spacing: 1px;
+  padding: 20px 0;
+  font-size: 11px;
+  width: 100%;
+}
+
+.table-visual .total-amount-row td {
+  font-weight: bold;
+  font-size: 14px;
+  border-top: 2px solid #000;
+}
+
+.table-visual .total-label-cell {
+  text-align: center;
+}
+
+
+.table-visual .desc-indent-wrapper {
+  padding-left: var(--indent, 0);
+  display: flex;
+  align-items: center;
+}
+
+.table-visual .desc-arrow {
+  margin-right: 4px;
+  opacity: 0.6;
+}
+
+.print-assembly-header .col-ref-cell,
+.print-assembly-header .col-machine-cell,
+.print-assembly-header .desc-text {
+  font-weight: bold;
+}
+
+.quotation-visual-exact {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Terms & Signatures */
+.mode-quotation .q-bottom-content {
+  margin-top: auto;
+}
+
+
+/* Terms & Signatures */
+.terms-visual {
+  font-size: 13px;
+  line-height: 1;
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+.signatures-visual {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.signature-row-visual {
+  display: flex;
+  margin-bottom: 10px;
+  position: relative;
+  min-height: 70px;
+}
+
+.signature-left-visual {
+  flex: 1;
+  max-width: 45%;
+}
+
+.signature-right-visual {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 250px;
+}
+
+.sig-label-visual {
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: left;
+  font-weight: bold;
+}
+
+.sig-line-visual {
+  border-bottom: 1px solid black;
+  width: 250px;
+  height: 30px;
+  margin-bottom: 5px;
+}
+
+.sig-name-visual {
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  width: 250px;
+  margin-bottom: 5%;
+}
+
+.sig-title-visual {
+  font-size: 11px;
+  text-align: center;
+  width: 250px;
+  font-style: italic;
+}
+
+.footer-visual {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-style: italic;
+  color: #000000;
+  margin-top: 25px;
+}
+
+.ppm-container .preview-content .signature-left-visual {
+  flex: 1;
+  max-width: 45%;
+}
+
+.ppm-container .preview-content .signature-right-visual {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 250px;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.ppm-container .preview-content .sig-label-visual {
+  font-size: 12px;
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+.ppm-container .preview-content .sig-line-visual {
+  border-bottom: 1px solid black;
+  width: 250px;
+  height: 30px;
+  margin-bottom: 5px;
+}
+
+.ppm-container .preview-content .sig-name-visual {
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+  width: 250px;
+}
+
+.ppm-container .preview-content .sig-title-visual {
+  font-size: 11px;
+  text-align: center;
+  width: 250px;
+  font-style: italic;
+}
+
+.ppm-container .preview-content .footer-bottom {
+  margin-top: 10px;
+  font-size: 10px;
+  font-style: italic;
+  text-align: right;
+  color: #000;
+}
+
+/* ── Print Preview Overrides (Scoped to Modal) ── */
+
+.ppm-container .preview-content .header-visual {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  margin-bottom: 20px;
+  margin-top: 0;
+  min-height: 140px;
+}
+
+.ppm-container .preview-content .qh-logo {
+  position: static;
+  flex-shrink: 0;
+  width: 140px;
+  height: 140px;
+  z-index: 1;
+}
+
+.ppm-container .preview-content .qh-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ppm-container .preview-content .qh-center {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  pointer-events: none;
+  z-index: 0;
+  padding-left: 70px;
+}
+
+.ppm-container .preview-content .qh-company-name {
+  font-size: 28px;
+  font-weight: bold;
+  white-space: nowrap;
+  line-height: 1.2;
+  margin-top: 4px;
+  margin-bottom: 2px;
+}
+
+.ppm-container .preview-content .qh-title {
+  font-size: 20px;
+  font-weight: bold;
+  white-space: nowrap;
+  margin-top: 6px;
+}
+
+.ppm-container .preview-content .qh-right {
+  position: static;
+  margin-left: auto;
+  flex-shrink: 0;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-top: 70px;
+  z-index: 1;
+}
+
+.ppm-container .preview-content .qh-meta-block {
+  position: absolute;
+  right: 8mm;
+  top: 240px;
+  bottom: auto;
+  width: 230px;
+  margin-top: 0;
+}
+
+.ppm-container .preview-content .qh-meta-row {
+  justify-content: flex-start;
+}
+
+.ppm-container .preview-content .qh-meta-label {
+  text-align: left;
+  width: 90px;
+}
+
+.ppm-container .preview-content .qh-meta-value {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
+.ppm-container .preview-content .quotation-details-visual {
+  font-size: 12px;
+  position: absolute;
+  top: 190px;
+  right: 0;
+  width: 300px;
+}
+
+.ppm-container .preview-content .detail-row-visual {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0;
+  margin-bottom: 6px;
+  align-items: center;
+  min-height: 20px;
+}
+
+.ppm-container .preview-content .detail-label-visual {
+  font-weight: bold;
+  font-size: 12px;
+  width: 95px;
+  text-align: left;
+}
+
+.ppm-container .preview-content .detail-value-visual {
+  border-bottom: 1px solid black;
+  width: 130px;
+  min-width: 130px;
+  padding-bottom: 0px;
+  margin-bottom: 0px;
+  text-align: center;
+  font-size: 11px;
+  height: 14px;
+  line-height: 14px;
+  display: inline-block;
+  vertical-align: bottom;
+}

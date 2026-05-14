@@ -17,6 +17,39 @@ export function calculateTaskTotal(
   baseRates: BaseRates,
   manualOverrides: ManualOverrides
 ): CalculatedSubtotals {
+  // Check if this is KEMCO (level-based)
+  const isKemco = task.level !== undefined
+
+  if (isKemco) {
+    const children = allTasks.filter(t => t.parentId === task.id)
+    
+    // If it has children, sum their calculated totals
+    if (children.length > 0) {
+      const childrenTotal = children.reduce((sum, child) => {
+        return sum + calculateTaskTotal(child, allTasks, baseRates, manualOverrides).total
+      }, 0)
+
+      return {
+        basicLabor: 0,
+        overtime: 0,
+        software: 0,
+        total: Number(childrenTotal.toFixed(2))
+      }
+    }
+
+    // If no children, use the amount field or manual override
+    const override = (manualOverrides?.tasks || {})[task.id]
+    const amount = override?.total !== undefined ? override.total : (task.amount || 0)
+
+    return {
+      basicLabor: 0,
+      overtime: 0,
+      software: 0,
+      total: Number(amount.toFixed(2))
+    }
+  }
+
+  // Original Special Logic
   const getRate = (type: string) => {
     if (type === '2D') return baseRates.timeChargeRate2D
     if (type === '3D' || !type) return baseRates.timeChargeRate3D

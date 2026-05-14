@@ -20,6 +20,16 @@ export interface Task {
   engineer?: string
   lastEditorName?: string
   lastEditorColor?: string
+  // KEMCO Fields
+  machineCode?: string
+  unitCode?: string
+  startDate?: string
+  endDate?: string
+  time?: number
+  percentage?: number
+  amount?: number
+  level?: number // 0: Assembly, 1: Sub-Assembly, 2: Part
+  dwgNo?: string
 }
 
 export interface BaseRates {
@@ -77,6 +87,7 @@ export interface ReceivedBy {
 export interface Signatures {
   quotation: {
     preparedBy: SignaturePerson
+    checkedBy: SignaturePerson
     approvedBy: SignaturePerson
     receivedBy: ReceivedBy
   }
@@ -90,6 +101,7 @@ export interface Signatures {
 export interface FooterOverrides {
   overhead?: number
   adjustment?: number
+  showAdmin?: boolean
 }
 
 export interface TaskOverrides {
@@ -165,6 +177,7 @@ const DEFAULT_BILLING_DETAILS: BillingDetails = {
 const DEFAULT_SIGNATURES: Signatures = {
   quotation: {
     preparedBy: { name: 'MR. MICHAEL PEÑANO', title: 'Engineering Manager' },
+    checkedBy: { name: 'MR. YUICHIRO MAENO', title: 'President' },
     approvedBy: { name: 'MR. YUICHIRO MAENO', title: 'President' },
     receivedBy: { label: '(Signature Over Printed Name)' },
   },
@@ -177,7 +190,7 @@ const DEFAULT_SIGNATURES: Signatures = {
 
 const EMPTY_MANUAL_OVERRIDES: ManualOverrides = { tasks: {}, footer: {} }
 
-export function makeBlankTask(): Task {
+export function makeBlankTask(level: number = 0, parentId: number | null = null): Task {
   return {
     id: Date.now(),
     description: '',
@@ -188,8 +201,11 @@ export function makeBlankTask(): Task {
     softwareUnits: 0,
     type: '3D',
     unitType: 'JD',
-    isMainTask: true,
-    parentId: null,
+    isMainTask: level === 0,
+    parentId: parentId,
+    amount: 0,
+    percentage: 0,
+    level: level,
   }
 }
 
@@ -328,6 +344,7 @@ export function useInvoiceState() {
   )
   const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'collapsed', ns)
   const [chatLog, setChatLog] = useStickyState<ChatMsg[]>([], 'chatLog', ns)
+  const [layoutVariant, setLayoutVariant] = useStickyState<'special' | 'kemco'>('special', 'layoutVariant', ns)
 
   const debouncedQuotationUpdate = useDebounceCallback((date: string) => {
     const newQuotationNo = generateQuotationNumber(date)
@@ -363,7 +380,34 @@ export function useInvoiceState() {
   }, [])
 
   const addTask = useCallback((manualTask?: Task) => {
-    setTasks(prev => [...prev, manualTask || makeBlankTask()])
+    setTasks(prev => [...prev, manualTask || makeBlankTask(0, null)])
+    setHasUnsavedChanges(true)
+  }, [])
+
+  const addChildTask = useCallback((parentId: number, level: number, manualTask?: Task) => {
+    const newTask: Task = manualTask || makeBlankTask(level, parentId)
+
+    setTasks(prev => {
+      const parentIndex = prev.findIndex(task => task.id === parentId)
+      if (parentIndex === -1) return prev
+      
+      // Insert after the last existing child (or after parent if no children)
+      let insertIndex = parentIndex + 1
+      for (let i = parentIndex + 1; i < prev.length; i++) {
+        let isDescendant = false
+        let curr = prev[i]
+        while (curr.parentId) {
+          if (curr.parentId === parentId) { isDescendant = true; break }
+          curr = prev.find(t => t.id === curr.parentId) || { parentId: null } as any
+        }
+        
+        if (isDescendant) insertIndex = i + 1
+        else break
+      }
+      const newTasks = [...prev]
+      newTasks.splice(insertIndex, 0, newTask)
+      return newTasks
+    })
     setHasUnsavedChanges(true)
   }, [])
 
@@ -373,46 +417,27 @@ export function useInvoiceState() {
       else alert('Please select a main task first to add a sub-task.')
       return
     }
-
-    const effectiveParentId = manualTask ? manualTask.parentId : mainTaskId
-    if (!effectiveParentId && manualTask) return
-
-    const newSubTask: Task = manualTask || {
-      id: Date.now(),
-      description: '',
-      referenceNumber: '',
-      hours: 0,
-      minutes: 0,
-      overtimeHours: 0,
-      softwareUnits: 0,
-      type: '3D',
-      unitType: 'JD',
-      isMainTask: false,
-      parentId: effectiveParentId,
-    }
-
-    setTasks(prev => {
-      const parentIndex = prev.findIndex(task => task.id === effectiveParentId)
-      if (parentIndex === -1) return prev
-      let insertIndex = parentIndex + 1
-      for (let i = parentIndex + 1; i < prev.length; i++) {
-        if (prev[i].parentId === effectiveParentId) insertIndex = i + 1
-        else break
-      }
-      const newTasks = [...prev]
-      newTasks.splice(insertIndex, 0, newSubTask)
-      return newTasks
-    })
-    setHasUnsavedChanges(true)
-  }, [])
+    const parentId = manualTask ? manualTask.parentId! : mainTaskId!
+    addChildTask(parentId, 1, manualTask)
+  }, [addChildTask])
 
   const removeTask = useCallback((id: number) => {
     setTasks(prev => {
-      const taskToRemove = prev.find(task => task.id === id)
-      if (taskToRemove?.isMainTask) {
-        return prev.filter(task => task.id !== id && task.parentId !== id)
+      const idsToRemove = new Set<number>([id])
+      
+      // Multi-pass to find all descendants (safe for flat list)
+      let foundNew = true
+      while (foundNew) {
+        foundNew = false
+        prev.forEach(task => {
+          if (task.parentId && idsToRemove.has(task.parentId) && !idsToRemove.has(task.id)) {
+            idsToRemove.add(task.id)
+            foundNew = true
+          }
+        })
       }
-      return prev.filter(task => task.id !== id)
+      
+      return prev.filter(task => !idsToRemove.has(task.id))
     })
     setHasUnsavedChanges(true)
   }, [])
@@ -484,12 +509,12 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [setChatLog, setHasUnsavedChanges])
 
-  const resetToNew = useCallback((forcedQuotNo?: string) => {
+  const resetToNew = useCallback((forcedQuotNo?: string, variant: 'special' | 'kemco' = 'special') => {
     const newToday = new Date().toISOString().split('T')[0]
     const newQuotNo = forcedQuotNo || generateQuotationNumber(newToday)
     const newDetails: QuotationDetails = { quotationNo: newQuotNo, referenceNo: '', date: newToday }
     const newBilling: BillingDetails = { ...DEFAULT_BILLING_DETAILS, invoiceNo: '', jobOrderNo: '' }
-    const newTasks: Task[] = [makeBlankTask()]
+    const newTasks: Task[] = [makeBlankTask(0, null)]
 
     // Pre-seed the new namespace before switching so useStickyState resync
     // reads correct values (not empty defaults) when ns changes.
@@ -504,6 +529,7 @@ export function useInvoiceState() {
       manualOverrides: EMPTY_MANUAL_OVERRIDES,
       collapsed: [],
       chatLog: [],
+      layoutVariant: variant,
       filePath: null,
       unsaved: false,
     })
@@ -518,6 +544,7 @@ export function useInvoiceState() {
     setManualOverrides(EMPTY_MANUAL_OVERRIDES)
     setCollapsedTaskIds([])
     setChatLog([])
+    setLayoutVariant(variant)
     setCurrentFilePath(null)
     setHasUnsavedChanges(false)
   }, [])
@@ -549,6 +576,7 @@ export function useInvoiceState() {
     const resolvedOverrides = migrateLegacyOverrides(data.manualOverrides)
     const resolvedCollapsed = data.collapsedTaskIds || []
     const resolvedChatLog = data.chatLog || []
+    const resolvedVariant = data.layoutVariant || 'special'
 
     // ── Critical: pre-seed sessionStorage under the new namespace BEFORE
     // calling setNs(). useStickyState's resync useEffect fires on the next
@@ -566,6 +594,7 @@ export function useInvoiceState() {
         manualOverrides: resolvedOverrides,
         collapsed:       resolvedCollapsed,
         chatLog:         resolvedChatLog,
+        layoutVariant:   resolvedVariant,
         filePath:        fileName,
         unsaved:         false,
       })
@@ -585,6 +614,7 @@ export function useInvoiceState() {
     setManualOverrides(resolvedOverrides)
     setCollapsedTaskIds(resolvedCollapsed)
     setChatLog(resolvedChatLog)
+    setLayoutVariant(resolvedVariant)
     setCurrentFilePath(fileName)
     setHasUnsavedChanges(false)
   }, [])
@@ -600,8 +630,9 @@ export function useInvoiceState() {
     manualOverrides,
     collapsedTaskIds,
     chatLog,
+    layoutVariant,
     savedAt: new Date().toISOString(),
-  }), [companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds, chatLog])
+  }), [companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures, manualOverrides, collapsedTaskIds, chatLog, layoutVariant])
 
   const markSaved = useCallback((filePath: string) => {
     setCurrentFilePath(filePath)
@@ -616,6 +647,8 @@ export function useInvoiceState() {
     addTask, addSubTask, removeTask, updateTask, reorderTasks,
     updateBaseRate, updateSignatures, setSelectedMainTaskId,
     updateManualOverrides, setCollapsedTaskIds, updateChatLog, chatLog,
+    layoutVariant, setLayoutVariant,
     resetToNew, loadData, getSaveData, markSaved, setHasUnsavedChanges,
+    addChildTask,
   }
 }

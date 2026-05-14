@@ -18,11 +18,12 @@ interface ActiveSession {
 interface NewRoomForm {
   name: string
   password?: string
+  variant: 'special' | 'kemco'
 }
 
 interface Props {
   onJoin: (id: number, password?: string) => void
-  onCreateNew: (name: string, password?: string) => void
+  onCreateNew: (name: string, variant: 'special' | 'kemco', password?: string) => void
   onStartTutorial: () => void
   onClose?: () => void
   mandatory?: boolean
@@ -34,7 +35,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
   const [isCreating, setIsCreating] = useState(false)
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
   const [isLobbyTutorialOpen, setIsLobbyTutorialOpen] = useState(false)
-  const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '' })
+  const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '', variant: 'special' })
   const [joiningSession, setJoiningSession] = useState<ActiveSession | null>(null)
   const [joinPassword, setJoinPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -73,7 +74,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onCreateNew(newRoom.name.trim(), newRoom.password)
+    onCreateNew(newRoom.name.trim(), newRoom.variant, newRoom.password)
   }
 
   const handleJoinClick = (s: ActiveSession) => {
@@ -158,6 +159,27 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
                   Back to lobby
                 </button>
                 <form onSubmit={handleCreateSubmit} className="quot-entry-form">
+                  {/* Layout Mode - Now at the TOP for better hierarchy */}
+                  <div className="form-group">
+                    <label>PROJECT</label>
+                    <div className={`variant-toggle-group ${newRoom.variant === 'kemco' ? 'kemco-active' : ''}`}>
+                      <button
+                        type="button"
+                        className={`variant-btn ${newRoom.variant === 'special' ? 'active' : ''}`}
+                        onClick={() => setNewRoom(prev => ({ ...prev, variant: 'special' }))}
+                      >
+                        Special
+                      </button>
+                      <button
+                        type="button"
+                        className={`variant-btn ${newRoom.variant === 'kemco' ? 'active' : ''}`}
+                        onClick={() => setNewRoom(prev => ({ ...prev, variant: 'kemco' }))}
+                      >
+                        KEMCO
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="form-group">
                     <label>Workspace Name</label>
                     <div className="input-with-icon">

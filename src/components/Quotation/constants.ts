@@ -28,9 +28,10 @@ export const LAYOUT = {
 
   // How many main tasks fit comfortably on a single A4 page.
   // We use separate limits to ensure footers/signatures always fit.
-  TASKS_PER_PAGE_QUOTATION: 14,
+  TASKS_PER_PAGE_QUOTATION_STANDARD: 14,
+  TASKS_PER_PAGE_QUOTATION_FINAL: 12,
   TASKS_PER_PAGE_BILLING_STANDARD: 18, // For non-final pages (no footers)
-  TASKS_PER_PAGE_BILLING_FINAL: 14,    // For the final page (with signatures/bank details)
+  TASKS_PER_PAGE_BILLING_FINAL: 10,    // For the final page (with signatures/bank details)
 
   // Switch to 5mm margin when a page carries >= this many tasks.
   COMPRESSION_THRESHOLD: 14,

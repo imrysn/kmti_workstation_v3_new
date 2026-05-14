@@ -1,0 +1,34 @@
+/* KEMCO VARIANT OVERRIDES */
+.mode-quotation:has(.col-code) .col-no { width: 4%; }
+.mode-quotation:has(.col-code) .col-reference { width: 12%; }
+.mode-quotation:has(.col-code) .col-description { width: 30%; }
+.mode-quotation:has(.col-code) .col-percent { width: 8%; }
+.mode-quotation:has(.col-code) .col-type { width: 6%; }
+.mode-quotation:has(.col-code) .col-price { width: 20%; }
+
+.table-visual .col-code { width: 10%; }
+.table-visual .col-unit { width: 10%; }
+
+@media print {
+  .mode-quotation .table-visual th.col-no { width: 35px; }
+  .mode-quotation .table-visual th.col-reference { width: 90px; }
+  .mode-quotation .table-visual th.col-description { width: auto; }
+  .mode-quotation .table-visual th.col-percent { width: 60px; }
+  .mode-quotation .table-visual th.col-type { width: 50px; }
+  .mode-quotation .table-visual th.col-price { width: 140px; }
+
+  /* KEMCO Layout Overrides */
+  .variant-kemco .table-visual th.col-reference { width: 45px !important; }
+  .variant-kemco .table-visual th.col-code { width: 45px !important; }
+  .variant-kemco .table-visual th.col-unit { width: 45px !important; }
+
+  .print-assembly-header { background-color: #f9fafb !important; }
+  .print-assembly-header td { border-bottom: 1.5pt solid black !important; }
+
+  /* KEMCO Specific: Leasing Fee in Red */
+  .variant-kemco .leasing-fee-row td.description-cell,
+  .variant-kemco .leasing-fee-row td.price-cell {
+    color: #ff0000 !important;
+    font-weight: 500 !important;
+  }
+}
