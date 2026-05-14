@@ -25,7 +25,7 @@ interface TasksTableProps {
   tasks: Task[]
   baseRates: BaseRates
   selectedMainTaskId: number | null
-  onTaskUpdate?: (id: number, field: keyof Task, value: any) => void
+  onTaskUpdate?: (id: number, fieldOrUpdates: keyof Task | Partial<Task>, value?: any) => void
   onTaskAdd?: () => void
   onSubTaskAdd?: (mainTaskId: number | null, notify?: (msg: string, type?: NotificationType) => void) => void
   onChildTaskAdd?: (parentId: number, level: number) => void
@@ -115,20 +115,18 @@ const TasksTable = memo(({
     const mainTaskCount = tasks.filter(t => t.isMainTask).length
 
     const totals: TaskSubtotals[] = tasks.map(task => {
-      const { basicLabor, overtime, software, total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides)
+      const { basicLabor, overtime, software, total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
       return { taskId: task.id, basicLabor, overtime, software, total }
     })
 
     const rawSub = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
-    const footer = manualOverrides?.footer || {}
-
     const sub = rawSub
 
-    const overhead = footer.overhead !== undefined
-      ? footer.overhead
+    const overhead = manualOverrides.footer?.overhead !== undefined
+      ? manualOverrides.footer.overhead
       : calculateOverhead(sub, baseRates.overheadPercentage)
 
-    const grand = sub + overhead + (footer.adjustment || 0)
+    const grand = sub + overhead + (manualOverrides.footer?.adjustment || 0)
 
     return { taskTotals: totals, overheadTotal: overhead, subtotal: sub, rawSubtotal: rawSub, grandTotal: grand, mainTaskCount }
   }, [tasks, baseRates, manualOverrides])
@@ -192,12 +190,59 @@ const TasksTable = memo(({
   }, [])
 
   const handleEngineerChange = useCallback((taskId: number, value: string) => {
-    onTaskUpdate?.(taskId, 'engineer' as keyof Task, value)
+    onTaskUpdate?.(taskId, 'engineer', value)
   }, [onTaskUpdate])
 
   const handleEditToggle = useCallback((taskId: number) => {
     if (editingTaskId === taskId) {
       const fieldsToSave = modifiedFields[taskId]
+      const edited = editedValues[taskId]
+      
+      if (fieldsToSave?.total && edited?.total !== undefined) {
+        // BACK-CALCULATION LOGIC (Sync Hours/Minutes to Price)
+        const task = tasks.find(t => t.id === taskId)
+        if (task) {
+          const { overtime, software } = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
+          const laborPart = edited.total - overtime - software
+          
+          const getRate = (type: string) => {
+            if (type === '2D') return baseRates.timeChargeRate2D || baseRates.timeChargeRate3D
+            if (type === '3D' || !type) return baseRates.timeChargeRate3D
+            return baseRates.timeChargeRateOthers || baseRates.timeChargeRate3D || 0
+          }
+          const rate = getRate(task.type)
+          
+          if (rate > 0 && laborPart > 0) {
+            const subTasks = task.isMainTask ? tasks.filter(t => t.parentId === task.id) : []
+            const subHours = subTasks.reduce((sum, sub) => sum + (sub.hours || 0) + (sub.minutes || 0) / 60, 0)
+            
+            const totalHoursNeeded = laborPart / rate
+            const ownHoursNeeded = Math.max(0, totalHoursNeeded - subHours)
+            
+            if (!isNaN(ownHoursNeeded) && isFinite(ownHoursNeeded)) {
+              const newHours = Math.floor(ownHoursNeeded)
+              const newMinutes = parseFloat(((ownHoursNeeded - newHours) * 60).toFixed(2))
+              
+              // Update task properties directly
+              onTaskUpdate?.(taskId, { hours: newHours, minutes: newMinutes })
+              
+              // Explicitly remove total from manualOverrides so the calculated hours take over
+              setManualOverrides?.(prev => {
+                const newTaskOverrides = { ...(prev.tasks?.[taskId] || {}) }
+                delete newTaskOverrides.total
+                return {
+                  ...prev,
+                  tasks: { ...prev.tasks, [taskId]: newTaskOverrides }
+                }
+              })
+
+              // Remove 'total' from fields to save
+              delete fieldsToSave.total
+            }
+          }
+        }
+      }
+
       if (fieldsToSave && Object.keys(fieldsToSave).length > 0) {
         const valuesToSave: Record<string, number> = {}
         Object.keys(fieldsToSave).forEach(field => {
@@ -219,7 +264,7 @@ const TasksTable = memo(({
         setEditedValues({ [taskId]: { ...taskSubtotal } })
       }
     }
-  }, [editingTaskId, taskTotals, editedValues, modifiedFields, setManualOverrides])
+  }, [editingTaskId, taskTotals, editedValues, modifiedFields, setManualOverrides, tasks, baseRates, layoutVariant, onTaskUpdate, manualOverrides])
 
   const handleEditValueUpdate = useCallback((taskId: number, field: string, value: number, userModified = false) => {
     setEditedValues(prev => ({ ...prev, [taskId]: { ...prev[taskId], [field]: value } }))
@@ -445,7 +490,7 @@ const TasksTable = memo(({
                 ) : (
                   <>
                     <th>NO.</th><th>REFERENCE NO</th><th>DESCRIPTION</th><th>HOURS</th><th>MINUTES</th>
-                    <th>TIME CHARGE</th><th>OT RATE</th><th>OVERTIME</th><th>SOFTWARE</th>
+                    <th>TIME CHARGE</th><th>OT HOURS</th><th>OVERTIME</th><th>SOFTWARE</th>
                     <th>TYPE</th><th>TOTAL</th><th>ACTION</th>
                   </>
                 )}

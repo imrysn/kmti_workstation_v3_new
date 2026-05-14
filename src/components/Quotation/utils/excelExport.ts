@@ -133,6 +133,40 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
     }
   })
 
+  // 1.5. Total Amount Table (O2:Q3)
+  const mainTasks = tasks.filter(t => t.isMainTask)
+  const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides, layoutVariant).total)
+  const subtotal = taskTotals.reduce((s, t) => s + t, 0)
+  const footer = manualOverrides?.footer || {}
+  const overheadTotal = footer.overhead !== undefined
+    ? footer.overhead
+    : calculateOverhead(subtotal, baseRates.overheadPercentage)
+  const grandTotal = subtotal + overheadTotal + (footer.adjustment || 0)
+
+  const mainTaskCells = tasks
+    .map((t, i) => t.isMainTask ? `L${i + 2}` : null)
+    .filter(Boolean)
+    .join('+')
+
+  _safeMerge(sheet, 'O2:Q2')
+  const totTitle = sheet.getCell('O2')
+  totTitle.value = 'Total Amount'
+  totTitle.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } }
+  totTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } }
+  totTitle.alignment = { horizontal: 'center', vertical: 'middle' }
+  totTitle.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+
+  _safeMerge(sheet, 'O3:Q5')
+  const totVal = sheet.getCell('O3')
+  totVal.numFmt = '"¥"#,##0'
+  totVal.font = { bold: true, size: 20 }
+  totVal.alignment = { horizontal: 'center', vertical: 'middle' }
+  totVal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+  
+  const adjustment = footer.adjustment || 0
+  const totFormula = `(${mainTaskCells || '0'}) + R17${adjustment >= 0 ? '+' : ''}${adjustment}`
+  totVal.value = { formula: totFormula, result: grandTotal }
+
   // 3. Setup Global Computation Table (Starting N15)
   for (let c = 14; c <= 18; c++) {
     sheet.getColumn(c).width = UNIFORM_WIDTH
@@ -159,20 +193,27 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
     cell.alignment = { horizontal: 'center', vertical: 'middle' }
   })
 
-  const lastTaskRow = tasks.length + 1
   const CONST_DATA = sheet.getRow(17)
-  const timeChargeDefault = 2700
-  CONST_DATA.getCell(14).value = timeChargeDefault
+  const timeChargeValue = baseRates.timeChargeRate3D
+  CONST_DATA.getCell(14).value = timeChargeValue
   CONST_DATA.getCell(14).numFmt = '"¥"#,##0'
-  CONST_DATA.getCell(15).value = { formula: 'N17 * 1.3', result: timeChargeDefault * 1.3 }
+  
+  const otMultiplier = baseRates.otHoursMultiplier || 1.3
+  const otRateResult = baseRates.overtimeRate || (timeChargeValue * otMultiplier)
+  CONST_DATA.getCell(15).value = { formula: `N17 * ${otMultiplier}`, result: otRateResult }
   CONST_DATA.getCell(15).numFmt = '"¥"#,##0'
   CONST_DATA.getCell(16).value = baseRates.softwareRate
   CONST_DATA.getCell(16).numFmt = '"¥"#,##0'
-  CONST_DATA.getCell(17).value = 0.20
+  CONST_DATA.getCell(17).value = baseRates.overheadPercentage / 100
   CONST_DATA.getCell(17).numFmt = '0%'
+
+  const overheadResult = manualOverrides.footer?.overhead !== undefined
+    ? manualOverrides.footer.overhead
+    : subtotal * (baseRates.overheadPercentage / 100)
+
   CONST_DATA.getCell(18).value = {
-    formula: `SUM(L2:L${lastTaskRow}) * Q17`,
-    result: (tasks.reduce((sum: number, t: Task) => sum + (t.isMainTask ? 1 : 0), 0)) * 0.2
+    formula: `(${mainTaskCells || '0'}) * Q17`,
+    result: overheadResult
   }
   CONST_DATA.getCell(18).numFmt = '"¥"#,##0'
   CONST_DATA.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, col: number) => {
@@ -200,7 +241,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
       row.getCell(9).value = task.type || '3D'
 
       // Calculation logic for KEMCO total
-      const { total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides)
+      const { total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
       row.getCell(10).value = total
 
       row.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, colNumber: number) => {
@@ -213,7 +254,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
           cell.numFmt = '"¥"#,##0'
         }
         cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
-        
+
         if (task.level === 0) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF99CC' } }
           cell.font = { ...cell.font, bold: true }
@@ -223,48 +264,46 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
       })
     } else {
       // Original Special Logic
-      const rate = 2700
-      const timeCharge = (task.hours + task.minutes / 60) * rate
-      const otAmt = (task.overtimeHours || 0) * (rate * 1.3)
-      const swUnits = task.softwareUnits || 0
-      const totalAmt = timeCharge + otAmt + (swUnits * baseRates.softwareRate)
-
-      let subTaskRange = ''
-      if (task.isMainTask) {
-        let lastSubIdx = idx
-        for (let j = idx + 1; j < tasks.length; j++) {
-          if (tasks[j].isMainTask) break
-          lastSubIdx = j
-        }
-        if (lastSubIdx > idx) {
-          subTaskRange = `L${idx + 3}:L${lastSubIdx + 2}`
-        }
-      }
+      const subtotals = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
+      const taskOverrides = manualOverrides?.tasks?.[task.id] || {}
 
       row.getCell(1).value = idx + 1
       row.getCell(2).value = task.referenceNumber || ''
       row.getCell(3).value = task.description || ''
       row.getCell(4).value = task.hours || 0
       row.getCell(5).value = task.minutes || 0
-      row.getCell(6).value = { formula: `(D${rowIdx} + E${rowIdx}/60) * $N$17`, result: timeCharge }
+
+      // Time Charge: Use formula for simple calculation, result from our engine
+      const tcVal = subtotals.basicLabor
+      row.getCell(6).value = { formula: `(D${rowIdx} + E${rowIdx}/60) * $N$17`, result: tcVal }
+
       row.getCell(7).value = task.overtimeHours || 0
-      row.getCell(8).value = { formula: `G${rowIdx} * $O$17`, result: otAmt }
-      row.getCell(9).value = swUnits
+      const otVal = subtotals.overtime
+      row.getCell(8).value = { formula: `G${rowIdx} * $O$17`, result: otVal }
+
+      row.getCell(9).value = task.softwareUnits || 0
       row.getCell(10).value = task.type || '3D'
       row.getCell(11).value = task.engineer || ''
 
-      const baseFormula = `F${rowIdx} + H${rowIdx} + (I${rowIdx} * $P$17)`
-      const finalFormula = subTaskRange ? `(${baseFormula}) + SUM(${subTaskRange})` : baseFormula
-
-      let subSum = 0
-      if (task.isMainTask) {
-        tasks.filter(t => !t.isMainTask && t.parentId === task.id).forEach(sub => {
-          const subRate = 2700
-          subSum += (sub.hours + sub.minutes / 60) * subRate + (sub.overtimeHours || 0) * (subRate * 1.3) + (sub.softwareUnits || 0) * baseRates.softwareRate
-        })
+      // Total: Use formula if no manual total override
+      if (taskOverrides.total === undefined) {
+        let subTaskRange = ''
+        if (task.isMainTask) {
+          let lastSubIdx = idx
+          for (let j = idx + 1; j < tasks.length; j++) {
+            if (tasks[j].isMainTask) break
+            lastSubIdx = j
+          }
+          if (lastSubIdx > idx) {
+            subTaskRange = `L${idx + 3}:L${lastSubIdx + 2}`
+          }
+        }
+        const baseFormula = `F${rowIdx} + H${rowIdx} + (I${rowIdx} * $P$17)`
+        const finalFormula = subTaskRange ? `(${baseFormula}) + SUM(${subTaskRange})` : baseFormula
+        row.getCell(12).value = { formula: finalFormula, result: subtotals.total }
+      } else {
+        row.getCell(12).value = subtotals.total
       }
-
-      row.getCell(12).value = { formula: finalFormula, result: totalAmt + subSum }
 
       row.eachCell({ includeEmpty: true }, (cell, col) => {
         if (col > 12) return
@@ -383,7 +422,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     fitToHeight: 0,
     margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0, footer: 0 }
   }
-  sheet.views = [{ showGridLines: false, zoomScale: 100 }]
+  sheet.views = [{ showGridLines: false, zoomScale: 70 }]
 
   // ── Hide unused Columns and Rows to create "Page" look ──────────────────────
   // Hide columns H onwards

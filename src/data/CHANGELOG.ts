@@ -22,6 +22,20 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.3',
+    date: 'May 14, 2026',
+    entries: [
+      { type: 'improvement', text: 'Price-Driven Back-Calculation — Stabilized the synchronization between manual Total overrides and labor hours/minutes with instant state purging.' },
+      { type: 'improvement', text: 'High-Precision Time Engine — Enabled decimal minute support to allow perfect matching of manual price inputs without rounding errors.' },
+      { type: 'fix', text: 'Collaboration Sync — Resolved a critical bug where bulk task updates (like hours/minutes sync) were not broadcasting correctly to other users.' },
+      { type: 'improvement', text: 'Layout Flexibility — Unlocked full editing for Signatures and Billing Details in the KEMCO layout variant.' },
+      { type: 'improvement', text: 'Signature Refinement — Removed "Checked By" from quotation signatures and suppressed "Title" fields in KEMCO mode for a cleaner document aesthetic.' },
+      { type: 'new', text: 'Print-Ready Layouts — Finalized the quotation layout for professional PDF and print output.' },
+      { type: 'improvement', text: 'Quotation CSS Refactoring — Cleaned up and optimized the quotation layout styles for better performance and maintainability.' },
+      { type: 'fix', text: 'Engineering Bookmark — Resolved visibility and interaction issues for better ownership tracking.' },
+    ],
+  },
+  {
     version: '3.7.2',
     date: 'May 12, 2026',
     entries: [

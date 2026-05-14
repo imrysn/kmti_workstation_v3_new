@@ -44,7 +44,7 @@ const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling, layoutVarian
           </div>
         )}
 
-        {onUpdateBilling && layoutVariant !== 'kemco' && (
+        {onUpdateBilling && (
           <button
             className="info-card-edit-btn"
             onClick={() => setIsEditing(e => !e)}

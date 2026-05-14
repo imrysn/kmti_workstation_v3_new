@@ -360,14 +360,27 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     debouncedSyncDb()
   }, [updateSignatures, emitPatch, debouncedSyncDb])
 
-  const syncUpdateTask = useCallback((id: number, field: any, value: any) => {
-    const updates = { [field]: value, lastEditorName: myEffectiveName, lastEditorColor: myColor }
-    updateTask(id, updates)
-    emitBatchPatch([
-      { path: `task.${id}.${field}`, value },
+  const syncUpdateTask = useCallback((id: number, fieldOrUpdates: any, value?: any) => {
+    let updates: any = { lastEditorName: myEffectiveName, lastEditorColor: myColor }
+    let patches: Array<{ path: string; value: any }> = [
       { path: `task.${id}.lastEditorName`, value: myEffectiveName },
       { path: `task.${id}.lastEditorColor`, value: myColor }
-    ])
+    ]
+
+    if (typeof fieldOrUpdates === 'object' && fieldOrUpdates !== null) {
+      // Bulk update
+      updates = { ...updates, ...fieldOrUpdates }
+      Object.entries(fieldOrUpdates).forEach(([k, v]) => {
+        patches.push({ path: `task.${id}.${k}`, value: v })
+      })
+    } else {
+      // Single field update
+      updates[fieldOrUpdates] = value
+      patches.push({ path: `task.${id}.${fieldOrUpdates}`, value })
+    }
+
+    updateTask(id, updates)
+    emitBatchPatch(patches)
     debouncedSyncDb()
   }, [updateTask, emitBatchPatch, myEffectiveName, myColor, debouncedSyncDb])
 
@@ -802,20 +815,20 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                   />
                 </div>
 
-                  <TasksTable
-                    tasks={effTasks}
-                    baseRates={effBaseRates}
-                    layoutVariant={layoutVariant}
-                    selectedMainTaskId={selectedMainTaskId}
-                    onMainTaskSelect={setSelectedMainTaskId}
-                    onTaskAdd={isPreview ? undefined : syncAddTask}
-                    onSubTaskAdd={isPreview ? undefined : syncAddSubTask}
-                    onChildTaskAdd={isPreview ? undefined : syncAddChildTask}
-                    onTaskRemove={isPreview ? undefined : syncRemoveTask}
-                    onTaskUpdate={isPreview ? undefined : syncUpdateTask}
-                    onTaskReorder={isPreview ? undefined : syncReorderTasks}
-                    manualOverrides={effOverrides}
-                    setManualOverrides={isPreview ? undefined : updateManualOverrides}
+                <TasksTable
+                  tasks={effTasks}
+                  baseRates={effBaseRates}
+                  layoutVariant={layoutVariant}
+                  selectedMainTaskId={selectedMainTaskId}
+                  onMainTaskSelect={setSelectedMainTaskId}
+                  onTaskAdd={isPreview ? undefined : syncAddTask}
+                  onSubTaskAdd={isPreview ? undefined : syncAddSubTask}
+                  onChildTaskAdd={isPreview ? undefined : syncAddChildTask}
+                  onTaskRemove={isPreview ? undefined : syncRemoveTask}
+                  onTaskUpdate={isPreview ? undefined : syncUpdateTask}
+                  onTaskReorder={isPreview ? undefined : syncReorderTasks}
+                  manualOverrides={effOverrides}
+                  setManualOverrides={isPreview ? undefined : updateManualOverrides}
                   onFooterUpdate={isPreview ? undefined : syncUpdateFooter}
                   collapsedTasks={new Set(collapsedTaskIds)}
                   onCollapsedTasksChange={(set) => setCollapsedTaskIds(Array.from(set))}

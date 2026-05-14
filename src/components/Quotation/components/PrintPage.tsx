@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import type { CompanyInfo, QuotationDetails, BillingDetails, Task, Signatures, ManualOverrides, TaskOverrides } from '../../../hooks/quotation'
 import PrintHeader from './PrintHeader'
+import { getUnitPageCount } from '../../../utils/quotation'
 
 interface PrintPageProps {
   pageTasks: Task[]
@@ -39,14 +40,14 @@ export const PrintPage = memo(({
   allTasks
 }: PrintPageProps) => {
 
-  const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  const fmt = (n: number) => '¥' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 
   const resolveField = (task: Task, field: string, defaultValue: any) => {
     const override = manualOverrides.tasks[task.id] as any
     return override?.[field] !== undefined ? override[field] : defaultValue
   }
 
-  const resolveUnitPage = (task: Task) => resolveField(task, 'unitPage', task.minutes || 0)
+  const resolveUnitPage = (task: Task) => getUnitPageCount(task.id, allTasks, manualOverrides)
 
   const renderSignatures = () => {
     if (!isLastPage) return null

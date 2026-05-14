@@ -15,10 +15,11 @@ export function calculateTaskTotal(
   task: Task,
   allTasks: Task[],
   baseRates: BaseRates,
-  manualOverrides: ManualOverrides
+  manualOverrides: ManualOverrides,
+  layoutVariant: 'special' | 'kemco' = 'special'
 ): CalculatedSubtotals {
   // Check if this is KEMCO (level-based)
-  const isKemco = task.level !== undefined
+  const isKemco = layoutVariant === 'kemco'
 
   if (isKemco) {
     const children = allTasks.filter(t => t.parentId === task.id)
