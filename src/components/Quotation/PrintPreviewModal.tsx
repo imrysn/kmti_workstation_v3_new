@@ -1,6 +1,6 @@
 import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import type {
-  Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, ManualOverrides
+  Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, ManualOverrides, TaskOverrides
 } from '../../hooks/quotation'
 import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead, getUnitPageCount } from '../../utils/quotation'
 import { LAYOUT } from './constants'
@@ -147,7 +147,7 @@ const PrintPreviewModal = memo(({
 
   // ── Pagination ─────────────────────────────────────────────────
   const { pages, grandTotal, overheadTotal, lastAssemblyId } = useMemo(() => {
-    const mainTasks = tasks.filter(t => t.isMainTask)
+    const mainTasks = layoutVariant === 'kemco' ? tasks.filter(t => t.level! < 2) : tasks.filter(t => t.isMainTask)
     const slices = computePages(mainTasks, calculateTaskTotal, printMode)
 
     const subtotal = slices.flatMap(p => p.totals).reduce((s, t) => s + t, 0)
@@ -171,10 +171,10 @@ const PrintPreviewModal = memo(({
     [tasks, manualOverrides],
   )
 
-  const handleUnitEdit = useCallback((taskId: number, newValue: number) => {
+  const handleTaskOverride = useCallback((taskId: number, updates: Partial<TaskOverrides>) => {
     onManualOverrideChange(prev => ({
       ...prev,
-      tasks: { ...prev.tasks, [taskId]: { ...(prev.tasks[taskId] || {}), unitPage: newValue } },
+      tasks: { ...prev.tasks, [taskId]: { ...(prev.tasks[taskId] || {}), ...updates } },
     }))
   }, [onManualOverrideChange])
 
@@ -486,13 +486,14 @@ const PrintPreviewModal = memo(({
                         )}
                         <PrintPage
                           {...sharedPageProps}
+                          allTasks={tasks}
                           isFirstPage={pageIndex === 0}
                           isContinuation={pageIndex > 0}
                           pageTasks={page.tasks.map(t => ({ ...t, unitPage: resolveUnitPage(t) }))}
                           pageTotals={page.totals}
                           startIndex={page.startIndex}
                           isLastPage={isLastPage}
-                          onUnitEdit={handleUnitEdit}
+                          onTaskOverride={handleTaskOverride}
                           showAdmin={showAdmin}
                           fillerRowCount={(() => {
                             // Strictly ensure exactly 10 rows total (or 14 for billing):

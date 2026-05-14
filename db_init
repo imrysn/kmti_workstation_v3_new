@@ -7,15 +7,15 @@
     "phone": "TEL: +63-46-414-4009"
   },
   "clientInfo": {
-    "company": "NEXTENGINEERING Co, Ltd.",
-    "contact": "MR. Masahiro Hasegawa",
-    "address": "7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan",
-    "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
+    "company": "Kusakabe Electric and Machinery Co.,Ltd.",
+    "contact": "Mr.  Seiichi Fujiyama",
+    "address": "11-2,2Chome Murotani Nishiku Kobe, Japan (651-2241)",
+    "phone": "TEL: 078-992-9145 / FAX 078-992-9149"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-612131",
+    "quotationNo": "KMTE-260512-629",
     "referenceNo": "",
-    "date": "2026-05-05"
+    "date": "2026-05-12"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -29,10 +29,10 @@
   },
   "tasks": [
     {
-      "id": 1778634105572,
-      "description": "213",
-      "referenceNumber": "awd",
-      "hours": 2,
+      "id": 1778630593126,
+      "description": "サイドヨークジャッキ組立図",
+      "referenceNumber": "2814",
+      "hours": 0,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
@@ -44,51 +44,186 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "awda"
+      "lastEditorColor": "#C0392B",
+      "machineCode": "DF",
+      "engineer": "awdaw"
     },
     {
-      "id": 1778634110061,
-      "description": "sdwa",
-      "referenceNumber": "1321",
-      "hours": 3,
+      "id": 1778630596118,
+      "description": "デッキ組立図",
+      "referenceNumber": "",
+      "hours": 0,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
       "isMainTask": false,
-      "parentId": 1778634105572,
+      "parentId": 1778630593126,
       "amount": 0,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "dwadaw"
+      "lastEditorColor": "#C0392B",
+      "unitCode": "OF1",
+      "engineer": "adwa"
     },
     {
-      "id": 1778634110340,
-      "description": "dawda",
-      "referenceNumber": "321",
-      "hours": 4,
+      "id": 1778630598215,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
       "isMainTask": false,
-      "parentId": 1778634105572,
+      "parentId": 1778630596118,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#C0392B",
+      "dwgNo": "デッキ組立図1",
+      "engineer": "Bryan"
+    },
+    {
+      "id": 1778631449607,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778630596118,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#C0392B",
+      "dwgNo": "デッキ組立図2",
+      "engineer": "dwadwa"
+    },
+    {
+      "id": 1778631450078,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778630596118,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#C0392B",
+      "dwgNo": "デッキ組立図",
+      "engineer": "awdwa"
+    },
+    {
+      "id": 1778726634773,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778630596118,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E05C6B"
+    },
+    {
+      "id": 1778726635364,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778630596118,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E05C6B"
+    },
+    {
+      "id": 1778726636266,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778630596118,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E05C6B"
+    },
+    {
+      "id": 1778726636441,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778630596118,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E05C6B"
+    },
+    {
+      "id": 1778634931541,
+      "description": "近接ｽｲｯﾁ組立図",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778630593126,
       "amount": 0,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "dawdwa"
+      "lastEditorColor": "#C0392B",
+      "unitCode": "OF4",
+      "engineer": "awdwadwa"
     },
     {
-      "id": 1778634105733,
-      "description": "wdawd",
-      "referenceNumber": "3123",
+      "id": 1778728135849,
+      "description": "",
+      "referenceNumber": "2815",
       "hours": 0,
       "minutes": 0,
       "overtimeHours": 0,
@@ -101,62 +236,11 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "dwad"
+      "lastEditorColor": "#4A90D9",
+      "machineCode": "DD"
     },
     {
-      "id": 1778634105876,
-      "description": "awdawd",
-      "referenceNumber": "21312",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "awdawdaw"
-    },
-    {
-      "id": 1778662490819,
-      "description": "awdawd",
-      "referenceNumber": "312",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "awdaw"
-    },
-    {
-      "id": 1778662491156,
-      "description": "awdawdwad",
-      "referenceNumber": "12312312321",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "awd"
-    },
-    {
-      "id": 1778721059620,
+      "id": 1778730094601,
       "description": "",
       "referenceNumber": "",
       "hours": 0,
@@ -165,19 +249,38 @@
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
+      "isMainTask": false,
+      "parentId": 1778728135849,
       "amount": 0,
       "percentage": 0,
-      "level": 0,
+      "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "awdaw"
+      "lastEditorColor": "#4A90D9",
+      "unitCode": "OF2"
     },
     {
-      "id": 1778721059779,
+      "id": 1778730094983,
       "description": "",
       "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778728135849,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#4A90D9",
+      "unitCode": "OF5"
+    },
+    {
+      "id": 1778728136456,
+      "description": "",
+      "referenceNumber": "2816",
       "hours": 0,
       "minutes": 0,
       "overtimeHours": 0,
@@ -190,13 +293,51 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "dawd"
+      "lastEditorColor": "#4A90D9",
+      "machineCode": "Bryan"
     },
     {
-      "id": 1778721103173,
+      "id": 1778730096343,
       "description": "",
       "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778728136456,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#4A90D9",
+      "unitCode": "OF6"
+    },
+    {
+      "id": 1778730096472,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778728136456,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#4A90D9",
+      "unitCode": "OF7"
+    },
+    {
+      "id": 1778728136615,
+      "description": "",
+      "referenceNumber": "2817",
       "hours": 0,
       "minutes": 0,
       "overtimeHours": 0,
@@ -209,11 +350,11 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "awdad"
+      "lastEditorColor": "#4A90D9",
+      "machineCode": "Bergonia"
     },
     {
-      "id": 1778721103341,
+      "id": 1778730097887,
       "description": "",
       "referenceNumber": "",
       "hours": 0,
@@ -222,17 +363,17 @@
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
+      "isMainTask": false,
+      "parentId": 1778728136615,
       "amount": 0,
       "percentage": 0,
-      "level": 0,
+      "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "awdaw"
+      "lastEditorColor": "#4A90D9",
+      "unitCode": "OF8"
     },
     {
-      "id": 1778721103548,
+      "id": 1778730098039,
       "description": "",
       "referenceNumber": "",
       "hours": 0,
@@ -241,17 +382,17 @@
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
+      "isMainTask": false,
+      "parentId": 1778728136615,
       "amount": 0,
       "percentage": 0,
-      "level": 0,
+      "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#27AE60",
-      "engineer": "daw"
+      "lastEditorColor": "#4A90D9",
+      "unitCode": "OF9"
     },
     {
-      "id": 1778723602172,
+      "id": 1778730098191,
       "description": "",
       "referenceNumber": "",
       "hours": 0,
@@ -260,49 +401,14 @@
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
+      "isMainTask": false,
+      "parentId": 1778728136615,
       "amount": 0,
       "percentage": 0,
-      "level": 0,
+      "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#16A085"
-    },
-    {
-      "id": 1778723602539,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#16A085"
-    },
-    {
-      "id": 1778723602995,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#16A085"
+      "lastEditorColor": "#4A90D9",
+      "unitCode": "OF2"
     }
   ],
   "baseRates": {
@@ -335,165 +441,37 @@
     "billing": {
       "preparedBy": {
         "name": "MS. PAULYN MURRIEL BEJER",
-        "title": ""
+        "title": "Accounting Staff"
       },
       "approvedBy": {
         "name": "MR. MICHAEL PEÑANO",
-        "title": ""
+        "title": "Engineering Manager"
       },
       "finalApprover": {
         "name": "MR. YUICHIRO MAENO",
-        "title": ""
+        "title": "President"
       }
     }
   },
   "manualOverrides": {
     "tasks": {
-      "1778634105572": {
-        "unitPage": 2
+      "1778728136615": {
+        "machineCode": "JV"
+      },
+      "1778728136456": {
+        "machineCode": "BB"
       }
     },
     "footer": {}
   },
-  "collapsedTaskIds": [],
-  "chatLog": [
-    {
-      "sid": "MSFAiQQGvMH78AdFAABh",
-      "name": "Tiger",
-      "color": "#C0392B",
-      "message": "",
-      "time": "09:12",
-      "id": "1778548324894-yd0zmirdg",
-      "isEdited": true,
-      "isDeleted": true
-    },
-    {
-      "sid": "FZmsgA46KwU3kyEJAAAm",
-      "name": "Tiger",
-      "color": "#27AE60",
-      "message": "Hello",
-      "time": "13:52",
-      "id": "1778565135757-7oemyrx87",
-      "readBy": [
-        "Browser-User-31",
-        "Browser-User-248"
-      ]
-    },
-    {
-      "sid": "FZmsgA46KwU3kyEJAAAm",
-      "name": "Tiger",
-      "color": "#27AE60",
-      "message": "Oy",
-      "time": "13:52",
-      "id": "1778565138041-wxm2j3plv",
-      "readBy": [
-        "Browser-User-31",
-        "Browser-User-248"
-      ]
-    },
-    {
-      "sid": "FZmsgA46KwU3kyEJAAAm",
-      "name": "Tiger",
-      "color": "#27AE60",
-      "message": "",
-      "time": "13:52",
-      "id": "1778565139593-po7tfqv6a",
-      "isDeleted": true
-    },
-    {
-      "sid": "FZmsgA46KwU3kyEJAAAm",
-      "name": "Tiger",
-      "color": "#27AE60",
-      "message": "",
-      "time": "13:52",
-      "id": "1778565140488-oco8naktj",
-      "isDeleted": true
-    },
-    {
-      "sid": "FZmsgA46KwU3kyEJAAAm",
-      "name": "Tiger",
-      "color": "#27AE60",
-      "message": "",
-      "time": "13:52",
-      "id": "1778565140888-lc3m9hvi6",
-      "isDeleted": true
-    },
-    {
-      "sid": "FZmsgA46KwU3kyEJAAAm",
-      "name": "Tiger",
-      "color": "#27AE60",
-      "message": "",
-      "time": "13:52",
-      "id": "1778565141163-kkwlxno1c",
-      "isDeleted": true
-    },
-    {
-      "sid": "FZmsgA46KwU3kyEJAAAm",
-      "name": "Tiger",
-      "color": "#27AE60",
-      "message": "",
-      "time": "13:52",
-      "id": "1778565141384-ibee63k0s",
-      "isDeleted": true
-    },
-    {
-      "sid": "77LYsgQP1MRUA_jYAAAz",
-      "name": "Browser-User-31",
-      "color": "#E05C6B",
-      "message": "adwadw",
-      "time": "13:56",
-      "id": "1778565392249-43hplx2w7",
-      "readBy": [
-        "Tiger",
-        "Browser-User-248"
-      ]
-    },
-    {
-      "sid": "hsROt47XBRIyhYr-AAAv",
-      "name": "Tiger",
-      "color": "#2ECC71",
-      "message": "awda",
-      "time": "13:57",
-      "id": "1778565420746-uypc00r4n",
-      "readBy": [
-        "Browser-User-248"
-      ]
-    },
-    {
-      "sid": "77LYsgQP1MRUA_jYAAAz",
-      "name": "Browser-User-31",
-      "color": "#E05C6B",
-      "message": "awda",
-      "time": "13:57",
-      "id": "1778565427641-eeuymzmkv",
-      "readBy": [
-        "Tiger",
-        "Browser-User-248"
-      ]
-    },
-    {
-      "sid": "BDp3Yx09jVL1swOWAAB6",
-      "name": "Browser-User-248",
-      "color": "#F39C12",
-      "message": "awdwa",
-      "time": "14:01",
-      "id": "1778565713746-wofa965nd",
-      "readBy": [
-        "Tiger"
-      ]
-    },
-    {
-      "sid": "BDp3Yx09jVL1swOWAAB6",
-      "name": "Browser-User-248",
-      "color": "#F39C12",
-      "message": "awdaw",
-      "time": "14:02",
-      "id": "1778565720113-eicokki1q",
-      "readBy": [
-        "Tiger"
-      ]
-    }
+  "collapsedTaskIds": [
+    1778627685153,
+    1778635030573,
+    1778716870047,
+    1778716870318,
+    1778630593126
   ],
-  "layoutVariant": "special",
-  "savedAt": "2026-05-14T01:58:23.015Z"
+  "chatLog": [],
+  "layoutVariant": "kemco",
+  "savedAt": "2026-05-14T03:55:06.561Z"
 }

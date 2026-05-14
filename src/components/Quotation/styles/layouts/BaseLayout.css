@@ -13,6 +13,10 @@
   transition: all 0.3s ease;
 }
 
+.text-red {
+  color: red !important;
+}
+
 @media print {
   @page {
     size: A4 portrait;

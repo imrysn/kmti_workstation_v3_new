@@ -229,10 +229,12 @@
   width: 100%;
 }
 
+.table-visual .total-amount-row,
 .table-visual .total-amount-row td {
   font-weight: bold;
   font-size: 14px;
   border-top: 2px solid #000;
+  background-color: white !important;
 }
 
 .table-visual .total-label-cell {
@@ -319,7 +321,7 @@
   font-size: 14px;
   text-align: center;
   width: 250px;
-  margin-bottom: 5%;
+  margin-bottom: 2px;
 }
 
 .sig-title-visual {

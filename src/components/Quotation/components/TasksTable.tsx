@@ -430,9 +430,9 @@ const TasksTable = memo(({
                 {layoutVariant === 'kemco' ? (
                   <>
                     <th style={{ width: '4%' }}>NO.</th>
-                    <th style={{ width: '6%' }}>CONSTRUCTION NO</th>
-                    <th style={{ width: '6%' }}>MACHINE CODE</th>
-                    <th style={{ width: '6%' }}>UNIT CODE</th>
+                    <th style={{ width: '6%' }}>CONST NO</th>
+                    <th style={{ width: '6%' }}>MACHINE <br /> CODE</th>
+                    <th style={{ width: '6%' }}>UNIT <br /> CODE</th>
                     <th style={{ width: '18%' }}>DWG No.</th>
                     <th style={{ width: '21%' }}>DESCRIPTION</th>
                     <th style={{ width: '9%' }}>START DATE</th>

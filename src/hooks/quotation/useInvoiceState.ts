@@ -107,6 +107,12 @@ export interface FooterOverrides {
 export interface TaskOverrides {
   total?: number
   unitPage?: number
+  referenceNumber?: string
+  machineCode?: string
+  unitCode?: string
+  description?: string
+  percentage?: number
+  type?: string
 }
 
 export interface ManualOverrides {

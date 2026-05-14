@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import type { CompanyInfo, QuotationDetails, BillingDetails, Task, Signatures, ManualOverrides } from '../../../hooks/quotation'
+import type { CompanyInfo, QuotationDetails, BillingDetails, Task, Signatures, ManualOverrides, TaskOverrides } from '../../../hooks/quotation'
 import PrintHeader from './PrintHeader'
 
 interface PrintPageProps {
@@ -23,7 +23,8 @@ interface PrintPageProps {
   pageTotals: number[]
   layoutVariant?: 'special' | 'kemco'
   lastAssemblyId?: number
-  onUnitEdit?: (taskId: number, value: number) => void
+  onTaskOverride?: (taskId: number, updates: Partial<TaskOverrides>) => void
+  allTasks: Task[]
 }
 
 export const PrintPage = memo(({
@@ -34,16 +35,18 @@ export const PrintPage = memo(({
   isCompressed, showAdmin, fillerRowCount, pageTotals,
   layoutVariant = 'special',
   lastAssemblyId,
-  onUnitEdit
+  onTaskOverride,
+  allTasks
 }: PrintPageProps) => {
 
   const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 
-  const resolveUnitPage = (task: Task) => {
-    return manualOverrides.tasks[task.id]?.unitPage !== undefined
-      ? manualOverrides.tasks[task.id].unitPage
-      : (task.minutes || 0)
+  const resolveField = (task: Task, field: string, defaultValue: any) => {
+    const override = manualOverrides.tasks[task.id] as any
+    return override?.[field] !== undefined ? override[field] : defaultValue
   }
+
+  const resolveUnitPage = (task: Task) => resolveField(task, 'unitPage', task.minutes || 0)
 
   const renderSignatures = () => {
     if (!isLastPage) return null
@@ -79,14 +82,6 @@ export const PrintPage = memo(({
             <div className="sig-title-visual">{signatures.quotation.preparedBy.title}</div>
           </div>
           <div className="signature-right-visual">
-            {layoutVariant === 'kemco' ? (
-              <>
-                <div className="sig-label-visual">Checked by:</div>
-                <div className="sig-line-visual" />
-                <div className="sig-name-visual">{signatures.quotation.checkedBy.name}</div>
-                <div className="sig-title-visual">{signatures.quotation.checkedBy.title}</div>
-              </>
-            ) : null}
           </div>
         </div>
         <div className="signature-row-visual">
@@ -128,56 +123,155 @@ export const PrintPage = memo(({
     )
   }
 
-  const renderTable = () => (
-    <>
-      <table className="table-visual">
-        <thead>
-          {layoutVariant === 'kemco' ? (
-            <tr>
-              <th className="col-no">No.</th>
-              <th className="col-reference">Construction<br />No.</th>
-              <th className="col-code">Machine<br />Code</th>
-              <th className="col-unit">Unit<br />Code</th>
-              <th className="col-description">DESCRIPTION</th>
-              <th className="col-percent">Percent<br />%</th>
-              <th className="col-type">Type</th>
-              <th className="col-price">Price</th>
-            </tr>
-          ) : (
-            <tr>
-              <th className="col-no">NO.</th>
-              <th className="col-reference">REFERENCE NO.</th>
-              <th className="col-description">DESCRIPTION</th>
-              <th className="col-unitpage">UNIT<br />(PAGE)</th>
-              <th className="col-type">TYPE</th>
-              <th className="col-price">PRICE</th>
-            </tr>
-          )}
-        </thead>
-        <tbody>
-          {pageTasks.map((task, i) => {
-            if (layoutVariant === 'kemco') {
-              const indent = (task.level || 0) * 12
-              return (
-                <tr key={task.id} className={`level-${task.level} ${task.level === 0 ? 'print-assembly-header' : ''}`}>
-                  <td>{startIndex + i + 1}</td>
-                  <td className="col-ref-cell">{task.referenceNumber || ''}</td>
-                  <td className="col-machine-cell">{task.level === 0 ? (task.machineCode || '') : ''}</td>
-                  <td className="col-unit-cell">{task.level === 1 ? (task.unitCode || '') : ''}</td>
-                  <td className="description-cell">
-                    <div className="desc-indent-wrapper" style={{ '--indent': `${indent}px` } as React.CSSProperties}>
-                      {task.level! > 0 && <span className="desc-arrow">↳</span>}
-                      <span className="desc-text">{task.description}</span>
-                    </div>
-                  </td>
-                  <td>{task.level === 0 ? (task.percentage ? `${task.percentage}%` : '') : ''}</td>
-                  <td>{task.type || '3D'}</td>
-                  <td className="price-cell">
-                    {task.id === lastAssemblyId ? `¥${(1848400).toLocaleString()}` : ''}
-                  </td>
-                </tr>
-              )
-            }
+  const renderTable = () => {
+    const assemblyPercentages: Record<number, number> = {}
+    if (layoutVariant === 'kemco' && allTasks.length > 0) {
+      const childrenMap: Record<number, number[]> = {}
+      allTasks.forEach(t => {
+        if (t.parentId !== null) {
+          if (!childrenMap[t.parentId]) childrenMap[t.parentId] = []
+          childrenMap[t.parentId].push(t.id)
+        }
+      })
+
+      const countSubtree = (tid: number): number => {
+        let count = 1
+        const children = childrenMap[tid] || []
+        children.forEach(cid => {
+          count += countSubtree(cid)
+        })
+        return count
+      }
+
+      const topLevelCounts: { id: number, count: number }[] = allTasks
+        .filter(t => t.level === 0)
+        .map(t => ({ id: t.id, count: countSubtree(t.id) }))
+      
+      const totalWeight = topLevelCounts.reduce((acc, t) => acc + t.count, 0)
+      
+      topLevelCounts.forEach(t => {
+        assemblyPercentages[t.id] = totalWeight > 0 ? (t.count / totalWeight) * 100 : 0
+      })
+    }
+
+    return (
+      <>
+        <table className="table-visual">
+          <thead>
+            {layoutVariant === 'kemco' ? (
+              <tr>
+                <th className="col-no">No.</th>
+                <th className="col-reference">Construction<br />No.</th>
+                <th className="col-code">Machine<br />Code</th>
+                <th className="col-unit">Unit<br />Code</th>
+                <th className="col-description">DESCRIPTION</th>
+                <th className="col-percent">Percent<br />%</th>
+                <th className="col-type">Type</th>
+                <th className="col-price">Price</th>
+              </tr>
+            ) : (
+              <tr>
+                <th className="col-no">NO.</th>
+                <th className="col-reference">REFERENCE NO.</th>
+                <th className="col-description">DESCRIPTION</th>
+                <th className="col-unitpage">UNIT<br />(PAGE)</th>
+                <th className="col-type">TYPE</th>
+                <th className="col-price">PRICE</th>
+              </tr>
+            )}
+          </thead>
+          <tbody>
+            {pageTasks.map((task, i) => {
+              if (layoutVariant === 'kemco') {
+                const indent = 0
+                const getConstNoSpan = (idx: number) => {
+                  const t = pageTasks[idx]
+                  // If it's the first row and a continuation of previous page assembly, it should merge
+                  const isContinuationOfPrev = idx === 0 && isContinuation && t.level !== 0 && t.parentId === lastAssemblyId
+                  
+                  if (!isContinuationOfPrev && t.level !== 0 && idx > 0) return 0
+                  
+                  let span = 1
+                  for (let j = idx + 1; j < pageTasks.length; j++) {
+                    if (pageTasks[j].level === 0) break
+                    span++
+                  }
+                  return span
+                }
+
+                const span = getConstNoSpan(i)
+                let targetId = task.id
+                let groupRef = task.referenceNumber || ''
+                let groupMachine = task.level === 0 ? (task.machineCode || '') : ''
+                let groupPercentage = task.level === 0 ? (assemblyPercentages[task.id] || 0) : 0
+                
+                if (task.level === 1 && i === 0) {
+                  const fullIdx = allTasks.findIndex(at => at.id === task.id)
+                  if (fullIdx !== -1) {
+                    for (let k = fullIdx - 1; k >= 0; k--) {
+                      if (allTasks[k].level === 0) {
+                        targetId = allTasks[k].id
+                        groupRef = allTasks[k].referenceNumber || ''
+                        groupMachine = allTasks[k].machineCode || ''
+                        groupPercentage = assemblyPercentages[allTasks[k].id] || 0
+                        break
+                      }
+                    }
+                  }
+                }
+
+                const resRef = resolveField({ id: targetId } as Task, 'referenceNumber', groupRef)
+                const resMachine = resolveField({ id: targetId } as Task, 'machineCode', groupMachine)
+                const resUnit = resolveField(task, 'unitCode', task.level === 1 ? (task.unitCode || '') : '')
+                const resDesc = resolveField(task, 'description', task.description)
+                const resPercent = resolveField({ id: targetId } as Task, 'percentage', groupPercentage)
+                const resType = resolveField(task, 'type', task.type || '3D')
+
+                return (
+                  <tr key={task.id} className={`level-${task.level} ${task.level === 0 ? 'print-assembly-header' : ''}`}>
+                    <td>{startIndex + i + 1}</td>
+                    {span > 0 && (
+                      <>
+                        <td className="col-ref-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                          <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resRef} onChange={e => onTaskOverride?.(targetId, { referenceNumber: e.target.value })} />
+                        </td>
+                        <td className="col-machine-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                          <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resMachine} onChange={e => onTaskOverride?.(targetId, { machineCode: e.target.value })} />
+                        </td>
+                      </>
+                    )}
+                    <td className="col-unit-cell">
+                      {task.level === 1 && (
+                        <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%' }} value={resUnit} onChange={e => onTaskOverride?.(task.id, { unitCode: e.target.value })} />
+                      )}
+                    </td>
+                    <td className="description-cell">
+                      <div className="desc-indent-wrapper" style={{ '--indent': `${indent}px` } as React.CSSProperties}>
+                        <input type="text" className="ppm-unit-input" style={{ textAlign: 'left', width: '100%' }} value={resDesc} onChange={e => onTaskOverride?.(task.id, { description: e.target.value })} />
+                      </div>
+                    </td>
+                    {span > 0 && (
+                      <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                        <input
+                          type="text"
+                          className="ppm-unit-input"
+                          style={{ textAlign: 'center', width: '100%' }}
+                          value={typeof resPercent === 'number' ? `${resPercent.toFixed(0)}%` : resPercent}
+                          onChange={e => onTaskOverride?.(targetId, { percentage: parseFloat(e.target.value.replace('%', '')) || 0 })}
+                        />
+                      </td>
+                    )}
+                    <td>
+                      <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%' }} value={resType} onChange={e => onTaskOverride?.(task.id, { type: e.target.value })} />
+                    </td>
+                    {i === 0 && (
+                      <td className="price-cell kemco-merged-price" rowSpan={pageTasks.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
+                        ¥{(1848400).toLocaleString()}
+                      </td>
+                    )}
+                  </tr>
+                )
+              }
             return (
               <tr key={task.id}>
                 <td>{startIndex + i + 1}</td>
@@ -191,7 +285,7 @@ export const PrintPage = memo(({
                     value={resolveUnitPage(task) === 0 ? '' : resolveUnitPage(task)}
                     onChange={e => {
                       const val = parseInt(e.target.value.replace(/\D/g, '')) || 0
-                      onUnitEdit?.(task.id, val)
+                      onTaskOverride?.(task.id, { unitPage: val })
                     }}
                   />
                 </td>
@@ -259,7 +353,8 @@ export const PrintPage = memo(({
         </div>
       )}
     </>
-  )
+    )
+  }
 
   return (
     <div

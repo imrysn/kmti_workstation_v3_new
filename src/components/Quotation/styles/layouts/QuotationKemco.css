@@ -22,8 +22,8 @@
   .variant-kemco .table-visual th.col-code { width: 45px !important; }
   .variant-kemco .table-visual th.col-unit { width: 45px !important; }
 
-  .print-assembly-header { background-color: #f9fafb !important; }
-  .print-assembly-header td { border-bottom: 1.5pt solid black !important; }
+  /* .print-assembly-header { background-color: #f9fafb !important; } */
+  /* .print-assembly-header td { border-bottom: 1.5pt solid black !important; } */
 
   /* KEMCO Specific: Leasing Fee in Red */
   .variant-kemco .leasing-fee-row td.description-cell,
