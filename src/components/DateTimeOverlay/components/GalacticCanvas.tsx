@@ -5,11 +5,37 @@ interface GalacticCanvasProps {
   theme: ThemeConfig;
   overlayRef: React.RefObject<HTMLDivElement>;
   isInactive: boolean;
+  accentColor: string;
 }
 
-export const GalacticCanvas: React.FC<GalacticCanvasProps> = ({ theme, overlayRef, isInactive }) => {
+const hexToRgb = (hex: string) => {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : { r: 255, g: 100, b: 0 };
+};
+
+export const GalacticCanvas: React.FC<GalacticCanvasProps> = ({ theme, overlayRef, isInactive, accentColor }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bhAnimRef = useRef<number>(0);
+  const [canvasSize, setCanvasSize] = React.useState({ w: 600, h: 480 });
+
+  // 1. Automatically resize canvas to enclose the UI + generous padding for particles/glow
+  useEffect(() => {
+    if (!overlayRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const { width, height } = entries[0].contentRect;
+      // Add 300px padding on width and height to give particles room to fly without clipping
+      setCanvasSize({
+        w: Math.max(600, width + 300),
+        h: Math.max(480, height + 300)
+      });
+    });
+    observer.observe(overlayRef.current);
+    return () => observer.disconnect();
+  }, [overlayRef]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,16 +94,15 @@ export const GalacticCanvas: React.FC<GalacticCanvasProps> = ({ theme, overlayRe
         ctx.closePath();
       };
 
-      // 4. THE BLACK HOLE (The Pill)
-      drawPillPath(ctx, cx - bhRx, cy - bhRy, pillW, pillH);
-      ctx.fillStyle = '#000000';
-      ctx.fill();
+      // 4. THE BLACK HOLE (The Pill) - Removed solid black fill so parent bg is visible
 
-      // --- NEON ORANGE BORDER ---
+      const { r, g, b } = hexToRgb(accentColor);
+
+      // --- NEON BORDER ---
       ctx.save();
       ctx.shadowBlur = 10;
-      ctx.shadowColor = '#ff6600';
-      ctx.strokeStyle = '#ffae00';
+      ctx.shadowColor = accentColor;
+      ctx.strokeStyle = accentColor;
       ctx.lineWidth = 1.5;
       drawPillPath(ctx, cx - bhRx, cy - bhRy, pillW, pillH);
       ctx.stroke();
@@ -96,10 +121,10 @@ export const GalacticCanvas: React.FC<GalacticCanvasProps> = ({ theme, overlayRe
       if (!isInactive) {
         ctx.filter = 'blur(12px)';
         ctx.shadowBlur = 45;
-        ctx.shadowColor = '#ff4400';
+        ctx.shadowColor = accentColor;
       }
       
-      ctx.strokeStyle = `rgba(255, 68, 0, ${isInactive ? 0.1 : 0.2})`;
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${isInactive ? 0.1 : 0.2})`;
       ctx.lineWidth = isInactive ? 4 : 12;
       ctx.setLineDash([oPerimeter * 0.3, oPerimeter * 0.7]);
       ctx.lineDashOffset = -t * 400;
@@ -109,7 +134,7 @@ export const GalacticCanvas: React.FC<GalacticCanvasProps> = ({ theme, overlayRe
       if (!isInactive) {
         ctx.filter = 'blur(6px)';
         ctx.shadowBlur = 20;
-        ctx.strokeStyle = 'rgba(255, 120, 0, 0.4)';
+        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.4)`;
         ctx.lineWidth = 6;
         ctx.stroke();
       }
@@ -117,11 +142,9 @@ export const GalacticCanvas: React.FC<GalacticCanvasProps> = ({ theme, overlayRe
       ctx.restore();
 
       // 5. Hawking Radiation Particles
-      // Reduce particle processing if inactive
-      const activeParticles = isInactive ? particles.slice(0, 15) : particles;
-      
-      activeParticles.forEach(p => {
-        p.x += p.v * 1.5;
+      particles.forEach(p => {
+        // Slow down particle speed when inactive for a smooth "sleep" effect instead of looking laggy
+        p.x += p.v * (isInactive ? 0.5 : 1.5);
         const distMult = 1.35 + Math.sin(t * 0.15 + p.a * 10) * 0.25;
         const orbitX = cx + Math.cos(p.x) * bhRx * (distMult + 0.2);
         const orbitY = cy + Math.sin(p.x) * bhRy * (distMult + 0.4);
@@ -131,37 +154,33 @@ export const GalacticCanvas: React.FC<GalacticCanvasProps> = ({ theme, overlayRe
 
         ctx.beginPath();
         ctx.arc(orbitX, orbitY, size + 1.5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 100, 0, ${alpha * (isInactive ? 0.1 : 0.3)})`;
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha * (isInactive ? 0.1 : 0.3)})`;
         ctx.fill();
 
         ctx.beginPath();
         ctx.arc(orbitX, orbitY, size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(255, 200, 50, ${alpha})`;
+        // Inner core can be slightly brighter, we just use a higher alpha
+        ctx.fillStyle = `rgba(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)}, ${alpha})`;
         ctx.fill();
       });
 
-      // 6. DEPTH OVERLAY
-      const innerLens = ctx.createRadialGradient(cx, cy, 0, cx, cy, bhRx);
-      innerLens.addColorStop(0, 'rgba(255, 255, 255, 0.02)');
-      innerLens.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
-      drawPillPath(ctx, cx - bhRx, cy - bhRy, pillW, pillH);
-      ctx.fillStyle = innerLens;
-      ctx.fill();
+      // 6. DEPTH OVERLAY - Removed so the main UI background is completely clear
 
-      t += 0.012;
+      // Slow down overall rotation time when inactive
+      t += isInactive ? 0.004 : 0.012;
       bhAnimRef.current = requestAnimationFrame(draw);
     };
 
     bhAnimRef.current = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(bhAnimRef.current);
-  }, [theme.className, isInactive]);
+  }, [theme.className, isInactive, accentColor]);
 
   return (
     <canvas
       ref={canvasRef}
       className="bh-canvas"
-      width={600}
-      height={480}
+      width={canvasSize.w}
+      height={canvasSize.h}
     />
   );
 };

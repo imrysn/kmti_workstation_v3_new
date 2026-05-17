@@ -578,10 +578,10 @@
     border-radius: 999px !important;
     padding: 0;
     min-width: 220px;
-    background: transparent !important;
+    background: var(--galactic-bg) !important;
     border: none !important;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     overflow: visible !important;
     gap: 0;
 }
@@ -592,8 +592,6 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 600px !important;
-    height: 480px !important;
     z-index: 0;
     pointer-events: none;
     display: block;
@@ -604,26 +602,13 @@
     position: relative;
     z-index: 5;
     padding: 14px 32px;
-    background: rgba(0, 0, 0, 0.5) !important;
-    border-radius: 999px;
-    backdrop-filter: blur(12px);
-    transition: border-radius 0.3s ease;
-}
-
-/* Flatten bottom of top part when expanded to blend into CC */
-.findr-global-datetime.theme-galactic.expanded .findr-datetime-content {
-    border-radius: 32px 32px 0 0;
-    background: rgba(0, 0, 0, 0.6) !important;
 }
 
 .findr-global-datetime.theme-galactic .findr-control-center {
     position: relative;
     z-index: 5;
     padding: 0 24px 24px;
-    background: rgba(0, 0, 0, 0.6) !important;
     border-top: 1px solid rgba(255, 120, 30, 0.1);
-    backdrop-filter: blur(12px);
-    border-radius: 0 0 32px 32px;
 }
 
 /* Time — glowing orange/amber like accretion light */
@@ -703,3 +688,157 @@
 .findr-opacity-slider::-webkit-slider-thumb:hover {
     transform: scale(1.2);
 }
+
+/* ── Color Wheel (react-colorful) ── */
+.findr-cc-wheel-wrap {
+  position: relative;
+}
+
+.findr-cc-wheel-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.findr-cc-wheel-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--sw-contrast), 0.2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  padding: 0;
+}
+
+.findr-cc-wheel-swatch:hover,
+.findr-cc-wheel-swatch.open {
+  transform: scale(1.15);
+  border-color: rgba(var(--sw-contrast), 0.5);
+  box-shadow: 0 0 12px currentColor;
+}
+
+.findr-cc-color-hex {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+.findr-cc-bg-reset {
+  background: rgba(var(--sw-contrast), 0.08);
+  border: 1px solid rgba(var(--sw-contrast), 0.12);
+  color: inherit;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.findr-cc-bg-reset:hover {
+  background: rgba(var(--sw-contrast), 0.18);
+  transform: scale(1.1);
+}
+
+.findr-cc-bg-reset.active {
+  background: rgba(var(--sw-contrast), 0.2);
+  border-color: rgba(var(--sw-contrast), 0.4);
+}
+
+/* The popover panel that floats above */
+.findr-cc-wheel-popover {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  z-index: 99999;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 12px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: findrWheelIn 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes findrWheelIn {
+  from { transform: scale(0.85) translateY(8px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);   opacity: 1; }
+}
+
+/* Size the react-colorful wheel */
+.findr-cc-wheel-popover .react-colorful {
+  width: 160px;
+  height: 160px;
+}
+
+.findr-cc-wheel-popover .react-colorful__saturation {
+  border-radius: 8px 8px 0 0;
+}
+
+.findr-cc-wheel-popover .react-colorful__hue {
+  border-radius: 0 0 8px 8px;
+  height: 16px;
+  margin-top: 8px;
+}
+
+.findr-cc-wheel-popover .react-colorful__hue-pointer,
+.findr-cc-wheel-popover .react-colorful__saturation-pointer {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+}
+
+/* Keyframe used by control center group animations */
+@keyframes findrCCFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   TIME BOMB THEME
+   ========================================================================== */
+
+/* Hard, boxy, rugged appearance */
+.findr-global-datetime.theme-bomb {
+    border-radius: 8px !important;
+    border-width: 4px !important;
+    border-style: solid !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 0 30px rgba(255, 0, 0, 0.4) !important;
+}
+
+.findr-global-datetime.theme-bomb.expanded {
+    border-radius: 8px !important;
+}
+
+/* Inner containers should inherit the sharp corners */
+.findr-global-datetime.theme-bomb .findr-datetime-content,
+.findr-global-datetime.theme-bomb .findr-control-center {
+    border-radius: 4px;
+}
+
+/* Pulsing text to simulate emergency bomb state */
+.findr-global-datetime.theme-bomb .findr-datetime-time,
+.findr-global-datetime.theme-bomb .findr-sw-time {
+    animation: bombPulse 1s steps(2, start) infinite;
+    text-shadow: 0 0 8px currentColor, 0 0 15px currentColor;
+    letter-spacing: 2px;
+}
+
+/* More frantic pulse for milliseconds in stopwatch */
+.findr-global-datetime.theme-bomb .findr-sw-ms {
+    animation: bombPulse 0.1s steps(2, start) infinite;
+}
+
+@keyframes bombPulse {
+    0%   { opacity: 1; }
+    50%  { opacity: 0.8; }
+    100% { opacity: 1; }
+}

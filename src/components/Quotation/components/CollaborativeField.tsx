@@ -23,6 +23,8 @@ interface Props {
   children: React.ReactNode
   className?: string
   style?: React.CSSProperties
+  hardLocked?: boolean
+  lockOwnerName?: string
 }
 
 export function CollaborativeField({
@@ -33,6 +35,8 @@ export function CollaborativeField({
   children,
   className = '',
   style = {},
+  hardLocked = false,
+  lockOwnerName = '',
 }: Props) {
   const { recentEdits, emitSelection } = useCollaborationContext()
   const [remoteSelectionRects, setRemoteSelectionRects] = React.useState<Record<string, TextRangeRect[]>>({})
@@ -53,10 +57,12 @@ export function CollaborativeField({
 
   const hasFocus = focused.length > 0
   // Soft lock: field is locked if any remote user is currently focused on it.
-  // We still allow the local user to see/copy the value but not modify it.
-  const isLocked = hasFocus
-  const lockOwner = isLocked ? focused[0] : null
-  const lockTitle = lockOwner ? `${lockOwner.name} is editing this field` : undefined
+  // Hard lock: field is locked because the row is owned by another engineer.
+  const isLocked = hardLocked || hasFocus
+  const lockOwner = focused.length > 0 ? focused[0] : null
+  const lockTitle = hardLocked
+    ? `This row is locked by ${lockOwnerName || 'another engineer'}`
+    : (lockOwner ? `${lockOwner.name} is editing this field` : undefined)
 
   // Activity Glow: highlight if recently edited
   const recentEdit = recentEdits[fieldKey]
@@ -65,7 +71,7 @@ export function CollaborativeField({
   // Calculate coordinates for remote selections whenever state or value changes
   React.useLayoutEffect(() => {
     if (!childRef.current) return
-    
+
     const newRects: Record<string, TextRangeRect[]> = {}
     let hasValidCalculation = false
 
@@ -107,8 +113,8 @@ export function CollaborativeField({
 
   return (
     <div
-      className={`collab-field-wrapper ${hasFocus ? 'collab-field-active' : ''} ${hasActivity ? 'collab-field-activity' : ''} ${isLocked ? 'collab-field-locked' : ''} ${className}`}
-      style={{ 
+      className={`collab-field-wrapper ${hasFocus ? 'collab-field-active' : ''} ${hasActivity ? 'collab-field-activity' : ''} ${isLocked ? 'collab-field-locked' : ''} ${hardLocked ? 'collab-field-hard-locked' : ''} ${className}`}
+      style={{
         ...style,
         boxShadow: activityShadow,
         zIndex: hasFocus ? 50 : (hasActivity ? 40 : 'auto')
@@ -134,10 +140,23 @@ export function CollaborativeField({
           emitSelection(fieldKey, target.selectionStart || 0, target.selectionEnd || 0)
         }
       })}
-      
+
+      {/* Hard Lock Badge — SVG padlock, no emoji */}
+      {hardLocked && (
+        <div className="collab-field-lock-badge" title={lockTitle}>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+        </div>
+      )}
+
       {/* Overlay Layer: Always on top, click-transparent */}
       {hasFocus && (
-        <div 
+        <div
           className="collab-highlight-overlay"
           style={{ boxShadow: combinedShadow } as React.CSSProperties}
         >
@@ -146,7 +165,7 @@ export function CollaborativeField({
             rects.map((rect, i) => {
               const userColor = remoteUsers[sid]?.color || '#4A90D9'
               return (
-                <div 
+                <div
                   key={`${sid}-sel-${i}`}
                   className="collab-selection-rect"
                   style={{

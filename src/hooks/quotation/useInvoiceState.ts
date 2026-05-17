@@ -18,6 +18,7 @@ export interface Task {
   isMainTask: boolean
   parentId: number | null
   engineer?: string
+  engineerWorkstation?: string  // workstation name (myName) of whoever claimed this row — source of truth for locking
   lastEditorName?: string
   lastEditorColor?: string
   // KEMCO Fields

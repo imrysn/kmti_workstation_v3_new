@@ -15,13 +15,14 @@ export const useDragging = (
     if (!overlayRef.current) return;
     const padding = 20, snapThreshold = 60;
     const width = overlayRef.current.offsetWidth;
-    const height = overlayRef.current.offsetHeight;
+    // We only bound the vertical position by the clock itself, so it doesn't snap down when expanded
+    const clockHeight = (overlayRef.current.querySelector('.findr-datetime-content') as HTMLElement)?.offsetHeight || 44;
     
     setPosition((prev: { x: number; y: number }) => {
       const distToLeft = prev.x;
       const distToRight = window.innerWidth - (prev.x + width);
       const distToBottom = prev.y;
-      const distToTop = window.innerHeight - (prev.y + height);
+      const distToTop = window.innerHeight - (prev.y + clockHeight);
       
       let targetX = prev.x;
       let targetY = prev.y;
@@ -30,7 +31,7 @@ export const useDragging = (
       else if (distToRight < snapThreshold) targetX = window.innerWidth - width - padding;
       
       if (distToBottom < snapThreshold) targetY = padding;
-      else if (distToTop < snapThreshold) targetY = window.innerHeight - height - padding;
+      else if (distToTop < snapThreshold) targetY = window.innerHeight - clockHeight - padding;
       
       return { x: targetX, y: targetY };
     });

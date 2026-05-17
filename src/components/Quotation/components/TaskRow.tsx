@@ -1,6 +1,7 @@
-import { memo, useCallback, useState, useEffect } from 'react'
+import { memo, useCallback, useState, useEffect, useMemo } from 'react'
 import type { Task } from '../../../hooks/quotation/useInvoiceState'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
+import { useAuth } from '../../../context/AuthContext'
 import { CollaborativeField } from './CollaborativeField'
 
 export interface TaskSubtotals {
@@ -36,6 +37,8 @@ export interface TaskRowProps {
   onCancelEdit?: () => void
   layoutVariant?: 'special' | 'kemco'
   trRef?: React.Ref<HTMLTableRowElement>
+  /** Provided by TasksTable with full ancestor-chain lock awareness */
+  isRowLocked?: boolean
 }
 
 export const TaskRow = memo(({
@@ -46,9 +49,30 @@ export const TaskRow = memo(({
   onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd,
   hasSubTasks, isCollapsed, onToggleCollapse,
   onCancelEdit, layoutVariant, trRef,
+  isRowLocked: isRowLockedProp,
 }: TaskRowProps) => {
-  const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
+  const { hasRole } = useAuth()
+  const { remoteUsers, emitFocus, emitBlur, myName } = useCollaborationContext()
   const [localTotal, setLocalTotal] = useState<string>('')
+
+  const isRowLockedComputed = useMemo(() => {
+    const ownerWorkstation = task.engineerWorkstation?.trim().toLowerCase() || ''
+    if (!ownerWorkstation && !task.engineer?.trim()) return false
+    if (hasRole('admin', 'it')) return false
+
+    const myWorkstation = myName.trim().toLowerCase()
+    if (ownerWorkstation) {
+      // Workstation-based ownership (same system as bookmark colors)
+      return ownerWorkstation !== myWorkstation
+    }
+    // Legacy fallback: use lastEditorName if available
+    const editorWorkstation = task.lastEditorName?.trim().toLowerCase() || ''
+    if (editorWorkstation) return editorWorkstation !== myWorkstation
+    return false
+  }, [task.engineer, task.engineerWorkstation, task.lastEditorName, myName, hasRole])
+
+  // Prop takes priority (TasksTable resolves the full ancestor chain)
+  const isRowLocked = isRowLockedProp ?? isRowLockedComputed
 
   useEffect(() => {
     if (isEditing) {
@@ -86,7 +110,7 @@ export const TaskRow = memo(({
       <td>
         <CollaborativeField
           fieldKey={`task.${task.id}.hours`}
-          remoteUsers={remoteUsers}
+          remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
           onFocus={() => emitFocus(`task.${task.id}.hours`)}
           onBlur={() => emitBlur(`task.${task.id}.hours`)}
         >
@@ -104,7 +128,7 @@ export const TaskRow = memo(({
       <td>
         <CollaborativeField
           fieldKey={`task.${task.id}.minutes`}
-          remoteUsers={remoteUsers}
+          remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
           onFocus={() => emitFocus(`task.${task.id}.minutes`)}
           onBlur={() => emitBlur(`task.${task.id}.minutes`)}
         >
@@ -127,7 +151,7 @@ export const TaskRow = memo(({
       <td>
         <CollaborativeField
           fieldKey={`task.${task.id}.overtimeHours`}
-          remoteUsers={remoteUsers}
+          remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
           onFocus={() => emitFocus(`task.${task.id}.overtimeHours`)}
           onBlur={() => emitBlur(`task.${task.id}.overtimeHours`)}
         >
@@ -151,7 +175,7 @@ export const TaskRow = memo(({
         <div className="software-input-container">
           <CollaborativeField
             fieldKey={`task.${task.id}.softwareUnits`}
-            remoteUsers={remoteUsers}
+            remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
             onFocus={() => emitFocus(`task.${task.id}.softwareUnits`)}
             onBlur={() => emitBlur(`task.${task.id}.softwareUnits`)}
           >
@@ -174,7 +198,7 @@ export const TaskRow = memo(({
       {/* MACHINE CODE */}
       <td>
         {task.level === 0 && (
-          <CollaborativeField fieldKey={`task.${task.id}.machineCode`} remoteUsers={remoteUsers}>
+          <CollaborativeField fieldKey={`task.${task.id}.machineCode`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
             <input
               type="text"
               value={task.machineCode || ''}
@@ -188,7 +212,7 @@ export const TaskRow = memo(({
       {/* UNIT CODE */}
       <td>
         {task.level !== 2 && (
-          <CollaborativeField fieldKey={`task.${task.id}.unitCode`} remoteUsers={remoteUsers}>
+          <CollaborativeField fieldKey={`task.${task.id}.unitCode`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
             <input
               type="text"
               value={task.unitCode || ''}
@@ -201,7 +225,7 @@ export const TaskRow = memo(({
 
       {/* DWG No */}
       <td>
-        <CollaborativeField fieldKey={`task.${task.id}.dwgNo`} remoteUsers={remoteUsers}>
+        <CollaborativeField fieldKey={`task.${task.id}.dwgNo`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="text"
             value={task.dwgNo || ''}
@@ -215,7 +239,7 @@ export const TaskRow = memo(({
       {/* Actually, KEMCO has START DATE and END DATE instead of hours/minutes */}
       
       <td>
-        <CollaborativeField fieldKey={`task.${task.id}.startDate`} remoteUsers={remoteUsers}>
+        <CollaborativeField fieldKey={`task.${task.id}.startDate`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="date"
             value={task.startDate || ''}
@@ -226,7 +250,7 @@ export const TaskRow = memo(({
       </td>
 
       <td>
-        <CollaborativeField fieldKey={`task.${task.id}.endDate`} remoteUsers={remoteUsers}>
+        <CollaborativeField fieldKey={`task.${task.id}.endDate`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="date"
             value={task.endDate || ''}
@@ -237,7 +261,7 @@ export const TaskRow = memo(({
       </td>
 
       <td>
-        <CollaborativeField fieldKey={`task.${task.id}.time`} remoteUsers={remoteUsers}>
+        <CollaborativeField fieldKey={`task.${task.id}.time`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="text"
             value={task.time || ''}
@@ -257,11 +281,12 @@ export const TaskRow = memo(({
         isSelected ? 'selected-main-task' : '',
         isDragging ? 'dragging' : '',
         isDragOver ? 'drag-over' : '',
+        isRowLocked ? 'row-locked' : '',
         `layout-${layoutVariant}`,
         `level-${task.level || 0}`
       ].filter(Boolean).join(' ')}
       onClick={handleMainTaskClick}
-      draggable={task.isMainTask || layoutVariant === 'kemco'}
+      draggable={!isRowLocked && (task.isMainTask || layoutVariant === 'kemco')}
       onDragStart={e => onDragStart?.(e, task.id)}
       onDragOver={e => onDragOver?.(e, task.id)}
       onDragLeave={onDragLeave}
@@ -288,7 +313,7 @@ export const TaskRow = memo(({
 
       {/* REFERENCE NO / CONST NO */}
       <td className="reference-cell">
-        <CollaborativeField fieldKey={`task.${task.id}.referenceNumber`} remoteUsers={remoteUsers}>
+        <CollaborativeField fieldKey={`task.${task.id}.referenceNumber`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="text"
             value={task.referenceNumber || ''}
@@ -304,7 +329,7 @@ export const TaskRow = memo(({
           {(layoutVariant === 'kemco' ? (task.level || 0) > 0 : !task.isMainTask) && (
             <span className="sub-task-indicator">↳</span>
           )}
-          <CollaborativeField fieldKey={`task.${task.id}.description`} remoteUsers={remoteUsers} className="full-width-collab">
+          <CollaborativeField fieldKey={`task.${task.id}.description`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer} className="full-width-collab">
             <input
               type="text"
               value={task.description}
@@ -320,7 +345,7 @@ export const TaskRow = memo(({
 
       {/* TYPE */}
       <td className="type-cell">
-        <CollaborativeField fieldKey={`task.${task.id}.type`} remoteUsers={remoteUsers}>
+        <CollaborativeField fieldKey={`task.${task.id}.type`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <select
             value={task.type || '3D'}
             onChange={e => handleUpdate('type', e.target.value)}
@@ -337,7 +362,7 @@ export const TaskRow = memo(({
       {layoutVariant === 'special' && (
         <td className="total-cell">
           {isEditing ? (
-            <CollaborativeField fieldKey={`task.${task.id}.manualTotal`} remoteUsers={remoteUsers}>
+            <CollaborativeField fieldKey={`task.${task.id}.manualTotal`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
               <input
                 type="text"
                 inputMode="decimal"
@@ -360,11 +385,19 @@ export const TaskRow = memo(({
       <td className="action-cell">
         <div className="action-buttons-container">
           {layoutVariant === 'special' && (
-            <button onClick={handleEditToggle} className={`edit-task-button ${isEditing ? 'editing' : ''}`}>
+            <button
+              onClick={handleEditToggle}
+              className={`edit-task-button ${isEditing ? 'editing' : ''}`}
+              disabled={isRowLocked}
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
           )}
-          <button onClick={handleRemove} className="remove-task-button">
+          <button
+            onClick={handleRemove}
+            className="remove-task-button"
+            disabled={isRowLocked}
+          >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
           </button>
         </div>

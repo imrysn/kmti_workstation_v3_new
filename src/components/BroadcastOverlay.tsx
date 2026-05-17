@@ -198,10 +198,18 @@ const BroadcastOverlay: React.FC = () => {
     }
 
     window.addEventListener('kmti:broadcast-update', handleBroadcastUpdate)
+    
+    // --- DEBUG: Local UI Testing Hook ---
+    const handleTestBroadcast = (e: Event) => {
+      const mockData = (e as CustomEvent).detail
+      setBroadcasts([mockData])
+    }
+    window.addEventListener('kmti:test-broadcast', handleTestBroadcast)
 
     return () => {
       clearInterval(interval)
       window.removeEventListener('kmti:broadcast-update', handleBroadcastUpdate)
+      window.removeEventListener('kmti:test-broadcast', handleTestBroadcast)
     }
   }, [fetchBroadcasts, hasRole])
 
@@ -262,13 +270,12 @@ const BroadcastOverlay: React.FC = () => {
             <div className="island-header">
               <div className="island-icon-box">
                  <div className={`island-dot dot-${b.severity}`} />
-                 <img src={megaphoneIcon} alt="!" className="island-icon-img" />
+                 <div className="island-icon-img" style={{ WebkitMaskImage: `url(${megaphoneIcon})`, maskImage: `url(${megaphoneIcon})` }} />
               </div>
               <div className="island-meta">
                 <span className="island-tag">
                   {b.severity === 'danger' ? 'URGENT ANNOUNCEMENT' : b.severity === 'warning' ? 'SYSTEM ALERT' : 'GENERAL ANNOUNCEMENT'}
                 </span>
-                <span className="island-author">via {b.created_by}</span>
               </div>
             </div>
             

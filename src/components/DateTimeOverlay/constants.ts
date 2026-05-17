@@ -12,7 +12,8 @@ export const THEMES: ThemeConfig[] = [
   { name: 'Aurora', bg: '#1e1b4b', text: '#ffffff', sub: 'rgba(255,255,255,0.7)', border: 'rgba(255,255,255,0.2)', glowOpacity: 0.6, className: 'theme-aurora' },
   { name: 'Vaporwave', bg: '#0f0c29', text: '#f72585', sub: '#4cc9f0', border: '#7209b7', glowOpacity: 0.8, font: '"Courier New", monospace', className: 'theme-vapor' },
   { name: 'Luxury', bg: '#050505', text: '#d4af37', sub: 'rgba(212, 175, 55, 0.6)', border: '#d4af37', glowOpacity: 0.2, font: '"Playfair Display", "Times New Roman", serif', className: 'theme-luxury' },
-  { name: 'Galactic', bg: '#03000f', text: '#e0c4ff', sub: 'rgba(176, 100, 255, 0.7)', border: '#7c3aed', glowOpacity: 0.9, font: '"Courier New", monospace', className: 'theme-galactic' }
+  { name: 'Galactic', bg: '#03000f', text: '#e0c4ff', sub: 'rgba(176, 100, 255, 0.7)', border: '#7c3aed', glowOpacity: 0.9, font: '"Courier New", monospace', className: 'theme-galactic' },
+  { name: 'Time Bomb', bg: '#000000', text: '#ff0000', sub: '#ff000066', border: '#ff0000', glowOpacity: 0.5, font: '"VT323", "Digital-7", "Courier New", monospace', className: 'theme-bomb' }
 ];
 
 export const COLOR_PALETTES: PaletteColor[] = [

@@ -18,6 +18,7 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
+import { useAuth } from '../../../context/AuthContext'
 
 interface EngineerBookmarkProps {
   taskId: number
@@ -27,6 +28,7 @@ interface EngineerBookmarkProps {
   lastEditorName?: string
   lastEditorColor?: string
   onChange: (taskId: number, value: string) => void
+  isLocked?: boolean
 }
 
 const ICON_PERSON = (
@@ -45,9 +47,20 @@ const ICON_PLUS = (
   </svg>
 )
 
+const ICON_LOCK = (
+  <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+)
+
 export const EngineerBookmark = ({
-  taskId, engineer, top, height, lastEditorName, lastEditorColor, onChange,
+  taskId, engineer, top, height, lastEditorName, lastEditorColor, onChange, isLocked = false,
 }: EngineerBookmarkProps) => {
+  const { user } = useAuth()
+  const { remoteUsers, myColor, myName } = useCollaborationContext()
+
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing]   = useState(false)
   const [draft, setDraft]       = useState(engineer || '')
@@ -60,7 +73,6 @@ export const EngineerBookmark = ({
   const centeredTop = top + height / 2
 
   // ── Color Coding (Dynamic Sync) ──────────────────────────────────
-  const { remoteUsers, myColor, myName } = useCollaborationContext()
 
   const color = useMemo(() => {
     // If no engineer is assigned, always use default "+" state colors
@@ -92,11 +104,20 @@ export const EngineerBookmark = ({
 
   const handleTabClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
-    if (editing) return
+    if (editing || isLocked) return
+
+    // Quick Claim: If empty, clicking automatically assigns ME
+    if (!hasEngineer) {
+      const myDisplayName = user?.username || myName
+      onChange(taskId, myDisplayName)
+      setExpanded(false)
+      return
+    }
+
     setDraft(engineer || '')
     setEditing(true)
     setExpanded(true) // Ensure it's expanded if clicked (e.g. touch)
-  }, [editing, engineer])
+  }, [editing, engineer, isLocked, hasEngineer, taskId, myName, user?.username, onChange])
 
   const handleSave = useCallback(() => {
     onChange(taskId, draft.trim())
@@ -139,19 +160,19 @@ export const EngineerBookmark = ({
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      title={hasEngineer ? `Engineer: ${engineer}` : 'Assign engineer'}
+      title={isLocked ? `Locked by ${engineer}` : (hasEngineer ? `Engineer: ${engineer}` : 'Assign engineer')}
     >
       {/* ◀ Triangle pointer — faces left, into the row */}
       <div 
         className="eng-bookmark__pointer" 
-        style={color ? { borderRightColor: color } : {}}
+        style={isLocked ? { borderRightColor: '#64748b' } : (color ? { borderRightColor: color } : {})}
       />
 
       {/* Tab body — grows leftward on expand */}
       <div
-        className="eng-bookmark__tab"
+        className={`eng-bookmark__tab ${isLocked ? 'eng-bookmark__tab--locked' : ''}`}
         onClick={handleTabClick}
-        style={color ? { backgroundColor: color, borderColor: color } : {}}
+        style={isLocked ? { backgroundColor: '#64748b', borderColor: '#475569' } : (color ? { backgroundColor: color, borderColor: color } : {})}
       >
         {editing ? (
           <input
@@ -170,11 +191,11 @@ export const EngineerBookmark = ({
         ) : (
           <>
             <span className="eng-bookmark__icon">
-              {hasEngineer ? (
+              {isLocked ? ICON_LOCK : (hasEngineer ? (
                 <span className="eng-bookmark__avatar-initial">
                   {initial}
                 </span>
-              ) : ICON_PLUS}
+              ) : ICON_PLUS)}
             </span>
             <span className="eng-bookmark__label">
               {engineer || ''}

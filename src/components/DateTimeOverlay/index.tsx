@@ -7,7 +7,7 @@ import { ClockDisplay } from './components/ClockDisplay';
 import { StopwatchDisplay } from './components/StopwatchDisplay';
 import { ControlCenter } from './components/ControlCenter';
 import StopwatchLibraryModal from './components/StopwatchLibraryModal';
-import { COLOR_PALETTES, STORAGE_KEY } from './constants';
+import { STORAGE_KEY } from './constants';
 import { SettingsV6 } from './types';
 import './DateTimeOverlay.css'; // Path will be updated if we move the CSS
 
@@ -37,8 +37,8 @@ const DateTimeOverlay: React.FC = () => {
     const data: SettingsV6 = {
       position: settings.position,
       themeIndex: settings.themeIndex,
-      paletteIndex: settings.paletteIndex,
-      bgPaletteIndex: settings.bgPaletteIndex,
+      accentColor: settings.accentColor,
+      bgColor: settings.bgColor,
       bgOpacity: settings.bgOpacity,
       mode: settings.mode,
       swRunning: stopwatch.swRunning,
@@ -56,11 +56,11 @@ const DateTimeOverlay: React.FC = () => {
       
       const padding = 15;
       const width = overlayRef.current.offsetWidth;
-      const height = overlayRef.current.offsetHeight;
+      const clockHeight = (overlayRef.current.querySelector('.findr-datetime-content') as HTMLElement)?.offsetHeight || 44;
 
-      settings.setPosition(prev => {
+      settings.setPosition((prev: { x: number; y: number }) => {
         const maxX = window.innerWidth - width - padding;
-        const maxY = window.innerHeight - height - padding;
+        const maxY = window.innerHeight - clockHeight - padding;
         
         let newX = Math.max(padding, Math.min(prev.x, maxX));
         let newY = Math.max(padding, Math.min(prev.y, maxY));
@@ -84,7 +84,7 @@ const DateTimeOverlay: React.FC = () => {
     settings.setMode(prev => prev === 'clock' ? 'stopwatch' : 'clock');
   };
 
-  const accentColor = COLOR_PALETTES[settings.paletteIndex]?.hex || COLOR_PALETTES[0].hex;
+  const accentColor = settings.accentColor;
 
   const activeColors = useMemo(() => {
     const hexToRgbStr = (colorStr: string) => {
@@ -107,8 +107,8 @@ const DateTimeOverlay: React.FC = () => {
     let baseColor = settings.theme.bg;
     let isLight = false;
 
-    if (settings.bgPaletteIndex !== null) {
-      baseColor = COLOR_PALETTES[settings.bgPaletteIndex].hex;
+    if (settings.bgColor !== null) {
+      baseColor = settings.bgColor;
       const rgb = hexToRgbStr(baseColor).split(',');
       const yiq = ((parseInt(rgb[0]) * 299) + (parseInt(rgb[1]) * 587) + (parseInt(rgb[2]) * 114)) / 1000;
       isLight = yiq >= 128;
@@ -124,7 +124,7 @@ const DateTimeOverlay: React.FC = () => {
 
     if (settings.theme.className === 'theme-galactic') {
       return {
-        bg: settings.bgPaletteIndex !== null ? `rgba(${hexToRgbStr(COLOR_PALETTES[settings.bgPaletteIndex].hex)}, ${settings.bgOpacity})` : settings.theme.bg,
+        bg: settings.bgColor !== null ? `rgba(${hexToRgbStr(settings.bgColor)}, ${settings.bgOpacity})` : settings.theme.bg,
         text: '#ffffff',
         sub: 'rgba(255, 255, 255, 0.6)',
         border: 'rgba(255, 120, 30, 0.4)',
@@ -134,13 +134,13 @@ const DateTimeOverlay: React.FC = () => {
     }
 
     return {
-      bg: `rgba(${hexToRgbStr(baseColor)}, ${settings.bgOpacity})`,
+      bg: `rgba(${hexToRgbStr(settings.bgColor !== null ? settings.bgColor : baseColor)}, ${settings.bgOpacity})`,
       text: isLight ? '#0f172a' : '#ffffff',
       sub: isLight ? 'rgba(15, 23, 42, 0.5)' : 'rgba(255, 255, 255, 0.6)',
       border: isLight ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)',
       contrastRgb: isLight ? '0, 0, 0' : '255, 255, 255'
     };
-  }, [settings.bgPaletteIndex, settings.theme, settings.bgOpacity]);
+  }, [settings.bgColor, settings.theme, settings.bgOpacity]);
 
   const isInactive = !settings.isExpanded && (Date.now() - lastActivity > 30000);
   const isTopHalf = useMemo(() => settings.position.y > window.innerHeight / 2, [settings.position.y]);
@@ -157,7 +157,8 @@ const DateTimeOverlay: React.FC = () => {
         backgroundColor: activeColors.bg, color: activeColors.text, borderColor: activeColors.border,
         boxShadow: settings.theme.glowOpacity > 0 ? `0 0 20px ${accentColor}${Math.floor(settings.theme.glowOpacity * 255).toString(16).padStart(2, '0')}, 0 20px 40px rgba(0,0,0,0.2)` : '0 20px 40px rgba(0,0,0,0.2)',
         fontFamily: settings.theme.font || 'inherit',
-        '--sw-contrast': activeColors.contrastRgb
+        '--sw-contrast': activeColors.contrastRgb,
+        '--galactic-bg': activeColors.bg
       } as React.CSSProperties}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
@@ -170,6 +171,7 @@ const DateTimeOverlay: React.FC = () => {
           theme={settings.theme}
           overlayRef={overlayRef}
           isInactive={isInactive}
+          accentColor={accentColor}
         />
       )}
 
@@ -193,19 +195,19 @@ const DateTimeOverlay: React.FC = () => {
       {settings.isExpanded && (
         <ControlCenter
           mode={settings.mode}
+          accentColor={accentColor}
           safeThemeIndex={settings.safeThemeIndex}
-          paletteIndex={settings.paletteIndex}
-          bgPaletteIndex={settings.bgPaletteIndex}
-          bgOpacity={settings.bgOpacity}
-          swRecords={stopwatch.swRecords}
           setThemeIndex={settings.setThemeIndex}
-          setPaletteIndex={settings.setPaletteIndex}
-          setBgPaletteIndex={settings.setBgPaletteIndex}
+          accentColorValue={settings.accentColor}
+          setAccentColor={settings.setAccentColor}
+          bgColor={settings.bgColor}
+          setBgColor={settings.setBgColor}
+          bgOpacity={settings.bgOpacity}
           setBgOpacity={settings.setBgOpacity}
+          swRecords={stopwatch.swRecords}
           renameRecord={stopwatch.renameRecord}
           deleteRecord={stopwatch.deleteRecord}
           onOpenLibrary={() => setShowLibrary(true)}
-          accentColor={accentColor}
         />
       )}
 

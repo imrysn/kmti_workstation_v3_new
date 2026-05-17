@@ -12,6 +12,7 @@ import { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react'
 import type { Task, BaseRates, ManualOverrides } from '../../../hooks/quotation'
 import { calculateTaskTotal, calculateOverhead } from '../../../utils/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
+import { useAuth } from '../../../context/AuthContext'
 import { CollaborativeField } from './CollaborativeField'
 import { TaskRow } from './TaskRow'
 import type { TaskSubtotals } from './TaskRow'
@@ -54,7 +55,45 @@ const TasksTable = memo(({
   layoutVariant = 'special',
   onChildTaskAdd,
 }: TasksTableProps) => {
-  const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
+  const { hasRole } = useAuth()
+  const { remoteUsers, emitFocus, emitBlur, myName } = useCollaborationContext()
+
+  // ── Ancestor-chain-aware lock computation ─────────────────────
+  // A task is locked if IT or any of its ancestors has an engineer assigned
+  // that does not match the current user's identity.
+  const lockedTaskIds = useMemo(() => {
+    if (hasRole('admin', 'it')) return new Set<number>()
+
+    const byId = new Map(tasks.map(t => [t.id, t]))
+    const myWorkstation = myName.trim().toLowerCase()
+
+    const isTaskLocked = (task: Task, visited = new Set<number>()): boolean => {
+      if (visited.has(task.id)) return false
+      visited.add(task.id)
+
+      const ownerWorkstation = task.engineerWorkstation?.trim().toLowerCase() || ''
+
+      if (ownerWorkstation) {
+        // ✅ Workstation-based ownership — matches how bookmark color sync works
+        if (ownerWorkstation !== myWorkstation) return true
+      } else if (task.engineer?.trim()) {
+        // ⚠️ Legacy: no engineerWorkstation recorded yet
+        // Fall back to lastEditorName if the engineer field has a value
+        const editorWorkstation = task.lastEditorName?.trim().toLowerCase() || ''
+        if (editorWorkstation && editorWorkstation !== myWorkstation) return true
+      }
+
+      if (task.parentId != null) {
+        const parent = byId.get(task.parentId)
+        if (parent) return isTaskLocked(parent, visited)
+      }
+      return false
+    }
+
+    const locked = new Set<number>()
+    tasks.forEach(t => { if (isTaskLocked(t)) locked.add(t.id) })
+    return locked
+  }, [tasks, myName, hasRole])
 
   // ── Local UI state ─────────────────────────────────────────────
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
@@ -190,8 +229,18 @@ const TasksTable = memo(({
   }, [])
 
   const handleEngineerChange = useCallback((taskId: number, value: string) => {
-    onTaskUpdate?.(taskId, 'engineer', value)
-  }, [onTaskUpdate])
+    if (value.trim()) {
+      // Claim: store the display label + the workstation name as the owner identity
+      // myName is the workstation name from CollaborationContext — same one used for bookmark colors
+      onTaskUpdate?.(taskId, {
+        engineer: value,
+        engineerWorkstation: myName,
+      })
+    } else {
+      // Release: clear both fields to fully relinquish ownership
+      onTaskUpdate?.(taskId, { engineer: '', engineerWorkstation: '' })
+    }
+  }, [onTaskUpdate, myName])
 
   const handleEditToggle = useCallback((taskId: number) => {
     if (editingTaskId === taskId) {
@@ -546,6 +595,7 @@ const TasksTable = memo(({
                     onCancelEdit={handleCancelEdit}
                     layoutVariant={layoutVariant}
                     trRef={(el: HTMLTableRowElement | null) => setRowRef(task.id, el)}
+                    isRowLocked={lockedTaskIds.has(task.id)}
                   />
                 )
               })}
@@ -585,6 +635,7 @@ const TasksTable = memo(({
                   lastEditorName={task.lastEditorName}
                   lastEditorColor={task.lastEditorColor}
                   onChange={handleEngineerChange}
+                  isLocked={lockedTaskIds.has(task.id)}
                 />
               )
             })}

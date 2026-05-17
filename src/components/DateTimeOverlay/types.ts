@@ -26,8 +26,8 @@ export interface StopwatchRecord {
 export interface SettingsV6 {
   position: { x: number; y: number };
   themeIndex: number;
-  paletteIndex: number;
-  bgPaletteIndex: number | null;
+  accentColor: string;       // hex string from text color picker
+  bgColor: string | null;    // hex string from bg color picker, null = theme default
   bgOpacity?: number;
   mode: 'clock' | 'stopwatch';
   swRunning: boolean;

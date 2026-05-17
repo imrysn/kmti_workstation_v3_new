@@ -16,6 +16,12 @@
   cursor: grabbing;
 }
 
+/* Locked rows are never draggable */
+.row-locked,
+.row-locked[draggable="false"] {
+  cursor: not-allowed !important;
+}
+
 /* Ensure sub-tasks are not draggable */
 .sub-task-row {
   cursor: default !important;
@@ -413,19 +419,70 @@
 }
 
 /* ── Fixed Column Widths (Special Layout) ── */
-.tasks-table--special th:nth-child(1), .tasks-table--special td:nth-child(1) { width: 4%; }
-.tasks-table--special th:nth-child(2), .tasks-table--special td:nth-child(2) { width: 8%; }
-.tasks-table--special th:nth-child(3), .tasks-table--special td:nth-child(3) { width: 20%; }
-.tasks-table--special th:nth-child(4), .tasks-table--special td:nth-child(4) { width: 6%; }
-.tasks-table--special th:nth-child(5), .tasks-table--special td:nth-child(5) { width: 6%; }
-.tasks-table--special th:nth-child(6), .tasks-table--special td:nth-child(6) { width: 8%; }
-.tasks-table--special th:nth-child(7), .tasks-table--special td:nth-child(7) { width: 8%; }
-.tasks-table--special th:nth-child(8), .tasks-table--special td:nth-child(8) { width: 8%; }
-.tasks-table--special th:nth-child(9), .tasks-table--special td:nth-child(9) { width: 8%; }
-.tasks-table--special th:nth-child(10), .tasks-table--special td:nth-child(10) { width: 8%; }
-.tasks-table--special th:nth-child(11), .tasks-table--special td:nth-child(11) { width: 8%; }
-.tasks-table--special th:nth-child(12), .tasks-table--special td:nth-child(12) { width: 8%; }
-.tasks-table--special th:nth-child(13), .tasks-table--special td:nth-child(13) { width: 6%; }
+.tasks-table--special th:nth-child(1),
+.tasks-table--special td:nth-child(1) {
+  width: 4%;
+}
+
+.tasks-table--special th:nth-child(2),
+.tasks-table--special td:nth-child(2) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(3),
+.tasks-table--special td:nth-child(3) {
+  width: 20%;
+}
+
+.tasks-table--special th:nth-child(4),
+.tasks-table--special td:nth-child(4) {
+  width: 6%;
+}
+
+.tasks-table--special th:nth-child(5),
+.tasks-table--special td:nth-child(5) {
+  width: 6%;
+}
+
+.tasks-table--special th:nth-child(6),
+.tasks-table--special td:nth-child(6) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(7),
+.tasks-table--special td:nth-child(7) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(8),
+.tasks-table--special td:nth-child(8) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(9),
+.tasks-table--special td:nth-child(9) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(10),
+.tasks-table--special td:nth-child(10) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(11),
+.tasks-table--special td:nth-child(11) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(12),
+.tasks-table--special td:nth-child(12) {
+  width: 8%;
+}
+
+.tasks-table--special th:nth-child(13),
+.tasks-table--special td:nth-child(13) {
+  width: 6%;
+}
 
 /* ── Expand/Collapse ── */
 .collapse-toggle-btn {
@@ -818,19 +875,26 @@
 
 /* ── KEMCO Hierarchical Colors (High Contrast) ── */
 .kemco-level-0 {
-  background-color: #dbeafe !important; /* Blue 100 - Very visible foundation */
+  background-color: #dbeafe !important;
+  /* Blue 100 - Very visible foundation */
   border-left: 5px solid #2563eb !important;
 }
+
 .kemco-level-0 td {
   font-weight: 700;
-  color: #1e40af; /* Darker blue text for readability */
+  color: #1e40af;
+  /* Darker blue text for readability */
 }
+
 .kemco-level-1 {
-  background-color: #f1f5f9 !important; /* Slate 100 - Clear grey */
+  background-color: #f1f5f9 !important;
+  /* Slate 100 - Clear grey */
   border-left: 5px solid #64748b !important;
 }
+
 .kemco-level-2 {
-  background-color: #ffffff !important; /* Stay white for clarity */
+  background-color: #ffffff !important;
+  /* Stay white for clarity */
 }
 
 /* Fix input backgrounds on colored rows for better contrast */
@@ -845,18 +909,71 @@
   background-color: rgba(37, 99, 235, 0.15) !important;
   border-left-color: #3b82f6 !important;
 }
+
 .dark-theme .kemco-level-1 {
   background-color: rgba(148, 163, 184, 0.12) !important;
   border-left-color: #94a3b8 !important;
 }
 
 .kemco-selected-row {
-  background-color: #fef08a !important; /* Vivid Yellow 200 for selection */
+  background-color: #fef08a !important;
+  /* Vivid Yellow 200 for selection */
   border-left: 6px solid #eab308 !important;
   box-shadow: inset 6px 0 0 -2px #eab308;
 }
+
 .dark-theme .kemco-selected-row {
   background-color: rgba(234, 179, 8, 0.2) !important;
   border-left-color: #facc15 !important;
 }
 
+/* ── Row Locking & Sabotage Protection ── */
+
+.row-locked {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  position: relative;
+}
+
+.dark-theme .row-locked {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Dim locked inputs but keep them readable */
+.row-locked .table-input {
+  opacity: 0.65;
+  cursor: not-allowed !important;
+}
+
+.row-locked .action-buttons-container button {
+  opacity: 0.3;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+.collab-field-hard-locked {
+  cursor: not-allowed !important;
+}
+
+.eng-bookmark__tab--locked {
+  cursor: not-allowed !important;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.eng-bookmark__tab--locked .eng-bookmark__label {
+  color: #f8fafc !important;
+  font-style: italic;
+}
+
+.eng-bookmark__tab--locked .eng-bookmark__icon {
+  color: #cbd5e1 !important;
+}
+
+/* ── Row Number Cell — Centered ── */
+.row-number-container {
+  display: flex;
+  flex-direction: column;
+  align-items: left;
+  justify-content: center;
+  height: 100%;
+  gap: 2px;
+}

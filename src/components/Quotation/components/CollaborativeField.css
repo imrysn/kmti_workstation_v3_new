@@ -129,3 +129,28 @@
   width: 100%;
   height: 100%;
 }
+
+/* Hard Lock SVG Badge */
+.collab-field-lock-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  background: var(--bg-surface, #1e293b);
+  border: 1px solid var(--border-subtle, rgba(255,255,255,0.1));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  pointer-events: none;
+  z-index: 6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  animation: lock-badge-in 0.18s ease;
+}
+
+@keyframes lock-badge-in {
+  from { transform: scale(0.5); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}

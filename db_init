@@ -1,6 +1,6 @@
 {
   "companyInfo": {
-    "name": "KUSAKABE & MAENO TECH., INC.",
+    "name": "KUSAKABE & MAENO TECH., INC",
     "address": "Unit 2-B Building B, Vital Industrial Properties Inc.",
     "city": "First Cavite Industrial Estates, P-CIB PEZA Zone",
     "location": "Dasmariñas City, Cavite Philippines",
@@ -13,9 +13,9 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260514-872",
+    "quotationNo": "KMTE-260515-204",
     "referenceNo": "",
-    "date": "2026-05-14"
+    "date": "2026-05-15"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -29,14 +29,14 @@
   },
   "tasks": [
     {
-      "id": 1778743742856,
+      "id": 1778804399650,
       "description": "",
       "referenceNumber": "",
-      "hours": 0,
-      "minutes": 51,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "2D",
+      "hours": 999,
+      "minutes": 59.99,
+      "overtimeHours": null,
+      "softwareUnits": null,
+      "type": "3D",
       "unitType": "JD",
       "isMainTask": true,
       "parentId": null,
@@ -44,15 +44,53 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "engineer": "Raysan"
+      "lastEditorColor": "#E05C6B",
+      "engineer": "bryan"
     },
     {
-      "id": 1778749450169,
+      "id": 1778804434607,
       "description": "",
       "referenceNumber": "",
       "hours": 0,
-      "minutes": 21.4285,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778804399650,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Browser-User-512",
+      "lastEditorColor": "#2980B9",
+      "engineer": "User"
+    },
+    {
+      "id": 1778804435111,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778804399650,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Browser-User-512",
+      "lastEditorColor": "#2980B9",
+      "engineer": "User"
+    },
+    {
+      "id": 1778816348208,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
@@ -63,15 +101,111 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#E05C6B",
+      "engineer": "User"
+    },
+    {
+      "id": 1778817584088,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778816348208,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#F39C12",
+      "engineer": "User"
+    },
+    {
+      "id": 1778817584679,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1778816348208,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#F39C12",
+      "engineer": "User"
+    },
+    {
+      "id": 1778804423047,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 999,
+      "minutes": 59.99,
+      "overtimeHours": null,
+      "softwareUnits": null,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E05C6B",
+      "engineer": "gfdg"
+    },
+    {
+      "id": 1778817421472,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "Browser-User-512",
+      "lastEditorColor": "#2980B9",
+      "engineer": "User"
+    },
+    {
+      "id": 1778817421792,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "Browser-User-512",
+      "lastEditorColor": "#2980B9",
+      "engineer": "User"
     }
   ],
   "baseRates": {
-    "timeChargeRate2D": 4800,
-    "timeChargeRate3D": 2800,
+    "timeChargeRate2D": 2700,
+    "timeChargeRate3D": 2700,
     "timeChargeRateOthers": 0,
     "otHoursMultiplier": 1.3,
-    "overtimeRate": 3640,
+    "overtimeRate": 3300,
     "softwareRate": 500,
     "overheadPercentage": 20
   },
@@ -110,13 +244,43 @@
   },
   "manualOverrides": {
     "tasks": {
-      "1778743742856": {},
-      "1778749450169": {}
+      "1778804423047": {}
     },
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "chatLog": [],
+  "chatLog": [
+    {
+      "sid": "qZ22SScesknOeoIDAADA",
+      "name": "Flamingo",
+      "color": "#C0392B",
+      "message": "sas",
+      "time": "08:29",
+      "id": "1778805013291-3eiapmoqt",
+      "readBy": [
+        "Tiger"
+      ]
+    },
+    {
+      "sid": "kl3ads_L6My1DL10AAC9",
+      "name": "Tiger",
+      "color": "#E67E22",
+      "message": "hi",
+      "time": "08:29",
+      "id": "1778805015281-g4cfpvsdi"
+    },
+    {
+      "sid": "qZ22SScesknOeoIDAADA",
+      "name": "Flamingo",
+      "color": "#C0392B",
+      "message": "halu",
+      "time": "08:29",
+      "id": "1778805021885-0s40nuddv",
+      "readBy": [
+        "Tiger"
+      ]
+    }
+  ],
   "layoutVariant": "special",
-  "savedAt": "2026-05-14T09:14:55.424Z"
+  "savedAt": "2026-05-15T04:33:52.356Z"
 }
