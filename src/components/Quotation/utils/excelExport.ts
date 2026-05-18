@@ -776,8 +776,19 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
 
   // Programmatically merge Price column in KEMCO mode
   if (isKemco) {
-    try { sheet.unMergeCells(`H${TABLE_START}:H${TABLE_END}`) } catch (e) {}
+    try { sheet.unMergeCells(`H${TABLE_START}:H${TABLE_END + extraRows}`) } catch (e) {}
     
+    // Apply borders programmatically to all cells in Column H to prevent missing borders after unmerge
+    for (let r = TABLE_START; r <= TABLE_END + extraRows; r++) {
+      const cell = sheet.getCell(`H${r}`)
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: r === (TABLE_END + extraRows) ? { style: 'medium' } : { style: 'thin' },
+        right: { style: 'medium' }
+      }
+    }
+
     const lastTaskRow = TABLE_START + kemcoRows.length - 1
     if (lastTaskRow >= TABLE_START) {
       _safeMerge(sheet, `H${TABLE_START}:H${lastTaskRow}`)
