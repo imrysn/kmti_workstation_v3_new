@@ -173,6 +173,12 @@ export const helpApi = {
 export const telemetryApi = {
   heartbeat: (formData: FormData) => api.post('/telemetry/heartbeat', formData),
   getStatuses: () => api.get('/telemetry/status'),
+  nudge: (computerName: string, latestVersion: string) => {
+    const fd = new FormData();
+    fd.append('computer_name', computerName);
+    fd.append('latest_version', latestVersion);
+    return api.post('/telemetry/nudge', fd);
+  }
 }
 
 // --- Broadcast Messages ---

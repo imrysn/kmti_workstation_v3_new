@@ -47,7 +47,12 @@ export function useHeartbeat() {
         if (path.includes('calculator')) module = 'Calculator';
         if (path.includes('quotation')) module = 'Quotation';
         if (path.includes('settings')) module = 'Settings';
-        if (path.includes('admin-help')) module = 'IT Admin';
+        if (path.includes('admin-help')) module = 'Help Center';
+
+        // Detect if app is minimized/hidden
+        if (document.visibilityState === 'hidden') {
+          module = `💤 ${module}`;
+        }
 
         const formData = new FormData();
         formData.append('module', module);
@@ -57,7 +62,13 @@ export function useHeartbeat() {
           formData.append('computer_name', computerNameRef.current);
         }
 
-        await telemetryApi.heartbeat(formData);
+        const res = await telemetryApi.heartbeat(formData);
+        if (res.data && res.data.nudge_version) {
+          const event = new CustomEvent('kmti:update-nudge', {
+            detail: { version: res.data.nudge_version }
+          });
+          window.dispatchEvent(event);
+        }
       } catch {
         // Silent fail for heartbeats
       }
@@ -69,6 +80,12 @@ export function useHeartbeat() {
     // Set up interval for every 60 seconds
     const interval = setInterval(sendHeartbeat, 60000);
 
-    return () => clearInterval(interval);
+    // Also send heartbeat immediately when the app is minimized or restored
+    document.addEventListener('visibilitychange', sendHeartbeat);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', sendHeartbeat);
+    };
   }, [location.pathname, user]);
 }

@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 
 router = APIRouter()
 
+# In-memory dictionary to queue update nudges for specific workstations
+pending_nudges = {}  # key: computer_name or ip_address -> latest_version
+
 @router.post("/heartbeat")
 async def heartbeat(
     request: Request,
@@ -36,7 +39,19 @@ async def heartbeat(
     status.last_ping = datetime.now()
     
     await db.commit()
-    return {"success": True}
+
+    # Check if there is a pending update nudge for this client
+    nudge_version = None
+    if computer_name and computer_name in pending_nudges:
+        nudge_version = pending_nudges.pop(computer_name)
+    elif ip in pending_nudges:
+        nudge_version = pending_nudges.pop(ip)
+
+    response_data = {"success": True}
+    if nudge_version:
+        response_data["nudge_version"] = nudge_version
+
+    return response_data
 
 @router.get("/status")
 async def get_all_status(db: AsyncSession = Depends(get_db)):
@@ -61,3 +76,12 @@ async def get_all_status(db: AsyncSession = Depends(get_db)):
             for s in statuses
         ]
     }
+
+@router.post("/nudge")
+async def nudge_workstation(
+    computer_name: str = Form(...),
+    latest_version: str = Form(...)
+):
+    """Queue a silent update nudge for a workstation."""
+    pending_nudges[computer_name] = latest_version
+    return {"success": True, "message": f"Nudge queued for {computer_name}"}

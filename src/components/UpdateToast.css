@@ -1,0 +1,121 @@
+.kmti-update-toast {
+  position: fixed;
+  top: 45px; /* Safely below the custom Electron title bar */
+  right: 20px;
+  width: 320px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(99, 102, 241, 0.25); /* Indigo accent tint */
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.1), 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 14px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: kmti-toast-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s ease;
+}
+
+/* Dark mode compatibility if active */
+[data-theme='dark'] .kmti-update-toast {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.toast-content {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.toast-icon {
+  font-size: 18px;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+.toast-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.toast-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+[data-theme='dark'] .toast-title {
+  color: #f1f5f9;
+}
+
+.toast-message {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+[data-theme='dark'] .toast-message {
+  color: #94a3b8;
+}
+
+.toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: 10px;
+}
+[data-theme='dark'] .toast-actions {
+  border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.toast-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toast-btn.primary {
+  background: #6366f1; /* Indigo */
+  color: #ffffff;
+  border: none;
+}
+.toast-btn.primary:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+}
+
+.toast-btn.dismiss {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+}
+[data-theme='dark'] .toast-btn.dismiss {
+  color: #94a3b8;
+  border-color: #475569;
+}
+.toast-btn.dismiss:hover {
+  background: rgba(0, 0, 0, 0.03);
+  color: #334155;
+}
+[data-theme='dark'] .toast-btn.dismiss:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+@keyframes kmti-toast-slide-in {
+  from {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}

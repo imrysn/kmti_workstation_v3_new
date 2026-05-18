@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { helpApi, telemetryApi, SERVER_BASE } from '../services/api'
+import { version as appVersion } from '../../package.json'
 import type { Ticket } from '../components/FeedbackWidget'
 import ReactMarkdown from 'react-markdown'
 import { useModal } from '../components/ModalContext'
-import { 
-  BarChart, Bar, XAxis, YAxis, Cell, 
-  ResponsiveContainer, Tooltip 
+import {
+  BarChart, Bar, XAxis, YAxis, Cell,
+  ResponsiveContainer, Tooltip
 } from 'recharts'
 import './AdminHelpCenter.css'
 
@@ -21,6 +22,7 @@ function dataURLToBlob(dataURL: string): Blob {
 
 interface WorkstationStatus {
   ip_address: string;
+  computer_name?: string;
   active_module: string;
   current_user: string;
   version: string;
@@ -45,6 +47,17 @@ export default function AdminHelpCenter() {
   const [showLimitError, setShowLimitError] = useState(false)
 
   const { confirm, alert, notify } = useModal()
+
+  const [notifiedWorkstations, setNotifiedWorkstations] = useState<string[]>([])
+
+  const handleNotifyUpdate = async (computerName: string) => {
+    try {
+      await telemetryApi.nudge(computerName, appVersion)
+      setNotifiedWorkstations(prev => [...prev, computerName])
+    } catch (err) {
+      console.error('Failed to notify workstation:', err)
+    }
+  }
 
   const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -185,15 +198,15 @@ export default function AdminHelpCenter() {
   const stats = useMemo(() => {
     const open = tickets.filter(t => t.status !== 'resolved').length;
     const resolved = tickets.filter(t => t.status === 'resolved').length;
-    
+
     // Urgency distribution for horizontal chart
     const urgencies = [
       { name: 'Critical', key: 'critical', color: '#ef4444' },
-      { name: 'High',     key: 'high',     color: '#f97316' },
-      { name: 'Medium',   key: 'medium',   color: '#fbbf24' },
-      { name: 'Low',      key: 'low',      color: '#3b82f6' }
+      { name: 'High', key: 'high', color: '#f97316' },
+      { name: 'Medium', key: 'medium', color: '#fbbf24' },
+      { name: 'Low', key: 'low', color: '#3b82f6' }
     ];
-    
+
     const chartData = urgencies.map(u => ({
       name: u.name,
       value: tickets.filter(t => t.urgency === u.key).length,
@@ -371,6 +384,15 @@ export default function AdminHelpCenter() {
     if (diff < 60) return `${diff}m ago`
     if (diff < 1440) return `${Math.floor(diff / 60)}h ago`
     return `${Math.floor(diff / 1440)}d ago`
+  }
+
+  const getStatusClass = (lastPing: string | undefined | null, activeModule?: string) => {
+    if (activeModule?.startsWith('💤')) return 'status-minimized';
+    if (!lastPing) return 'status-away';
+    const diffSeconds = (new Date().getTime() - new Date(lastPing).getTime()) / 1000;
+    if (diffSeconds < 90) return 'status-active';
+    if (diffSeconds < 180) return 'status-idle';
+    return 'status-away';
   }
 
   const activeTickets = tickets.filter(t => t.status !== 'resolved')
@@ -597,20 +619,20 @@ export default function AdminHelpCenter() {
         {/* RIGHT COMPONENT: SUPPORT ANALYTICS & TELEMETRY */}
         <div className="ah-info-sidebar">
           <div className="ah-info-header-tabs">
-            <button 
+            <button
               className={`ah-tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
               onClick={() => setActiveTab('analytics')}
             >
               Analytics
             </button>
-            <button 
+            <button
               className={`ah-tab-btn ${activeTab === 'terminals' ? 'active' : ''}`}
               onClick={() => setActiveTab('terminals')}
             >
               Terminals ({activeWorkstations.length})
             </button>
           </div>
-          
+
           <div className="ah-analytics-content">
             {activeTab === 'analytics' ? (
               <>
@@ -639,11 +661,11 @@ export default function AdminHelpCenter() {
                           margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
                         >
                           <XAxis type="number" hide />
-                          <YAxis 
-                            type="category" 
-                            dataKey="name" 
-                            stroke="#64748b" 
-                            fontSize={10} 
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            stroke="#64748b"
+                            fontSize={10}
                             fontWeight={600}
                             tickLine={false}
                             axisLine={false}
@@ -669,11 +691,11 @@ export default function AdminHelpCenter() {
                           margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
                         >
                           <XAxis type="number" hide />
-                          <YAxis 
-                            type="category" 
-                            dataKey="name" 
-                            stroke="#64748b" 
-                            fontSize={10} 
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            stroke="#64748b"
+                            fontSize={10}
                             fontWeight={600}
                             tickLine={false}
                             axisLine={false}
@@ -697,11 +719,11 @@ export default function AdminHelpCenter() {
                           margin={{ top: 0, right: 20, left: 10, bottom: 0 }}
                         >
                           <XAxis type="number" hide />
-                          <YAxis 
-                            type="category" 
-                            dataKey="name" 
-                            stroke="#64748b" 
-                            fontSize={10} 
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            stroke="#64748b"
+                            fontSize={10}
                             fontWeight={600}
                             tickLine={false}
                             axisLine={false}
@@ -733,30 +755,60 @@ export default function AdminHelpCenter() {
 
                 {!activeTicket && (
                   <div className="ah-info-empty-msg">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-                    <p>Select a ticket to see<br/>workstation details</p>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+                    <p>Select a ticket to see<br />workstation details</p>
                   </div>
                 )}
               </>
             ) : (
               <div className="ah-terminal-list">
+                <div className="ah-terminal-legend">
+                  <div className="legend-item"><span className="legend-dot status-active"></span> Active</div>
+                  <div className="legend-item"><span className="legend-dot status-minimized"></span> Minimized</div>
+                  <div className="legend-item"><span className="legend-dot status-idle"></span> Idle</div>
+                  <div className="legend-item"><span className="legend-dot status-away"></span> Offline</div>
+                </div>
                 {activeWorkstations.length === 0 ? (
                   <div className="ah-no-terminals">No active workstations seen in the last 5 minutes.</div>
                 ) : (
-                  activeWorkstations.map((ws) => (
-                    <div key={ws.ip_address} className="ah-terminal-card">
-                      <div className="ah-terminal-main">
-                        <div className="ah-term-status-indicator active"></div>
-                        <div className="ah-term-ip">{ws.ip_address}</div>
-                        <div className="ah-term-time">{formatRelative(ws.last_ping)}</div>
+                  activeWorkstations.map((ws) => {
+                    const isMinimized = ws.active_module?.startsWith('💤');
+                    const cleanModule = isMinimized ? ws.active_module.replace('💤', '').trim() : ws.active_module;
+                    const status = getStatusClass(ws.last_ping, ws.active_module);
+                    const isOutdated = ws.version && ws.version !== appVersion;
+                    const hasBeenNotified = notifiedWorkstations.includes(ws.computer_name || ws.ip_address);
+                    
+                    return (
+                      <div key={ws.ip_address} className={`ah-terminal-card ${status}`}>
+                        <div className="ah-terminal-main">
+                          <div className={`ah-term-status-indicator ${status}`}></div>
+                          <div className="ah-term-ip" title={ws.ip_address}>{ws.computer_name || ws.ip_address}</div>
+                          <div className="ah-term-time">{formatRelative(ws.last_ping)}</div>
+                        </div>
+                        <div className="ah-term-details">
+                          <div className="ah-term-user">{ws.current_user || 'Guest'}</div>
+                          <div className="ah-term-module">
+                            {isMinimized && <span className="ah-minimized-tag">Minimized • </span>}
+                            {cleanModule || 'Idle'}
+                            <span className={`ah-term-version ${isOutdated ? 'outdated' : ''}`}>
+                              v{ws.version || 'unknown'}
+                            </span>
+                          </div>
+                        </div>
+                        {isOutdated && (
+                          <div className="ah-term-actions">
+                            <button
+                              className={`ah-term-nudge-btn ${hasBeenNotified ? 'notified' : ''}`}
+                              onClick={() => handleNotifyUpdate(ws.computer_name || ws.ip_address)}
+                              disabled={hasBeenNotified}
+                            >
+                              {hasBeenNotified ? 'Notified ✓' : 'Notify Update'}
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <div className="ah-term-details">
-                        <div className="ah-term-user">👤 {ws.current_user || 'Guest'}</div>
-                        <div className="ah-term-module">📍 {ws.active_module || 'Idle'}</div>
-                      </div>
-                      <div className="ah-term-version">v{ws.version || 'unknown'}</div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             )}

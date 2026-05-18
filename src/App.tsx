@@ -32,6 +32,7 @@ import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { useHeartbeat } from './hooks/useHeartbeat'
 import MandatoryUpdateOverlay from './components/MandatoryUpdateOverlay'
+import UpdateToast from './components/UpdateToast'
 import { setApiToken, onUnauthorized } from './services/api'
 import './styles/App.css'
 
@@ -227,6 +228,7 @@ function WorkstationShell() {
       <BroadcastOverlay />
       <BroadcastFAB />
       <MandatoryUpdateOverlay />
+      <UpdateToast />
     </div>
   )
 }
