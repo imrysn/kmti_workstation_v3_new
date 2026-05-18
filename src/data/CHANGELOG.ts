@@ -25,9 +25,11 @@ export const CHANGELOG: VersionChangelog[] = [
     version: '3.7.4',
     date: 'May 18, 2026',
     entries: [
-      { type: 'new', text: 'KEMCO Excel Export — Enabled high-fidelity Excel export matching the custom KEMCO quotation print layout specifications.' },
-      { type: 'fix', text: 'Excel Layout Duplication — Resolved a critical ExcelJS rendering bug where spliced rows duplicated Total Amount and signature blocks horizontally.' },
-      { type: 'improvement', text: 'Responsive Leasing Fee — Shifted the KEMCO Leasing Fee row to sit immediately after task content, dynamically eliminating redundant blank layout gaps.' },
+      { type: 'new', text: 'KEMCO Excel Export — You can now export KEMCO Quotation to Excel files with sheet 2 Details, if you like' },
+      { type: 'new', text: 'User Notify Update — Admin can now nudge users with lower version of their app to update.' },
+      { type: 'new', text: 'Task Ownership — Users can now claim and lock rows to other users in the same workspace.' },
+      { type: 'improvement', text: 'Broadcast UI — Improved UI of broadcast messages for premium feels.' },
+      { type: 'improvement', text: 'Galactic Clock — Users can now customize their galactic clock.' },
     ],
   },
   {
