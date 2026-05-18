@@ -538,11 +538,9 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     }
   }
 
-  const TEMPLATE_TASK_ROWS = isKemco ? 6 : 10
-  const effectiveTaskRows = isKemco ? Math.max(10, kemcoRows.length) : 10
-  const extraRows = isKemco
-    ? (effectiveTaskRows - TEMPLATE_TASK_ROWS)
-    : Math.max(0, mainTasks.length - TEMPLATE_TASK_ROWS)
+  const TEMPLATE_TASK_ROWS = 10
+  const effectiveTaskRows = isKemco ? Math.max(10, kemcoRows.length + 1) : 10
+  const extraRows = Math.max(0, (isKemco ? kemcoRows.length + 1 : mainTasks.length) - TEMPLATE_TASK_ROWS)
 
   // Compute assembly percentages for KEMCO mode
   const assemblyPercentages: Record<number, number> = {}
@@ -684,7 +682,6 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
         
         // Construction No (row-spanned)
         if (span > 0) {
-          _cleanAndReMerge(r, 'B', 'B')
           if (span > 1) {
             _safeMerge(sheet, `B${r}:B${r + span - 1}`)
           }
@@ -694,7 +691,6 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
           refCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
           // Machine Code (row-spanned)
-          _cleanAndReMerge(r, 'C', 'C')
           if (span > 1) {
             _safeMerge(sheet, `C${r}:C${r + span - 1}`)
           }
@@ -704,7 +700,6 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
           machCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
           // Description (row-spanned, strictly in column E!)
-          _cleanAndReMerge(r, 'E', 'E')
           if (span > 1) {
             _safeMerge(sheet, `E${r}:E${r + span - 1}`)
           }
@@ -715,7 +710,6 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
           descCell.font = { name: 'ＭＳ Ｐゴシック', size: 10, bold: true }
 
           // Percent% (row-spanned)
-          _cleanAndReMerge(r, 'F', 'F')
           if (span > 1) {
             _safeMerge(sheet, `F${r}:F${r + span - 1}`)
           }
@@ -809,8 +803,8 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   let totalAmountRow = TABLE_END + extraRows + 1
 
   if (isKemco) {
-    leasingRowIdx = 24 + extraRows
-    totalAmountRow = 28 + extraRows
+    leasingRowIdx = TABLE_START + kemcoRows.length + extraRows
+    totalAmountRow = TABLE_END + extraRows + 1
 
     const leasingRow = sheet.getRow(leasingRowIdx)
     
@@ -831,10 +825,6 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     leasingRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' }
     leasingRow.getCell(8).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
 
-    // Remove the 3 empty rows between Leasing Fee and Total Amount
-    sheet.spliceRows(leasingRowIdx + 1, 3)
-    totalAmountRow -= 3
-    
     currentRow = leasingRowIdx + 1
   } else {
     // ── Administrative Overhead ───────────────────────────────────────────────
@@ -902,7 +892,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   }
 
   // ── Signatures ────────────────────────────────────────────────────────────
-  const s = extraRows - (isKemco ? 3 : 0) // signature row offset
+  const s = extraRows // signature row offset
 
   if (isKemco) {
     _cleanAndReMerge(39 + s, 'A', 'C')
