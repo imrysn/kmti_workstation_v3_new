@@ -94,7 +94,54 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   // 1. Column Widths (A-L)
   const WIDE_WIDTH = 27
   const UNIFORM_WIDTH = 12
-  const totalCols = 12
+  const totalCols = layoutVariant === 'kemco' ? 13 : 12
+
+  // Compute assembly percentages for KEMCO mode
+  const assemblyPercentages: Record<number, number> = {}
+  if (layoutVariant === 'kemco' && tasks.length > 0) {
+    const childrenMap: Record<number, number[]> = {}
+    tasks.forEach(t => {
+      if (t.parentId !== null) {
+        if (!childrenMap[t.parentId]) childrenMap[t.parentId] = []
+        childrenMap[t.parentId].push(t.id)
+      }
+    })
+
+    const countSubtree = (tid: number): number => {
+      let count = 1
+      const children = childrenMap[tid] || []
+      children.forEach(cid => {
+        count += countSubtree(cid)
+      })
+      return count
+    }
+
+    const topLevelCounts = tasks
+      .filter(t => t.level === 0)
+      .map(t => ({ id: t.id, count: countSubtree(t.id) }))
+    
+    const totalSubtreeTasks = topLevelCounts.reduce((acc, c) => acc + c.count, 0)
+    topLevelCounts.forEach(tc => {
+      const pct = totalSubtreeTasks > 0 ? Math.round((tc.count / totalSubtreeTasks) * 100) : 0
+      assemblyPercentages[tc.id] = pct
+    })
+  }
+
+  const getDetailsAssemblySpan = (taskIdx: number) => {
+    const task = tasks[taskIdx]
+    if (!task || task.level !== 0) return 0
+    
+    let span = 1
+    for (let j = taskIdx + 1; j < tasks.length; j++) {
+      const nextTask = tasks[j]
+      if (nextTask && nextTask.level !== undefined && nextTask.level > 0) {
+        span++
+      } else {
+        break
+      }
+    }
+    return span
+  }
 
   if (layoutVariant === 'kemco') {
     sheet.columns = [
@@ -104,6 +151,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
       { header: 'Unit Code', key: 'uCode', width: 7.50 },
       { header: 'DWG No.', key: 'dwgNo', width: 29 },
       { header: 'Description', key: 'desc', width: 30 },
+      { header: 'Percent %', key: 'pct', width: 10.25 },
       { header: 'Start Date', key: 'sDate', width: 11 },
       { header: 'End Date', key: 'eDate', width: 11 },
       { header: 'Time', key: 'time', width: 11 },
@@ -140,15 +188,16 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
     sheet.getCell('D1').value = 'Unit Code'
     sheet.getCell('E1').value = 'DWG No.'
     sheet.getCell('F1').value = 'Description'
-    sheet.getCell('G1').value = 'Date'
-    sheet.getCell('I1').value = 'Time'
-    sheet.getCell('J1').value = 'Type'
-    sheet.getCell('K1').value = 'Engineer'
-    sheet.getCell('L1').value = 'Amount'
+    sheet.getCell('G1').value = 'Percent %'
+    sheet.getCell('H1').value = 'Date'
+    sheet.getCell('J1').value = 'Time'
+    sheet.getCell('K1').value = 'Type'
+    sheet.getCell('L1').value = 'Engineer'
+    sheet.getCell('M1').value = 'Amount'
 
     // Set values for row 2
-    sheet.getCell('G2').value = 'Start'
-    sheet.getCell('H2').value = 'End'
+    sheet.getCell('H2').value = 'Start'
+    sheet.getCell('I2').value = 'End'
 
     // Merges
     _safeMerge(sheet, 'A1:A2')
@@ -157,11 +206,12 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
     _safeMerge(sheet, 'D1:D2')
     _safeMerge(sheet, 'E1:E2')
     _safeMerge(sheet, 'F1:F2')
-    _safeMerge(sheet, 'G1:H1')
-    _safeMerge(sheet, 'I1:I2')
+    _safeMerge(sheet, 'G1:G2')
+    _safeMerge(sheet, 'H1:I1')
     _safeMerge(sheet, 'J1:J2')
     _safeMerge(sheet, 'K1:K2')
     _safeMerge(sheet, 'L1:L2')
+    _safeMerge(sheet, 'M1:M2')
 
     // Style row 1 and 2
     ;[1, 2].forEach(rIdx => {
@@ -293,27 +343,50 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
       const indent = '    '.repeat(task.level || 0)
 
       row.getCell(1).value = idx + 1
-      row.getCell(2).value = task.level === 0 ? (task.referenceNumber || '') : ''
-      row.getCell(3).value = task.level === 0 ? (task.machineCode || '') : ''
+      
+      const span = getDetailsAssemblySpan(idx)
+      if (span > 0) {
+        if (span > 1) {
+          _safeMerge(sheet, `B${rowIdx}:B${rowIdx + span - 1}`)
+          _safeMerge(sheet, `C${rowIdx}:C${rowIdx + span - 1}`)
+          _safeMerge(sheet, `G${rowIdx}:G${rowIdx + span - 1}`)
+        }
+        
+        const refCell = row.getCell(2)
+        refCell.value = task.referenceNumber || ''
+        refCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+        const machCell = row.getCell(3)
+        machCell.value = task.machineCode || ''
+        machCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+        const pctCell = row.getCell(7)
+        const pct = assemblyPercentages[task.id] || 0
+        pctCell.value = pct / 100
+        pctCell.numFmt = '0%'
+        pctCell.alignment = { horizontal: 'center', vertical: 'middle' }
+      }
+
       row.getCell(4).value = task.level === 1 ? (task.unitCode || '') : ''
       row.getCell(5).value = task.level === 2 ? (task.dwgNo || '') : ''
       row.getCell(6).value = indent + (task.description || '')
-      row.getCell(7).value = task.startDate || ''
-      row.getCell(8).value = task.endDate || ''
-      row.getCell(9).value = task.time || 0
-      row.getCell(10).value = task.type || '3D'
-      row.getCell(11).value = task.engineer || ''
+      row.getCell(8).value = task.startDate || ''
+      row.getCell(9).value = task.endDate || ''
+      row.getCell(10).value = task.time || 0
+      row.getCell(11).value = task.type || '3D'
+      row.getCell(12).value = task.engineer || ''
 
       // Calculation logic for KEMCO total
       const { total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
-      row.getCell(12).value = total
+      row.getCell(13).value = total
 
       row.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, colNumber: number) => {
-        if (colNumber > 12) return
+        if (colNumber > 13) return
         cell.font = { name: 'Arial', size: 9 }
         cell.alignment = { horizontal: 'center', vertical: 'middle' }
         if (colNumber === 6) cell.alignment = { horizontal: 'left', vertical: 'middle' }
-        if (colNumber === 12) {
+        if (colNumber === 7) cell.numFmt = '0%'
+        if (colNumber === 13) {
           cell.alignment = { horizontal: 'right', vertical: 'middle' }
           cell.numFmt = '"¥"#,##0'
         }
@@ -402,7 +475,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   }
 
   if (layoutVariant === 'kemco') {
-    sheet.getColumn(12).hidden = true
+    sheet.getColumn(13).hidden = true
   }
 }
 
