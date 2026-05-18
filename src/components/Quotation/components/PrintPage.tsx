@@ -346,7 +346,8 @@ export const PrintPage = memo(({
                     <td className="price-cell">{fmt(pageTotals[i])}</td>
                   </tr>
                 )
-              })}
+              })
+            })()}
 
           {isLastPage && (
             <>
