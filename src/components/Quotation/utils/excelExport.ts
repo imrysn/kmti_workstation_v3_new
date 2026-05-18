@@ -477,8 +477,37 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   } = d
 
   const isKemco = layoutVariant === 'kemco'
+
+  // Custom grouping for KEMCO mode
+  interface ExcelKemcoRow {
+    type: 'assembly' | 'subgroup'
+    tasks: Task[]
+    assemblyTask: Task
+  }
+  const kemcoRows: ExcelKemcoRow[] = []
+  
+  if (isKemco) {
+    let currentAssembly: Task | null = null
+    mainTasks.forEach(task => {
+      if (task.level === 0) {
+        currentAssembly = task
+        kemcoRows.push({ type: 'assembly', tasks: [task], assemblyTask: task })
+      } else {
+        if (!currentAssembly || currentAssembly.id !== task.parentId) {
+          currentAssembly = tasks.find(at => at.id === task.parentId && at.level === 0) || task
+        }
+        const lastRow = kemcoRows[kemcoRows.length - 1]
+        if (lastRow && lastRow.type === 'subgroup' && lastRow.assemblyTask.id === currentAssembly.id && lastRow.tasks.length < 2) {
+          lastRow.tasks.push(task)
+        } else {
+          kemcoRows.push({ type: 'subgroup', tasks: [task], assemblyTask: currentAssembly })
+        }
+      }
+    })
+  }
+
   const TEMPLATE_TASK_ROWS = isKemco ? 6 : 10
-  const effectiveTaskRows = isKemco ? Math.max(10, mainTasks.length) : 10
+  const effectiveTaskRows = isKemco ? Math.max(10, kemcoRows.length) : 10
   const extraRows = isKemco
     ? (effectiveTaskRows - TEMPLATE_TASK_ROWS)
     : Math.max(0, mainTasks.length - TEMPLATE_TASK_ROWS)
@@ -590,55 +619,116 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   }
 
   // Write task rows
-  mainTasks.forEach((task, idx) => {
-    const r = TABLE_START + idx
-    const unitPage = getUnitPageCount(task.id, tasks, manualOverrides)
+  const getExcelSubgroupSpan = (rowIndex: number) => {
+    const row = kemcoRows[rowIndex]
+    if (!row || row.type !== 'subgroup') return 0
+    
+    if (rowIndex > 0 && kemcoRows[rowIndex - 1] && kemcoRows[rowIndex - 1].type === 'subgroup' && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
+      return 0
+    }
+    
+    let span = 1
+    for (let j = rowIndex + 1; j < kemcoRows.length; j++) {
+      if (kemcoRows[j] && kemcoRows[j].type === 'subgroup' && kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
+        span++
+      } else {
+        break
+      }
+    }
+    return span
+  }
 
-    // Find matching row in 'Details' sheet
-    const detailsIdx = tasks.findIndex(t => t.id === task.id)
-    const detailsRowIdx = detailsIdx + 2
+  const loopLength = isKemco ? effectiveTaskRows : mainTasks.length
+  for (let idx = 0; idx < loopLength; idx++) {
+    const r = TABLE_START + idx
 
     sheet.getCell(`A${r}`).value = idx + 1
     sheet.getCell(`A${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getCell(`A${r}`).font = { name: 'Arial', size: 10 }
 
     if (isKemco) {
-      // Construction No
-      sheet.getCell(`B${r}`).value = task.level === 0 ? (task.referenceNumber || '') : ''
-      sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-      sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+      const row = kemcoRows[idx]
+      if (row) {
+        if (row.type === 'assembly') {
+          // Assembly Row: Merge cells from B to G (columns 2 to 7) to show description!
+          _cleanAndReMerge(r, 'B', 'G')
+          const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description)
+          sheet.getCell(`B${r}`).value = resDesc || ''
+          sheet.getCell(`B${r}`).alignment = { horizontal: 'left', vertical: 'middle' }
+          sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10, bold: true }
+          
+          // Apply light gray background for KEMCO assembly row
+          for (let col = 2; col <= 7; col++) {
+            sheet.getCell(r, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } }
+          }
+        } else {
+          // Subgroup Row
+          const span = getExcelSubgroupSpan(idx)
+          
+          // Construction No (row-spanned)
+          if (span > 0) {
+            _cleanAndReMerge(r, 'B', 'B')
+            if (span > 1) {
+              _safeMerge(sheet, `B${r}:B${r + span - 1}`)
+            }
+            const refCell = sheet.getCell(`B${r}`)
+            refCell.value = row.assemblyTask.referenceNumber || ''
+            refCell.alignment = { horizontal: 'center', vertical: 'middle' }
+            refCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
-      // Machine Code
-      sheet.getCell(`C${r}`).value = task.level === 0 ? (task.machineCode || '') : ''
-      sheet.getCell(`C${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-      sheet.getCell(`C${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+            // Machine Code (row-spanned)
+            _cleanAndReMerge(r, 'C', 'C')
+            if (span > 1) {
+              _safeMerge(sheet, `C${r}:C${r + span - 1}`)
+            }
+            const machCell = sheet.getCell(`C${r}`)
+            machCell.value = row.assemblyTask.machineCode || ''
+            machCell.alignment = { horizontal: 'center', vertical: 'middle' }
+            machCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
-      // Unit Code
-      sheet.getCell(`D${r}`).value = task.level === 1 ? (task.unitCode || '') : ''
-      sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-      sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
-
-      // Description (no arrow)
-      sheet.getCell(`E${r}`).value = task.description || ''
-      sheet.getCell(`E${r}`).alignment = { horizontal: 'left', vertical: 'middle' }
-      sheet.getCell(`E${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
-
-      // Percent %
-      const pct = task.level === 0 ? (assemblyPercentages[task.id] || 0) : 0
-      sheet.getCell(`F${r}`).value = task.level === 0 ? pct / 100 : null
-      sheet.getCell(`F${r}`).numFmt = '0%'
-      sheet.getCell(`F${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-      sheet.getCell(`F${r}`).font = { name: 'Arial', size: 10 }
-
-      // TYPE
-      sheet.getCell(`G${r}`).value = task.type || '3D'
-      sheet.getCell(`G${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-      sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
-
-      // Price is handled programmatically below using vertical merge
-      sheet.getCell(`H${r}`).value = null
+            // Percent% (row-spanned)
+            _cleanAndReMerge(r, 'F', 'F')
+            if (span > 1) {
+              _safeMerge(sheet, `F${r}:F${r + span - 1}`)
+            }
+            const pctCell = sheet.getCell(`F${r}`)
+            const pct = assemblyPercentages[row.assemblyTask.id] || 0
+            pctCell.value = pct / 100
+            pctCell.numFmt = '0%'
+            pctCell.alignment = { horizontal: 'center', vertical: 'middle' }
+            pctCell.font = { name: 'Arial', size: 10 }
+          }
+          
+          // Unit Code (2 unit codes in 1 cell)
+          const unitStr = row.tasks.map(t => t.unitCode || '').filter(Boolean).join(', ')
+          sheet.getCell(`D${r}`).value = unitStr
+          sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+          sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+          
+          // Description is HIDDEN on print preview / quotation sheet
+          sheet.getCell(`E${r}`).value = ''
+          
+          // Type
+          const firstTask = row.tasks[0]
+          sheet.getCell(`G${r}`).value = firstTask.type || '3D'
+          sheet.getCell(`G${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+          sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
+        }
+        
+        sheet.getCell(`H${r}`).value = null
+      } else {
+        // Empty filler row to pad up to 10 rows
+        for (let col = 2; col <= 8; col++) {
+          sheet.getCell(r, col).value = ''
+        }
+      }
     } else {
       // Original Special
+      const task = mainTasks[idx]
+      const unitPage = getUnitPageCount(task.id, tasks, manualOverrides)
+      const detailsIdx = tasks.findIndex(t => t.id === task.id)
+      const detailsRowIdx = detailsIdx + 2
+
       sheet.getCell(`B${r}`).value = task.referenceNumber || ''
       sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
       sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
@@ -664,13 +754,13 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
       sheet.getCell(`G${r}`).alignment = { horizontal: 'right', vertical: 'middle' }
       sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
     }
-  })
+  }
 
   // Programmatically merge Price column in KEMCO mode
   if (isKemco) {
     try { sheet.unMergeCells(`H${TABLE_START}:H${TABLE_END}`) } catch (e) {}
     
-    const lastTaskRow = TABLE_START + mainTasks.length - 1
+    const lastTaskRow = TABLE_START + kemcoRows.length - 1
     if (lastTaskRow >= TABLE_START) {
       _safeMerge(sheet, `H${TABLE_START}:H${lastTaskRow}`)
       
@@ -712,7 +802,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
 
     const leasingRow = sheet.getRow(leasingRowIdx)
     
-    leasingRow.getCell(1).value = mainTasks.length + 1
+    leasingRow.getCell(1).value = isKemco ? (kemcoRows.length + 1) : (mainTasks.length + 1)
     leasingRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
     leasingRow.getCell(1).font = { name: 'Arial', size: 11 }
     
