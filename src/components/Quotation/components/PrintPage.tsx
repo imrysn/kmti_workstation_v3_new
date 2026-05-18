@@ -254,9 +254,16 @@ export const PrintPage = memo(({
                 const resUnit = row.subgroupTasks.map(t => resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
                 const resType = row.subgroupTasks.length > 0 ? resolveField(row.subgroupTasks[0], 'type', row.subgroupTasks[0].type || '3D') : '3D'
 
+                const assemblyIndex = allTasks.filter(t => t.level === 0).findIndex(t => t.id === targetId)
+                const displayNo = assemblyIndex !== -1 ? assemblyIndex + 1 : ''
+
                 return (
                   <tr key={`kemco-row-${rowIndex}`} className="level-1">
-                    <td>{startIndex + rowIndex + 1}</td>
+                    {span > 0 && (
+                      <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                        {displayNo}
+                      </td>
+                    )}
                     {span > 0 && (
                       <>
                         <td className="col-ref-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
@@ -283,13 +290,33 @@ export const PrintPage = memo(({
                     </td>
                     {span > 0 && (
                       <td className="description-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'left', paddingLeft: '8px' }}>
-                        <input 
-                          type="text" 
-                          className="ppm-unit-input" 
-                          style={{ textAlign: 'left', width: '100%', fontWeight: 'bold' }} 
-                          value={resDesc} 
-                          onChange={e => onTaskOverride?.(targetId, { description: e.target.value })} 
-                        />
+                        <div
+                          contentEditable
+                          suppressContentEditableWarning
+                          className="ppm-unit-input"
+                          style={{ 
+                            textAlign: 'left', 
+                            width: '100%', 
+                            fontWeight: 'bold',
+                            border: 'none',
+                            outline: 'none',
+                            background: 'transparent',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            cursor: 'text',
+                            minHeight: '20px'
+                          }}
+                          onBlur={e => {
+                            onTaskOverride?.(targetId, { description: e.currentTarget.textContent || '' })
+                          }}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.stopPropagation()
+                            }
+                          }}
+                        >
+                          {resDesc}
+                        </div>
                       </td>
                     )}
                     {span > 0 && (
@@ -303,19 +330,21 @@ export const PrintPage = memo(({
                         />
                       </td>
                     )}
-                    <td>
-                      <input 
-                        type="text" 
-                        className="ppm-unit-input" 
-                        style={{ textAlign: 'center', width: '100%' }} 
-                        value={resType} 
-                        onChange={e => {
-                          if (row.subgroupTasks.length > 0) {
-                            onTaskOverride?.(row.subgroupTasks[0].id, { type: e.target.value })
-                          }
-                        }} 
-                      />
-                    </td>
+                    {span > 0 && (
+                      <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                        <input 
+                          type="text" 
+                          className="ppm-unit-input" 
+                          style={{ textAlign: 'center', width: '100%' }} 
+                          value={resType} 
+                          onChange={e => {
+                            if (row.subgroupTasks.length > 0) {
+                              onTaskOverride?.(row.subgroupTasks[0].id, { type: e.target.value })
+                            }
+                          }} 
+                        />
+                      </td>
+                    )}
                     {rowIndex === 0 && (
                       <td className="price-cell kemco-merged-price" rowSpan={kemcoRows.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
                         ¥{(1848400).toLocaleString()}
@@ -447,7 +476,7 @@ export const PrintPage = memo(({
             </div>
             <div className="qh-meta-row">
               <span className="qh-meta-label">DATE:</span>
-              <span className="qh-meta-value">{quotationDetails.date || ''}</span>
+              <span className="qh-meta-value">{(quotationDetails.date || '').replace(/-/g, '/')}</span>
             </div>
           </div>
         )}
@@ -456,7 +485,7 @@ export const PrintPage = memo(({
           <div className="quotation-details-visual">
             <div className="detail-row-visual">
               <span className="detail-label-visual">DATE:</span>
-              <span className="detail-value-visual">{quotationDetails.date || ''}</span>
+              <span className="detail-value-visual">{(quotationDetails.date || '').replace(/-/g, '/')}</span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Invoice No.:</span>

@@ -382,10 +382,42 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       patches.push({ path: taskPath(id, fieldOrUpdates), value })
     }
 
+    // Clear manual override for the updated fields in manualOverrides so the main workspace has absolute priority!
+    updateManualOverrides((prev: any) => {
+      if (!prev || !prev.tasks || !prev.tasks[id]) return prev
+      const tasks = { ...prev.tasks }
+      const sub = { ...tasks[id] }
+      
+      let changed = false
+      if (typeof fieldOrUpdates === 'object' && fieldOrUpdates !== null) {
+        Object.keys(fieldOrUpdates).forEach(k => {
+          if (sub[k] !== undefined) {
+            delete sub[k]
+            changed = true
+          }
+        })
+      } else {
+        if (sub[fieldOrUpdates] !== undefined) {
+          delete sub[fieldOrUpdates]
+          changed = true
+        }
+      }
+      
+      if (!changed) return prev
+      
+      if (Object.keys(sub).length === 0) {
+        delete tasks[id]
+      } else {
+        tasks[id] = sub
+      }
+      
+      return { ...prev, tasks }
+    })
+
     updateTask(id, updates)
     emitBatchPatch(patches)
     debouncedSyncDb()
-  }, [updateTask, emitBatchPatch, myEffectiveName, myColor, debouncedSyncDb])
+  }, [updateTask, emitBatchPatch, myEffectiveName, myColor, debouncedSyncDb, updateManualOverrides])
 
   const syncAddTask = useCallback(() => {
     const newTask = { ...makeBlankTask(), lastEditorName: myEffectiveName, lastEditorColor: myColor }

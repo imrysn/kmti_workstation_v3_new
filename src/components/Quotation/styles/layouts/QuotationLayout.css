@@ -156,12 +156,7 @@
   padding: 4px 3px;
   text-align: center;
   vertical-align: middle;
-  border: none;
-}
-
-.table-visual th:not(:last-child),
-.table-visual td:not(:last-child) {
-  border-right: 1px solid #000;
+  border: 1px solid #000;
 }
 
 .table-visual thead th {
@@ -169,10 +164,6 @@
   background-color: transparent;
   font-size: 12px;
   border-bottom: 2px solid #000;
-}
-
-.table-visual tbody tr:not(:last-child) td {
-  border-bottom: 1px solid #ccc;
 }
 
 
