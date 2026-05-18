@@ -116,3 +116,57 @@ export function getUnitPageCount(
   const subTaskCount = allTasks.filter(t => t.parentId === taskId).length
   return 1 + subTaskCount
 }
+
+/**
+ * Automatically calculates KEMCO Rank and Unit Price based on time (minutes), level, and type.
+ */
+export function getKemcoRankAndPrice(time: number, level: number, type: string): { rank: string, price: number } {
+  const isPart = level === 2
+  const is3D = type === '3D' || !type // fallback to 3D if not specified
+
+  if (is3D) {
+    if (isPart) {
+      if (time >= 241) return { rank: 'AA', price: 4180 }
+      if (time >= 121) return { rank: 'AB', price: 2090 }
+      if (time >= 61) return { rank: 'A', price: 1290 }
+      if (time >= 31) return { rank: 'B', price: 840 }
+      if (time >= 16) return { rank: 'C', price: 460 }
+      if (time >= 6) return { rank: 'D', price: 270 }
+      if (time >= 1) return { rank: 'E', price: 160 }
+      return { rank: '', price: 0 }
+    } else {
+      // 3D Assembly
+      if (time >= 1441) return { rank: 'AA', price: 20110 }
+      if (time >= 961) return { rank: 'A', price: 12330 }
+      if (time >= 481) return { rank: 'B', price: 8350 }
+      if (time >= 241) return { rank: 'C', price: 4180 }
+      if (time >= 121) return { rank: 'D', price: 2090 }
+      if (time >= 1) return { rank: 'E', price: 1290 }
+      return { rank: '', price: 0 }
+    }
+  } else {
+    // 2D
+    if (isPart) {
+      if (time >= 481) return { rank: 'AA', price: 8350 }
+      if (time >= 241) return { rank: 'AB', price: 4180 }
+      if (time >= 121) return { rank: 'AC', price: 2090 }
+      if (time >= 61) return { rank: 'A', price: 1290 }
+      if (time >= 31) return { rank: 'B', price: 840 }
+      if (time >= 16) return { rank: 'C', price: 460 }
+      if (time >= 6) return { rank: 'D', price: 270 }
+      if (time >= 1) return { rank: 'E', price: 160 }
+      return { rank: '', price: 0 }
+    } else {
+      // 2D Assembly
+      if (time >= 1441) return { rank: 'AA', price: 20110 }
+      if (time >= 961) return { rank: 'AB', price: 12330 }
+      if (time >= 481) return { rank: 'AC', price: 8350 }
+      if (time >= 241) return { rank: 'A', price: 4180 }
+      if (time >= 121) return { rank: 'B', price: 2090 }
+      if (time >= 61) return { rank: 'C', price: 1290 }
+      if (time >= 31) return { rank: 'D', price: 840 }
+      if (time >= 1) return { rank: 'E', price: 460 }
+      return { rank: '', price: 0 }
+    }
+  }
+}

@@ -38,6 +38,8 @@ export interface Task {
   /** 0: Assembly, 1: Sub-Assembly / Unit, 2: Part */
   level?: number
   dwgNo?: string
+  drawingRank?: string
+  unitPrice?: number
 }
 
 export interface BaseRates {
@@ -137,6 +139,8 @@ export interface TaskOverrides {
   description?: string
   percentage?: number
   type?: string
+  drawingRank?: string
+  unitPrice?: number
 }
 
 export interface ManualOverrides {

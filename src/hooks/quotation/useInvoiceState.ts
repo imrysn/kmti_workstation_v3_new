@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useDebounceCallback } from '../useDebounce'
+import { getKemcoRankAndPrice } from '../../utils/quotation'
 
 import type {
   Task, BaseRates, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails,
@@ -233,7 +234,28 @@ export function useInvoiceState() {
   )
   const [collapsedTaskIds, setCollapsedTaskIds] = useStickyState<number[]>([], 'collapsed', ns)
   const [chatLog, setChatLog] = useStickyState<ChatMsg[]>([], 'chatLog', ns)
-  const [layoutVariant, setLayoutVariant] = useStickyState<'special' | 'kemco'>('special', 'layoutVariant', ns)
+  const [layoutVariantRaw, setLayoutVariantRaw] = useStickyState<'special' | 'kemco'>('special', 'layoutVariant', ns)
+
+  const setLayoutVariant = useCallback((variant: 'special' | 'kemco') => {
+    setLayoutVariantRaw(variant)
+    if (variant === 'kemco') {
+      setTasks(prev => prev.map(task => {
+        const { rank, price } = getKemcoRankAndPrice(
+          task.time || 0,
+          task.level || 0,
+          task.type || '3D'
+        )
+        return {
+          ...task,
+          drawingRank: rank,
+          unitPrice: price,
+          amount: price
+        }
+      }))
+    }
+  }, [setLayoutVariantRaw, setTasks])
+
+  const layoutVariant = layoutVariantRaw
 
   const debouncedQuotationUpdate = useDebounceCallback((date: string) => {
     const newQuotationNo = generateQuotationNumber(date)
@@ -334,13 +356,24 @@ export function useInvoiceState() {
   const updateTask = useCallback((id: number, fieldOrUpdates: keyof Task | Partial<Task>, value?: any) => {
     setTasks(prev => prev.map(task => {
       if (task.id !== id) return task
-      if (typeof fieldOrUpdates === 'object') {
-        return { ...task, ...fieldOrUpdates }
+      let updatedTask = typeof fieldOrUpdates === 'object'
+        ? { ...task, ...fieldOrUpdates }
+        : { ...task, [fieldOrUpdates]: value }
+
+      if (layoutVariant === 'kemco') {
+        const { rank, price } = getKemcoRankAndPrice(
+          updatedTask.time || 0,
+          updatedTask.level || 0,
+          updatedTask.type || '3D'
+        )
+        updatedTask.drawingRank = rank
+        updatedTask.unitPrice = price
+        updatedTask.amount = price
       }
-      return { ...task, [fieldOrUpdates]: value }
+      return updatedTask
     }))
     setHasUnsavedChanges(true)
-  }, [setHasUnsavedChanges])
+  }, [setHasUnsavedChanges, layoutVariant])
 
   const reorderTasks = useCallback((draggedTaskId: number, targetTaskId: number) => {
     setTasks(prev => {
@@ -455,7 +488,23 @@ export function useInvoiceState() {
       invoiceNo:  data.billingDetails?.invoiceNo  ?? qd.invoiceNo  ?? '',
       jobOrderNo: data.billingDetails?.jobOrderNo ?? qd.jobOrderNo ?? '',
     }
-    const resolvedTasks    = data.tasks || [makeBlankTask()]
+    const resolvedVariant = data.layoutVariant || 'special'
+    let resolvedTasks = data.tasks || [makeBlankTask()]
+    if (resolvedVariant === 'kemco') {
+      resolvedTasks = resolvedTasks.map((task: Task) => {
+        const { rank, price } = getKemcoRankAndPrice(
+          task.time || 0,
+          task.level || 0,
+          task.type || '3D'
+        )
+        return {
+          ...task,
+          drawingRank: rank,
+          unitPrice: price,
+          amount: price
+        }
+      })
+    }
     const resolvedRates    = data.baseRates || DEFAULT_BASE_RATES
     const loadedSig        = data.signatures || {}
     const resolvedSigs: Signatures = {
@@ -465,7 +514,6 @@ export function useInvoiceState() {
     const resolvedOverrides = migrateLegacyOverrides(data.manualOverrides)
     const resolvedCollapsed = data.collapsedTaskIds || []
     const resolvedChatLog = data.chatLog || []
-    const resolvedVariant = data.layoutVariant || 'special'
 
     // ── Critical: pre-seed sessionStorage under the new namespace BEFORE
     // calling setNs(). useStickyState's resync useEffect fires on the next
