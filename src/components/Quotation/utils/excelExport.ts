@@ -480,30 +480,44 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
 
   // Custom grouping for KEMCO mode
   interface ExcelKemcoRow {
-    type: 'assembly' | 'subgroup'
-    tasks: Task[]
     assemblyTask: Task
+    tasks: Task[]
   }
   const kemcoRows: ExcelKemcoRow[] = []
   
   if (isKemco) {
     let currentAssembly: Task | null = null
+    let currentSubgroup: Task[] = []
+
     mainTasks.forEach(task => {
       if (task.level === 0) {
+        if (currentSubgroup.length > 0 && currentAssembly) {
+          kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
+          currentSubgroup = []
+        }
         currentAssembly = task
-        kemcoRows.push({ type: 'assembly', tasks: [task], assemblyTask: task })
       } else {
         if (!currentAssembly || currentAssembly.id !== task.parentId) {
+          if (currentSubgroup.length > 0 && currentAssembly) {
+            kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
+            currentSubgroup = []
+          }
           currentAssembly = tasks.find(at => at.id === task.parentId && at.level === 0) || task
         }
-        const lastRow = kemcoRows[kemcoRows.length - 1]
-        if (lastRow && lastRow.type === 'subgroup' && lastRow.assemblyTask.id === currentAssembly.id && lastRow.tasks.length < 2) {
-          lastRow.tasks.push(task)
-        } else {
-          kemcoRows.push({ type: 'subgroup', tasks: [task], assemblyTask: currentAssembly })
+        
+        currentSubgroup.push(task)
+        if (currentSubgroup.length === 2) {
+          kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
+          currentSubgroup = []
         }
       }
     })
+
+    if (currentSubgroup.length > 0 && currentAssembly) {
+      kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
+    } else if (currentAssembly && kemcoRows.filter(r => r.assemblyTask.id === currentAssembly!.id).length === 0) {
+      kemcoRows.push({ assemblyTask: currentAssembly, tasks: [] })
+    }
   }
 
   const TEMPLATE_TASK_ROWS = isKemco ? 6 : 10
@@ -618,18 +632,17 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     _insertRows(sheet, TABLE_END, extraRows, TABLE_END)
   }
 
-  // Write task rows
-  const getExcelSubgroupSpan = (rowIndex: number) => {
+  const getExcelAssemblyRowSpan = (rowIndex: number) => {
     const row = kemcoRows[rowIndex]
-    if (!row || row.type !== 'subgroup') return 0
+    if (!row) return 0
     
-    if (rowIndex > 0 && kemcoRows[rowIndex - 1] && kemcoRows[rowIndex - 1].type === 'subgroup' && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
+    if (rowIndex > 0 && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
       return 0
     }
     
     let span = 1
     for (let j = rowIndex + 1; j < kemcoRows.length; j++) {
-      if (kemcoRows[j] && kemcoRows[j].type === 'subgroup' && kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
+      if (kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
         span++
       } else {
         break
@@ -649,72 +662,65 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     if (isKemco) {
       const row = kemcoRows[idx]
       if (row) {
-        if (row.type === 'assembly') {
-          // Assembly Row: Merge cells from B to G (columns 2 to 7) to show description!
-          _cleanAndReMerge(r, 'B', 'G')
-          const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description)
-          sheet.getCell(`B${r}`).value = resDesc || ''
-          sheet.getCell(`B${r}`).alignment = { horizontal: 'left', vertical: 'middle' }
-          sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10, bold: true }
-          
-          // Apply light gray background for KEMCO assembly row
-          for (let col = 2; col <= 7; col++) {
-            sheet.getCell(r, col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFEFEF' } }
+        const span = getExcelAssemblyRowSpan(idx)
+        
+        // Construction No (row-spanned)
+        if (span > 0) {
+          _cleanAndReMerge(r, 'B', 'B')
+          if (span > 1) {
+            _safeMerge(sheet, `B${r}:B${r + span - 1}`)
           }
-        } else {
-          // Subgroup Row
-          const span = getExcelSubgroupSpan(idx)
-          
-          // Construction No (row-spanned)
-          if (span > 0) {
-            _cleanAndReMerge(r, 'B', 'B')
-            if (span > 1) {
-              _safeMerge(sheet, `B${r}:B${r + span - 1}`)
-            }
-            const refCell = sheet.getCell(`B${r}`)
-            refCell.value = row.assemblyTask.referenceNumber || ''
-            refCell.alignment = { horizontal: 'center', vertical: 'middle' }
-            refCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+          const refCell = sheet.getCell(`B${r}`)
+          refCell.value = row.assemblyTask.referenceNumber || ''
+          refCell.alignment = { horizontal: 'center', vertical: 'middle' }
+          refCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
-            // Machine Code (row-spanned)
-            _cleanAndReMerge(r, 'C', 'C')
-            if (span > 1) {
-              _safeMerge(sheet, `C${r}:C${r + span - 1}`)
-            }
-            const machCell = sheet.getCell(`C${r}`)
-            machCell.value = row.assemblyTask.machineCode || ''
-            machCell.alignment = { horizontal: 'center', vertical: 'middle' }
-            machCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
-
-            // Percent% (row-spanned)
-            _cleanAndReMerge(r, 'F', 'F')
-            if (span > 1) {
-              _safeMerge(sheet, `F${r}:F${r + span - 1}`)
-            }
-            const pctCell = sheet.getCell(`F${r}`)
-            const pct = assemblyPercentages[row.assemblyTask.id] || 0
-            pctCell.value = pct / 100
-            pctCell.numFmt = '0%'
-            pctCell.alignment = { horizontal: 'center', vertical: 'middle' }
-            pctCell.font = { name: 'Arial', size: 10 }
+          // Machine Code (row-spanned)
+          _cleanAndReMerge(r, 'C', 'C')
+          if (span > 1) {
+            _safeMerge(sheet, `C${r}:C${r + span - 1}`)
           }
-          
-          // Unit Code (2 unit codes in 1 cell)
-          const unitStr = row.tasks.map(t => t.unitCode || '').filter(Boolean).join(', ')
-          sheet.getCell(`D${r}`).value = unitStr
-          sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-          sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
-          
-          // Description is HIDDEN on print preview / quotation sheet
-          sheet.getCell(`E${r}`).value = ''
-          
-          // Type
-          const firstTask = row.tasks[0]
-          sheet.getCell(`G${r}`).value = firstTask.type || '3D'
-          sheet.getCell(`G${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-          sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
+          const machCell = sheet.getCell(`C${r}`)
+          machCell.value = row.assemblyTask.machineCode || ''
+          machCell.alignment = { horizontal: 'center', vertical: 'middle' }
+          machCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+
+          // Description (row-spanned, strictly in column E!)
+          _cleanAndReMerge(r, 'E', 'E')
+          if (span > 1) {
+            _safeMerge(sheet, `E${r}:E${r + span - 1}`)
+          }
+          const descCell = sheet.getCell(`E${r}`)
+          const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
+          descCell.value = resDesc || ''
+          descCell.alignment = { horizontal: 'left', vertical: 'middle' }
+          descCell.font = { name: 'ＭＳ Ｐゴシック', size: 10, bold: true }
+
+          // Percent% (row-spanned)
+          _cleanAndReMerge(r, 'F', 'F')
+          if (span > 1) {
+            _safeMerge(sheet, `F${r}:F${r + span - 1}`)
+          }
+          const pctCell = sheet.getCell(`F${r}`)
+          const pct = assemblyPercentages[row.assemblyTask.id] || 0
+          pctCell.value = pct / 100
+          pctCell.numFmt = '0%'
+          pctCell.alignment = { horizontal: 'center', vertical: 'middle' }
+          pctCell.font = { name: 'Arial', size: 10 }
         }
         
+        // Unit Code (2 unit codes in 1 cell)
+        const unitStr = row.tasks.map(t => t.unitCode || '').filter(Boolean).join(', ')
+        sheet.getCell(`D${r}`).value = unitStr
+        sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+        sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+        
+        // Type
+        const firstTask = row.tasks[0]
+        sheet.getCell(`G${r}`).value = firstTask ? (firstTask.type || '3D') : '3D'
+        sheet.getCell(`G${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+        sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
+
         sheet.getCell(`H${r}`).value = null
       } else {
         // Empty filler row to pad up to 10 rows

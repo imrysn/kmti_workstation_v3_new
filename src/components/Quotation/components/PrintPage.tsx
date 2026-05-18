@@ -185,51 +185,55 @@ export const PrintPage = memo(({
             {(() => {
               if (layoutVariant === 'kemco') {
                 interface KemcoRenderRow {
-                  type: 'assembly' | 'subgroup'
-                  tasks: Task[]
                   assemblyTask: Task
+                  subgroupTasks: Task[]
                 }
                 const kemcoRows: KemcoRenderRow[] = []
                 let currentAssembly: Task | null = null
+                let currentSubgroup: Task[] = []
 
                 for (let idx = 0; idx < pageTasks.length; idx++) {
                   const t = pageTasks[idx]
                   if (t.level === 0) {
+                    if (currentSubgroup.length > 0 && currentAssembly) {
+                      kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+                      currentSubgroup = []
+                    }
                     currentAssembly = t
-                    kemcoRows.push({
-                      type: 'assembly',
-                      tasks: [t],
-                      assemblyTask: t
-                    })
                   } else {
                     if (!currentAssembly || currentAssembly.id !== t.parentId) {
+                      if (currentSubgroup.length > 0 && currentAssembly) {
+                        kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+                        currentSubgroup = []
+                      }
                       currentAssembly = allTasks.find(at => at.id === t.parentId && at.level === 0) || t
                     }
                     
-                    const lastRow = kemcoRows[kemcoRows.length - 1]
-                    if (lastRow && lastRow.type === 'subgroup' && lastRow.assemblyTask.id === currentAssembly.id && lastRow.tasks.length < 2) {
-                      lastRow.tasks.push(t)
-                    } else {
-                      kemcoRows.push({
-                        type: 'subgroup',
-                        tasks: [t],
-                        assemblyTask: currentAssembly
-                      })
+                    currentSubgroup.push(t)
+                    if (currentSubgroup.length === 2) {
+                      kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+                      currentSubgroup = []
                     }
                   }
                 }
 
-                const getSubgroupSpan = (rowIndex: number) => {
+                if (currentSubgroup.length > 0 && currentAssembly) {
+                  kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+                } else if (currentAssembly && kemcoRows.filter(r => r.assemblyTask.id === currentAssembly!.id).length === 0) {
+                  kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: [] })
+                }
+
+                const getAssemblyRowSpan = (rowIndex: number) => {
                   const row = kemcoRows[rowIndex]
-                  if (row.type !== 'subgroup') return 0
+                  if (!row) return 0
                   
-                  if (rowIndex > 0 && kemcoRows[rowIndex - 1].type === 'subgroup' && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
+                  if (rowIndex > 0 && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
                     return 0
                   }
                   
                   let span = 1
                   for (let j = rowIndex + 1; j < kemcoRows.length; j++) {
-                    if (kemcoRows[j].type === 'subgroup' && kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
+                    if (kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
                       span++
                     } else {
                       break
@@ -239,40 +243,18 @@ export const PrintPage = memo(({
                 }
 
                 return kemcoRows.map((row, rowIndex) => {
+                  const span = getAssemblyRowSpan(rowIndex)
                   const targetId = row.assemblyTask.id
                   const resRef = resolveField(row.assemblyTask, 'referenceNumber', row.assemblyTask.referenceNumber || '')
                   const resMachine = resolveField(row.assemblyTask, 'machineCode', row.assemblyTask.machineCode || '')
+                  const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
                   const resPercent = resolveField(row.assemblyTask, 'percentage', assemblyPercentages[targetId] || 0)
                   
-                  if (row.type === 'assembly') {
-                    const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description)
-                    return (
-                      <tr key={`assembly-${row.assemblyTask.id}`} className="level-0 print-assembly-header">
-                        <td>{startIndex + rowIndex + 1}</td>
-                        <td colSpan={6} style={{ fontWeight: 'bold', backgroundColor: '#f9f9f9', textAlign: 'left', paddingLeft: '8px' }}>
-                          <input 
-                            type="text" 
-                            className="ppm-unit-input" 
-                            style={{ textAlign: 'left', width: '100%', fontWeight: 'bold' }} 
-                            value={resDesc} 
-                            onChange={e => onTaskOverride?.(targetId, { description: e.target.value })} 
-                          />
-                        </td>
-                        {rowIndex === 0 && (
-                          <td className="price-cell kemco-merged-price" rowSpan={kemcoRows.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
-                            ¥{(1848400).toLocaleString()}
-                          </td>
-                        )}
-                      </tr>
-                    )
-                  }
-
-                  const span = getSubgroupSpan(rowIndex)
-                  const resUnit = row.tasks.map(t => resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
-                  const resType = resolveField(row.tasks[0], 'type', row.tasks[0].type || '3D')
+                  const resUnit = row.subgroupTasks.map(t => resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
+                  const resType = row.subgroupTasks.length > 0 ? resolveField(row.subgroupTasks[0], 'type', row.subgroupTasks[0].type || '3D') : '3D'
 
                   return (
-                    <tr key={`subgroup-${rowIndex}`} className="level-1">
+                    <tr key={`kemco-row-${rowIndex}`} className="level-1">
                       <td>{startIndex + rowIndex + 1}</td>
                       {span > 0 && (
                         <>
@@ -292,13 +274,23 @@ export const PrintPage = memo(({
                           value={resUnit} 
                           onChange={e => {
                             const parts = e.target.value.split(',').map(s => s.trim())
-                            row.tasks.forEach((t, tIdx) => {
+                            row.subgroupTasks.forEach((t, tIdx) => {
                               onTaskOverride?.(t.id, { unitCode: parts[tIdx] || '' })
                             })
                           }} 
                         />
                       </td>
-                      <td>&nbsp;</td>
+                      {span > 0 && (
+                        <td className="description-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'left', paddingLeft: '8px' }}>
+                          <input 
+                            type="text" 
+                            className="ppm-unit-input" 
+                            style={{ textAlign: 'left', width: '100%', fontWeight: 'bold' }} 
+                            value={resDesc} 
+                            onChange={e => onTaskOverride?.(targetId, { description: e.target.value })} 
+                          />
+                        </td>
+                      )}
                       {span > 0 && (
                         <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
                           <input
@@ -311,7 +303,17 @@ export const PrintPage = memo(({
                         </td>
                       )}
                       <td>
-                        <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%' }} value={resType} onChange={e => onTaskOverride?.(row.tasks[0].id, { type: e.target.value })} />
+                        <input 
+                          type="text" 
+                          className="ppm-unit-input" 
+                          style={{ textAlign: 'center', width: '100%' }} 
+                          value={resType} 
+                          onChange={e => {
+                            if (row.subgroupTasks.length > 0) {
+                              onTaskOverride?.(row.subgroupTasks[0].id, { type: e.target.value })
+                            }
+                          }} 
+                        />
                       </td>
                       {rowIndex === 0 && (
                         <td className="price-cell kemco-merged-price" rowSpan={kemcoRows.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
