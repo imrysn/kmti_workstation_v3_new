@@ -15,3 +15,8 @@ export type {
   SignaturePerson,
   ReceivedBy,
 } from './useInvoiceState'
+export type {
+  LayoutVariant,
+  TaskSubtotals,
+  ChatMsg,
+} from '../../types/quotation'

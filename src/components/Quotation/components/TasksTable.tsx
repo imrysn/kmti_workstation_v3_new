@@ -9,7 +9,7 @@
  */
 
 import { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react'
-import type { Task, BaseRates, ManualOverrides } from '../../../hooks/quotation'
+import type { Task, BaseRates, ManualOverrides } from '../../../types/quotation'
 import { calculateTaskTotal, calculateOverhead } from '../../../utils/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { useAuth } from '../../../context/AuthContext'
@@ -434,7 +434,7 @@ const TasksTable = memo(({
           <h2 className="section-title">Computation Table</h2>
         </div>
         <div className="computation-buttons">
-          {onOpenRateSettings && (
+          {onOpenRateSettings && layoutVariant !== 'kemco' && (
             <button className="add-button rate-settings-btn" onClick={onOpenRateSettings} title="Configure base rates">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="3" />

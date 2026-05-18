@@ -1,7 +1,7 @@
 import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import type {
   Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, ManualOverrides, TaskOverrides
-} from '../../hooks/quotation'
+} from '../../types/quotation'
 import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead, getUnitPageCount } from '../../utils/quotation'
 import { LAYOUT } from './constants'
 import PrintPage from './components/PrintPage'

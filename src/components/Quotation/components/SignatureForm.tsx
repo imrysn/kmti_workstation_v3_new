@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react'
-import type { Signatures } from '../../../hooks/quotation'
+import type { Signatures } from '../../../types/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
 

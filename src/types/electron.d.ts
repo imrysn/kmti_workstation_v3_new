@@ -42,6 +42,8 @@ export interface KMTIElectronAPI {
   printToPDF: (options?: any) => Promise<{ success: boolean; data: Uint8Array; error?: string }>;
   showSaveDialog: (options?: any) => Promise<{ canceled: boolean; filePath?: string }>;
   writeFile: (filePath: string, data: any) => Promise<{ success: boolean; error?: string }>;
+  showOpenDialog: (options?: any) => Promise<{ canceled: boolean; filePath?: string }>;
+  readFile: (filePath: string) => Promise<string | null>;
 }
 
 declare global {

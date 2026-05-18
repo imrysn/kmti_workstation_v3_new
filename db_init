@@ -13,9 +13,9 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMTE-260515-204",
+    "quotationNo": "KMTE-260517-867",
     "referenceNo": "",
-    "date": "2026-05-15"
+    "date": "2026-05-17"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -29,13 +29,13 @@
   },
   "tasks": [
     {
-      "id": 1778804399650,
+      "id": 1779062226314,
       "description": "",
       "referenceNumber": "",
-      "hours": 999,
-      "minutes": 59.99,
-      "overtimeHours": null,
-      "softwareUnits": null,
+      "hours": 1,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
       "isMainTask": true,
@@ -44,160 +44,61 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#E05C6B",
-      "engineer": "bryan"
+      "lastEditorColor": "#F39C12"
     },
     {
-      "id": 1778804434607,
+      "id": 1779062228777,
       "description": "",
       "referenceNumber": "",
-      "hours": 0,
+      "hours": 1,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#F39C12"
+    },
+    {
+      "id": 1779062230282,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 1,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
       "isMainTask": false,
-      "parentId": 1778804399650,
+      "parentId": 1779062228777,
       "amount": 0,
       "percentage": 0,
       "level": 1,
-      "lastEditorName": "Browser-User-512",
-      "lastEditorColor": "#2980B9",
-      "engineer": "User"
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#F39C12"
     },
     {
-      "id": 1778804435111,
+      "id": 1779062230737,
       "description": "",
       "referenceNumber": "",
-      "hours": 0,
+      "hours": 1,
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
       "unitType": "JD",
       "isMainTask": false,
-      "parentId": 1778804399650,
-      "amount": 0,
-      "percentage": 0,
-      "level": 1,
-      "lastEditorName": "Browser-User-512",
-      "lastEditorColor": "#2980B9",
-      "engineer": "User"
-    },
-    {
-      "id": 1778816348208,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#E05C6B",
-      "engineer": "User"
-    },
-    {
-      "id": 1778817584088,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": false,
-      "parentId": 1778816348208,
+      "parentId": 1779062228777,
       "amount": 0,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#F39C12",
-      "engineer": "User"
-    },
-    {
-      "id": 1778817584679,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": false,
-      "parentId": 1778816348208,
-      "amount": 0,
-      "percentage": 0,
-      "level": 1,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#F39C12",
-      "engineer": "User"
-    },
-    {
-      "id": 1778804423047,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 999,
-      "minutes": 59.99,
-      "overtimeHours": null,
-      "softwareUnits": null,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "Tiger",
-      "lastEditorColor": "#E05C6B",
-      "engineer": "gfdg"
-    },
-    {
-      "id": 1778817421472,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "Browser-User-512",
-      "lastEditorColor": "#2980B9",
-      "engineer": "User"
-    },
-    {
-      "id": 1778817421792,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "Browser-User-512",
-      "lastEditorColor": "#2980B9",
-      "engineer": "User"
+      "lastEditorColor": "#F39C12"
     }
   ],
   "baseRates": {
@@ -243,44 +144,11 @@
     }
   },
   "manualOverrides": {
-    "tasks": {
-      "1778804423047": {}
-    },
+    "tasks": {},
     "footer": {}
   },
   "collapsedTaskIds": [],
-  "chatLog": [
-    {
-      "sid": "qZ22SScesknOeoIDAADA",
-      "name": "Flamingo",
-      "color": "#C0392B",
-      "message": "sas",
-      "time": "08:29",
-      "id": "1778805013291-3eiapmoqt",
-      "readBy": [
-        "Tiger"
-      ]
-    },
-    {
-      "sid": "kl3ads_L6My1DL10AAC9",
-      "name": "Tiger",
-      "color": "#E67E22",
-      "message": "hi",
-      "time": "08:29",
-      "id": "1778805015281-g4cfpvsdi"
-    },
-    {
-      "sid": "qZ22SScesknOeoIDAADA",
-      "name": "Flamingo",
-      "color": "#C0392B",
-      "message": "halu",
-      "time": "08:29",
-      "id": "1778805021885-0s40nuddv",
-      "readBy": [
-        "Tiger"
-      ]
-    }
-  ],
+  "chatLog": [],
   "layoutVariant": "special",
-  "savedAt": "2026-05-15T04:33:52.356Z"
+  "savedAt": "2026-05-18T00:41:06.373Z"
 }
