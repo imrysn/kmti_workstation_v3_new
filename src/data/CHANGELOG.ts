@@ -22,6 +22,15 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.4',
+    date: 'May 18, 2026',
+    entries: [
+      { type: 'new', text: 'KEMCO Excel Export — Enabled high-fidelity Excel export matching the custom KEMCO quotation print layout specifications.' },
+      { type: 'fix', text: 'Excel Layout Duplication — Resolved a critical ExcelJS rendering bug where spliced rows duplicated Total Amount and signature blocks horizontally.' },
+      { type: 'improvement', text: 'Responsive Leasing Fee — Shifted the KEMCO Leasing Fee row to sit immediately after task content, dynamically eliminating redundant blank layout gaps.' },
+    ],
+  },
+  {
     version: '3.7.3',
     date: 'May 14, 2026',
     entries: [
