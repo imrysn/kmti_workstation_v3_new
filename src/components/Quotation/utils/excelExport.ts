@@ -28,8 +28,10 @@ export async function exportToExcel(data: ExcelExportData) {
   } = data
 
   // ── 1. Compute totals ─────────────────────────────────────────────────────
-  const mainTasks = tasks.filter(t => t.isMainTask)
-  const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides).total)
+  const mainTasks = layoutVariant === 'kemco'
+    ? tasks.filter(t => t.level! < 2)
+    : tasks.filter(t => t.isMainTask)
+  const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides, layoutVariant).total)
   const subtotal = taskTotals.reduce((s, t) => s + t, 0)
   const footer = manualOverrides?.footer || {}
   const overheadTotal = footer.overhead !== undefined
@@ -40,7 +42,9 @@ export async function exportToExcel(data: ExcelExportData) {
   const metaDate = quotationDetails.date || new Date().toISOString().slice(0, 10)
 
   // ── 2. Fetch template from backend ────────────────────────────────────────
-  const templateKey = mode === 'billing' ? 'billing' : 'quotation'
+  const templateKey = mode === 'billing'
+    ? 'billing'
+    : (layoutVariant === 'kemco' ? 'kemco_quotation' : 'quotation')
   const templateRes = await fetch(`${API_BASE}/quotations/templates/${templateKey}`)
   if (!templateRes.ok) throw new Error(`Failed to load ${templateKey} template: ${templateRes.status}`)
   const templateBuffer = await templateRes.arrayBuffer()
@@ -59,6 +63,7 @@ export async function exportToExcel(data: ExcelExportData) {
     _fillQuotation(sheet, {
       quotNo, clientInfo, quotationDetails, mainTasks, taskTotals,
       overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
+      layoutVariant,
     })
 
     // ── SHEET 2: Detailed Breakdown ─────────────────────────────────────────
@@ -89,18 +94,21 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   // 1. Column Widths (A-L)
   const WIDE_WIDTH = 27
   const UNIFORM_WIDTH = 12
+  const totalCols = 12
 
   if (layoutVariant === 'kemco') {
     sheet.columns = [
       { header: 'No.', key: 'no', width: 6 },
-      { header: 'Construction No.', key: 'ref', width: 20 },
-      { header: 'Machine Code', key: 'mCode', width: 15 },
-      { header: 'Unit Code', key: 'uCode', width: 15 },
-      { header: 'Description', key: 'desc', width: WIDE_WIDTH },
-      { header: 'Start Date', key: 'sDate', width: 15 },
-      { header: 'End Date', key: 'eDate', width: 15 },
-      { header: 'Time', key: 'time', width: UNIFORM_WIDTH },
-      { header: 'Type', key: 'type', width: UNIFORM_WIDTH },
+      { header: 'Construction No.', key: 'ref', width: 10.25 },
+      { header: 'Machine Code', key: 'mCode', width: 8.25 },
+      { header: 'Unit Code', key: 'uCode', width: 7.50 },
+      { header: 'DWG No.', key: 'dwgNo', width: 29 },
+      { header: 'Description', key: 'desc', width: 30 },
+      { header: 'Start Date', key: 'sDate', width: 11 },
+      { header: 'End Date', key: 'eDate', width: 11 },
+      { header: 'Time', key: 'time', width: 11 },
+      { header: 'Type', key: 'type', width: 7.50 },
+      { header: 'Engineer', key: 'eng', width: 20 },
       { header: 'Amount', key: 'amount', width: 20 },
     ]
   } else {
@@ -121,20 +129,72 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   }
 
   // 2. Main Header Style (A-L)
-  const headerRow = sheet.getRow(1)
-  headerRow.height = 45
-  headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    if (colNumber > 12) return
-    cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF000000' } }
-    cell.fill = { type: 'pattern', pattern: 'none' }
-    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-    cell.border = {
-      top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
-    }
-  })
+  if (layoutVariant === 'kemco') {
+    sheet.getRow(1).height = 25
+    sheet.getRow(2).height = 20
+
+    // Set values for row 1
+    sheet.getCell('A1').value = 'No.'
+    sheet.getCell('B1').value = 'Construction No.'
+    sheet.getCell('C1').value = 'Machine Code'
+    sheet.getCell('D1').value = 'Unit Code'
+    sheet.getCell('E1').value = 'DWG No.'
+    sheet.getCell('F1').value = 'Description'
+    sheet.getCell('G1').value = 'Date'
+    sheet.getCell('I1').value = 'Time'
+    sheet.getCell('J1').value = 'Type'
+    sheet.getCell('K1').value = 'Engineer'
+    sheet.getCell('L1').value = 'Amount'
+
+    // Set values for row 2
+    sheet.getCell('G2').value = 'Start'
+    sheet.getCell('H2').value = 'End'
+
+    // Merges
+    _safeMerge(sheet, 'A1:A2')
+    _safeMerge(sheet, 'B1:B2')
+    _safeMerge(sheet, 'C1:C2')
+    _safeMerge(sheet, 'D1:D2')
+    _safeMerge(sheet, 'E1:E2')
+    _safeMerge(sheet, 'F1:F2')
+    _safeMerge(sheet, 'G1:H1')
+    _safeMerge(sheet, 'I1:I2')
+    _safeMerge(sheet, 'J1:J2')
+    _safeMerge(sheet, 'K1:K2')
+    _safeMerge(sheet, 'L1:L2')
+
+    // Style row 1 and 2
+    ;[1, 2].forEach(rIdx => {
+      const row = sheet.getRow(rIdx)
+      for (let c = 1; c <= totalCols; c++) {
+        const cell = row.getCell(c)
+        cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF000000' } }
+        cell.fill = { type: 'pattern', pattern: 'none' }
+        cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+        cell.border = {
+          top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+        }
+      }
+    })
+  } else {
+    const headerRow = sheet.getRow(1)
+    headerRow.height = 45
+    headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      if (colNumber > totalCols) return
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF000000' } }
+      cell.fill = { type: 'pattern', pattern: 'none' }
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+      cell.border = {
+        top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
+      }
+    })
+  }
 
   // 1.5. Total Amount Table (O2:Q3)
-  const mainTasks = tasks.filter(t => t.isMainTask)
+  const isMainTaskForSum = (t: Task) => layoutVariant === 'kemco' ? t.level === 0 : t.isMainTask
+  const mainTasks = layoutVariant === 'kemco'
+    ? tasks.filter(t => t.level! < 2)
+    : tasks.filter(t => t.isMainTask)
   const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides, layoutVariant).total)
   const subtotal = taskTotals.reduce((s, t) => s + t, 0)
   const footer = manualOverrides?.footer || {}
@@ -143,113 +203,117 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
     : calculateOverhead(subtotal, baseRates.overheadPercentage)
   const grandTotal = subtotal + overheadTotal + (footer.adjustment || 0)
 
+  const amountColChar = 'L'
   const mainTaskCells = tasks
-    .map((t, i) => t.isMainTask ? `L${i + 2}` : null)
+    .map((t, i) => isMainTaskForSum(t) ? `${amountColChar}${i + 2}` : null)
     .filter(Boolean)
     .join('+')
 
-  _safeMerge(sheet, 'O2:Q2')
-  const totTitle = sheet.getCell('O2')
-  totTitle.value = 'Total Amount'
-  totTitle.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } }
-  totTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } }
-  totTitle.alignment = { horizontal: 'center', vertical: 'middle' }
-  totTitle.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+  if (layoutVariant !== 'kemco') {
+    _safeMerge(sheet, 'O2:Q2')
+    const totTitle = sheet.getCell('O2')
+    totTitle.value = 'Total Amount'
+    totTitle.font = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } }
+    totTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0070C0' } }
+    totTitle.alignment = { horizontal: 'center', vertical: 'middle' }
+    totTitle.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
 
-  _safeMerge(sheet, 'O3:Q5')
-  const totVal = sheet.getCell('O3')
-  totVal.numFmt = '"¥"#,##0'
-  totVal.font = { bold: true, size: 20 }
-  totVal.alignment = { horizontal: 'center', vertical: 'middle' }
-  totVal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
-  
-  const adjustment = footer.adjustment || 0
-  const totFormula = `(${mainTaskCells || '0'}) + R17${adjustment >= 0 ? '+' : ''}${adjustment}`
-  totVal.value = { formula: totFormula, result: grandTotal }
+    _safeMerge(sheet, 'O3:Q5')
+    const totVal = sheet.getCell('O3')
+    totVal.numFmt = '"¥"#,##0'
+    totVal.font = { bold: true, size: 20 }
+    totVal.alignment = { horizontal: 'center', vertical: 'middle' }
+    totVal.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+    
+    const adjustment = footer.adjustment || 0
+    const totFormula = `(${mainTaskCells || '0'}) + R17${adjustment >= 0 ? '+' : ''}${adjustment}`
+    totVal.value = { formula: totFormula, result: grandTotal }
 
-  // 3. Setup Global Computation Table (Starting N15)
-  for (let c = 14; c <= 18; c++) {
-    sheet.getColumn(c).width = UNIFORM_WIDTH
+    // 3. Setup Global Computation Table (Starting N15)
+    for (let c = 14; c <= 18; c++) {
+      sheet.getColumn(c).width = UNIFORM_WIDTH
+    }
+
+    _safeMerge(sheet, 'N15:R15')
+    const titleCell = sheet.getCell('N15')
+    titleCell.value = 'Computation Table'
+    titleCell.font = { bold: true, size: 11 }
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } }
+    titleCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+
+    const CONST_HEADER = sheet.getRow(16)
+    CONST_HEADER.getCell(14).value = 'Time Charge'
+    CONST_HEADER.getCell(15).value = 'OT Rate'
+    CONST_HEADER.getCell(16).value = 'Software Rate'
+    CONST_HEADER.getCell(17).value = 'Overhead %'
+    CONST_HEADER.getCell(18).value = 'Overhead Amt'
+    CONST_HEADER.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, col: number) => {
+      if (col < 14 || col > 18) return
+      cell.font = { bold: true, size: 9 }
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    })
+
+    const CONST_DATA = sheet.getRow(17)
+    const timeChargeValue = baseRates.timeChargeRate3D
+    CONST_DATA.getCell(14).value = timeChargeValue
+    CONST_DATA.getCell(14).numFmt = '"¥"#,##0'
+    
+    const otMultiplier = baseRates.otHoursMultiplier || 1.3
+    const otRateResult = baseRates.overtimeRate || (timeChargeValue * otMultiplier)
+    CONST_DATA.getCell(15).value = { formula: `N17 * ${otMultiplier}`, result: otRateResult }
+    CONST_DATA.getCell(15).numFmt = '"¥"#,##0'
+    CONST_DATA.getCell(16).value = baseRates.softwareRate
+    CONST_DATA.getCell(16).numFmt = '"¥"#,##0'
+    CONST_DATA.getCell(17).value = baseRates.overheadPercentage / 100
+    CONST_DATA.getCell(17).numFmt = '0%'
+
+    const overheadResult = manualOverrides.footer?.overhead !== undefined
+      ? manualOverrides.footer.overhead
+      : subtotal * (baseRates.overheadPercentage / 100)
+
+    CONST_DATA.getCell(18).value = {
+      formula: `(${mainTaskCells || '0'}) * Q17`,
+      result: overheadResult
+    }
+    CONST_DATA.getCell(18).numFmt = '"¥"#,##0'
+    CONST_DATA.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, col: number) => {
+      if (col < 14 || col > 18) return
+      cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    })
   }
 
-  _safeMerge(sheet, 'N15:R15')
-  const titleCell = sheet.getCell('N15')
-  titleCell.value = 'Computation Table'
-  titleCell.font = { bold: true, size: 11 }
-  titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
-  titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEEEEE' } }
-  titleCell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
-
-  const CONST_HEADER = sheet.getRow(16)
-  CONST_HEADER.getCell(14).value = 'Time Charge'
-  CONST_HEADER.getCell(15).value = 'OT Rate'
-  CONST_HEADER.getCell(16).value = 'Software Rate'
-  CONST_HEADER.getCell(17).value = 'Overhead %'
-  CONST_HEADER.getCell(18).value = 'Overhead Amt'
-  CONST_HEADER.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, col: number) => {
-    if (col < 14 || col > 18) return
-    cell.font = { bold: true, size: 9 }
-    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
-    cell.alignment = { horizontal: 'center', vertical: 'middle' }
-  })
-
-  const CONST_DATA = sheet.getRow(17)
-  const timeChargeValue = baseRates.timeChargeRate3D
-  CONST_DATA.getCell(14).value = timeChargeValue
-  CONST_DATA.getCell(14).numFmt = '"¥"#,##0'
-  
-  const otMultiplier = baseRates.otHoursMultiplier || 1.3
-  const otRateResult = baseRates.overtimeRate || (timeChargeValue * otMultiplier)
-  CONST_DATA.getCell(15).value = { formula: `N17 * ${otMultiplier}`, result: otRateResult }
-  CONST_DATA.getCell(15).numFmt = '"¥"#,##0'
-  CONST_DATA.getCell(16).value = baseRates.softwareRate
-  CONST_DATA.getCell(16).numFmt = '"¥"#,##0'
-  CONST_DATA.getCell(17).value = baseRates.overheadPercentage / 100
-  CONST_DATA.getCell(17).numFmt = '0%'
-
-  const overheadResult = manualOverrides.footer?.overhead !== undefined
-    ? manualOverrides.footer.overhead
-    : subtotal * (baseRates.overheadPercentage / 100)
-
-  CONST_DATA.getCell(18).value = {
-    formula: `(${mainTaskCells || '0'}) * Q17`,
-    result: overheadResult
-  }
-  CONST_DATA.getCell(18).numFmt = '"¥"#,##0'
-  CONST_DATA.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, col: number) => {
-    if (col < 14 || col > 18) return
-    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } }
-    cell.alignment = { horizontal: 'center', vertical: 'middle' }
-  })
-
-  // 4. Fill Main Tasks (A-L)
   tasks.forEach((task, idx) => {
-    const rowIdx = idx + 2
+    const rowIdx = layoutVariant === 'kemco' ? (idx + 3) : (idx + 2)
     const row = sheet.getRow(rowIdx)
 
     if (layoutVariant === 'kemco') {
       const indent = '    '.repeat(task.level || 0)
 
       row.getCell(1).value = idx + 1
-      row.getCell(2).value = task.referenceNumber || ''
-      row.getCell(3).value = task.machineCode || ''
-      row.getCell(4).value = task.unitCode || ''
-      row.getCell(5).value = (task.level! > 0 ? '↳ ' : '') + indent + (task.description || '')
-      row.getCell(6).value = task.startDate || ''
-      row.getCell(7).value = task.endDate || ''
-      row.getCell(8).value = task.time || 0
-      row.getCell(9).value = task.type || '3D'
+      row.getCell(2).value = task.level === 0 ? (task.referenceNumber || '') : ''
+      row.getCell(3).value = task.level === 0 ? (task.machineCode || '') : ''
+      row.getCell(4).value = task.level === 1 ? (task.unitCode || '') : ''
+      row.getCell(5).value = task.level === 2 ? (task.dwgNo || '') : ''
+      row.getCell(6).value = indent + (task.description || '')
+      row.getCell(7).value = task.startDate || ''
+      row.getCell(8).value = task.endDate || ''
+      row.getCell(9).value = task.time || 0
+      row.getCell(10).value = task.type || '3D'
+      row.getCell(11).value = task.engineer || ''
 
       // Calculation logic for KEMCO total
       const { total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
-      row.getCell(10).value = total
+      row.getCell(12).value = total
 
       row.eachCell({ includeEmpty: true }, (cell: ExcelJS.Cell, colNumber: number) => {
-        if (colNumber > 10) return
+        if (colNumber > 12) return
         cell.font = { name: 'Arial', size: 9 }
         cell.alignment = { horizontal: 'center', vertical: 'middle' }
-        if (colNumber === 5) cell.alignment = { horizontal: 'left', vertical: 'middle' }
-        if (colNumber === 10) {
+        if (colNumber === 6) cell.alignment = { horizontal: 'left', vertical: 'middle' }
+        if (colNumber === 12) {
           cell.alignment = { horizontal: 'right', vertical: 'middle' }
           cell.numFmt = '"¥"#,##0'
         }
@@ -275,11 +339,11 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
 
       // Time Charge: Use formula for simple calculation, result from our engine
       const tcVal = subtotals.basicLabor
-      row.getCell(6).value = { formula: `(D${rowIdx} + E${rowIdx}/60) * $N$17`, result: tcVal }
+      row.getCell(6).value = { formula: `(D${rowIdx} + E${rowIdx}/60) * N17`, result: tcVal }
 
       row.getCell(7).value = task.overtimeHours || 0
       const otVal = subtotals.overtime
-      row.getCell(8).value = { formula: `G${rowIdx} * $O$17`, result: otVal }
+      row.getCell(8).value = { formula: `G${rowIdx} * O17`, result: otVal }
 
       row.getCell(9).value = task.softwareUnits || 0
       row.getCell(10).value = task.type || '3D'
@@ -298,7 +362,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
             subTaskRange = `L${idx + 3}:L${lastSubIdx + 2}`
           }
         }
-        const baseFormula = `F${rowIdx} + H${rowIdx} + (I${rowIdx} * $P$17)`
+        const baseFormula = `F${rowIdx} + H${rowIdx} + (I${rowIdx} * P17)`
         const finalFormula = subTaskRange ? `(${baseFormula}) + SUM(${subTaskRange})` : baseFormula
         row.getCell(12).value = { formula: finalFormula, result: subtotals.total }
       } else {
@@ -327,14 +391,18 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   })
 
   // 5. Add Medium Outside Border to Main Table (A-L)
-  const lastRow = tasks.length + 1
-  for (let c = 1; c <= 12; c++) {
+  const lastRow = layoutVariant === 'kemco' ? (tasks.length + 2) : (tasks.length + 1)
+  for (let c = 1; c <= totalCols; c++) {
     sheet.getRow(1).getCell(c).border = { ...sheet.getRow(1).getCell(c).border, top: { style: 'medium' } }
     sheet.getRow(lastRow).getCell(c).border = { ...sheet.getRow(lastRow).getCell(c).border, bottom: { style: 'medium' } }
   }
   for (let r = 1; r <= lastRow; r++) {
     sheet.getRow(r).getCell(1).border = { ...sheet.getRow(r).getCell(1).border, left: { style: 'medium' } }
-    sheet.getRow(r).getCell(12).border = { ...sheet.getRow(r).getCell(12).border, right: { style: 'medium' } }
+    sheet.getRow(r).getCell(totalCols).border = { ...sheet.getRow(r).getCell(totalCols).border, right: { style: 'medium' } }
+  }
+
+  if (layoutVariant === 'kemco') {
+    sheet.getColumn(12).hidden = true
   }
 }
 
@@ -400,18 +468,58 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   signatures: Signatures
   manualOverrides: ManualOverrides
   tasks: Task[]
+  layoutVariant?: 'special' | 'kemco'
 }) {
   const {
     quotNo, clientInfo, quotationDetails, mainTasks, taskTotals,
     overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
+    layoutVariant = 'special',
   } = d
 
-  const extraRows = Math.max(0, mainTasks.length - 10)
+  const isKemco = layoutVariant === 'kemco'
+  const TEMPLATE_TASK_ROWS = isKemco ? 6 : 10
+  const effectiveTaskRows = isKemco ? Math.max(10, mainTasks.length) : 10
+  const extraRows = isKemco
+    ? (effectiveTaskRows - TEMPLATE_TASK_ROWS)
+    : Math.max(0, mainTasks.length - TEMPLATE_TASK_ROWS)
+
+  // Compute assembly percentages for KEMCO mode
+  const assemblyPercentages: Record<number, number> = {}
+  if (isKemco && tasks.length > 0) {
+    const childrenMap: Record<number, number[]> = {}
+    tasks.forEach(t => {
+      if (t.parentId !== null) {
+        if (!childrenMap[t.parentId]) childrenMap[t.parentId] = []
+        childrenMap[t.parentId].push(t.id)
+      }
+    })
+
+    const countSubtree = (tid: number): number => {
+      let count = 1
+      const children = childrenMap[tid] || []
+      children.forEach(cid => {
+        count += countSubtree(cid)
+      })
+      return count
+    }
+
+    const topLevelCounts = tasks
+      .filter(t => t.level === 0)
+      .map(t => ({ id: t.id, count: countSubtree(t.id) }))
+    
+    const totalWeight = topLevelCounts.reduce((acc, t) => acc + t.count, 0)
+    
+    topLevelCounts.forEach(t => {
+      assemblyPercentages[t.id] = totalWeight > 0 ? (t.count / totalWeight) * 100 : 0
+    })
+  }
 
   // ── Column header override: ensure UNIT/(PAGE) label is set correctly ──────
-  sheet.getCell('E17').value = 'UNIT\n(PAGE)'
-  sheet.getCell('E17').alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-  sheet.getCell('E17').font = { name: 'Arial', size: 10, bold: true }
+  if (!isKemco) {
+    sheet.getCell('E17').value = 'UNIT\n(PAGE)'
+    sheet.getCell('E17').alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+    sheet.getCell('E17').font = { name: 'Arial', size: 10, bold: true }
+  }
 
   // ── Page Setup and View settings ──────────────────────────────────────────
   sheet.pageSetup = {
@@ -425,8 +533,9 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   sheet.views = [{ showGridLines: false, zoomScale: 70 }]
 
   // ── Hide unused Columns and Rows to create "Page" look ──────────────────────
-  // Hide columns H onwards
-  for (let i = 8; i <= 26; i++) {
+  // Hide columns after table ends (Col 9 [I] onwards for KEMCO, Col 8 [H] onwards for Special)
+  const startHideCol = isKemco ? 9 : 8
+  for (let i = startHideCol; i <= 26; i++) {
     const col = sheet.getColumn(i)
     col.hidden = true
   }
@@ -446,21 +555,29 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   sheet.getCell('A15').value = `TEL: ${clientInfo.phone || ''}`
   sheet.getCell('A15').font = { name: 'Arial', size: 10 }
 
-    // ── Document meta ─────────────────────────────────────────────────────────
+  // ── Document meta ─────────────────────────────────────────────────────────
+  if (isKemco) {
+    sheet.getCell('H12').value = quotNo
+    sheet.getCell('H12').font = { name: 'Arial', size: 10, bold: true }
+    sheet.getCell('H13').value = quotationDetails.referenceNo || ''
+    sheet.getCell('H13').font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell('H14').value = metaDate
+    sheet.getCell('H14').font = { name: 'Arial', size: 10 }
+  } else {
     ;['E12', 'E13', 'E14'].forEach(cell => {
       sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: true }
     })
-  sheet.getCell('F12').value = quotNo
-  sheet.getCell('F12').font = { name: 'Arial', size: 10 }
-  sheet.getCell('F13').value = quotationDetails.referenceNo || ''
-  sheet.getCell('F13').font = { name: 'ＭＳ Ｐゴシック', size: 10 }
-  sheet.getCell('F14').value = metaDate
-  sheet.getCell('F14').font = { name: 'Arial', size: 10 }
+    sheet.getCell('F12').value = quotNo
+    sheet.getCell('F12').font = { name: 'Arial', size: 10 }
+    sheet.getCell('F13').value = quotationDetails.referenceNo || ''
+    sheet.getCell('F13').font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell('F14').value = metaDate
+    sheet.getCell('F14').font = { name: 'Arial', size: 10 }
+  }
 
   // ── Task table ────────────────────────────────────────────────────────────
   const TABLE_START = 18
-  const TEMPLATE_TASK_ROWS = 10
-  const TABLE_END = TABLE_START + TEMPLATE_TASK_ROWS - 1  // 27
+  const TABLE_END = TABLE_START + TEMPLATE_TASK_ROWS - 1
 
   // Clear all pre-styled data rows
   for (let r = TABLE_START; r <= TABLE_END; r++) {
@@ -485,79 +602,215 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     sheet.getCell(`A${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getCell(`A${r}`).font = { name: 'Arial', size: 10 }
 
-    sheet.getCell(`B${r}`).value = task.referenceNumber || ''
-    sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-    sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
-    _safeMerge(sheet, `B${r}:C${r}`)
+    if (isKemco) {
+      // Construction No
+      sheet.getCell(`B${r}`).value = task.level === 0 ? (task.referenceNumber || '') : ''
+      sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
-    sheet.getCell(`D${r}`).value = task.description || ''
-    sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+      // Machine Code
+      sheet.getCell(`C${r}`).value = task.level === 0 ? (task.machineCode || '') : ''
+      sheet.getCell(`C${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`C${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
-    sheet.getCell(`E${r}`).value = unitPage
-    sheet.getCell(`E${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-    sheet.getCell(`E${r}`).font = { name: 'Arial', size: 10 }
+      // Unit Code
+      sheet.getCell(`D${r}`).value = task.level === 1 ? (task.unitCode || '') : ''
+      sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
-    sheet.getCell(`F${r}`).value = task.type || '3D'
-    sheet.getCell(`F${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-    sheet.getCell(`F${r}`).font = { name: 'Arial', size: 10 }
+      // Description (no arrow)
+      sheet.getCell(`E${r}`).value = task.description || ''
+      sheet.getCell(`E${r}`).alignment = { horizontal: 'left', vertical: 'middle' }
+      sheet.getCell(`E${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
 
-    // PRICE: Link to 'Details' sheet Assembly Amount
-    sheet.getCell(`G${r}`).value = {
-      formula: `Details!L${detailsRowIdx}`,
-      result: taskTotals[idx]
+      // Percent %
+      const pct = task.level === 0 ? (assemblyPercentages[task.id] || 0) : 0
+      sheet.getCell(`F${r}`).value = task.level === 0 ? pct / 100 : null
+      sheet.getCell(`F${r}`).numFmt = '0%'
+      sheet.getCell(`F${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`F${r}`).font = { name: 'Arial', size: 10 }
+
+      // TYPE
+      sheet.getCell(`G${r}`).value = task.type || '3D'
+      sheet.getCell(`G${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
+
+      // Price is handled programmatically below using vertical merge
+      sheet.getCell(`H${r}`).value = null
+    } else {
+      // Original Special
+      sheet.getCell(`B${r}`).value = task.referenceNumber || ''
+      sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+      _safeMerge(sheet, `B${r}:C${r}`)
+
+      sheet.getCell(`D${r}`).value = task.description || ''
+      sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+
+      sheet.getCell(`E${r}`).value = unitPage
+      sheet.getCell(`E${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`E${r}`).font = { name: 'Arial', size: 10 }
+
+      sheet.getCell(`F${r}`).value = task.type || '3D'
+      sheet.getCell(`F${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`F${r}`).font = { name: 'Arial', size: 10 }
+
+      // PRICE: Link to 'Details' sheet Assembly Amount
+      sheet.getCell(`G${r}`).value = {
+        formula: `Details!L${detailsRowIdx}`,
+        result: taskTotals[idx]
+      }
+      sheet.getCell(`G${r}`).numFmt = '"¥"#,##0'
+      sheet.getCell(`G${r}`).alignment = { horizontal: 'right', vertical: 'middle' }
+      sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
     }
-    sheet.getCell(`G${r}`).numFmt = '"¥"#,##0'
-    sheet.getCell(`G${r}`).alignment = { horizontal: 'right', vertical: 'middle' }
-    sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
   })
+
+  // Programmatically merge Price column in KEMCO mode
+  if (isKemco) {
+    try { sheet.unMergeCells(`H${TABLE_START}:H${TABLE_END}`) } catch (e) {}
+    
+    const lastTaskRow = TABLE_START + mainTasks.length - 1
+    if (lastTaskRow >= TABLE_START) {
+      _safeMerge(sheet, `H${TABLE_START}:H${lastTaskRow}`)
+      
+      const priceCell = sheet.getCell(`H${TABLE_START}`)
+      const calculatedSum = taskTotals.reduce((a, b) => a + b, 0)
+      const priceVal = calculatedSum || 1848400
+
+      priceCell.value = priceVal
+      priceCell.numFmt = '"¥"#,##0'
+      priceCell.alignment = { horizontal: 'right', vertical: 'middle' }
+      priceCell.font = { name: 'Arial', size: 11, bold: true }
+    }
+  }
+
+  // Helper to clear duplicate/split cells from KEMCO column insertions in Excel template
+  const _cleanAndReMerge = (rNum: number, startColChar: string, endColChar: string) => {
+    try {
+      sheet.unMergeCells(`${startColChar}${rNum}:${endColChar}${rNum}`)
+    } catch (e) {}
+    const startIdx = startColChar.charCodeAt(0) - 64
+    const endIdx = endColChar.charCodeAt(0) - 64
+    const row = sheet.getRow(rNum)
+    for (let c = startIdx; c <= endIdx; c++) {
+      row.getCell(c).value = null
+    }
+    _safeMerge(sheet, `${startColChar}${rNum}:${endColChar}${rNum}`)
+  }
 
   // Dynamic row positions after potential insertion
   let currentRow = TABLE_START + mainTasks.length
 
-  // ── Administrative Overhead ───────────────────────────────────────────────
-  if (showAdmin && overheadTotal !== 0) {
-    sheet.getCell(`B${currentRow}`).value = 'Administrative Overhead'
-    sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
-    sheet.getCell(`B${currentRow}`).font = { name: 'Arial', size: 10 }
+  // ── Leasing Fee (KEMCO Mode Only) ─────────────────────────────────────────
+  let leasingRowIdx = 24
+  let totalAmountRow = TABLE_END + extraRows + 1
 
-    sheet.getCell(`G${currentRow}`).value = {
-      formula: `Details!R17`,
-      result: overheadTotal
+  if (isKemco) {
+    leasingRowIdx = 24 + extraRows
+    totalAmountRow = 28 + extraRows
+
+    const leasingRow = sheet.getRow(leasingRowIdx)
+    
+    leasingRow.getCell(1).value = mainTasks.length + 1
+    leasingRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
+    leasingRow.getCell(1).font = { name: 'Arial', size: 11 }
+    
+    leasingRow.getCell(5).value = 'Leasing fee'
+    leasingRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' }
+    leasingRow.getCell(5).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
+    
+    const adjustment = manualOverrides.footer?.adjustment !== undefined
+      ? manualOverrides.footer.adjustment
+      : -148400
+      
+    leasingRow.getCell(8).value = adjustment
+    leasingRow.getCell(8).numFmt = '"¥"#,##0;[Red]"- ¥"#,##0'
+    leasingRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' }
+    leasingRow.getCell(8).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
+
+    // Remove the 3 empty rows between Leasing Fee and Total Amount
+    sheet.spliceRows(leasingRowIdx + 1, 3)
+    totalAmountRow -= 3
+    
+    currentRow = leasingRowIdx + 1
+  } else {
+    // ── Administrative Overhead ───────────────────────────────────────────────
+    if (showAdmin && overheadTotal !== 0) {
+      sheet.getCell(`B${currentRow}`).value = 'Administrative Overhead'
+      sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
+      sheet.getCell(`B${currentRow}`).font = { name: 'Arial', size: 10 }
+
+      sheet.getCell(`G${currentRow}`).value = {
+        formula: `Details!R17`,
+        result: overheadTotal
+      }
+      sheet.getCell(`G${currentRow}`).numFmt = '"¥"#,##0'
+      sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
+      sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 10 }
+      currentRow++
     }
-    sheet.getCell(`G${currentRow}`).numFmt = '"¥"#,##0'
-    sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
-    sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 10 }
+
+    // ── Nothing Follow ────────────────────────────────────────────────────────
+    sheet.getCell(`D${currentRow}`).value = '\u2026\u2026NOTHING FOLLOW \u2026\u2026'
+    sheet.getCell(`D${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`D${currentRow}`).font = { name: 'Arial', size: 11, bold: true }
     currentRow++
   }
 
-  // ── Nothing Follow ────────────────────────────────────────────────────────
-  sheet.getCell(`D${currentRow}`).value = '\u2026\u2026NOTHING FOLLOW \u2026\u2026'
-  sheet.getCell(`D${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getCell(`D${currentRow}`).font = { name: 'Arial', size: 11, bold: true }
-  currentRow++
-
   // ── Grand total ───────────────────────────────────────────────────────────
-  const totalAmountRow = TABLE_END + extraRows + 1
-  sheet.getCell(`G${totalAmountRow}`).value = {
-    formula: `SUM(G${TABLE_START}:G${currentRow - 1})`,
-    result: grandTotal
+  if (isKemco) {
+    const calculatedSum = taskTotals.reduce((a, b) => a + b, 0)
+    const priceVal = calculatedSum || 1848400
+    const adjustment = manualOverrides.footer?.adjustment !== undefined
+      ? manualOverrides.footer.adjustment
+      : -148400
+
+    _cleanAndReMerge(totalAmountRow, 'A', 'G')
+    const lblCell = sheet.getCell(`A${totalAmountRow}`)
+    lblCell.value = 'Total Amount'
+    lblCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    lblCell.font = { name: 'Arial', size: 11, bold: true }
+
+    sheet.getCell(`H${totalAmountRow}`).value = {
+      formula: `H${TABLE_START} + H${leasingRowIdx}`,
+      result: priceVal + adjustment
+    }
+    sheet.getCell(`H${totalAmountRow}`).numFmt = '"¥"#,##0'
+    sheet.getCell(`H${totalAmountRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
+    sheet.getCell(`H${totalAmountRow}`).font = { name: 'Arial', size: 11, bold: true }
+  } else {
+    sheet.getCell(`G${totalAmountRow}`).value = {
+      formula: `SUM(G${TABLE_START}:G${currentRow - 1})`,
+      result: grandTotal
+    }
+    sheet.getCell(`G${totalAmountRow}`).numFmt = '"¥"#,##0'
+    sheet.getCell(`G${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`G${totalAmountRow}`).font = { name: 'Arial', size: 10, bold: true }
+
+    // Align the "Total Amount" label row
+    sheet.getCell(`B${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+
+    // Clear the secondary total row (30 in original template) to avoid confusion
+    const secondaryTotalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2
+    if (secondaryTotalRow !== totalAmountRow) {
+      sheet.getCell(`G${secondaryTotalRow}`).value = null
+      sheet.getCell(`B${secondaryTotalRow}`).value = null
+    }
   }
-  sheet.getCell(`G${totalAmountRow}`).numFmt = '"¥"#,##0'
-  sheet.getCell(`G${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getCell(`G${totalAmountRow}`).font = { name: 'Arial', size: 10, bold: true }
 
-  // Align the "Total Amount" label row
-  sheet.getCell(`B${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  // ── Signatures ────────────────────────────────────────────────────────────
+  const s = extraRows - (isKemco ? 3 : 0) // signature row offset
 
-  // Clear the secondary total row (30 in original template) to avoid confusion
-  const secondaryTotalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2
-  if (secondaryTotalRow !== totalAmountRow) {
-    sheet.getCell(`G${secondaryTotalRow}`).value = null
-    sheet.getCell(`B${secondaryTotalRow}`).value = null
+  if (isKemco) {
+    _cleanAndReMerge(39 + s, 'A', 'C')
+    _cleanAndReMerge(40 + s, 'A', 'C')
+    _cleanAndReMerge(46 + s, 'A', 'C')
+    _cleanAndReMerge(47 + s, 'A', 'C')
+    _cleanAndReMerge(46 + s, 'F', 'H')
+    _cleanAndReMerge(47 + s, 'F', 'H')
   }
 
-  // ── Signatures (shift by extraRows) ──────────────────────────────────────
-  const s = extraRows  // signature row offset
   sheet.getCell(`A${39 + s}`).value = signatures.quotation.preparedBy.name
   sheet.getCell(`A${39 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`A${39 + s}`).font = { name: 'Arial', size: 10, bold: true }
@@ -572,14 +825,17 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   sheet.getCell(`A${47 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`A${47 + s}`).font = { name: 'Arial', size: 10, italic: true }
 
-  sheet.getCell(`E${46 + s}`).value = signatures.quotation.receivedBy.label || '(Signature Over Printed Name)'
-  sheet.getCell(`E${46 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getCell(`E${46 + s}`).font = { name: 'Arial', size: 10, bold: true }
+  const receivedCol = isKemco ? 'F' : 'E'
+  sheet.getCell(`${receivedCol}${46 + s}`).value = signatures.quotation.receivedBy.label || '(Signature Over Printed Name)'
+  sheet.getCell(`${receivedCol}${46 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`${receivedCol}${46 + s}`).font = { name: 'Arial', size: 10, bold: true }
 
-    // Un-bold TIN in header
+  // Un-bold TIN in header (only for Special template since KEMCO doesn't need it)
+  if (!isKemco) {
     ;['D5', 'E5', 'F5'].forEach(cell => {
       sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: false }
     })
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
