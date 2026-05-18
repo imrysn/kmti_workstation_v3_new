@@ -476,6 +476,24 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     layoutVariant = 'special',
   } = d
 
+  const _resolveField = (task: Task, field: string, defaultValue: any) => {
+    const override = manualOverrides?.tasks?.[task.id] as any
+    return override?.[field] !== undefined ? override[field] : defaultValue
+  }
+
+  function _cleanAndReMerge(rNum: number, startColChar: string, endColChar: string) {
+    try {
+      sheet.unMergeCells(`${startColChar}${rNum}:${endColChar}${rNum}`)
+    } catch (e) {}
+    const startIdx = startColChar.charCodeAt(0) - 64
+    const endIdx = endColChar.charCodeAt(0) - 64
+    const row = sheet.getRow(rNum)
+    for (let c = startIdx; c <= endIdx; c++) {
+      row.getCell(c).value = null
+    }
+    _safeMerge(sheet, `${startColChar}${rNum}:${endColChar}${rNum}`)
+  }
+
   const isKemco = layoutVariant === 'kemco'
 
   // Custom grouping for KEMCO mode
@@ -691,7 +709,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
             _safeMerge(sheet, `E${r}:E${r + span - 1}`)
           }
           const descCell = sheet.getCell(`E${r}`)
-          const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
+          const resDesc = _resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
           descCell.value = resDesc || ''
           descCell.alignment = { horizontal: 'left', vertical: 'middle' }
           descCell.font = { name: 'ＭＳ Ｐゴシック', size: 10, bold: true }
@@ -781,19 +799,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     }
   }
 
-  // Helper to clear duplicate/split cells from KEMCO column insertions in Excel template
-  const _cleanAndReMerge = (rNum: number, startColChar: string, endColChar: string) => {
-    try {
-      sheet.unMergeCells(`${startColChar}${rNum}:${endColChar}${rNum}`)
-    } catch (e) {}
-    const startIdx = startColChar.charCodeAt(0) - 64
-    const endIdx = endColChar.charCodeAt(0) - 64
-    const row = sheet.getRow(rNum)
-    for (let c = startIdx; c <= endIdx; c++) {
-      row.getCell(c).value = null
-    }
-    _safeMerge(sheet, `${startColChar}${rNum}:${endColChar}${rNum}`)
-  }
+  // _cleanAndReMerge was declared at the top of _fillQuotation
 
   // Dynamic row positions after potential insertion
   let currentRow = TABLE_START + mainTasks.length

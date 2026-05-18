@@ -126,6 +126,12 @@ export const PrintPage = memo(({
 
   const renderTable = () => {
     const assemblyPercentages: Record<number, number> = {}
+    interface KemcoRenderRow {
+      assemblyTask: Task
+      subgroupTasks: Task[]
+    }
+    const kemcoRows: KemcoRenderRow[] = []
+
     if (layoutVariant === 'kemco' && allTasks.length > 0) {
       const childrenMap: Record<number, number[]> = {}
       allTasks.forEach(t => {
@@ -153,6 +159,60 @@ export const PrintPage = memo(({
       topLevelCounts.forEach(t => {
         assemblyPercentages[t.id] = totalWeight > 0 ? (t.count / totalWeight) * 100 : 0
       })
+
+      // Parse KEMCO rows
+      let currentAssembly: Task | null = null
+      let currentSubgroup: Task[] = []
+
+      for (let idx = 0; idx < pageTasks.length; idx++) {
+        const t = pageTasks[idx]
+        if (t.level === 0) {
+          if (currentSubgroup.length > 0 && currentAssembly) {
+            kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+            currentSubgroup = []
+          }
+          currentAssembly = t
+        } else {
+          if (!currentAssembly || currentAssembly.id !== t.parentId) {
+            if (currentSubgroup.length > 0 && currentAssembly) {
+              kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+              currentSubgroup = []
+            }
+            currentAssembly = allTasks.find(at => at.id === t.parentId && at.level === 0) || t
+          }
+          
+          currentSubgroup.push(t)
+          if (currentSubgroup.length === 2) {
+            kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+            currentSubgroup = []
+          }
+        }
+      }
+
+      if (currentSubgroup.length > 0 && currentAssembly) {
+        kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
+      } else if (currentAssembly && kemcoRows.filter(r => r.assemblyTask.id === currentAssembly!.id).length === 0) {
+        kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: [] })
+      }
+    }
+
+    const getAssemblyRowSpan = (rowIndex: number) => {
+      const row = kemcoRows[rowIndex]
+      if (!row) return 0
+      
+      if (rowIndex > 0 && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
+        return 0
+      }
+      
+      let span = 1
+      for (let j = rowIndex + 1; j < kemcoRows.length; j++) {
+        if (kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
+          span++
+        } else {
+          break
+        }
+      }
+      return span
     }
 
     return (
@@ -182,151 +242,90 @@ export const PrintPage = memo(({
             )}
           </thead>
           <tbody>
-            {(() => {
-              if (layoutVariant === 'kemco') {
-                interface KemcoRenderRow {
-                  assemblyTask: Task
-                  subgroupTasks: Task[]
-                }
-                const kemcoRows: KemcoRenderRow[] = []
-                let currentAssembly: Task | null = null
-                let currentSubgroup: Task[] = []
+            {layoutVariant === 'kemco' ? (
+              kemcoRows.map((row, rowIndex) => {
+                const span = getAssemblyRowSpan(rowIndex)
+                const targetId = row.assemblyTask.id
+                const resRef = resolveField(row.assemblyTask, 'referenceNumber', row.assemblyTask.referenceNumber || '')
+                const resMachine = resolveField(row.assemblyTask, 'machineCode', row.assemblyTask.machineCode || '')
+                const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
+                const resPercent = resolveField(row.assemblyTask, 'percentage', assemblyPercentages[targetId] || 0)
+                
+                const resUnit = row.subgroupTasks.map(t => resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
+                const resType = row.subgroupTasks.length > 0 ? resolveField(row.subgroupTasks[0], 'type', row.subgroupTasks[0].type || '3D') : '3D'
 
-                for (let idx = 0; idx < pageTasks.length; idx++) {
-                  const t = pageTasks[idx]
-                  if (t.level === 0) {
-                    if (currentSubgroup.length > 0 && currentAssembly) {
-                      kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-                      currentSubgroup = []
-                    }
-                    currentAssembly = t
-                  } else {
-                    if (!currentAssembly || currentAssembly.id !== t.parentId) {
-                      if (currentSubgroup.length > 0 && currentAssembly) {
-                        kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-                        currentSubgroup = []
-                      }
-                      currentAssembly = allTasks.find(at => at.id === t.parentId && at.level === 0) || t
-                    }
-                    
-                    currentSubgroup.push(t)
-                    if (currentSubgroup.length === 2) {
-                      kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-                      currentSubgroup = []
-                    }
-                  }
-                }
-
-                if (currentSubgroup.length > 0 && currentAssembly) {
-                  kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-                } else if (currentAssembly && kemcoRows.filter(r => r.assemblyTask.id === currentAssembly!.id).length === 0) {
-                  kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: [] })
-                }
-
-                const getAssemblyRowSpan = (rowIndex: number) => {
-                  const row = kemcoRows[rowIndex]
-                  if (!row) return 0
-                  
-                  if (rowIndex > 0 && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
-                    return 0
-                  }
-                  
-                  let span = 1
-                  for (let j = rowIndex + 1; j < kemcoRows.length; j++) {
-                    if (kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
-                      span++
-                    } else {
-                      break
-                    }
-                  }
-                  return span
-                }
-
-                return kemcoRows.map((row, rowIndex) => {
-                  const span = getAssemblyRowSpan(rowIndex)
-                  const targetId = row.assemblyTask.id
-                  const resRef = resolveField(row.assemblyTask, 'referenceNumber', row.assemblyTask.referenceNumber || '')
-                  const resMachine = resolveField(row.assemblyTask, 'machineCode', row.assemblyTask.machineCode || '')
-                  const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
-                  const resPercent = resolveField(row.assemblyTask, 'percentage', assemblyPercentages[targetId] || 0)
-                  
-                  const resUnit = row.subgroupTasks.map(t => resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
-                  const resType = row.subgroupTasks.length > 0 ? resolveField(row.subgroupTasks[0], 'type', row.subgroupTasks[0].type || '3D') : '3D'
-
-                  return (
-                    <tr key={`kemco-row-${rowIndex}`} className="level-1">
-                      <td>{startIndex + rowIndex + 1}</td>
-                      {span > 0 && (
-                        <>
-                          <td className="col-ref-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                            <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resRef} onChange={e => onTaskOverride?.(targetId, { referenceNumber: e.target.value })} />
-                          </td>
-                          <td className="col-machine-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                            <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resMachine} onChange={e => onTaskOverride?.(targetId, { machineCode: e.target.value })} />
-                          </td>
-                        </>
-                      )}
-                      <td className="col-unit-cell">
+                return (
+                  <tr key={`kemco-row-${rowIndex}`} className="level-1">
+                    <td>{startIndex + rowIndex + 1}</td>
+                    {span > 0 && (
+                      <>
+                        <td className="col-ref-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                          <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resRef} onChange={e => onTaskOverride?.(targetId, { referenceNumber: e.target.value })} />
+                        </td>
+                        <td className="col-machine-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                          <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resMachine} onChange={e => onTaskOverride?.(targetId, { machineCode: e.target.value })} />
+                        </td>
+                      </>
+                    )}
+                    <td className="col-unit-cell">
+                      <input 
+                        type="text" 
+                        className="ppm-unit-input" 
+                        style={{ textAlign: 'center', width: '100%' }} 
+                        value={resUnit} 
+                        onChange={e => {
+                          const parts = e.target.value.split(',').map(s => s.trim())
+                          row.subgroupTasks.forEach((t, tIdx) => {
+                            onTaskOverride?.(t.id, { unitCode: parts[tIdx] || '' })
+                          })
+                        }} 
+                      />
+                    </td>
+                    {span > 0 && (
+                      <td className="description-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'left', paddingLeft: '8px' }}>
                         <input 
                           type="text" 
                           className="ppm-unit-input" 
-                          style={{ textAlign: 'center', width: '100%' }} 
-                          value={resUnit} 
-                          onChange={e => {
-                            const parts = e.target.value.split(',').map(s => s.trim())
-                            row.subgroupTasks.forEach((t, tIdx) => {
-                              onTaskOverride?.(t.id, { unitCode: parts[tIdx] || '' })
-                            })
-                          }} 
+                          style={{ textAlign: 'left', width: '100%', fontWeight: 'bold' }} 
+                          value={resDesc} 
+                          onChange={e => onTaskOverride?.(targetId, { description: e.target.value })} 
                         />
                       </td>
-                      {span > 0 && (
-                        <td className="description-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'left', paddingLeft: '8px' }}>
-                          <input 
-                            type="text" 
-                            className="ppm-unit-input" 
-                            style={{ textAlign: 'left', width: '100%', fontWeight: 'bold' }} 
-                            value={resDesc} 
-                            onChange={e => onTaskOverride?.(targetId, { description: e.target.value })} 
-                          />
-                        </td>
-                      )}
-                      {span > 0 && (
-                        <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                          <input
-                            type="text"
-                            className="ppm-unit-input"
-                            style={{ textAlign: 'center', width: '100%' }}
-                            value={typeof resPercent === 'number' ? `${resPercent.toFixed(0)}%` : resPercent}
-                            onChange={e => onTaskOverride?.(targetId, { percentage: parseFloat(e.target.value.replace('%', '')) || 0 })}
-                          />
-                        </td>
-                      )}
-                      <td>
-                        <input 
-                          type="text" 
-                          className="ppm-unit-input" 
-                          style={{ textAlign: 'center', width: '100%' }} 
-                          value={resType} 
-                          onChange={e => {
-                            if (row.subgroupTasks.length > 0) {
-                              onTaskOverride?.(row.subgroupTasks[0].id, { type: e.target.value })
-                            }
-                          }} 
+                    )}
+                    {span > 0 && (
+                      <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
+                        <input
+                          type="text"
+                          className="ppm-unit-input"
+                          style={{ textAlign: 'center', width: '100%' }}
+                          value={typeof resPercent === 'number' ? `${resPercent.toFixed(0)}%` : resPercent}
+                          onChange={e => onTaskOverride?.(targetId, { percentage: parseFloat(e.target.value.replace('%', '')) || 0 })}
                         />
                       </td>
-                      {rowIndex === 0 && (
-                        <td className="price-cell kemco-merged-price" rowSpan={kemcoRows.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
-                          ¥{(1848400).toLocaleString()}
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })
-              }
-
-              // Normal path (special)
-              return pageTasks.map((task, i) => {
+                    )}
+                    <td>
+                      <input 
+                        type="text" 
+                        className="ppm-unit-input" 
+                        style={{ textAlign: 'center', width: '100%' }} 
+                        value={resType} 
+                        onChange={e => {
+                          if (row.subgroupTasks.length > 0) {
+                            onTaskOverride?.(row.subgroupTasks[0].id, { type: e.target.value })
+                          }
+                        }} 
+                      />
+                    </td>
+                    {rowIndex === 0 && (
+                      <td className="price-cell kemco-merged-price" rowSpan={kemcoRows.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
+                        ¥{(1848400).toLocaleString()}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })
+            ) : (
+              pageTasks.map((task, i) => {
                 return (
                   <tr key={task.id}>
                     <td>{startIndex + i + 1}</td>
@@ -349,7 +348,7 @@ export const PrintPage = memo(({
                   </tr>
                 )
               })
-            })()}
+            )}
 
           {isLastPage && (
             <>
@@ -383,11 +382,16 @@ export const PrintPage = memo(({
                   <td />
                 </tr>
               )}
-              {Array.from({ length: fillerRowCount }, (_, i) => (
-                <tr key={`empty-${i}`}>
-                  {Array.from({ length: layoutVariant === 'kemco' ? 8 : 6 }).map((_, j) => <td key={j}>&nbsp;</td>)}
-                </tr>
-              ))}
+              {(() => {
+                const actualFillerCount = layoutVariant === 'kemco'
+                  ? Math.max(0, 10 - kemcoRows.length - 1)
+                  : fillerRowCount
+                return Array.from({ length: actualFillerCount }, (_, i) => (
+                  <tr key={`empty-${i}`}>
+                    {Array.from({ length: layoutVariant === 'kemco' ? 8 : 6 }).map((_, j) => <td key={j}>&nbsp;</td>)}
+                  </tr>
+                ))
+              })()}
               <tr className="total-amount-row">
                 <td colSpan={layoutVariant === 'kemco' ? 7 : 5} className="total-label-cell">Total Amount</td>
                 <td className="price-cell">
