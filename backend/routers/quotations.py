@@ -378,6 +378,7 @@ router = APIRouter()
 _TEMPLATE_MAP = {
     "quotation": "Quotation Template.xlsx",
     "billing":   "Billing Template.xlsx",
+    "kemco_quotation": "KEMCO Quotation Template.xlsx",
 }
 
 @router.get("/templates/{template_name}")

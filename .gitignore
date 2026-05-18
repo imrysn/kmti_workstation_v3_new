@@ -68,3 +68,4 @@ backend/scripts/diagnostics/
 *.json
 *.wav
 backend/models/tts/*
+scratch/
