@@ -25,6 +25,11 @@ export const CHANGELOG: VersionChangelog[] = [
     version: '3.7.4',
     date: 'May 18, 2026',
     entries: [
+      { type: 'new', text: 'KEMCO Excel Export — You can now export KEMCO Quotation to Excel files with 2 additional sheets (Details, Rank)' },
+      { type: 'new', text: 'User Notify Update — Admin can now nudge users with lower version of their app to update.' },
+      { type: 'new', text: 'Task Ownership — Users can now claim and lock rows to other users in the same workspace.' },
+      { type: 'improvement', text: 'Broadcast UI — Improved UI of broadcast messages for premium feels.' },
+      { type: 'improvement', text: 'Galactic Clock — Users can now customize their galactic clock.' },
       { type: 'improvement', text: 'KEMCO Print Preview — Custom vertically merged layout showing Description inside the Description column spanning across paired sub-assembly rows.' },
       { type: 'improvement', text: 'KEMCO Excel Export — Completed dynamic cell merging, paired unit code consolidation, and vertical column merging for Construction No, Machine Code, Description, and Percent.' },
     ],
