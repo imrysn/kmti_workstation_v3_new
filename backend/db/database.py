@@ -76,3 +76,34 @@ class Base(DeclarativeBase):
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
+
+# Secondary DB (Remote kmtifms) Configuration
+FMS_DB_HOST = os.environ.get("FMS_DB_HOST", "KMTI-NAS")
+FMS_DB_PORT = os.environ.get("FMS_DB_PORT", "3306")
+FMS_DB_NAME = os.environ.get("FMS_DB_NAME", "kmtifms")
+FMS_DB_USER = os.environ.get("FMS_DB_USER", "kmtifms_user")
+FMS_DB_PASS = os.environ.get("FMS_DB_PASS", "Ph15IcadRs")
+
+FMS_DATABASE_URL = f"mysql+aiomysql://{FMS_DB_USER}:{FMS_DB_PASS}@{FMS_DB_HOST}:{FMS_DB_PORT}/{FMS_DB_NAME}?charset=utf8"
+
+fms_engine = create_async_engine(
+    FMS_DATABASE_URL, 
+    pool_size=10, 
+    max_overflow=5,
+    pool_recycle=1800,
+    pool_timeout=30,
+    pool_pre_ping=True
+)
+
+FmsAsyncSessionLocal = sessionmaker(
+    bind=fms_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+class FmsBase(DeclarativeBase):
+    pass
+
+async def get_fms_db():
+    async with FmsAsyncSessionLocal() as session:
+        yield session

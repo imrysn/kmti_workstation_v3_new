@@ -13,6 +13,7 @@ import Users from './pages/Users'
 import ITControls from './pages/ITControls'
 import AdminHelpCenter from './pages/AdminHelpCenter'
 import Quotation from './pages/Quotation'
+import TeamCalendar from './pages/TeamCalendar'
 import FeatureClosed from './pages/FeatureClosed'
 import Maintenance from './pages/Maintenance'
 import Login from './pages/Login'
@@ -117,8 +118,8 @@ function WorkstationShell() {
       <div className="app-body">
         <main className="app-content">
           <Routes>
-            <Route path="/" element={<Navigate to="/parts" replace />} />
-            <Route path="/login" element={<Navigate to="/parts" replace />} />
+            <Route path="/" element={<Navigate to="/team-calendar" replace />} />
+            <Route path="/login" element={<Navigate to="/team-calendar" replace />} />
 
             <Route
               path="/parts"
@@ -177,6 +178,14 @@ function WorkstationShell() {
                   <ModuleGuard visibleKey="quotation_enabled" maintKey="quotation_maintenance">
                     <Quotation />
                   </ModuleGuard>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/team-calendar"
+              element={
+                <ProtectedRoute>
+                  <TeamCalendar />
                 </ProtectedRoute>
               }
             />

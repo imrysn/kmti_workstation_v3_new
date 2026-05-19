@@ -4,9 +4,22 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useModal } from './ModalContext'
 import logo from '../assets/kmti_logo.png'
+import { teamCalendarApi } from '../services/teamCalendarService'
 import './TitleBar.css'
 
 const nav = [
+  {
+    label: 'Calendar',
+    path: '/team-calendar',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+    )
+  },
   {
     label: 'findr',
     path: '/parts',
@@ -93,6 +106,29 @@ export default function TitleBar() {
   const [downloadPercent, setDownloadPercent] = useState(0)
   const [updateVersion, setUpdateVersion] = useState('')
   const [isMaximized, setIsMaximized] = useState(false)
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0)
+
+  useEffect(() => {
+    if (!user || !hasRole('admin', 'it')) {
+      setPendingApprovalsCount(0)
+      return
+    }
+
+    const fetchPendingCount = async () => {
+      try {
+        const res = await teamCalendarApi.getPendingApprovals()
+        if (res.success) {
+          setPendingApprovalsCount(res.pending.length)
+        }
+      } catch (err) {
+        console.error('Error fetching pending count in titlebar:', err)
+      }
+    }
+
+    fetchPendingCount()
+    const interval = setInterval(fetchPendingCount, 15000)
+    return () => clearInterval(interval)
+  }, [user, hasRole])
 
   const handleMinimize = () => window.electronAPI?.minimizeWindow()
   const handleMaximize = () => window.electronAPI?.maximizeWindow()
@@ -164,19 +200,40 @@ export default function TitleBar() {
       </div>
 
       <nav className="titlebar-nav">
-        {nav.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => `titlebar-link${isActive ? ' active' : ''}`}
-            title={item.label}
-          >
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {item.icon}
-              <span className={`nav-label ${item.icon ? 'has-icon' : ''}`}>{item.label}</span>
-            </span>
-          </NavLink>
-        ))}
+        {nav.map((item) => {
+          const showBadge = item.path === '/team-calendar' && pendingApprovalsCount > 0
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) => `titlebar-link${isActive ? ' active' : ''}`}
+              title={item.label}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
+                {item.icon}
+                <span className={`nav-label ${item.icon ? 'has-icon' : ''}`}>{item.label}</span>
+                {showBadge && (
+                  <span
+                    className="nav-badge-bubble"
+                    style={{
+                      background: 'var(--danger, #ef4444)',
+                      color: '#fff',
+                      fontSize: '9.5px',
+                      fontWeight: 'bold',
+                      borderRadius: '10px',
+                      padding: '2px 6px',
+                      lineHeight: '1',
+                      marginLeft: '4px',
+                      boxShadow: '0 0 6px rgba(239, 68, 68, 0.4)'
+                    }}
+                  >
+                    {pendingApprovalsCount}
+                  </span>
+                )}
+              </span>
+            </NavLink>
+          )
+        })}
       </nav>
 
       <div className="titlebar-controls">
@@ -241,10 +298,10 @@ export default function TitleBar() {
             disabled={themeLocked}
             title={
               themeLocked ? 'Wait...' :
-              theme === 'void' ? 'Escape the Void' :
-              theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'
+                theme === 'void' ? 'Escape the Void' :
+                  theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'
             }
-            style={{ 
+            style={{
               color: theme === 'dark' ? '#fbff00ff' : theme === 'void' ? '#ff0040' : 'inherit',
               opacity: themeLocked ? 0.4 : 1,
               cursor: themeLocked ? 'not-allowed' : 'pointer'
@@ -258,7 +315,7 @@ export default function TitleBar() {
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <path d="M9 9h.01M15 9h.01" />
-                <path d="M9.5 15.5c.83.83 2.17 1 3 0" strokeLinecap="round"/>
+                <path d="M9.5 15.5c.83.83 2.17 1 3 0" strokeLinecap="round" />
               </svg>
             ) : (
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

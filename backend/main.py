@@ -10,7 +10,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms
+from routers import team_calendar as team_calendar_router
 import time
 import logging
 import os
@@ -20,8 +21,10 @@ from fastapi.staticfiles import StaticFiles
 START_TIME = time.time()
 from core.config import IS_FROZEN, BASE_DIR, LOG_DIR
 
-from db.database import engine, Base
+from db.database import engine, Base, fms_engine
+from sqlalchemy import text
 from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model # Ensure models are registered for metadata
+import team_calendar.infrastructure.models # Ensure team calendar models are registered for metadata
 try:
     from core.nas_indexer import indexer
 except ImportError:
@@ -53,6 +56,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"  [ERROR] Database initialization failed: {e}")
         # We continue anyway so the GUI can at least show the error state
+
+    try:
+        async with fms_engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        logger.info("  [SUCCESS] Secondary FMS database connection established.")
+    except Exception as e:
+        logger.warning(f"  [WARNING] Secondary FMS database connection failed: {e}. FMS integrations may be offline.")
         
     if indexer:
         indexer.start()
@@ -118,6 +128,8 @@ app.include_router(designers.router, prefix="/api/designers", tags=["Designers"]
 app.include_router(quotations.router, prefix="/api/quotations", tags=["Shared Quotations"])
 app.include_router(stopwatch.router, prefix="/api/stopwatch", tags=["Stopwatch Records"])
 app.include_router(tts.router, prefix="/api/tts", tags=["TTS"])
+app.include_router(team_calendar_router.router, prefix="/api/team-calendar", tags=["Team Calendar"])
+app.include_router(fms.router, prefix="/api/fms", tags=["FMS Integration"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
 # IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE
