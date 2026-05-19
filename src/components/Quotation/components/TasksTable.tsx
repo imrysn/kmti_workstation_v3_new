@@ -246,35 +246,35 @@ const TasksTable = memo(({
     if (editingTaskId === taskId) {
       const fieldsToSave = modifiedFields[taskId]
       const edited = editedValues[taskId]
-      
+
       if (fieldsToSave?.total && edited?.total !== undefined) {
         // BACK-CALCULATION LOGIC (Sync Hours/Minutes to Price)
         const task = tasks.find(t => t.id === taskId)
         if (task) {
           const { overtime, software } = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
           const laborPart = edited.total - overtime - software
-          
+
           const getRate = (type: string) => {
             if (type === '2D') return baseRates.timeChargeRate2D || baseRates.timeChargeRate3D
             if (type === '3D' || !type) return baseRates.timeChargeRate3D
             return baseRates.timeChargeRateOthers || baseRates.timeChargeRate3D || 0
           }
           const rate = getRate(task.type)
-          
+
           if (rate > 0 && laborPart > 0) {
             const subTasks = task.isMainTask ? tasks.filter(t => t.parentId === task.id) : []
             const subHours = subTasks.reduce((sum, sub) => sum + (sub.hours || 0) + (sub.minutes || 0) / 60, 0)
-            
+
             const totalHoursNeeded = laborPart / rate
             const ownHoursNeeded = Math.max(0, totalHoursNeeded - subHours)
-            
+
             if (!isNaN(ownHoursNeeded) && isFinite(ownHoursNeeded)) {
               const newHours = Math.floor(ownHoursNeeded)
               const newMinutes = parseFloat(((ownHoursNeeded - newHours) * 60).toFixed(2))
-              
+
               // Update task properties directly
               onTaskUpdate?.(taskId, { hours: newHours, minutes: newMinutes })
-              
+
               // Explicitly remove total from manualOverrides so the calculated hours take over
               setManualOverrides?.(prev => {
                 const newTaskOverrides = { ...(prev.tasks?.[taskId] || {}) }
@@ -389,7 +389,7 @@ const TasksTable = memo(({
           <col style={{ width: '6%' }} />
           <col style={{ width: '6%' }} />
           <col style={{ width: '18%' }} />
-          <col style={{ width: '19%' }} />
+          <col style={{ width: '21%' }} />
           <col style={{ width: '9%' }} />
           <col style={{ width: '9%' }} />
           <col style={{ width: '7%' }} />

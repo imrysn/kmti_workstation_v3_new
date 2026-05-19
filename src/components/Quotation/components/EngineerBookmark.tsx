@@ -1,21 +1,3 @@
-/**
- * EngineerBookmark.tsx
- * ─────────────────────────────────────────────────────────────────
- * A collapsible bookmark tab in the RIGHT gutter of the Computation
- * Table, pointing LEFT into its main-task row.
- *
- * Layout (right-to-left read order):
- *   [◀ pointer] [tab body — icon + label/input]
- *
- * The pointer faces left (into the row). The tab grows leftward on
- * expand so it doesn't push out of the gutter — achieved by anchoring
- * the whole bookmark to the right edge via `right: 0`.
- *
- * Collapsed  → pointer + icon-only tab (~26px wide)
- * Expanded   → pointer + tab slides open to show name
- * Editing    → tab body becomes inline text input
- */
-
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { useAuth } from '../../../context/AuthContext'
@@ -30,14 +12,6 @@ interface EngineerBookmarkProps {
   onChange: (taskId: number, value: string) => void
   isLocked?: boolean
 }
-
-const ICON_PERSON = (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-    <circle cx="12" cy="7" r="4" />
-  </svg>
-)
 
 const ICON_PLUS = (
   <svg width="9" height="9" viewBox="0 0 24 24" fill="none"
@@ -62,8 +36,8 @@ export const EngineerBookmark = ({
   const { remoteUsers, myColor, myName } = useCollaborationContext()
 
   const [expanded, setExpanded] = useState(false)
-  const [editing, setEditing]   = useState(false)
-  const [draft, setDraft]       = useState(engineer || '')
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(engineer || '')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setDraft(engineer || '') }, [engineer])
@@ -81,7 +55,7 @@ export const EngineerBookmark = ({
     if (!lastEditorName) return lastEditorColor
 
     const normalizedEditor = lastEditorName.trim().toLowerCase()
-    
+
     // 1. Is it me?
     if (normalizedEditor === myName.trim().toLowerCase()) return myColor
 
@@ -144,8 +118,8 @@ export const EngineerBookmark = ({
       className={[
         'eng-bookmark',
         hasEngineer ? 'eng-bookmark--assigned' : 'eng-bookmark--empty',
-        expanded    ? 'eng-bookmark--expanded' : '',
-        editing     ? 'eng-bookmark--editing'  : '',
+        expanded ? 'eng-bookmark--expanded' : '',
+        editing ? 'eng-bookmark--editing' : '',
       ].filter(Boolean).join(' ')}
       style={{
         position: 'absolute',
@@ -163,8 +137,8 @@ export const EngineerBookmark = ({
       title={isLocked ? `Locked by ${engineer}` : (hasEngineer ? `Engineer: ${engineer}` : 'Assign engineer')}
     >
       {/* ◀ Triangle pointer — faces left, into the row */}
-      <div 
-        className="eng-bookmark__pointer" 
+      <div
+        className="eng-bookmark__pointer"
         style={isLocked ? { borderRightColor: '#64748b' } : (color ? { borderRightColor: color } : {})}
       />
 

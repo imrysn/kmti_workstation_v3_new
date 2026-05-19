@@ -36,21 +36,23 @@
       "minutes": 0,
       "overtimeHours": 0,
       "softwareUnits": 0,
-      "type": "3D",
+      "type": "2D",
       "unitType": "JD",
       "isMainTask": true,
       "parentId": null,
-      "amount": 0,
+      "amount": 2090,
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#4A90D9",
+      "lastEditorColor": "#27AE60",
       "machineCode": "DF",
       "startDate": "2026-05-11",
       "endDate": "2026-05-18",
       "time": 123,
       "engineer": "Raysan",
-      "engineerWorkstation": "Tiger"
+      "engineerWorkstation": "Tiger",
+      "drawingRank": "B",
+      "unitPrice": 2090
     },
     {
       "id": 1779089475530,
@@ -64,13 +66,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089468155,
-      "amount": 0,
+      "amount": 1290,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
       "lastEditorColor": "#2980B9",
       "unitCode": "OF1",
-      "time": 23
+      "time": 23,
+      "drawingRank": "E",
+      "unitPrice": 1290
     },
     {
       "id": 1779089477767,
@@ -84,12 +88,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089475530,
-      "amount": 0,
+      "amount": 4180,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "dwgNo": "adw"
+      "lastEditorColor": "#27AE60",
+      "dwgNo": "adw",
+      "drawingRank": "AA",
+      "unitPrice": 4180,
+      "time": 480
     },
     {
       "id": 1779089477914,
@@ -103,12 +110,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089475530,
-      "amount": 0,
+      "amount": 4180,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "dwgNo": "adwa"
+      "lastEditorColor": "#27AE60",
+      "dwgNo": "adwa",
+      "drawingRank": "AA",
+      "unitPrice": 4180,
+      "time": 345
     },
     {
       "id": 1779089475781,
@@ -122,12 +132,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089468155,
-      "amount": 0,
+      "amount": 4180,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "unitCode": "OF2"
+      "lastEditorColor": "#27AE60",
+      "unitCode": "OF2",
+      "drawingRank": "C",
+      "unitPrice": 4180,
+      "time": 453
     },
     {
       "id": 1779089479476,
@@ -141,12 +154,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089475781,
-      "amount": 0,
+      "amount": 460,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "dwgNo": "dfas"
+      "lastEditorColor": "#27AE60",
+      "dwgNo": "dfas",
+      "drawingRank": "C",
+      "unitPrice": 460,
+      "time": 24
     },
     {
       "id": 1779089479601,
@@ -160,12 +176,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089475781,
-      "amount": 0,
+      "amount": 4180,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "dwgNo": "gadsad"
+      "lastEditorColor": "#27AE60",
+      "dwgNo": "gadsad",
+      "drawingRank": "AA",
+      "unitPrice": 4180,
+      "time": 343
     },
     {
       "id": 1779090071034,
@@ -179,12 +198,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089468155,
-      "amount": 0,
+      "amount": 1290,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "unitCode": "OF3"
+      "lastEditorColor": "#27AE60",
+      "unitCode": "OF3",
+      "drawingRank": "E",
+      "unitPrice": 1290,
+      "time": 43
     },
     {
       "id": 1779090079123,
@@ -198,11 +220,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779090071034,
-      "amount": 0,
+      "amount": 840,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "B",
+      "unitPrice": 840,
+      "time": 34
     },
     {
       "id": 1779090079339,
@@ -216,11 +241,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779090071034,
-      "amount": 0,
+      "amount": 2090,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "AB",
+      "unitPrice": 2090,
+      "time": 122
     },
     {
       "id": 1779090071834,
@@ -234,12 +262,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089468155,
-      "amount": 0,
+      "amount": 2090,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9",
-      "unitCode": "OF4"
+      "lastEditorColor": "#27AE60",
+      "unitCode": "OF4",
+      "drawingRank": "D",
+      "unitPrice": 2090,
+      "time": 233
     },
     {
       "id": 1779090080898,
@@ -253,11 +284,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779090071834,
-      "amount": 0,
+      "amount": 2090,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "AB",
+      "unitPrice": 2090,
+      "time": 122
     },
     {
       "id": 1779090081034,
@@ -271,11 +305,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779090071834,
-      "amount": 0,
+      "amount": 840,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "B",
+      "unitPrice": 840,
+      "time": 32
     },
     {
       "id": 1779089469516,
@@ -289,14 +326,17 @@
       "unitType": "JD",
       "isMainTask": true,
       "parentId": null,
-      "amount": 0,
+      "amount": 4180,
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#F39C12",
+      "lastEditorColor": "#27AE60",
       "machineCode": "AS",
       "engineer": "Bryan",
-      "engineerWorkstation": "Tiger"
+      "engineerWorkstation": "Tiger",
+      "drawingRank": "C",
+      "unitPrice": 4180,
+      "time": 480
     },
     {
       "id": 1779089481425,
@@ -310,12 +350,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089469516,
-      "amount": 0,
+      "amount": 1290,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#F39C12",
-      "unitCode": "AS1"
+      "lastEditorColor": "#27AE60",
+      "unitCode": "AS1",
+      "drawingRank": "E",
+      "unitPrice": 1290,
+      "time": 12
     },
     {
       "id": 1779089484929,
@@ -329,11 +372,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089481425,
-      "amount": 0,
+      "amount": 460,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "C",
+      "unitPrice": 460,
+      "time": 23
     },
     {
       "id": 1779089485057,
@@ -347,11 +393,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089481425,
-      "amount": 0,
+      "amount": 160,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "E",
+      "unitPrice": 160,
+      "time": 3
     },
     {
       "id": 1779089483033,
@@ -365,12 +414,15 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089469516,
-      "amount": 0,
+      "amount": 1290,
       "percentage": 0,
       "level": 1,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#F39C12",
-      "unitCode": "AS2"
+      "lastEditorColor": "#27AE60",
+      "unitCode": "AS2",
+      "drawingRank": "E",
+      "unitPrice": 1290,
+      "time": 32
     },
     {
       "id": 1779089486730,
@@ -384,11 +436,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089483033,
-      "amount": 0,
+      "amount": 2090,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "AB",
+      "unitPrice": 2090,
+      "time": 232
     },
     {
       "id": 1779089486890,
@@ -402,11 +457,14 @@
       "unitType": "JD",
       "isMainTask": false,
       "parentId": 1779089483033,
-      "amount": 0,
+      "amount": 840,
       "percentage": 0,
       "level": 2,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#2980B9"
+      "lastEditorColor": "#27AE60",
+      "drawingRank": "B",
+      "unitPrice": 840,
+      "time": 32
     },
     {
       "id": 1779089469681,
@@ -420,12 +478,54 @@
       "unitType": "JD",
       "isMainTask": true,
       "parentId": null,
-      "amount": 0,
+      "amount": 2090,
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#F39C12",
-      "machineCode": "WE"
+      "lastEditorColor": "#27AE60",
+      "machineCode": "WE",
+      "drawingRank": "D",
+      "unitPrice": 2090,
+      "time": 232
+    },
+    {
+      "id": 1779152083029,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1779089469681,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E67E22",
+      "unitCode": "DS",
+      "drawingRank": "",
+      "unitPrice": 0
+    },
+    {
+      "id": 1779152090669,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1779152083029,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E67E22"
     },
     {
       "id": 1779089470169,
@@ -439,12 +539,120 @@
       "unitType": "JD",
       "isMainTask": true,
       "parentId": null,
+      "amount": 2090,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#27AE60",
+      "machineCode": "RD",
+      "drawingRank": "D",
+      "unitPrice": 2090,
+      "time": 232
+    },
+    {
+      "id": 1779152093981,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1779089470169,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E67E22",
+      "unitCode": "AS",
+      "drawingRank": "",
+      "unitPrice": 0
+    },
+    {
+      "id": 1779152067861,
+      "description": "",
+      "referenceNumber": "2821",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
       "amount": 0,
       "percentage": 0,
       "level": 0,
       "lastEditorName": "Tiger",
-      "lastEditorColor": "#F39C12",
-      "machineCode": "RD"
+      "lastEditorColor": "#E67E22",
+      "drawingRank": "",
+      "unitPrice": 0,
+      "machineCode": "DS"
+    },
+    {
+      "id": 1779152107836,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1779152067861,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E67E22",
+      "unitCode": "SD",
+      "drawingRank": "",
+      "unitPrice": 0
+    },
+    {
+      "id": 1779152068037,
+      "description": "",
+      "referenceNumber": "2822",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E67E22",
+      "drawingRank": "",
+      "unitPrice": 0,
+      "machineCode": "GD"
+    },
+    {
+      "id": 1779152111561,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1779152068037,
+      "amount": 0,
+      "percentage": 0,
+      "level": 1,
+      "lastEditorName": "Tiger",
+      "lastEditorColor": "#E67E22",
+      "unitCode": "ASD",
+      "drawingRank": "",
+      "unitPrice": 0
     }
   ],
   "baseRates": {
@@ -494,8 +702,8 @@
       "1779089469516": {
         "description": ""
       },
-      "1779089468155": {
-        "description": "Main Assembly Title"
+      "1779089475530": {
+        "type": "2D"
       }
     },
     "footer": {}
@@ -503,5 +711,5 @@
   "collapsedTaskIds": [],
   "chatLog": [],
   "layoutVariant": "kemco",
-  "savedAt": "2026-05-18T08:52:32.087Z"
+  "savedAt": "2026-05-19T00:55:44.646Z"
 }

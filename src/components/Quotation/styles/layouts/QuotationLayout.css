@@ -153,10 +153,15 @@
 
 .table-visual th,
 .table-visual td {
-  padding: 4px 3px;
+  padding: 6.5px 5px;
   text-align: center;
   vertical-align: middle;
   border: 1px solid #000;
+}
+
+.variant-special .table-visual th,
+.variant-special .table-visual td {
+  padding: 6.5px 5px;
 }
 
 .table-visual thead th {
@@ -200,7 +205,7 @@
 
 .table-visual .admin-overhead-row td {
   border-right: 1px solid #000 !important;
-  border-bottom: 1px solid #ccc !important;
+  border-bottom: 1px solid #000 !important;
 }
 
 .table-visual .admin-overhead-row td:last-child {
@@ -264,9 +269,9 @@
 /* Terms & Signatures */
 .terms-visual {
   font-size: 13px;
-  line-height: 1;
-  margin-top: 15px;
-  margin-bottom: 15px;
+  line-height: 1.35;
+  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .signatures-visual {

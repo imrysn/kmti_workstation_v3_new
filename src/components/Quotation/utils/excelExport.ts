@@ -29,7 +29,7 @@ export async function exportToExcel(data: ExcelExportData) {
 
   // ── 1. Compute totals ─────────────────────────────────────────────────────
   const mainTasks = layoutVariant === 'kemco'
-    ? tasks.filter(t => t.level! < 2)
+    ? tasks.filter(t => t.level === 1)
     : tasks.filter(t => t.isMainTask)
   const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides, layoutVariant).total)
   const subtotal = taskTotals.reduce((s, t) => s + t, 0)
@@ -203,7 +203,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
   // 1.5. Total Amount Table (O2:Q3)
   const isMainTaskForSum = (t: Task) => layoutVariant === 'kemco' ? t.level === 0 : t.isMainTask
   const mainTasks = layoutVariant === 'kemco'
-    ? tasks.filter(t => t.level! < 2)
+    ? tasks.filter(t => t.level === 1)
     : tasks.filter(t => t.isMainTask)
   const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides, layoutVariant).total)
   const subtotal = taskTotals.reduce((s, t) => s + t, 0)

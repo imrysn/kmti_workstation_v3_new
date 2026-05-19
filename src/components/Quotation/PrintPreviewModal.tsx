@@ -147,7 +147,7 @@ const PrintPreviewModal = memo(({
 
   // ── Pagination ─────────────────────────────────────────────────
   const { pages, grandTotal, overheadTotal, lastAssemblyId } = useMemo(() => {
-    const mainTasks = layoutVariant === 'kemco' ? tasks.filter(t => t.level! < 2) : tasks.filter(t => t.isMainTask)
+    const mainTasks = layoutVariant === 'kemco' ? tasks.filter(t => t.level === 1) : tasks.filter(t => t.isMainTask)
     const slices = computePages(mainTasks, calculateTaskTotal, printMode)
 
     const subtotal = slices.flatMap(p => p.totals).reduce((s, t) => s + t, 0)
