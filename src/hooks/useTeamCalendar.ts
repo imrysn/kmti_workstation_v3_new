@@ -30,6 +30,7 @@ export function useTeamCalendar() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showClaims, setShowClaims] = useState(true)
   const [showAbsences, setShowAbsences] = useState(true)
+  const [showSpans, setShowSpans] = useState(false)
 
   // --- Modals Form State ---
   const [newTodoTitle, setNewTodoTitle] = useState('')
@@ -547,6 +548,8 @@ export function useTeamCalendar() {
     setShowClaims,
     showAbsences,
     setShowAbsences,
+    showSpans,
+    setShowSpans,
     newTodoTitle,
     setNewTodoTitle,
     newTodoDesc,

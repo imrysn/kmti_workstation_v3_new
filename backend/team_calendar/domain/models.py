@@ -41,6 +41,9 @@ class DomainTodo:
     status: str # "Pending", "Claimed", "Completed"
     priority: str = "Normal" # "Low", "Normal", "High", "Critical"
     created_at: Optional[str] = None
+    due_date: Optional[date] = None
+
+    @property
 
     def is_claimable(self) -> bool:
         return self.status == "Pending"

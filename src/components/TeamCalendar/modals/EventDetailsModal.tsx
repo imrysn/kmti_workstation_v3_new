@@ -69,6 +69,9 @@ export default function EventDetailsModal({
               <p>
                 <strong>Task Title:</strong> {selectedEvent.todo_title}
               </p>
+              <p>
+                <strong>Due Date:</strong> {selectedEvent.due_date || selectedEvent.end_date}
+              </p>
               {selectedEvent.todo_priority && (
                 <p>
                   <strong>Priority:</strong>{' '}

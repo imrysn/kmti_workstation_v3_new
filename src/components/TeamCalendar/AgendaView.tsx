@@ -8,6 +8,7 @@ interface AgendaViewProps {
   phHolidays: Record<string, IHoliday>
   showClaims: boolean
   showAbsences: boolean
+  showSpans: boolean
   setSelectedEvent: (event: ICalendarEvent | null) => void
 }
 
@@ -17,6 +18,7 @@ export default function AgendaView({
   phHolidays,
   showClaims,
   showAbsences,
+  showSpans,
   setSelectedEvent
 }: AgendaViewProps) {
   return (
@@ -30,6 +32,10 @@ export default function AgendaView({
 
         // Get events targeting this day
         const dayEvents = events.filter(e => {
+          if (e.event_type === 'Task_Claim' && !showSpans) {
+            const targetDateStr = e.due_date || e.end_date
+            return dateStr === targetDateStr
+          }
           const start = new Date(e.start_date)
           const end = new Date(e.end_date)
           start.setHours(0, 0, 0, 0)
@@ -133,7 +139,7 @@ export default function AgendaView({
                             <p style={{ margin: '0', fontSize: '12.5px', color: 'var(--cal-text-secondary)' }}>{event.todo_description}</p>
                           )}
                           <p style={{ margin: '0', fontSize: '11px', color: 'var(--cal-text-muted)', fontWeight: 500 }}>
-                            by: <span style={{ fontWeight: 600 }}>{displayName}</span>
+                            Task: <span style={{ fontWeight: 600 }}>{displayName}</span>
                           </p>
                         </div>
                       )}

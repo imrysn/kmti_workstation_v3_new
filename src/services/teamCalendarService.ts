@@ -11,8 +11,9 @@ export interface ICalendarEvent {
   todo_description: string | null
   todo_priority: string | null
   todo_status: 'Pending' | 'Claimed' | 'Completed' | null
-  start_date: string // YYYY-MM-DD
-  end_date: string // YYYY-MM-DD
+  start_date: string // YYYY-MM-DD - when work starts
+  end_date: string // YYYY-MM-DD - when work ends or is due
+  due_date?: string // YYYY-MM-DD - explicit due date (for FMS assignments)
   status: string
   leave_type: string | null
 }
@@ -24,6 +25,7 @@ export interface ITodo {
   status: 'Pending' | 'Claimed' | 'Completed'
   priority: 'Low' | 'Normal' | 'High' | 'Critical'
   created_at: string | null
+  due_date?: string | null // YYYY-MM-DD
 }
 
 export interface IActiveUser {

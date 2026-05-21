@@ -69,3 +69,4 @@ backend/scripts/diagnostics/
 *.wav
 backend/models/tts/*
 scratch/
+*.agent.md

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -164,6 +164,7 @@ async def get_team_grid(
             "todo_status": todo.status if todo else None,
             "start_date": e.start_date.isoformat(),
             "end_date": e.end_date.isoformat(),
+            "due_date": (todo.due_date.isoformat() if todo.due_date else e.end_date.isoformat()) if todo else None,
             "status": e.status,
             "leave_type": e.leave_type,
         })
@@ -171,14 +172,16 @@ async def get_team_grid(
     # 2. Fetch assignments from remote FMS database in the date range
     try:
         from datetime import datetime, time as dt_time
-        start_datetime = datetime.combine(start_date, dt_time.min)
-        end_datetime = datetime.combine(end_date, dt_time.max)
+        
+        # Expand search window to include assignments that START before range but DUE within range
+        search_start = datetime.combine(start_date, dt_time.min) - timedelta(days=90)  # Look back 90 days for long assignments
+        search_end = datetime.combine(end_date, dt_time.max)
         
         fms_assign_query = (
             select(FmsAssignment)
             .where(
-                FmsAssignment.due_date >= start_datetime,
-                FmsAssignment.due_date <= end_datetime
+                FmsAssignment.due_date >= search_start,
+                FmsAssignment.due_date <= search_end
             )
             .options(selectinload(FmsAssignment.members))
         )
@@ -191,16 +194,35 @@ async def get_team_grid(
         fms_users_list = fms_users_res.scalars().all()
         fms_user_id_to_obj = {u.id: u for u in fms_users_list}
         
-        EXCLUDED_USERNAMES = {"test", "test_user", "team.leader", "test fms assignee"}
         for fa in fms_assignments:
+            # Determine assignment start and due dates
+            if fa.due_date:
+                due_date_obj = fa.due_date.date()
+            else:
+                due_date_obj = (fa.created_at.date() + timedelta(days=7)) if fa.created_at else start_date
+            
+            # Start date: when assignment was created (work begins)
+            if fa.created_at:
+                start_date_obj = fa.created_at.date()
+            else:
+                start_date_obj = due_date_obj
+            
+            # Only show if the assignment span overlaps with our calendar view range
+            if due_date_obj < start_date or start_date_obj > end_date:
+                continue
+            
             for member in fa.members:
                 fms_u = fms_user_id_to_obj.get(member.user_id)
                 if not fms_u or fms_u.username.lower() in EXCLUDED_USERNAMES:
                     continue
                 
                 l_user_id = user_name_to_id.get(fms_u.username.lower(), current_user.id)
-                evt_date = fa.due_date.date() if fa.due_date else (fa.created_at.date() if fa.created_at else start_date)
-                t_status = "Completed" if (member.status == "submitted" or fa.status == "completed") else "Claimed"
+                
+                # Task status based on member submission status
+                if member.status == "submitted" or fa.status == "completed":
+                    t_status = "Completed"
+                else:
+                    t_status = "Claimed"
                 
                 response_events.append({
                     "id": 3000000 + member.id,
@@ -213,8 +235,9 @@ async def get_team_grid(
                     "todo_description": fa.description,
                     "todo_priority": "Normal",
                     "todo_status": t_status,
-                    "start_date": evt_date.isoformat(),
-                    "end_date": evt_date.isoformat(),
+                    "start_date": start_date_obj.isoformat(),  # When work begins
+                    "end_date": due_date_obj.isoformat(),      # When work must be done
+                    "due_date": due_date_obj.isoformat(),      # EXPLICIT due date field
                     "status": "Approved",
                     "leave_type": None,
                 })
@@ -332,7 +355,8 @@ async def claim_task(
                 title=title_val,
                 description=fms_assign.description,
                 status="Pending",
-                priority="Normal"
+                priority="Normal",
+                due_date=fms_assign.due_date.date() if fms_assign.due_date else None
             )
             db.add(db_todo)
             await db.commit()
@@ -646,7 +670,8 @@ async def assign_task(
                 title=title_val,
                 description=fms_assign.description,
                 status="Pending",
-                priority="Normal"
+                priority="Normal",
+                due_date=fms_assign.due_date.date() if fms_assign.due_date else None
             )
             db.add(db_todo)
             await db.commit()

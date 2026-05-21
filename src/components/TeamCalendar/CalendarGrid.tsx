@@ -10,6 +10,7 @@ interface CalendarGridProps {
   phHolidays: Record<string, IHoliday>
   showClaims: boolean
   showAbsences: boolean
+  showSpans: boolean
   claimingTask: any
   claimStartDate: string | null
   handleCellClick: (day: Date, dateStr: string) => void
@@ -25,6 +26,7 @@ export default function CalendarGrid({
   phHolidays,
   showClaims,
   showAbsences,
+  showSpans,
   claimingTask,
   claimStartDate,
   handleCellClick,
@@ -53,8 +55,11 @@ export default function CalendarGrid({
           const isWeekend = day.getDay() === 0 || day.getDay() === 6
           const isFriday = day.getDay() === 5
 
-          // Find events targeting this day
           const dayEvents = events.filter(e => {
+            if (e.event_type === 'Task_Claim' && !showSpans) {
+              const targetDateStr = e.due_date || e.end_date
+              return dateStr === targetDateStr
+            }
             const start = new Date(e.start_date)
             const end = new Date(e.end_date)
             start.setHours(0, 0, 0, 0)
@@ -116,20 +121,45 @@ export default function CalendarGrid({
                   const isCompanyEvent = event.event_type === 'Company_Event'
                   const displayName = event.engineer_name || event.username
                   const engColor = getEngineerColor(event.user_id)
-                  const isOverdue = event.event_type === 'Task_Claim' && event.todo_status === 'Claimed' && event.end_date < formatLocalDate(new Date())
+                  
+                  // Due date detection (for FMS assignments with explicit due_date)
+                  const hasDueDate = event.due_date != null
+                  const isDueToday = hasDueDate && event.due_date === dateStr
+                  const today = new Date()
+                  today.setHours(0, 0, 0, 0)
+                  
+                  // Check if overdue: task is claimed, has due date, and due date is in the past
+                  const isOverdue = event.event_type === 'Task_Claim' && 
+                                   event.todo_status === 'Claimed' && 
+                                   hasDueDate &&
+                                   new Date(event.due_date!) < today
+                  
+                  // Check if due soon (within 3 days)
+                  const dueDateObj = hasDueDate ? new Date(event.due_date!) : null
+                  const threeDaysFromNow = new Date(today)
+                  threeDaysFromNow.setDate(today.getDate() + 3)
+                  const isDueSoon = dueDateObj && 
+                                   dueDateObj > today && 
+                                   dueDateObj <= threeDaysFromNow
+                  
                   return (
                     <div
                       key={event.id}
-                      className={`event-badge ${isCompanyEvent
-                        ? 'company-event-badge'
-                        : isAbsence
-                          ? event.status === 'Pending'
-                            ? 'absence-badge pending-absence-badge leave-absence'
-                            : 'absence-badge leave-absence'
-                          : isOverdue
-                            ? 'claim-badge overdue-claim-badge'
-                            : 'claim-badge'
-                        }`}
+                      className={`event-badge ${
+                        isCompanyEvent
+                          ? 'company-event-badge'
+                          : isAbsence
+                            ? event.status === 'Pending'
+                              ? 'absence-badge pending-absence-badge leave-absence'
+                              : 'absence-badge leave-absence'
+                            : isOverdue
+                              ? 'claim-badge overdue-claim-badge'
+                              : isDueToday
+                                ? 'claim-badge due-today-badge'
+                                : isDueSoon
+                                  ? 'claim-badge due-soon-badge'
+                                  : 'claim-badge'
+                      }`}
                       style={(!isAbsence && !isCompanyEvent) ? {
                         background: engColor.bg,
                         borderLeftColor: engColor.border,
@@ -139,7 +169,13 @@ export default function CalendarGrid({
                         e.stopPropagation()
                         setSelectedEvent(event)
                       }}
-                      title={isCompanyEvent ? `Company Event: ${event.engineer_name} (${event.leave_type || 'Other'})` : isAbsence ? 'On Leave' : `${displayName}: ${event.todo_title}`}
+                      title={
+                        isCompanyEvent 
+                          ? `Company Event: ${event.engineer_name} (${event.leave_type || 'Other'})` 
+                          : isAbsence 
+                            ? 'On Leave' 
+                            : `${displayName}: ${event.todo_title}${hasDueDate ? ` (Due: ${event.due_date})` : ''}`
+                      }
                     >
                       <span className="event-badge-icon">
                         {isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : <BriefcaseIcon />}
@@ -153,6 +189,10 @@ export default function CalendarGrid({
                               ? `${event.todo_title.substring(0, 25)}...` 
                               : event.todo_title)}
                       </span>
+                      {/* Due date flag indicator - only show on the actual due date */}
+                      {isDueToday && !isAbsence && !isCompanyEvent && (
+                        <span className="due-flag" title="Due Today">🎯</span>
+                      )}
                     </div>
                   )
                 })}

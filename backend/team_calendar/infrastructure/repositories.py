@@ -21,7 +21,8 @@ class SqlAlchemyTodoRepository(TodoRepository):
             description=db_todo.description,
             status=db_todo.status,
             priority=db_todo.priority,
-            created_at=db_todo.created_at.isoformat() if db_todo.created_at else None
+            created_at=db_todo.created_at.isoformat() if db_todo.created_at else None,
+            due_date=db_todo.due_date
         )
 
     async def get_by_id(self, todo_id: int) -> Optional[DomainTodo]:
@@ -49,7 +50,8 @@ class SqlAlchemyTodoRepository(TodoRepository):
             title=todo.title,
             description=todo.description,
             status=todo.status,
-            priority=todo.priority
+            priority=todo.priority,
+            due_date=todo.due_date
         )
         self.session.add(db_todo)
         await self.session.commit()

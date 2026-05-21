@@ -40,10 +40,7 @@ export default function CalendarToolbar({
             fontSize: '11px',
             color: 'var(--cal-text-muted)',
             fontWeight: '550',
-            background: 'var(--bg-surface-subtle)',
-            padding: '3px 10px',
             borderRadius: '12px',
-            border: '1px solid var(--cal-card-border)',
             width: 'fit-content'
           }}>
             <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--cal-primary)' }}></span>

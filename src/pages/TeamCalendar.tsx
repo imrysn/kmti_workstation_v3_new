@@ -23,7 +23,7 @@ export default function TeamCalendar() {
           <div className="banner-content">
             <span className="pulse-dot"></span>
             <span>
-              Claiming Task: <strong>{cal.claimingTask.title}</strong>.
+              Claiming Task: <strong>{cal.claimingTask.title}</strong>.{' '}
               {!cal.claimStartDate
                 ? "Click on the start day in the calendar grid."
                 : `Selected Start: ${cal.claimStartDate}. Now click on the end day.`}
@@ -40,6 +40,8 @@ export default function TeamCalendar() {
           setShowClaims={cal.setShowClaims}
           showAbsences={cal.showAbsences}
           setShowAbsences={cal.setShowAbsences}
+          showSpans={cal.showSpans}
+          setShowSpans={cal.setShowSpans}
         />
 
         <main className="calendar-main-content" onWheel={cal.handleCalendarWheel}>
@@ -62,6 +64,7 @@ export default function TeamCalendar() {
                 phHolidays={cal.phHolidays}
                 showClaims={cal.showClaims}
                 showAbsences={cal.showAbsences}
+                showSpans={cal.showSpans}
                 setSelectedEvent={cal.setSelectedEvent}
               />
             ) : (
@@ -73,6 +76,7 @@ export default function TeamCalendar() {
                 phHolidays={cal.phHolidays}
                 showClaims={cal.showClaims}
                 showAbsences={cal.showAbsences}
+                showSpans={cal.showSpans}
                 claimingTask={cal.claimingTask}
                 claimStartDate={cal.claimStartDate}
                 handleCellClick={cal.handleCellClick}
@@ -166,6 +170,7 @@ export default function TeamCalendar() {
           phHolidays={cal.phHolidays}
           showClaims={cal.showClaims}
           showAbsences={cal.showAbsences}
+          showSpans={cal.showSpans}
           isAdminOrIT={cal.isAdminOrIT}
           setSelectedEvent={cal.setSelectedEvent}
           setCompanyEventStart={cal.setCompanyEventStart}

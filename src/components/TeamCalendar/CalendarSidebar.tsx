@@ -9,6 +9,8 @@ interface CalendarSidebarProps {
   setShowClaims: (val: boolean) => void
   showAbsences: boolean
   setShowAbsences: (val: boolean) => void
+  showSpans: boolean
+  setShowSpans: (val: boolean) => void
 }
 
 export default function CalendarSidebar({
@@ -16,7 +18,9 @@ export default function CalendarSidebar({
   showClaims,
   setShowClaims,
   showAbsences,
-  setShowAbsences
+  setShowAbsences,
+  showSpans,
+  setShowSpans
 }: CalendarSidebarProps) {
   return (
     <aside className="calendar-sidebar">
@@ -69,6 +73,17 @@ export default function CalendarSidebar({
             />
             <span className="checkbox-custom absence-checkbox"></span>
             <span className="checkbox-label">Protected Absences</span>
+          </label>
+        </div>
+        <div className="filter-legend-item">
+          <label className="checkbox-container">
+            <input
+              type="checkbox"
+              checked={showSpans}
+              onChange={e => setShowSpans(e.target.checked)}
+            />
+            <span className="checkbox-custom"></span>
+            <span className="checkbox-label">Display Task Spans</span>
           </label>
         </div>
       </div>
