@@ -1,7 +1,7 @@
 /* SPECIAL VARIANT (DEFAULT) COLUMN WIDTHS */
 .table-visual .col-no { width: 4%; }
-.table-visual .col-reference { width: 18%; font-family: 'MS PGothic', 'MS Gothic', 'MS PMincho', sans-serif; }
-.table-visual .col-description { width: 30%; text-align: center; }
+.table-visual .col-reference { width: 20%; font-family: 'MS PGothic', 'MS Gothic', 'MS PMincho', sans-serif; }
+.table-visual .col-description { width: 28%; text-align: center; }
 .table-visual .col-unitpage { width: 8%; }
 .table-visual .col-type { width: 6%; }
 .table-visual .col-price { width: 26%; text-align: center; }
@@ -52,4 +52,12 @@
     padding: 0 !important;
     color: black !important;
   }
+
+  /* Restore Special Layout Column Widths during Print */
+  .variant-special.mode-quotation .table-visual th.col-no { width: 4% !important; }
+  .variant-special.mode-quotation .table-visual th.col-reference { width: 18% !important; }
+  .variant-special.mode-quotation .table-visual th.col-description { width: 30% !important; }
+  .variant-special.mode-quotation .table-visual th.col-unitpage { width: 8% !important; }
+  .variant-special.mode-quotation .table-visual th.col-type { width: 6% !important; }
+  .variant-special.mode-quotation .table-visual th.col-price { width: 26% !important; }
 }
