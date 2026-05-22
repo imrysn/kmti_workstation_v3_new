@@ -1,8 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useModal } from '../ModalContext';
 
 export const AlertModal: React.FC = () => {
   const { alertState, closeAlert } = useModal();
+
+  useEffect(() => {
+    if (!alertState.isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeAlert();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [alertState.isOpen, closeAlert]);
 
   if (!alertState.isOpen) return null;
 

@@ -72,7 +72,7 @@ interface Props extends WorkspaceSession {
 
 export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial, workstation, variant }: Props) {
   const { notify, confirm: showConfirm } = useModal()
-  const { user } = useAuth()
+  const { user, token } = useAuth()
 
   // ── Database State ─────────────────────────────────────────────
   const [quotId, setQuotId] = useState<number | undefined>(initialQuotId)
@@ -194,6 +194,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     password,
     displayName,
     userName: user?.username || 'User',
+    authToken: token ?? undefined,
     onUserJoined: (u) => {
       // Don't toast for yourself unless it's a truly new connection
       if (u.name !== myEffectiveName) {
@@ -922,6 +923,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             autoStartTutorial={isTutorialOpen}
             onCompleteTutorial={handleTutorialClose}
             layoutVariant={layoutVariant}
+            canViewBilling={user?.role !== 'user'}
           />
         )}
 

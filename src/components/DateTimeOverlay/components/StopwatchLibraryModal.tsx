@@ -94,6 +94,14 @@ export default function StopwatchLibraryModal({ onClose, accentColor, themeClass
     '--contrast-rgb': activeColors.contrastRgb
   } as React.CSSProperties;
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return createPortal(
     <div className={`sw-library-overlay ${themeClass}`} onClick={onClose}>
       <div className="sw-library-modal" onClick={e => e.stopPropagation()} style={modalStyle}>

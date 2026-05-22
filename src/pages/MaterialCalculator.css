@@ -400,3 +400,502 @@
     justify-content: center;
   }
 }
+
+/* ── Form Mode Switcher & Segmented Controls ── */
+.calc-mode-header {
+  padding: 16px 32px 0 32px;
+  display: flex;
+  justify-content: center; /* Center the toggle button */
+  background: var(--bg-primary);
+  border-bottom: none;
+}
+
+.mode-segmented-control {
+  position: relative;
+  display: flex;
+  background: var(--bg-surface-subtle);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.mode-sliding-bg {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: var(--accent);
+  border-radius: 8px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+  pointer-events: none;
+}
+
+.mode-sliding-bg.form {
+  transform: translateX(100%);
+}
+
+.mode-sliding-bg.scratchpad {
+  transform: translateX(0);
+}
+
+.mode-btn {
+  position: relative;
+  z-index: 2; /* Render label above sliding background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent !important;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  width: 170px; /* Equal button widths for smooth splitting */
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-btn:hover {
+  color: var(--text-primary);
+  background: transparent !important;
+}
+
+.mode-btn.active {
+  color: #ffffff;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.mode-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.mode-btn:hover svg {
+  transform: scale(1.1);
+}
+
+/* ── Form Calculator Grid Layout ── */
+.form-calculator-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  flex: 1;
+  padding: 24px 32px 32px 32px;
+  gap: 40px;
+  background: var(--bg-primary);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.form-inputs-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-output-column {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Shape Selector ── */
+.shape-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.shape-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 8px;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 48px; /* Reduced min-height since symbol is removed */
+  text-align: center;
+}
+
+.shape-card:hover {
+  border-color: var(--text-muted);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.shape-card.active {
+  background: rgba(56, 189, 248, 0.08);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+}
+
+.shape-card-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: color 0.2s ease, font-weight 0.2s ease;
+}
+
+.shape-card.active .shape-card-label {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* ── Form Fields & Groups ── */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-input, .form-select {
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.form-input:focus, .form-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.material-input-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.custom-material-input {
+  flex: 1;
+}
+
+/* ── Dimensions Layout ── */
+.dimensions-section {
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 4px;
+}
+
+.dimensions-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.dim-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dim-field.full-width {
+  grid-column: span 2;
+}
+
+.dim-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.dim-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dim-input-wrapper .form-input {
+  padding-right: 40px;
+}
+
+.dim-unit {
+  position: absolute;
+  right: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* Pipe toggle control */
+.pipe-type-toggle {
+  display: flex;
+  background: var(--bg-surface-hover);
+  padding: 3px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  gap: 2px;
+}
+
+.pipe-type-toggle .toggle-btn {
+  flex: 1;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pipe-type-toggle .toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.pipe-type-toggle .toggle-btn.active {
+  background: var(--bg-surface);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Digital Scale indicator ── */
+.scale-display-card {
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-surface-subtle) 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-lg);
+  height: 100%;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  transition: background var(--transition), border var(--transition), box-shadow var(--transition);
+}
+
+.scale-display-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 150px;
+  background: radial-gradient(circle at top, var(--accent-subtle) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.scale-display-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 12px;
+  z-index: 1;
+}
+
+.scale-display-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+}
+
+.scale-status-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.05em;
+}
+
+.scale-status-badge.success {
+  background: var(--bg-success-subtle);
+  color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.scale-status-badge.error {
+  background: var(--bg-danger-subtle);
+  color: var(--danger);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.scale-status-badge.pending {
+  background: var(--bg-warning-subtle);
+  color: var(--warning);
+  border: 1px solid rgba(217, 119, 6, 0.2);
+}
+
+body.dark-theme .scale-status-badge.pending {
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.scale-weight-box {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+  z-index: 1;
+  transition: background var(--transition), border var(--transition);
+}
+
+body.dark-theme .scale-weight-box,
+body.void-theme .scale-weight-box {
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.scale-weight-value {
+  font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent-subtle);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.scale-weight-value.error-val {
+  color: var(--danger);
+  text-shadow: 0 0 20px var(--bg-danger-subtle);
+}
+
+.scale-weight-unit {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.scale-meta-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px;
+  z-index: 1;
+  transition: background var(--transition), border var(--transition);
+}
+
+.scale-meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.scale-meta-label {
+  color: var(--text-muted);
+}
+
+.scale-meta-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.scale-meta-value.mono {
+  font-family: 'JetBrains Mono', 'Cascadia Code', monospace;
+}
+
+.scale-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1;
+}
+
+.scale-actions .btn {
+  justify-content: center;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.scale-actions .btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 12px var(--accent-subtle);
+}
+
+.scale-actions .btn-primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 6px 16px var(--accent-subtle);
+}
+
+.scale-actions .btn-ghost {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.scale-actions .btn-ghost:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+/* ── Responsive styling for Form Mode ── */
+@media (max-width: 1050px) {
+  .form-calculator-grid {
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    padding: 20px;
+  }
+}
+
+@media (max-width: 900px) {
+  .form-calculator-grid {
+    grid-template-columns: 1fr;
+    overflow-y: visible;
+  }
+  .scale-display-card {
+    height: auto;
+  }
+}
+
+@media (max-width: 550px) {
+  .shape-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .dim-field.full-width-sm {
+    grid-column: span 2;
+  }
+}

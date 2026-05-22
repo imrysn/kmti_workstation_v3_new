@@ -31,6 +31,15 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const [loading, setLoading] = useState(true)
   const [myWorkstation, setMyWorkstation] = useState<string | null>(null)
 
+  // ESC to close
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   // ── Handlers ────────────────────────────────────────────────────
   const fetchLibrary = useCallback(async () => {
     setLoading(true)
@@ -133,8 +142,8 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
 
   // ── Render ──────────────────────────────────────────────────────
   return (
-    <div className="quot-library-overlay">
-      <div className="quot-library-modal">
+    <div className="quot-library-overlay" onClick={onClose}>
+      <div className="quot-library-modal" onClick={e => e.stopPropagation()}>
         <header className="quot-library-header">
           <div className="quot-library-header-main">
             <h2>Quotation Library</h2>

@@ -46,6 +46,18 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
     setIsZoomed(!isZoomed);
   };
 
+  const closeZoom = () => setIsZoomed(false);
+
+  // ESC to close lightbox
+  useEffect(() => {
+    if (!isZoomed) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeZoom();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isZoomed]);
+
   return (
     <>
       <div className={`file-preview-container ${isPdf ? 'is-pdf' : ''}`}>

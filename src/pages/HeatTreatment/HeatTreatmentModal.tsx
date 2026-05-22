@@ -42,6 +42,15 @@ export default function HeatTreatmentModal({
     }
   }, [isOpen, editingItem])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formCategory.trim() || !formEng.trim() || !formJp.trim()) {
@@ -77,8 +86,8 @@ export default function HeatTreatmentModal({
   if (!isOpen) return null
 
   return (
-    <div className="ht-modal-overlay">
-      <div className="ht-modal">
+    <div className="ht-modal-overlay" onClick={onClose}>
+      <div className="ht-modal" onClick={e => e.stopPropagation()}>
         <h2 className="ht-modal-title">
           {editingItem ? 'Edit Special Process' : 'Add Special Process'}
         </h2>

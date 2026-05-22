@@ -37,6 +37,16 @@ export default function DraftingNoteModal({
     }
   }, [isOpen, editingNote])
 
+  // ESC to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formEng.trim() || !formJp.trim()) {
@@ -70,8 +80,8 @@ export default function DraftingNoteModal({
   if (!isOpen) return null
 
   return (
-    <div className="char-modal-overlay">
-      <div className="char-modal">
+    <div className="char-modal-overlay" onClick={onClose}>
+      <div className="char-modal" onClick={(e) => e.stopPropagation()}>
         <h2 className="char-modal-title">
           {editingNote ? 'Edit Drafting Note' : 'Add New Drafting Note'}
         </h2>

@@ -29,6 +29,8 @@ interface Props {
   autoStartTutorial?: boolean
   onCompleteTutorial?: () => void
   layoutVariant?: 'special' | 'kemco'
+  /** If false (role === 'user'), the Billing Preview tab is hidden entirely */
+  canViewBilling?: boolean
 }
 
 /** A single page slice produced by computePages(). */
@@ -104,10 +106,17 @@ const PrintPreviewModal = memo(({
   companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
   manualOverrides, onManualOverrideChange,
   autoStartTutorial, onCompleteTutorial,
-  layoutVariant = 'special'
+  layoutVariant = 'special',
+  canViewBilling = false,
 }: Props) => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [printMode, setPrintMode] = useState<'quotation' | 'billing'>('quotation')
+
+  // Guard: reset to quotation if billing tab is not permitted
+  useEffect(() => {
+    if (!canViewBilling && printMode === 'billing') setPrintMode('quotation')
+  }, [canViewBilling])
+
   const [baseScale, setBaseScale] = useState(1)
   const [zoomMode, setZoomMode] = useState<'fit' | number>('fit')
   const [isTutorialOpen, setIsTutorialOpen] = useState(false)
@@ -413,16 +422,18 @@ const PrintPreviewModal = memo(({
                 </svg>
                 Quotation Preview
               </button>
-              <button
-                id="ppm-btn-billing"
-                className={`ppm-mode-btn${printMode === 'billing' ? ' active' : ''}`}
-                onClick={() => setPrintMode('billing')}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                </svg>
-                Billing Preview
-              </button>
+              {canViewBilling && (
+                <button
+                  id="ppm-btn-billing"
+                  className={`ppm-mode-btn${printMode === 'billing' ? ' active' : ''}`}
+                  onClick={() => setPrintMode('billing')}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  Billing Preview
+                </button>
+              )}
             </div>
 
 

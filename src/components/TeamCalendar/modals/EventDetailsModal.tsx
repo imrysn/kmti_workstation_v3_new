@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
 import { formatDurationRange } from '../../../utils/teamCalendarUtils'
 
@@ -18,6 +19,14 @@ export default function EventDetailsModal({
   handleCancelEvent,
   onClose
 }: EventDetailsModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-content cal-modal-card animated zoomIn" onClick={e => e.stopPropagation()}>

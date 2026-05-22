@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 
 interface DayOffModalProps {
   engineerName: string
@@ -21,9 +21,17 @@ export default function DayOffModal({
   handleRequestDayOffSubmit,
   onClose
 }: DayOffModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   return (
-    <div className="modal-backdrop">
-      <div className="modal-content cal-modal-card animated zoomIn">
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-content cal-modal-card animated zoomIn" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Request Leave / Day Off</h3>
           <button className="close-btn" onClick={onClose}>×</button>

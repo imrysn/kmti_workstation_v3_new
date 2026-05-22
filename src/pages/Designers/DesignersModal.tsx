@@ -48,6 +48,15 @@ export default function DesignersModal({
     }
   }, [editingItem, categories, isOpen])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, onClose])
+
   if (!isOpen) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,8 +79,8 @@ export default function DesignersModal({
   }
 
   return (
-    <div className="ht-modal-overlay">
-      <div className="ht-modal">
+    <div className="ht-modal-overlay" onClick={onClose}>
+      <div className="ht-modal" onClick={e => e.stopPropagation()}>
         <h2 className="ht-modal-title">{editingItem ? 'Edit Client' : 'Add New Client'}</h2>
         <form onSubmit={handleSubmit} className="ht-modal-form">
           <div className="ht-form-group">

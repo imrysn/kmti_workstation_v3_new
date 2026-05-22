@@ -101,7 +101,7 @@ async def connect(sid: str, environ: dict):
 
 @sio.event
 async def join_doc(sid: str, data: dict):
-    """Join a shared quotation room. data = { quot_id, user_name, password? }"""
+    """Join a shared quotation room. data = { quot_id, user_name, password?, auth_token? }"""
     try:
         q_id = int(data.get("quot_id", 0))
     except (ValueError, TypeError):
@@ -109,8 +109,24 @@ async def join_doc(sid: str, data: dict):
 
     user_name = data.get("user_name", "Unknown")
     password = data.get("password")
+    auth_token = data.get("auth_token")
     
     if not q_id: return
+
+    # ── Role-based bypass via JWT ──────────────────────────────────
+    # If a valid JWT is provided and the user is admin/IT, bypass the
+    # password entirely. This is the server-side enforcement of the
+    # frontend admin bypass in QuotationEntryModal.
+    is_admin_bypass = False
+    if auth_token:
+        try:
+            from core.auth import decode_token
+            payload = decode_token(auth_token)
+            role = payload.get("role", "")
+            if role in ("admin", "it"):
+                is_admin_bypass = True
+        except Exception:
+            pass  # Invalid/expired token — fall through to normal password check
 
     # Verify ID and password in DB
     from db.database import AsyncSessionLocal
@@ -123,15 +139,16 @@ async def join_doc(sid: str, data: dict):
             await sio.emit("join_error", {"message": "Quotation not found."}, to=sid)
             return
         
-        # ── Password / Ownership Bypass (Method 3) ──────────────────
+        # ── Password / Ownership Bypass ────────────────────────────
         # Entry is allowed IF:
         # 1. No password is set
         # 2. OR the provided password is correct
         # 3. OR the user is the original owner (recognized by workstation name)
+        # 4. OR the user is admin/IT (verified via JWT above)
         
         is_owner = (user_name and quot.workstation == user_name)
         
-        if quot.password and quot.password != password and not is_owner:
+        if quot.password and quot.password != password and not is_owner and not is_admin_bypass:
             await sio.emit("join_error", {"message": "Invalid password."}, to=sid)
             return
 

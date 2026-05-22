@@ -43,6 +43,15 @@ export default function WhatsNewModal() {
     setVisible(false)
   }
 
+  useEffect(() => {
+    if (!visible) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [visible, dontShowAgain]);
+
   if (!visible) return null
 
   // Show the latest release entry at the top of the changelog

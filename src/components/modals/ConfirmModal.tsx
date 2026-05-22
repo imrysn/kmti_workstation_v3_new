@@ -1,8 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useModal } from '../ModalContext';
 
 export const ConfirmModal: React.FC = () => {
   const { confirmationState, closeConfirmation } = useModal();
+
+  useEffect(() => {
+    if (!confirmationState.isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeConfirmation();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [confirmationState.isOpen, closeConfirmation]);
 
   if (!confirmationState.isOpen) return null;
 

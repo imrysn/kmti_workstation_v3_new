@@ -43,6 +43,7 @@ interface UseCollaborationOptions {
   password?: string
   displayName?: string   // Human-readable label shown in the sessions list
   userName?: string // Fallback, but computer name takes priority
+  authToken?: string    // JWT token — used for admin/IT password bypass on the server
   onRemotePatch?: (patch: { path: string; value: any }, sid: string) => void
   onAuditEntry?: (entry: any) => void
   onUserJoined?: (user: RemoteUser) => void
@@ -58,6 +59,7 @@ export function useCollaboration({
   password,
   displayName,
   userName,
+  authToken,
   onRemotePatch,
   onAuditEntry,
   onUserJoined,
@@ -168,7 +170,8 @@ export function useCollaboration({
         quot_no: quotNo,
         user_name: myEffectiveName,
         password: password,
-        display_name: displayName || null
+        display_name: displayName || null,
+        auth_token: authToken || null,
       })
       currentQuotIdRef.current = quotId
     }

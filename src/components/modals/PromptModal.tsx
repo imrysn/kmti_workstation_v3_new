@@ -14,6 +14,16 @@ export const PromptModal: React.FC = () => {
     }
   }, [promptState.isOpen, promptState.defaultValue]);
 
+  // Global ESC handler
+  useEffect(() => {
+    if (!promptState.isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closePrompt();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [promptState.isOpen, closePrompt]);
+
   if (!promptState.isOpen) return null;
 
   const handleConfirm = () => {
@@ -25,7 +35,6 @@ export const PromptModal: React.FC = () => {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') handleConfirm();
-    if (e.key === 'Escape') closePrompt();
   };
 
   return (

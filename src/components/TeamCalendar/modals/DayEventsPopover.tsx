@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
 import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange } from '../../../utils/teamCalendarUtils'
 import { CalendarIcon, GlobeIcon, LockIcon, BriefcaseIcon } from '../Icons'
@@ -35,6 +36,13 @@ export default function DayEventsPopover({
   setIsAddingCompanyEvent,
   onClose
 }: DayEventsPopoverProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
   const formatPopoverDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       weekday: 'long',

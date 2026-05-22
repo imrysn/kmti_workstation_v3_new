@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
 import { inferTaskType, getTaskTypeColor, getTeamColor, formatLocalDate } from '../../../utils/teamCalendarUtils'
 import { BriefcaseIcon, LockIcon, GlobeIcon, CalendarIcon } from '../Icons'
@@ -177,6 +177,14 @@ export default function LandingAgendaModal({
     }
     onClose()
   }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [dontShowAgainToday])
 
   const isTodayEmpty = todayEvents.length === 0
   const showUpcoming = isTodayEmpty && upcomingDeadlines.length > 0

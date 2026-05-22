@@ -126,6 +126,8 @@ export type SolutionResult = {
   // Error diagnosis
   errorReason?: string;
   suggestions?: string[];
+  errorCategory?: 'format' | 'parse' | 'constraint' | 'symbol' | 'lookup';
+  errorCode?: string;
 }
 
 /** Levenshtein distance for "Did you mean?" matching */
@@ -187,7 +189,13 @@ export function calculateSolution(
     result: 0,
   };
 
-  const fail = (reason: string, suggestions?: string[], detailedStepsOverride?: DetailedStep[]): SolutionResult => ({
+  const fail = (
+    reason: string,
+    suggestions?: string[],
+    detailedStepsOverride?: DetailedStep[],
+    errorCategory?: SolutionResult['errorCategory'],
+    errorCode?: string
+  ): SolutionResult => ({
     ...base,
     detailedSteps: detailedStepsOverride || [
       {
@@ -198,6 +206,8 @@ export function calculateSolution(
     isError: true,
     errorReason: reason,
     suggestions,
+    errorCategory,
+    errorCode,
   });
 
   try {
@@ -206,18 +216,23 @@ export function calculateSolution(
     // ── Parse line: MATERIAL SPEC QTY ───────────────────────────
     const parts = rawLine.trim().replace(/\t/g, ' ').replace(/\s+/g, ' ').split(' ');
     if (parts.length < 2) return fail(
-      'Line needs at least MATERIAL and SPEC.',
-      undefined,
+      'Incomplete input: at least a MATERIAL code and a SPEC are required.',
+      [`${parts[0] ?? 'SS400'} φ12×500 1`, `${parts[0] ?? 'SS400'} □25×300 1`, `${parts[0] ?? 'SS400'} 9×200-600 1`],
       [
         {
-          title: 'Analyze Format',
-          desc: 'Input format must contain at least a material code and a spec (e.g. SS400 φ12×500 2).'
+          title: 'Diagnose Input',
+          desc: `Parsed ${parts.length} token(s) from: "${rawLine.trim()}". The calculator needs at minimum a material code and a shape specification.`
         },
         {
-          title: 'Status',
-          desc: `Failed: Found only ${parts.length} parts.`
+          title: 'Format Error — Specification Missing',
+          desc: 'Every input line must follow the pattern: MATERIAL SPEC [QTY]\n• MATERIAL: grade code (e.g. SS400, SUS304, A5052)\n• SPEC: shape with dimensions (e.g. φ12×500, □25×300, 9×200-600)\n• QTY: optional quantity (default = 1)'
+        },
+        {
+          title: 'How to Fix',
+          desc: `Add a shape specification after the material code.\nExamples:\n• SS400 φ12×500 2\n• SUS304 □60×4.5-1000 1\n• A5052 9×200-600 3`
         }
-      ]
+      ],
+      'format', 'A1'
     );
 
     let qty = 1;
@@ -236,6 +251,30 @@ export function calculateSolution(
     base.material = materialRaw;
     base.qty = qty;
 
+    // Strict mode: Reject 'x' (or its variants) in favor of batsu '×'
+    if (/[xXｘＸ]/.test(specRaw)) {
+      const corrected = rawLine.replace(/[xXｘＸ]/g, '×');
+      return fail(
+        'Invalid multiplication symbol: User inputted "x" letter, not batsu ×.',
+        [corrected],
+        [
+          {
+            title: 'Diagnose Input',
+            desc: `Spec "${specRaw}" contains "x" or "X" character(s) used as a dimension separator.`
+          },
+          {
+            title: 'Symbol Error — Banned "x" Letter Detected',
+            desc: 'The user inputted the letter "x" (or its variants x, X, ｘ, Ｘ) instead of the mathematical multiplication sign "×" (U+00D7 batsu). Strict mode enforces the correct symbol at all times.'
+          },
+          {
+            title: 'How to Fix',
+            desc: `Replace all "x" characters with "×" (batsu).\nCorrected line: ${corrected}`
+          }
+        ],
+        'symbol', 'D1'
+      );
+    }
+
     const normMat = normalize(materialRaw).toUpperCase();
     const density = materialLookupData[normMat] !== undefined
       ? materialLookupData[normMat]
@@ -248,23 +287,28 @@ export function calculateSolution(
     base.densitySource = densitySource;
 
     if (!specRaw) return fail(
-      'No spec found after material code.',
-      suggestMaterial(materialRaw),
+      'Specification missing: nothing was found after the material code.',
+      [`${materialRaw} φ12×500 1`, `${materialRaw} □25×300 1`, `${materialRaw} 9×200-600 1`],
       [
         {
-          title: 'Extract Material',
-          desc: `Parsed material code: "${materialRaw}" (Density = ${fmt(density)} g/cm³).`
+          title: 'Diagnose Input',
+          desc: `Material code "${materialRaw}" identified. Density = ${fmt(density)} g/cm³ (${densitySource === 'lookup' ? 'database match' : 'fallback — not in database'}). No shape specification found after it.`
         },
         {
-          title: 'Extract Spec',
-          desc: 'Failed: No specification content found after material code.'
+          title: 'Format Error — Shape Specification Missing',
+          desc: 'After the material code, a shape specification is required. It must start with:\n• φ or Φ — for round bar or round pipe\n• □ — for square bar or square pipe\n• A number — for plate (T×W-L) or block (A×B×C)'
+        },
+        {
+          title: 'How to Fix',
+          desc: `Append a specification after "${materialRaw}".\nExamples:\n• ${materialRaw} φ12×500 1\n• ${materialRaw} □25×300 2\n• ${materialRaw} 9×200-600 1`
         }
-      ]
+      ],
+      'format', 'A2'
     );
 
     const cleanSpec = specRaw.trim();
 
-    // ── Branch 1: Profile Materials ──────────────────────────────
+    // ── Unknown Material check ──
     const isProfileMat = [
       'SUS304TP', 'Ｈ形鋼', 'Ｈ型鋼', 'H形鋼', 'H型鋼',
       'Ｉ形鋼', 'Ｉ型鋼', 'I形鋼', 'I型鋼',
@@ -272,55 +316,127 @@ export function calculateSolution(
       'STKR400'
     ].some(p => materialRaw.includes(p));
 
+    if (densitySource === 'fallback' && !isProfileMat) {
+      const matSuggestions = suggestMaterial(materialRaw);
+      const correctedLines = matSuggestions.map(m => `${m} ${cleanSpec} ${qty}`.trim());
+      return fail(
+        `Material "${materialRaw}" is not recognized in the database.`,
+        correctedLines,
+        [
+          {
+            title: 'Diagnose Input',
+            desc: `Material grade: "${materialRaw}" (not found in database)\nSpecification: "${cleanSpec}"`
+          },
+          {
+            title: 'Lookup Error — Unknown Material Grade',
+            desc: `The material grade "${materialRaw}" was not found in the database.\nTo prevent incorrect weight calculations using default densities, the calculator requires a recognized material.`
+          },
+          {
+            title: 'How to Fix',
+            desc: `Verify the spelling of the material grade.\n${
+              matSuggestions.length > 0 
+                ? `Did you mean one of these?\n${matSuggestions.map(m => `• ${m}`).join('\n')}` 
+                : 'Please use a recognized grade like SS400, SUS304, or A5052.'
+            }`
+          }
+        ],
+        'lookup', 'E1'
+      );
+    }
+
+    // ── Dirty input: reject any character that has no place in a valid spec ──
+    // Valid chars: φΦ□ · digits · × (batsu) · . (decimal) · - (dash)
+    // Anything else (parentheses, brackets, letters, slashes …) is rejected.
+    const allowedSpecPattern = /^[φΦ□\d×.\-\s]+$/;
+    if (!allowedSpecPattern.test(cleanSpec)) {
+      const badChars = [...new Set(cleanSpec.replace(/[φΦ□\d×.\-\s]/g, '').split(''))].join(' ');
+      const cleanedSpec = cleanSpec.replace(/[^φΦ□\d×.\-\s]/g, '').replace(/\s{2,}/g, ' ').trim();
+      return fail(
+        `Specification contains unexpected symbol(s): ${badChars}`,
+        cleanedSpec ? [`${materialRaw} ${cleanedSpec} ${qty}`] : undefined,
+        [
+          {
+            title: 'Diagnose Input',
+            desc: `Spec: "${cleanSpec}"\nUnexpected character(s) found: ${badChars}`
+          },
+          {
+            title: 'Symbol Error — Extraneous Characters Detected',
+            desc: `A valid specification must only contain:\n• φ or Φ — round shape prefix\n• □ — square shape prefix\n• Digits (0–9) and decimal point (.)\n• × (batsu) — dimension separator\n• - (dash) — length separator\n\nFound instead: ${badChars}\n\nNote: JavaScript's number parser silently ignores trailing garbage — the calculator refuses to guess.`
+          },
+          {
+            title: 'How to Fix',
+            desc: `Remove all unexpected characters from the spec.${cleanedSpec ? `\nCleaned suggestion: ${materialRaw} ${cleanedSpec} ${qty}` : '\nCheck the full input for stray symbols.'}`
+          }
+        ],
+        'symbol', 'D2'
+      );
+    }
+
+    // ── Branch 1: Profile Materials ──────────────────────────────
     if (isProfileMat) {
       base.shape = 'Profile (H / I / Channel / Angle)';
       const dashIdx = cleanSpec.lastIndexOf('-');
       if (dashIdx === -1) return fail(
-        'Profile spec requires a dash before the length.\nExpected: SPEC-LENGTH (e.g. 250×250×9-6000)',
+        'Profile specification is missing the "-" length separator.',
         [`${materialRaw} ${cleanSpec}-6000 ${qty}`],
         [
           {
-            title: 'Identify Profile Shape',
-            desc: `Detected Profile material: "${materialRaw}".`
+            title: 'Diagnose Input',
+            desc: `Profile material detected: "${materialRaw}". Full spec: "${cleanSpec}". No dash "-" separator found.`
           },
           {
-            title: 'Extract Length',
-            desc: `Failed: A dash '-' separator is required before the length in profile specs (e.g. 250×250×9-6000).`
+            title: 'Format Error — Missing Length Separator',
+            desc: 'Profile specs require a dash "-" between the section dimensions and the length.\nFormat: SECTION_SPEC-LENGTH\nExample: 250×250×9-6000 (250×250mm H-beam, 6000mm long)'
+          },
+          {
+            title: 'How to Fix',
+            desc: `Append "-LENGTH" after the section spec.\nSuggested: ${materialRaw} ${cleanSpec}-6000 ${qty}`
           }
-        ]
+        ],
+        'format', 'A9'
       );
 
       const specPart = normalize(cleanSpec.substring(0, dashIdx));
       const length = parseFloat(cleanSpec.substring(dashIdx + 1));
       if (isNaN(length)) return fail(
-        'Could not parse length after the dash.',
-        undefined,
+        `Profile length "${cleanSpec.substring(dashIdx + 1)}" is not a valid number.`,
+        [`${materialRaw} ${cleanSpec.substring(0, dashIdx)}-6000 ${qty}`],
         [
           {
-            title: 'Identify Profile Shape',
-            desc: `Profile spec: "${cleanSpec.substring(0, dashIdx)}"`
+            title: 'Diagnose Input',
+            desc: `Profile material: "${materialRaw}", section spec: "${cleanSpec.substring(0, dashIdx)}", length string: "${cleanSpec.substring(dashIdx + 1)}".`
           },
           {
-            title: 'Parse Length',
-            desc: `Failed: Length value "${cleanSpec.substring(dashIdx + 1)}" is not a valid number.`
+            title: 'Parse Error — Invalid Length Value',
+            desc: `The value "${cleanSpec.substring(dashIdx + 1)}" after the dash cannot be converted to a number. Length must be a positive integer or decimal in millimeters.`
+          },
+          {
+            title: 'How to Fix',
+            desc: `Replace with a valid numeric length in mm.\nExample: ${materialRaw} ${cleanSpec.substring(0, dashIdx)}-6000 ${qty}`
           }
-        ]
+        ],
+        'parse', 'B2'
       );
 
       const wpm = findBestShapeFactor(materialRaw, specPart);
       if (!wpm) return fail(
-        `Spec "${specPart}" not found in shape lookup table.\nThe profile must match an Excel-defined entry exactly.`,
+        `Profile "${specPart}" not found in the shape lookup database.`,
         undefined,
         [
           {
-            title: 'Identify Profile Shape',
-            desc: `Material: "${materialRaw}", Specification Part: "${specPart}".`
+            title: 'Diagnose Input',
+            desc: `Material: "${materialRaw}", normalized spec key: "${specPart}", Length: ${fmt(length)} mm, Qty: ${qty}.`
           },
           {
-            title: 'Excel Reference Lookup',
-            desc: `Failed: The spec "${specPart}" was not found in shape lookup table. Please ensure it matches standard Excel-defined sizing.`
+            title: 'Lookup Error — Spec Not in Database',
+            desc: `No weight-per-meter entry exists for "${specPart}" in the Excel-sourced shape database. Profile weights are pre-tabulated — the section dimensions must exactly match a catalogued standard size.`
+          },
+          {
+            title: 'How to Fix',
+            desc: 'Verify section dimensions against the standard catalogue.\nCommon H-beam (H形鄒) sizes: 100×100×6, 150×150×7, 200×200×8, 250×250×9, 300×300×10.\nUse batsu × as the separator between dimensions.'
           }
-        ]
+        ],
+        'lookup', 'C4'
       );
 
       const result = (wpm * length * 0.001) * qty;
@@ -367,18 +483,23 @@ export function calculateSolution(
         const length = parseFloat(specContent.substring(dashIdx + 1));
 
         if (isNaN(length)) return fail(
-          'Could not parse length after the dash.',
-          undefined,
+          `Square Pipe length "${specContent.substring(dashIdx + 1)}" after the dash is not a valid number.`,
+          [`${materialRaw} □${specPartRaw}-1000 ${qty}`],
           [
             {
-              title: 'Identify Square Pipe',
-              desc: `Hollow section spec: "${specPartRaw}"`
+              title: 'Diagnose Input',
+              desc: `Square Pipe spec: "□${specPartRaw}", length string: "${specContent.substring(dashIdx + 1)}".`
             },
             {
-              title: 'Parse Length',
-              desc: `Failed: Length value "${specContent.substring(dashIdx + 1)}" is not a valid number.`
+              title: 'Parse Error — Invalid Length Value',
+              desc: `"${specContent.substring(dashIdx + 1)}" cannot be converted to a number. The length after the "-" must be a positive number in millimeters.`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Replace the length with a valid number.\nExample: ${materialRaw} □${specPartRaw}-1000 ${qty}`
             }
-          ]
+          ],
+          'parse', 'B1'
         );
 
         // Try lookup first (STKR square pipe)
@@ -423,21 +544,48 @@ export function calculateSolution(
         if (normParts.length === 2) {
           const od = parseFloat(normParts[0]);
           const wt = parseFloat(normParts[1]);
-          if (isNaN(od)) return fail(`Could not parse outer dimension (OD) from "${normParts[0]}".`);
-          if (isNaN(wt)) return fail(`Could not parse wall thickness (WT) from "${normParts[1]}".`);
+          if (isNaN(od)) return fail(
+            `Cannot read Outer Side (A) from "${normParts[0]}".`,
+            [`${materialRaw} □60×4.5-${length} ${qty}`],
+            [
+              { title: 'Diagnose Input', desc: `Square Pipe spec before dash: "□${specPartRaw}", parsed part[0]: "${normParts[0]}".` },
+              { title: 'Parse Error — Outer Side (A) Invalid', desc: `"${normParts[0]}" is not a valid number. The first value before "×" must be the outer side length in mm.` },
+              { title: 'How to Fix', desc: `Format: □A×WT-L where A = outer side mm.\nExample: ${materialRaw} □60×4.5-1000 ${qty}` }
+            ],
+            'parse', 'B3'
+          );
+          if (isNaN(wt)) return fail(
+            `Cannot read Wall Thickness (WT) from "${normParts[1]}".`,
+            [`${materialRaw} □${od}×4.5-${length} ${qty}`],
+            [
+              { title: 'Diagnose Input', desc: `Square Pipe: Outer Side A = ${fmt(od)} mm, WT string: "${normParts[1]}".` },
+              { title: 'Parse Error — Wall Thickness (WT) Invalid', desc: `"${normParts[1]}" is not a valid number. The second value after "×" must be the wall thickness in mm.` },
+              { title: 'How to Fix', desc: `Format: □A×WT-L where WT = wall thickness mm.\nExample: ${materialRaw} □${fmt(od)}×4.5-1000 ${qty}` }
+            ],
+            'parse', 'B4'
+          );
           if (wt <= 0 || wt >= od / 2) return fail(
-            `Wall thickness (${fmt(wt)}) must be > 0 and < OD/2 (${fmt(od / 2)}).`,
-            undefined,
+            `Wall Thickness (${fmt(wt)} mm) violates constraint: must be > 0 and < A/2 (${fmt(od / 2)} mm).`,
+            [`${materialRaw} □${fmt(od)}×${fmt(parseFloat((od * 0.1).toFixed(1)))}-${length} ${qty}`],
             [
               {
-                title: 'Extract Parameters',
-                desc: `OD = ${fmt(od)} mm, WT = ${fmt(wt)} mm.`
+                title: 'Diagnose Input',
+                desc: `Square Pipe: Outer Side (A) = ${fmt(od)} mm, Wall Thickness (WT) = ${fmt(wt)} mm, Length = ${fmt(length)} mm.`
               },
               {
-                title: 'Check Constraints',
-                desc: `Failed: Wall thickness ${fmt(wt)} mm must be greater than 0 and less than half of OD (${fmt(od / 2)} mm) to form a hollow core.`
+                title: 'Constraint Violation — Wall Thickness Out of Range',
+                desc: `Constraint: 0 < WT < A/2.\nWith A = ${fmt(od)} mm, WT must satisfy: 0 < WT < ${fmt(od / 2)} mm.\nYour WT = ${fmt(wt)} mm ${
+                  wt <= 0
+                    ? 'is zero or negative — there is no material to form the wall'
+                    : `equals or exceeds A/2 (${fmt(od / 2)} mm) — leaves no hollow space inside`
+                }.`
+              },
+              {
+                title: 'How to Fix',
+                desc: `Choose a wall thickness between 0 and ${fmt(od / 2)} mm.\nFor a ${fmt(od)} mm square pipe, typical WT: ${fmt(parseFloat((od * 0.05).toFixed(1)))} – ${fmt(parseFloat((od * 0.12).toFixed(1)))} mm.`
               }
-            ]
+            ],
+            'constraint', 'C1'
           );
           const A = od;
           const a = A - 2 * wt;
@@ -489,41 +637,69 @@ export function calculateSolution(
         }
 
         return fail(
-          `Square Pipe spec should be □OD×WT-LENGTH (e.g. □60×4.5-1000).\nParsed parts before dash: "${specPartRaw}"`,
-          [`${materialRaw} □${specPartRaw.replace(/[×x]/g, '×')}-${length} ${qty}`],
+          `Square Pipe spec before the dash could not be split into 2 dimensions.`,
+          [`${materialRaw} □60×4.5-${Math.round(length)} ${qty}`],
           [
             {
-              title: 'Identify Shape',
-              desc: 'Detected square symbol (□) with a dash separator.'
+              title: 'Diagnose Input',
+              desc: `Square symbol "□" detected with dash separator. Spec before dash: "${specPartRaw}", Length: ${Math.round(length)} mm.`
             },
             {
-              title: 'Parse Specifications',
-              desc: `Failed: Could not split "${specPartRaw}" into two dimensions (Outer Dimension × Wall Thickness).`
+              title: 'Format Error — Square Pipe Spec Invalid',
+              desc: `Expected exactly 2 values: □OUTER_SIDE×WALL_THICKNESS-LENGTH.\nGot: "□${specPartRaw}" which does not split cleanly into 2 parts at "×".`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Use format: MATERIAL □A×WT-L QTY\nExample: ${materialRaw} □60×4.5-1000 ${qty}\n• A = outer side length (mm)\n• WT = wall thickness (mm)\n• L = length (mm)`
             }
-          ]
+          ],
+          'format', 'A6'
         );
       } else {
         // Square Bar
         const norm = normalize(specContent);
         const parts2 = norm.split('x');
         if (parts2.length !== 2) return fail(
-          `Square Bar spec should be □SIDE×LENGTH (e.g. □25×300).\nGot ${parts2.length} value(s) instead of 2.`,
-          [`${materialRaw} □${parts2[0]}×${parts2.slice(1).join('×') || '?'} ${qty}`],
+          `Square Bar spec needs exactly 2 dimensions (SIDE×LENGTH) but got ${parts2.length}.`,
+          [`${materialRaw} □25×300 ${qty}`],
           [
             {
-              title: 'Identify Shape',
-              desc: 'Detected square symbol (□) without a dash separator.'
+              title: 'Diagnose Input',
+              desc: `Square symbol "□" detected without dash (no length separator → Square Bar). Spec: "□${specContent}". Parsed ${parts2.length} dimension(s).`
             },
             {
-              title: 'Parse Dimensions',
-              desc: `Failed: Expected exactly 2 dimensions (Side × Length) but got ${parts2.length} dimension(s).`
+              title: 'Format Error — Dimension Count Wrong',
+              desc: `Square Bar requires exactly 2 values: □SIDE×LENGTH.\nGot ${parts2.length} value(s): [${parts2.join(', ')}].`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Format: MATERIAL □SIDE×LENGTH QTY\nExample: ${materialRaw} □25×300 ${qty}\n• SIDE = side length (mm)\n• LENGTH = bar length (mm)\nFor hollow square pipe, add wall thickness and a dash: □A×WT-L`
             }
-          ]
+          ],
+          'format', 'A5'
         );
         const side = parseFloat(parts2[0]);
         const length = parseFloat(parts2[1]);
-        if (isNaN(side)) return fail(`Could not parse side dimension from "${parts2[0]}".`);
-        if (isNaN(length)) return fail(`Could not parse length from "${parts2[1]}".`);
+        if (isNaN(side)) return fail(
+          `Cannot read Side dimension from "${parts2[0]}".`,
+          [`${materialRaw} □25×${Math.round(parseFloat(parts2[1]) || 300)} ${qty}`],
+          [
+            { title: 'Diagnose Input', desc: `Square Bar spec: "□${specContent}", side string: "${parts2[0]}".` },
+            { title: 'Parse Error — Side Dimension Invalid', desc: `"${parts2[0]}" is not a valid number. The first value must be the side length in mm.` },
+            { title: 'How to Fix', desc: `Use a numeric value for SIDE.\nExample: ${materialRaw} □25×300 ${qty}` }
+          ],
+          'parse', 'B6'
+        );
+        if (isNaN(length)) return fail(
+          `Cannot read Length from "${parts2[1]}".`,
+          [`${materialRaw} □${Math.round(parseFloat(parts2[0]) || 25)}×300 ${qty}`],
+          [
+            { title: 'Diagnose Input', desc: `Square Bar: Side = ${parts2[0]}, length string: "${parts2[1]}".` },
+            { title: 'Parse Error — Length Invalid', desc: `"${parts2[1]}" is not a valid number. The second value must be the bar length in mm.` },
+            { title: 'How to Fix', desc: `Use a numeric value for LENGTH.\nExample: ${materialRaw} □25×300 ${qty}` }
+          ],
+          'parse', 'B1'
+        );
 
         const volume = side * side * length;
         const result = (volume * density * 0.000001) * qty;
@@ -577,37 +753,56 @@ export function calculateSolution(
         const specPartText = normalize(specContent.substring(0, dashIdx));
         const length = parseFloat(specContent.substring(dashIdx + 1));
         if (isNaN(length)) return fail(
-          'Could not parse length after the dash.',
-          undefined,
+          `Round Pipe length "${specContent.substring(dashIdx + 1)}" after the dash is not a valid number.`,
+          [`${materialRaw} φ60.5×3.2-1000 ${qty}`],
           [
             {
-              title: 'Identify Round Pipe',
-              desc: `Hollow section spec: "${specPartText}"`
+              title: 'Diagnose Input',
+              desc: `Round Pipe spec: "φ${specPartText}", length string: "${specContent.substring(dashIdx + 1)}".`
             },
             {
-              title: 'Parse Length',
-              desc: `Failed: Length value "${specContent.substring(dashIdx + 1)}" is not a valid number.`
+              title: 'Parse Error — Invalid Length Value',
+              desc: `"${specContent.substring(dashIdx + 1)}" cannot be converted to a number. The length after the "-" must be a positive number in millimeters.`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Replace with a valid numeric length.\nFormat: ${materialRaw} φOD×WT-LENGTH QTY\nExample: ${materialRaw} φ60.5×3.2-1000 ${qty}`
             }
-          ]
+          ],
+          'parse', 'B1'
         );
 
         const parts2 = specPartText.split('x');
         if (parts2.length !== 2) return fail(
-          `Round Pipe spec should be φOD×WT-LENGTH (e.g. φ60.5×3.2-1000).\nGot ${parts2.length} value(s) before dash instead of 2.`,
-          [`${materialRaw} φ${parts2[0]}×${parts2[1] ?? '?'}-${length} ${qty}`],
+          `Round Pipe spec needs exactly 2 values before the dash (OD×WT) but got ${parts2.length}.`,
+          [`${materialRaw} φ60.5×3.2-${Math.round(length)} ${qty}`],
           [
             {
-              title: 'Identify Shape',
-              desc: 'Detected round symbol (φ/Φ) with a dash separator.'
+              title: 'Diagnose Input',
+              desc: `Round symbol "φ/Φ" detected with dash. Spec before dash: "${specPartText}", Length: ${Math.round(length)} mm. Parsed ${parts2.length} part(s).`
             },
             {
-              title: 'Parse Dimensions',
-              desc: `Failed: Expected 2 values before dash (Outer Diameter × Wall Thickness) but got ${parts2.length}.`
+              title: 'Format Error — Dimension Count Wrong',
+              desc: `Round Pipe requires exactly 2 values before the dash: OD×WT.\nGot ${parts2.length} value(s): [${parts2.join(', ')}].\nNote: for OD×ID specification, prefix the inner diameter with φ (e.g. φ220×φ140-1000).`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Format: MATERIAL φOD×WT-L QTY\nExample: ${materialRaw} φ60.5×3.2-1000 ${qty}\n• OD = outer diameter (mm)\n• WT = wall thickness (mm)\n• L = pipe length (mm)\nOr for ID mode: ${materialRaw} φOD×φID-L QTY`
             }
-          ]
+          ],
+          'format', 'A4'
         );
         const od = parseFloat(parts2[0]);
-        if (isNaN(od)) return fail(`Could not parse outer diameter (OD) from "${parts2[0]}".`);
+        if (isNaN(od)) return fail(
+          `Cannot read Outer Diameter (OD) from "${parts2[0]}".`,
+          [`${materialRaw} φ60.5×3.2-${Math.round(length)} ${qty}`],
+          [
+            { title: 'Diagnose Input', desc: `Round Pipe spec: "φ${specPartText}-${length}", OD string: "${parts2[0]}".` },
+            { title: 'Parse Error — OD Invalid', desc: `"${parts2[0]}" is not a valid number. The first value before "×" must be the outer diameter in mm.` },
+            { title: 'How to Fix', desc: `Format: φOD×WT-L — OD must be a positive number.\nExample: ${materialRaw} φ60.5×3.2-1000 ${qty}` }
+          ],
+          'parse', 'B3'
+        );
 
         const hasSecondPhi = cleanSpec.substring(1).includes('φ') || cleanSpec.substring(1).includes('Φ');
         let wt = 0;
@@ -615,38 +810,74 @@ export function calculateSolution(
 
         if (hasSecondPhi) {
           id = parseFloat(parts2[1]);
-          if (isNaN(id)) return fail(`Could not parse inner diameter (ID) from "${parts2[1]}".`);
+          if (isNaN(id)) return fail(
+            `Cannot read Inner Diameter (ID) from "${parts2[1]}".`,
+            [`${materialRaw} φ${fmt(od)}×φ${fmt(od * 0.6)}-${Math.round(length)} ${qty}`],
+            [
+              { title: 'Diagnose Input', desc: `Round Pipe OD×ID mode: OD = ${fmt(od)} mm, ID string: "${parts2[1]}".` },
+              { title: 'Parse Error — ID Invalid', desc: `"${parts2[1]}" is not a valid number. In OD×ID mode (two φ symbols), the second value must be the inner diameter in mm.` },
+              { title: 'How to Fix', desc: `Format: φOD×φID-L\nExample: ${materialRaw} φ${fmt(od)}×φ${fmt(od * 0.6)}-1000 ${qty}` }
+            ],
+            'parse', 'B5'
+          );
           if (id <= 0 || id >= od) return fail(
-            `Inner Diameter (${fmt(id)}) must be > 0 and < OD (${fmt(od)}).`,
-            undefined,
+            `Inner Diameter (${fmt(id)} mm) violates constraint: must be > 0 and < OD (${fmt(od)} mm).`,
+            [`${materialRaw} φ${fmt(od)}×φ${fmt(parseFloat((od * 0.6).toFixed(1)))}-${Math.round(length)} ${qty}`],
             [
               {
-                title: 'Extract Parameters',
-                desc: `OD = ${fmt(od)} mm, ID = ${fmt(id)} mm.`
+                title: 'Diagnose Input',
+                desc: `Round Pipe OD×ID mode: OD = ${fmt(od)} mm, ID = ${fmt(id)} mm, Length = ${Math.round(length)} mm.`
               },
               {
-                title: 'Check Constraints',
-                desc: `Failed: Inner diameter ${fmt(id)} mm must be greater than 0 and less than outer diameter ${fmt(od)} mm.`
+                title: 'Constraint Violation — Inner Diameter Out of Range',
+                desc: `Constraint: 0 < ID < OD.\nWith OD = ${fmt(od)} mm, ID must satisfy: 0 < ID < ${fmt(od)} mm.\nYour ID = ${fmt(id)} mm ${
+                  id <= 0
+                    ? 'is zero or negative — a diameter cannot be zero or less'
+                    : `equals or exceeds OD (${fmt(od)} mm) — the inner hole cannot be as large as or larger than the outer diameter`
+                }.`
+              },
+              {
+                title: 'How to Fix',
+                desc: `Choose an ID strictly between 0 and ${fmt(od)} mm.\nFor a φ${fmt(od)} pipe, typical ID: ${fmt(parseFloat((od * 0.5).toFixed(1)))} – ${fmt(parseFloat((od * 0.85).toFixed(1)))} mm.`
               }
-            ]
+            ],
+            'constraint', 'C3'
           );
           wt = (od - id) / 2;
         } else {
           wt = parseFloat(parts2[1]);
-          if (isNaN(wt)) return fail(`Could not parse wall thickness (WT) from "${parts2[1]}".`);
+          if (isNaN(wt)) return fail(
+            `Cannot read Wall Thickness (WT) from "${parts2[1]}".`,
+            [`${materialRaw} φ${fmt(od)}×${fmt(parseFloat((od * 0.053).toFixed(1)))}-${Math.round(length)} ${qty}`],
+            [
+              { title: 'Diagnose Input', desc: `Round Pipe OD×WT mode: OD = ${fmt(od)} mm, WT string: "${parts2[1]}".` },
+              { title: 'Parse Error — WT Invalid', desc: `"${parts2[1]}" is not a valid number. The second value after "×" must be the wall thickness in mm.` },
+              { title: 'How to Fix', desc: `Format: φOD×WT-L — WT must be a positive number less than OD/2.\nExample: ${materialRaw} φ${fmt(od)}×3.2-1000 ${qty}` }
+            ],
+            'parse', 'B4'
+          );
           if (wt <= 0 || wt >= od / 2) return fail(
-            `Wall thickness (${fmt(wt)}) must be > 0 and < OD/2 (${fmt(od / 2)}).`,
-            undefined,
+            `Wall Thickness (${fmt(wt)} mm) violates constraint: must be > 0 and < OD/2 (${fmt(od / 2)} mm).`,
+            [`${materialRaw} φ${fmt(od)}×${fmt(parseFloat((od * 0.053).toFixed(1)))}-${Math.round(length)} ${qty}`],
             [
               {
-                title: 'Extract Parameters',
-                desc: `OD = ${fmt(od)} mm, WT = ${fmt(wt)} mm.`
+                title: 'Diagnose Input',
+                desc: `Round Pipe: OD = ${fmt(od)} mm, WT = ${fmt(wt)} mm, Length = ${Math.round(length)} mm.`
               },
               {
-                title: 'Check Constraints',
-                desc: `Failed: Wall thickness ${fmt(wt)} mm must be greater than 0 and less than half of OD (${fmt(od / 2)} mm).`
+                title: 'Constraint Violation — Wall Thickness Out of Range',
+                desc: `Constraint: 0 < WT < OD/2.\nWith OD = ${fmt(od)} mm, WT must satisfy: 0 < WT < ${fmt(od / 2)} mm.\nYour WT = ${fmt(wt)} mm ${
+                  wt <= 0
+                    ? 'is zero or negative — there is no material to form the wall'
+                    : `equals or exceeds OD/2 (${fmt(od / 2)} mm) — the wall fills the entire bore, leaving no hollow`
+                }.`
+              },
+              {
+                title: 'How to Fix',
+                desc: `Choose a wall thickness between 0 and ${fmt(od / 2)} mm.\nFor a φ${fmt(od)} pipe, typical WT: ${fmt(parseFloat((od * 0.04).toFixed(1)))} – ${fmt(parseFloat((od * 0.1).toFixed(1)))} mm.`
               }
-            ]
+            ],
+            'constraint', 'C2'
           );
         }
 
@@ -752,23 +983,46 @@ export function calculateSolution(
         const norm = normalize(specContent);
         const parts2 = norm.split('x');
         if (parts2.length !== 2) return fail(
-          `Round Bar spec should be φDIAM×LENGTH (e.g. φ12×500).\nGot ${parts2.length} value(s) instead of 2.`,
-          [`${materialRaw} φ${parts2[0]}×${parts2[1] ?? '?'} ${qty}`],
+          `Round Bar spec needs exactly 2 values (DIAM×LENGTH) but got ${parts2.length}.`,
+          [`${materialRaw} φ12×500 ${qty}`],
           [
             {
-              title: 'Identify Shape',
-              desc: 'Detected round symbol (φ/Φ) without a dash separator.'
+              title: 'Diagnose Input',
+              desc: `Round symbol "φ/Φ" detected without dash (no length separator → Round Bar). Spec: "φ${specContent}". Parsed ${parts2.length} dimension(s).`
             },
             {
-              title: 'Parse Dimensions',
-              desc: `Failed: Expected 2 values (Diameter × Length) but got ${parts2.length} value(s).`
+              title: 'Format Error — Dimension Count Wrong',
+              desc: `Round Bar requires exactly 2 values: DIAMETER×LENGTH.\nGot ${parts2.length} value(s): [${parts2.join(', ')}].\nIf you meant a pipe, add a dash before the length: φOD×WT-LENGTH.`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Format: MATERIAL φDIAM×LENGTH QTY\nExample: ${materialRaw} φ12×500 ${qty}\n• DIAM = bar diameter (mm)\n• LENGTH = bar length (mm)\nFor a pipe: ${materialRaw} φ60.5×3.2-1000 ${qty}`
             }
-          ]
+          ],
+          'format', 'A3'
         );
         const d = parseFloat(parts2[0]);
         const length = parseFloat(parts2[1]);
-        if (isNaN(d)) return fail(`Could not parse diameter from "${parts2[0]}".`);
-        if (isNaN(length)) return fail(`Could not parse length from "${parts2[1]}".`);
+        if (isNaN(d)) return fail(
+          `Cannot read Diameter from "${parts2[0]}".`,
+          [`${materialRaw} φ12×${Math.round(parseFloat(parts2[1]) || 500)} ${qty}`],
+          [
+            { title: 'Diagnose Input', desc: `Round Bar spec: "φ${specContent}", diameter string: "${parts2[0]}".` },
+            { title: 'Parse Error — Diameter Invalid', desc: `"${parts2[0]}" is not a valid number. The first value must be the bar diameter in mm.` },
+            { title: 'How to Fix', desc: `Use a numeric value for DIAM.\nExample: ${materialRaw} φ12×500 ${qty}` }
+          ],
+          'parse', 'B7'
+        );
+        if (isNaN(length)) return fail(
+          `Cannot read Length from "${parts2[1]}".`,
+          [`${materialRaw} φ${Math.round(parseFloat(parts2[0]) || 12)}×500 ${qty}`],
+          [
+            { title: 'Diagnose Input', desc: `Round Bar: Diameter = ${parts2[0]}, length string: "${parts2[1]}".` },
+            { title: 'Parse Error — Length Invalid', desc: `"${parts2[1]}" is not a valid number. The second value must be the bar length in mm.` },
+            { title: 'How to Fix', desc: `Use a numeric value for LENGTH.\nExample: ${materialRaw} φ12×500 ${qty}` }
+          ],
+          'parse', 'B1'
+        );
         const r = d / 2;
         const volume = Math.PI * r * r * length;
         const result = (volume * density * 0.000001) * qty;
@@ -829,40 +1083,68 @@ export function calculateSolution(
         const specPartRaw = cleanSpec.substring(0, dashIdx);
         const length = parseFloat(cleanSpec.substring(dashIdx + 1));
         if (isNaN(length)) return fail(
-          'Could not parse length after the dash.',
-          undefined,
+          `Plate length "${cleanSpec.substring(dashIdx + 1)}" after the dash is not a valid number.`,
+          [`${materialRaw} ${specPartRaw}-600 ${qty}`],
           [
             {
-              title: 'Identify Plate Shape',
-              desc: `Dimensions spec before length: "${specPartRaw}"`
+              title: 'Diagnose Input',
+              desc: `Plate spec: "${specPartRaw}", length string: "${cleanSpec.substring(dashIdx + 1)}".`
             },
             {
-              title: 'Parse Length',
-              desc: `Failed: Length value "${cleanSpec.substring(dashIdx + 1)}" is not a valid number.`
+              title: 'Parse Error — Invalid Length Value',
+              desc: `"${cleanSpec.substring(dashIdx + 1)}" cannot be converted to a number. The length after the "-" must be a positive number in millimeters.`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Replace with a valid numeric length.\nFormat: MATERIAL THICKNESS×WIDTH-LENGTH QTY\nExample: ${materialRaw} ${specPartRaw}-600 ${qty}`
             }
-          ]
+          ],
+          'parse', 'B1'
         );
 
         const specNorm = normalize(specPartRaw);
         const parts2 = specNorm.split('x');
         if (parts2.length !== 2) return fail(
-          `Plate spec should be THICKNESS×WIDTH-LENGTH (e.g. 9×200-600).\nGot ${parts2.length} value(s) before dash instead of 2.`,
-          [`${materialRaw} ${parts2[0]}×${parts2[1] ?? '?'}-${length} ${qty}`],
+          `Plate spec needs exactly 2 values before the dash (T×W) but got ${parts2.length}.`,
+          [`${materialRaw} 9×200-${Math.round(length)} ${qty}`],
           [
             {
-              title: 'Identify Shape',
-              desc: 'Detected numerical specification with dash separator (Plate / Flat stock).'
+              title: 'Diagnose Input',
+              desc: `Numeric spec detected with dash. Spec before dash: "${specPartRaw}", Length: ${Math.round(length)} mm. Parsed ${parts2.length} value(s).`
             },
             {
-              title: 'Parse Thickness and Width',
-              desc: `Failed: Expected 2 values before dash (Thickness × Width) but got ${parts2.length}.`
+              title: 'Format Error — Plate Dimension Count Wrong',
+              desc: `Plate (Flat Stock) requires exactly 2 values before the dash: THICKNESS×WIDTH.\nGot ${parts2.length} value(s): [${parts2.join(', ')}].\nFor a 3D block (no length separator), use A×B×C format without a dash.`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Format: MATERIAL T×W-L QTY\nExample: ${materialRaw} 9×200-600 ${qty}\n• T = thickness (mm)\n• W = width (mm)\n• L = length (mm)\nFor a block: ${materialRaw} 50×80×200 ${qty}`
             }
-          ]
+          ],
+          'format', 'A7'
         );
         const t = parseFloat(parts2[0]);
         const w = parseFloat(parts2[1]);
-        if (isNaN(t)) return fail(`Could not parse thickness from "${parts2[0]}".`);
-        if (isNaN(w)) return fail(`Could not parse width from "${parts2[1]}".`);
+        if (isNaN(t)) return fail(
+          `Cannot read Thickness (T) from "${parts2[0]}".`,
+          [`${materialRaw} 9×${Math.round(parseFloat(parts2[1]) || 200)}-${Math.round(length)} ${qty}`],
+          [
+            { title: 'Diagnose Input', desc: `Plate spec: "${specPartRaw}", thickness string: "${parts2[0]}".` },
+            { title: 'Parse Error — Thickness Invalid', desc: `"${parts2[0]}" is not a valid number. The first value before "×" must be the plate thickness in mm.` },
+            { title: 'How to Fix', desc: `Use a numeric value for T.\nExample: ${materialRaw} 9×200-600 ${qty}` }
+          ],
+          'parse', 'B8'
+        );
+        if (isNaN(w)) return fail(
+          `Cannot read Width (W) from "${parts2[1]}".`,
+          [`${materialRaw} ${Math.round(parseFloat(parts2[0]) || 9)}×200-${Math.round(length)} ${qty}`],
+          [
+            { title: 'Diagnose Input', desc: `Plate: Thickness = ${parts2[0]}, width string: "${parts2[1]}".` },
+            { title: 'Parse Error — Width Invalid', desc: `"${parts2[1]}" is not a valid number. The second value after "×" must be the plate width in mm.` },
+            { title: 'How to Fix', desc: `Use a numeric value for W.\nExample: ${materialRaw} 9×200-600 ${qty}` }
+          ],
+          'parse', 'B9'
+        );
         const volume = t * w * length;
         const result = (volume * density * 0.000001) * qty;
         return {
@@ -907,35 +1189,50 @@ export function calculateSolution(
         const norm = normalize(cleanSpec);
         const parts2 = norm.split('x');
         if (parts2.length !== 3) return fail(
-          `Block spec should be A×B×C with exactly 3 dimensions (e.g. 50×80×200).\nGot ${parts2.length} value(s) instead of 3.`,
-          [`${materialRaw} ${parts2.join('×')} ${qty}`],
+          `Block spec needs exactly 3 dimensions (A×B×C) but got ${parts2.length}.`,
+          [`${materialRaw} 50×80×200 ${qty}`],
           [
             {
-              title: 'Identify Shape',
-              desc: 'Detected numerical specification without dash separator (Block / 3D cuboid).'
+              title: 'Diagnose Input',
+              desc: `Numeric spec detected without dash (Block / cuboid). Spec: "${cleanSpec}". Parsed ${parts2.length} dimension(s).`
             },
             {
-              title: 'Parse Dimensions',
-              desc: `Failed: Expected exactly 3 dimensions (A × B × C) but got ${parts2.length}.`
+              title: 'Format Error — Block Dimension Count Wrong',
+              desc: `Block (cuboid) requires exactly 3 dimensions: A×B×C.\nGot ${parts2.length} value(s): [${parts2.join(', ')}].\nIf you meant a plate, add a dash before the length: T×W-L.`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Format: MATERIAL A×B×C QTY\nExample: ${materialRaw} 50×80×200 ${qty}\n• A, B, C = three side lengths (mm)\nFor a plate (flat stock): ${materialRaw} 9×200-600 ${qty}`
             }
-          ]
+          ],
+          'format', 'A8'
         );
         const a = parseFloat(parts2[0]);
         const b = parseFloat(parts2[1]);
         const c = parseFloat(parts2[2]);
+        const invalidDims = [
+          isNaN(a) ? `A ("${parts2[0]}")` : null,
+          isNaN(b) ? `B ("${parts2[1]}")` : null,
+          isNaN(c) ? `C ("${parts2[2]}")` : null,
+        ].filter(Boolean);
         if (isNaN(a) || isNaN(b) || isNaN(c)) return fail(
-          `Could not parse all 3 dimensions from "${cleanSpec}".`,
-          undefined,
+          `Cannot read dimension(s): ${invalidDims.join(', ')}.`,
+          [`${materialRaw} 50×80×200 ${qty}`],
           [
             {
-              title: 'Identify Dimensions',
-              desc: `Value strings: "${parts2[0]}", "${parts2[1]}", "${parts2[2]}"`
+              title: 'Diagnose Input',
+              desc: `Block spec: "${cleanSpec}", parsed values: A="${parts2[0]}", B="${parts2[1]}", C="${parts2[2]}".`
             },
             {
-              title: 'Parse Dimensions',
-              desc: 'Failed: One or more dimension values are not valid numbers.'
+              title: 'Parse Error — One or More Dimensions Invalid',
+              desc: `The following dimension(s) are not valid numbers: ${invalidDims.join(', ')}.\nAll three values (A, B, C) must be positive numbers in millimeters.`
+            },
+            {
+              title: 'How to Fix',
+              desc: `Replace invalid values with positive numbers.\nExample: ${materialRaw} 50×80×200 ${qty}`
             }
-          ]
+          ],
+          'parse', 'B10'
         );
         const volume = a * b * c;
         const result = (volume * density * 0.000001) * qty;
@@ -982,20 +1279,25 @@ export function calculateSolution(
     // ── No branch matched ─────────────────────────────────────────
     const matSuggestions = suggestMaterial(materialRaw);
     return fail(
-      `Could not identify shape from spec "${cleanSpec}".\nSpec must start with φ, □, or a number.`,
+      `Specification "${cleanSpec}" does not match any recognized shape format.`,
       matSuggestions.length > 0
         ? matSuggestions.map(m => `${m} ${specRaw} ${qty}`)
-        : undefined,
+        : [`${materialRaw} φ12×500 ${qty}`, `${materialRaw} □25×300 ${qty}`, `${materialRaw} 9×200-600 ${qty}`],
       [
         {
-          title: 'Extract Material',
-          desc: `Parsed material code: "${materialRaw}" (Density = ${fmt(density)} g/cm³).`
+          title: 'Diagnose Input',
+          desc: `Material: "${materialRaw}" (${fmt(density)} g/cm³, ${densitySource === 'lookup' ? 'database match' : 'fallback'}). Spec: "${cleanSpec}". First character: "${cleanSpec.charAt(0)}".`
         },
         {
-          title: 'Identify Shape',
-          desc: `Failed: Specification "${cleanSpec}" does not start with a recognized shape symbol (φ for round, □ for square) or a number (for plates/blocks).`
+          title: 'Format Error — Shape Not Recognized',
+          desc: `The specification "${cleanSpec}" does not start with a recognized shape prefix.\nExpected one of:\n• φ or Φ — Round Bar (e.g. φ12×500) or Round Pipe (e.g. φ60.5×3.2-1000)\n• □ — Square Bar (e.g. □25×300) or Square Pipe (e.g. □60×4.5-1000)\n• A digit (0–9) — Plate (e.g. 9×200-600) or Block (e.g. 50×80×200)`
+        },
+        {
+          title: 'How to Fix',
+          desc: `Ensure the spec begins with φ, □, or a number.\nExamples:\n• ${materialRaw} φ12×500 ${qty} (Round Bar)\n• ${materialRaw} □25×300 ${qty} (Square Bar)\n• ${materialRaw} 9×200-600 ${qty} (Plate)\n• ${materialRaw} 50×80×200 ${qty} (Block)`
         }
-      ]
+      ],
+      'format', 'A10'
     );
 
   } catch (err) {
@@ -1025,8 +1327,15 @@ export function calculateExcelBatchWeight(
   try {
     if (!materialRaw || !specRaw) return 0;
 
+    // Strict mode: Reject 'x' (or its variants) in favor of batsu '×'
+    if (/[xXｘＸ]/.test(specRaw)) return 0;
+
     const normMat = normalize(materialRaw).toUpperCase();
     const cleanSpec = specRaw.trim();
+
+    // Dirty input: reject specs with unexpected characters (same rule as calculateSolution)
+    if (!/^[φΦ□\d×.\-\s]+$/.test(cleanSpec)) return 0;
+
     const density = materialLookupData[normMat] || 7.85;
 
     const isProfileMat = [
@@ -1035,6 +1344,10 @@ export function calculateExcelBatchWeight(
       '溝形鋼', '溝型鋼', '山形鋼', '山型鋼', 
       'STKR400'
     ].some(p => materialRaw.includes(p));
+
+    if (materialLookupData[normMat] === undefined && !isProfileMat) {
+      return 0;
+    }
 
     if (isProfileMat) {
       const dashIdx = cleanSpec.lastIndexOf('-');

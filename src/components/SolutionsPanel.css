@@ -405,15 +405,34 @@
 
 .sp-suggest-chip {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-secondary);
   background: var(--bg-surface-hover);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 4px 8px;
-  cursor: default;
+  cursor: pointer;
   line-height: 1.4;
   word-break: break-all;
+  text-align: left;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.sp-suggest-chip:hover {
+  background: rgba(56, 189, 248, 0.06);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: var(--accent);
+}
+
+.sp-chip-copy {
+  font-size: 10px;
+  opacity: 0.5;
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 /* Dark theme adjustments */
@@ -434,3 +453,108 @@
 .dark-theme .sp-math-block {
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* ── Error Category Badges ───────────────────────────────── */
+.sp-cat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.sp-cat-badge.cat-format {
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+  border-color: rgba(249, 115, 22, 0.25);
+}
+
+.sp-cat-badge.cat-parse {
+  background: rgba(234, 179, 8, 0.12);
+  color: #ca8a04;
+  border-color: rgba(234, 179, 8, 0.25);
+}
+
+.sp-cat-badge.cat-constraint {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.25);
+}
+
+.sp-cat-badge.cat-symbol {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border-color: rgba(168, 85, 247, 0.25);
+}
+
+.sp-cat-badge.cat-lookup {
+  background: rgba(107, 114, 128, 0.12);
+  color: var(--text-muted);
+  border-color: rgba(107, 114, 128, 0.2);
+}
+
+/* ── Error Step Highlight (index 1 = error identification) ────── */
+.sp-detailed-step--error-highlight {
+  background: rgba(220, 38, 38, 0.04);
+  border-radius: 6px;
+  padding: 4px 6px 4px 0;
+  margin: 2px 0;
+}
+
+.sp-step-num--error {
+  background: rgba(220, 38, 38, 0.15) !important;
+  border-color: rgba(220, 38, 38, 0.3) !important;
+  color: #dc2626 !important;
+}
+
+/* ── Fix Step Highlight (last step = How to Fix) ─────────────── */
+.sp-detailed-step--fix {
+  background: rgba(5, 150, 105, 0.05);
+  border: 1px solid rgba(5, 150, 105, 0.15);
+  border-radius: 6px;
+  padding: 6px 8px 6px 4px;
+  margin-top: 4px;
+}
+
+.sp-step-num--fix {
+  background: rgba(5, 150, 105, 0.15) !important;
+  border-color: rgba(5, 150, 105, 0.3) !important;
+  color: var(--success) !important;
+}
+
+.dark-theme .sp-detailed-step--fix {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.18);
+}
+
+.dark-theme .sp-detailed-step--error-highlight {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.dark-theme .sp-step-num--error {
+  background: rgba(239, 68, 68, 0.18) !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+}
+
+.dark-theme .sp-step-num--fix {
+  background: rgba(16, 185, 129, 0.18) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+}
+
+.dark-theme .sp-suggest-chip:hover {
+  background: rgba(56, 189, 248, 0.08);
+}
+
+/* ── Dark theme adjustments ─────────────────────────────── */
+.dark-theme .sp-cat-badge.cat-format    { background: rgba(249, 115, 22, 0.15);  border-color: rgba(249, 115, 22, 0.3); }
+.dark-theme .sp-cat-badge.cat-parse     { background: rgba(234, 179, 8, 0.15);   border-color: rgba(234, 179, 8, 0.3);  color: #eab308; }
+.dark-theme .sp-cat-badge.cat-constraint{ background: rgba(239, 68, 68, 0.15);   border-color: rgba(239, 68, 68, 0.3);  color: #ef4444; }
+.dark-theme .sp-cat-badge.cat-symbol    { background: rgba(192, 132, 252, 0.15); border-color: rgba(192, 132, 252, 0.3);color: #c084fc; }
+.dark-theme .sp-cat-badge.cat-lookup    { background: rgba(107, 114, 128, 0.18); border-color: rgba(107, 114, 128, 0.25); }

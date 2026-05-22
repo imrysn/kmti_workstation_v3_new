@@ -7,6 +7,26 @@ interface Props {
   activeIndex: number | null
 }
 
+// ── Error category badge map ───────────────────────────────────
+const CATEGORY_META: Record<string, { label: string; icon: string; cls: string }> = {
+  format:     { label: 'Format Error',          icon: '🟠', cls: 'cat-format'     },
+  parse:      { label: 'Parse Error',            icon: '🟡', cls: 'cat-parse'      },
+  constraint: { label: 'Constraint Violation',   icon: '🔴', cls: 'cat-constraint' },
+  symbol:     { label: 'Symbol Error',           icon: '🟣', cls: 'cat-symbol'     },
+  lookup:     { label: 'Lookup Miss',            icon: '⚫', cls: 'cat-lookup'     },
+}
+
+function ErrorCategoryBadge({ category }: { category?: string }) {
+  if (!category) return null
+  const meta = CATEGORY_META[category]
+  if (!meta) return null
+  return (
+    <span className={`sp-cat-badge ${meta.cls}`}>
+      {meta.icon} {meta.label}
+    </span>
+  )
+}
+
 // ── Shape icon map ─────────────────────────────────────────────
 function ShapeTag({ shape }: { shape: string }) {
   const map: Record<string, string> = {
@@ -58,6 +78,7 @@ function SolutionCard({ sol, isActive }: { sol: SolutionResult; isActive: boolea
       {/* Card header (interactive toggle) */}
       <div className="sp-card-header" onClick={() => setIsManuallyToggled(!isExpanded)}>
         <span className="sp-line-num">#{sol.lineIndex + 1}</span>
+        {sol.isError && <ErrorCategoryBadge category={sol.errorCategory} />}
         <span className="sp-raw-line">{sol.rawLine.trim()}</span>
         {!sol.isError && (
           <span className="sp-result-badge">
@@ -105,35 +126,46 @@ function SolutionCard({ sol, isActive }: { sol: SolutionResult; isActive: boolea
       {/* Expandable Step-by-Step Solver */}
       {isExpanded && (
         <div className="sp-card-body">
+
           {/* Detailed Solver Steps */}
           {sol.detailedSteps.length > 0 && (
             <div className="sp-detailed-steps">
-              {sol.detailedSteps.map((step, idx) => (
-                <div key={idx} className="sp-detailed-step">
-                  <div className="sp-step-num-col">
-                    <span className="sp-detailed-step-num">{idx + 1}</span>
-                    {idx < sol.detailedSteps.length - 1 && <div className="sp-step-line" />}
-                  </div>
-                  <div className="sp-step-content-col">
-                    <span className="sp-detailed-step-title">{step.title}</span>
-                    <span className="sp-detailed-step-desc">{step.desc}</span>
-                    {step.formula && (
-                      <div className="sp-math-block">
-                        <div className="sp-math-row-item">
-                          <span className="sp-math-label">Formula:</span>
-                          <span className="sp-math-formula">{step.formula}</span>
-                        </div>
-                        {step.equation && (
+              {sol.detailedSteps.map((step, idx) => {
+                const isFixStep = sol.isError && idx === sol.detailedSteps.length - 1 && step.title.startsWith('How to Fix')
+                const isErrorStep = sol.isError && idx === 1
+                return (
+                  <div key={idx} className={`sp-detailed-step ${
+                    isFixStep ? 'sp-detailed-step--fix' :
+                    isErrorStep ? 'sp-detailed-step--error-highlight' : ''
+                  }`}>
+                    <div className="sp-step-num-col">
+                      <span className={`sp-detailed-step-num ${
+                        isFixStep ? 'sp-step-num--fix' :
+                        isErrorStep ? 'sp-step-num--error' : ''
+                      }`}>{idx + 1}</span>
+                      {idx < sol.detailedSteps.length - 1 && <div className="sp-step-line" />}
+                    </div>
+                    <div className="sp-step-content-col">
+                      <span className="sp-detailed-step-title">{step.title}</span>
+                      <span className="sp-detailed-step-desc" style={{ whiteSpace: 'pre-line' }}>{step.desc}</span>
+                      {step.formula && (
+                        <div className="sp-math-block">
                           <div className="sp-math-row-item">
-                            <span className="sp-math-label">Substitute:</span>
-                            <span className="sp-math-equation">{step.equation}</span>
+                            <span className="sp-math-label">Formula:</span>
+                            <span className="sp-math-formula">{step.formula}</span>
                           </div>
-                        )}
-                      </div>
-                    )}
+                          {step.equation && (
+                            <div className="sp-math-row-item">
+                              <span className="sp-math-label">Substitute:</span>
+                              <span className="sp-math-equation">{step.equation}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
@@ -149,12 +181,27 @@ function SolutionCard({ sol, isActive }: { sol: SolutionResult; isActive: boolea
             </div>
           )}
 
-          {/* Suggestions */}
+          {/* Suggestions / corrected lines */}
           {sol.isError && sol.suggestions && sol.suggestions.length > 0 && (
             <div className="sp-suggestions">
-              <span className="sp-suggest-label">Did you mean?</span>
+              <span className="sp-suggest-label">
+                {sol.errorCategory === 'symbol' ? 'Corrected line:' :
+                 sol.errorCategory === 'lookup' ? 'Check similar:' :
+                 'Try instead:'}
+              </span>
               {sol.suggestions.map((s, i) => (
-                <span key={i} className="sp-suggest-chip">{s}</span>
+                <button
+                  key={i}
+                  className="sp-suggest-chip"
+                  title="Click to copy"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigator.clipboard.writeText(s).catch(() => {})
+                  }}
+                >
+                  {s}
+                  <span className="sp-chip-copy">📋</span>
+                </button>
               ))}
             </div>
           )}
