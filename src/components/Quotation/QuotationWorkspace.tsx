@@ -920,6 +920,8 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             signatures={signatures}
             manualOverrides={manualOverrides}
             onManualOverrideChange={updateManualOverrides}
+            onQuotationDetailsChange={isPreview ? undefined : syncQuotationDetails}
+            onBillingDetailsChange={isPreview ? undefined : syncBillingDetails}
             autoStartTutorial={isTutorialOpen}
             onCompleteTutorial={handleTutorialClose}
             layoutVariant={layoutVariant}

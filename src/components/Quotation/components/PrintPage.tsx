@@ -26,6 +26,8 @@ interface PrintPageProps {
   lastAssemblyId?: number
   onTaskOverride?: (taskId: number, updates: Partial<TaskOverrides>) => void
   allTasks: Task[]
+  onQuotationDetailsChange?: (updates: Partial<QuotationDetails>) => void
+  onBillingDetailsChange?: (updates: Partial<BillingDetails>) => void
 }
 
 export const PrintPage = memo(({
@@ -37,7 +39,9 @@ export const PrintPage = memo(({
   layoutVariant = 'special',
   lastAssemblyId,
   onTaskOverride,
-  allTasks
+  allTasks,
+  onQuotationDetailsChange,
+  onBillingDetailsChange
 }: PrintPageProps) => {
 
   const fmt = (n: number) => '¥' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
@@ -468,7 +472,15 @@ export const PrintPage = memo(({
           <div className="qh-meta-block">
             <div className="qh-meta-row">
               <span className="qh-meta-label">Quotation NO.:</span>
-              <span className="qh-meta-value">{quotationDetails.quotationNo || ''}</span>
+              <span className="qh-meta-value">
+                <input
+                  type="text"
+                  className="ppm-unit-input"
+                  value={quotationDetails.quotationNo || ''}
+                  onChange={e => onQuotationDetailsChange?.({ quotationNo: e.target.value })}
+                  readOnly={!onQuotationDetailsChange}
+                />
+              </span>
             </div>
             <div className="qh-meta-row">
               <span className="qh-meta-label">REFERENCE NO.:</span>
@@ -476,7 +488,18 @@ export const PrintPage = memo(({
             </div>
             <div className="qh-meta-row">
               <span className="qh-meta-label">DATE:</span>
-              <span className="qh-meta-value">{(quotationDetails.date || '').replace(/-/g, '/')}</span>
+              <span className="qh-meta-value">
+                <input
+                  type="text"
+                  className="ppm-unit-input"
+                  value={(quotationDetails.date || '').replace(/-/g, '/')}
+                  onChange={e => {
+                    const normalized = e.target.value.replace(/\//g, '-')
+                    onQuotationDetailsChange?.({ date: normalized })
+                  }}
+                  readOnly={!onQuotationDetailsChange}
+                />
+              </span>
             </div>
           </div>
         )}
@@ -485,19 +508,54 @@ export const PrintPage = memo(({
           <div className="quotation-details-visual">
             <div className="detail-row-visual">
               <span className="detail-label-visual">DATE:</span>
-              <span className="detail-value-visual">{(quotationDetails.date || '').replace(/-/g, '/')}</span>
+              <span className="detail-value-visual">
+                <input
+                  type="text"
+                  className="ppm-unit-input"
+                  value={(quotationDetails.date || '').replace(/-/g, '/')}
+                  onChange={e => {
+                    const normalized = e.target.value.replace(/\//g, '-')
+                    onQuotationDetailsChange?.({ date: normalized })
+                  }}
+                  readOnly={!onQuotationDetailsChange}
+                />
+              </span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Invoice No.:</span>
-              <span className="detail-value-visual">{billingDetails.invoiceNo || ''}</span>
+              <span className="detail-value-visual">
+                <input
+                  type="text"
+                  className="ppm-unit-input"
+                  value={billingDetails.invoiceNo || ''}
+                  onChange={e => onBillingDetailsChange?.({ invoiceNo: e.target.value })}
+                  readOnly={!onBillingDetailsChange}
+                />
+              </span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Quotation No.:</span>
-              <span className="detail-value-visual">{quotationDetails.quotationNo || ''}</span>
+              <span className="detail-value-visual">
+                <input
+                  type="text"
+                  className="ppm-unit-input"
+                  value={quotationDetails.quotationNo || ''}
+                  onChange={e => onQuotationDetailsChange?.({ quotationNo: e.target.value })}
+                  readOnly={!onQuotationDetailsChange}
+                />
+              </span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Job Order No.:</span>
-              <span className="detail-value-visual">{billingDetails.jobOrderNo || ''}</span>
+              <span className="detail-value-visual">
+                <input
+                  type="text"
+                  className="ppm-unit-input"
+                  value={billingDetails.jobOrderNo || ''}
+                  onChange={e => onBillingDetailsChange?.({ jobOrderNo: e.target.value })}
+                  readOnly={!onBillingDetailsChange}
+                />
+              </span>
             </div>
           </div>
         )}

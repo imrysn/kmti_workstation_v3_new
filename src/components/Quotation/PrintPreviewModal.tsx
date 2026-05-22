@@ -26,6 +26,8 @@ interface Props {
   signatures: Signatures
   manualOverrides: ManualOverrides
   onManualOverrideChange: (updater: (prev: ManualOverrides) => ManualOverrides) => void
+  onQuotationDetailsChange?: (updates: Partial<QuotationDetails>) => void
+  onBillingDetailsChange?: (updates: Partial<BillingDetails>) => void
   autoStartTutorial?: boolean
   onCompleteTutorial?: () => void
   layoutVariant?: 'special' | 'kemco'
@@ -105,6 +107,7 @@ const PrintPreviewModal = memo(({
   isOpen, onClose,
   companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
   manualOverrides, onManualOverrideChange,
+  onQuotationDetailsChange, onBillingDetailsChange,
   autoStartTutorial, onCompleteTutorial,
   layoutVariant = 'special',
   canViewBilling = false,
@@ -228,6 +231,24 @@ const PrintPreviewModal = memo(({
     .quotation-visual-exact * { color: #000 !important; }
     .quotation-visual-exact .text-red { color: red !important; }
     .quotation-visual-exact .nothing-follow { color: #888 !important; }
+    .quotation-visual-exact input {
+      border: none !important;
+      background: transparent !important;
+      outline: none !important;
+      box-shadow: none !important;
+      -webkit-appearance: none !important;
+      appearance: none !important;
+      color: inherit !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      line-height: inherit !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      font-weight: inherit !important;
+      text-align: inherit !important;
+    }
     .quotation-visual-exact .contact-header,
     .quotation-visual-exact .table-header th,
     .quotation-visual-exact .total-amount-row { background: #f0f0f0 !important; }
@@ -391,6 +412,7 @@ const PrintPreviewModal = memo(({
     printMode, companyInfo, clientInfo, quotationDetails, billingDetails,
     signatures, manualOverrides, baseRates, grandTotal, overheadTotal,
     layoutVariant, lastAssemblyId,
+    onQuotationDetailsChange, onBillingDetailsChange,
   }
 
   return (
@@ -410,19 +432,19 @@ const PrintPreviewModal = memo(({
           </div>
 
           <div className="ppm-header-actions">
-            <div className="ppm-mode-toggle">
-              <div className={`ppm-mode-slider ${printMode}`} />
-              <button
-                id="ppm-btn-quotation"
-                className={`ppm-mode-btn${printMode === 'quotation' ? ' active' : ''}`}
-                onClick={() => setPrintMode('quotation')}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
-                </svg>
-                Quotation Preview
-              </button>
-              {canViewBilling && (
+            {canViewBilling && (
+              <div className="ppm-mode-toggle">
+                <div className={`ppm-mode-slider ${printMode}`} />
+                <button
+                  id="ppm-btn-quotation"
+                  className={`ppm-mode-btn${printMode === 'quotation' ? ' active' : ''}`}
+                  onClick={() => setPrintMode('quotation')}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  Quotation Preview
+                </button>
                 <button
                   id="ppm-btn-billing"
                   className={`ppm-mode-btn${printMode === 'billing' ? ' active' : ''}`}
@@ -433,11 +455,10 @@ const PrintPreviewModal = memo(({
                   </svg>
                   Billing Preview
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
-
-            <div className="ppm-sep" />
+            {canViewBilling && <div className="ppm-sep" />}
 
             <div className="ppm-export-group">
               <button id="ppm-btn-print" className="ppm-action-btn primary" onClick={handlePrint} disabled={isProcessing}>

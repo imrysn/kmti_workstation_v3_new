@@ -513,3 +513,25 @@
   display: inline-block;
   vertical-align: bottom;
 }
+
+/* Inline inputs styling in metadata blocks */
+.ppm-container .preview-content .qh-meta-value .ppm-unit-input,
+.ppm-container .preview-content .detail-value-visual .ppm-unit-input {
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: center;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.ppm-container .preview-content .qh-meta-value .ppm-unit-input:focus,
+.ppm-container .preview-content .detail-value-visual .ppm-unit-input:focus {
+  background: #fff;
+  box-shadow: 0 0 0 1px #2196f3, 0 1px 3px rgba(0, 0, 0, 0.1);
+  color: #000;
+}
