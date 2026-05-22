@@ -1,0 +1,419 @@
+/* ── Formula Panel Shell ─────────────────────────────────────── */
+.formula-panel {
+    position: fixed;
+    left: 0;
+    top: var(--titlebar-height);
+    width: 400px;
+    height: calc(100vh - var(--titlebar-height));
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+}
+
+/* ── Panel Body ──────────────────────────────────────────────── */
+.formula-panel-body {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 32px 16px 20px 22px;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.fp-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 18px;
+    flex-shrink: 0;
+}
+
+.fp-header-icon {
+    color: var(--text-muted);
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.fp-header span {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
+/* ── Scroll Area ─────────────────────────────────────────────── */
+.formula-panel-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 4px 20px;
+    scrollbar-width: none;
+}
+
+.formula-panel-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* ── Section Label ─────────────────────────────────────────── */
+.fp-section {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    opacity: 0.8;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fp-section-unit {
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 11px;
+    opacity: 0.9;
+}
+
+/* ── Entries ────────────────────────────────────────────────── */
+.fp-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* ── Each Entry ─────────────────────────────────────────────── */
+.fp-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+/* ── Row: icon + name ──────────────────────────────────────── */
+.fp-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ── Icon ───────────────────────────────────────────────────── */
+.fp-icon-wrap {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+}
+
+.fp-icon-wrap svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* ── Name + sub-type ───────────────────────────────────────── */
+.fp-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.fp-short-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fp-sub-type {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.85;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ── Detail block ────────────────────────────────────────────── */
+.fp-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding-left: 38px;
+}
+
+/* ── Formula ────────────────────────────────────────────────── */
+.fp-formula-pill {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--accent);
+    opacity: 0.9;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.fp-vol-formula {
+    font-family: 'JetBrains Mono', var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.75;
+    margin-top: -2px;
+    margin-bottom: 2px;
+    line-height: 1.4;
+}
+
+.fp-description {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    opacity: 0.85;
+    margin: 4px 0 8px;
+}
+
+.fp-variants-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 8px 0;
+}
+
+.fp-variant-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fp-variant-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+.fp-variant-math {
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    margin: 4px 0;
+}
+
+.fp-math-display {
+    font-family: 'JetBrains Mono', var(--font-mono);
+    font-size: 14px;
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Vertical Fraction Layout */
+.math-fraction {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: middle;
+    padding: 0 4px;
+}
+
+.math-numerator {
+    border-bottom: 1px solid var(--text-muted);
+    padding-bottom: 2px;
+    text-align: center;
+    width: 100%;
+    font-family: 'JetBrains Mono', var(--font-mono);
+}
+
+.math-denominator {
+    padding-top: 2px;
+    text-align: center;
+    width: 100%;
+    font-family: 'JetBrains Mono', var(--font-mono);
+}
+
+/* Inline Fraction for variables */
+.math-fraction.math-inline {
+    font-size: 11px;
+    padding: 0 2px;
+}
+
+.math-fraction.math-inline .math-numerator {
+    padding-bottom: 1px;
+    border-bottom-width: 1px;
+}
+
+.math-fraction.math-inline .math-denominator {
+    padding-top: 1px;
+}
+
+/* Detailed Variables list matching screenshot styling */
+.fp-detailed-vars-section {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fp-vars-header {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    opacity: 0.9;
+}
+
+.fp-detailed-vars-list {
+    list-style-type: none;
+    padding-left: 8px;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fp-detailed-var-item {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.85;
+    line-height: 1.5;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.fp-detailed-var-item::before {
+    content: "o";
+    font-family: var(--font-mono);
+    font-size: 8px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    vertical-align: middle;
+    margin-right: 2px;
+}
+
+.fp-detailed-sym {
+    font-family: 'JetBrains Mono', var(--font-mono);
+    font-weight: 700;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+.fp-detailed-desc {
+    display: inline-flex;
+    align-items: baseline;
+}
+
+/* ── Example ────────────────────────────────────────────────── */
+.fp-example-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.fp-ex-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.fp-example {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.85;
+    line-height: 1.4;
+}
+
+/* ── Variable List ───────────────────────────────────────────── */
+.fp-vars {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.fp-var {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+}
+
+.fp-sym {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    opacity: 0.9;
+    min-width: 26px;
+    flex-shrink: 0;
+}
+
+.fp-var-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    opacity: 0.8;
+    line-height: 1.4;
+}
+
+/* ── Note ────────────────────────────────────────────────────── */
+.fp-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.75;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+.fp-note svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    opacity: 0.7;
+}
+
+/* ── Density Section ─────────────────────────────────────────── */
+.fp-density-table {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.fp-density-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    line-height: 1.5;
+}
+
+.fp-density-val {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.9;
+    min-width: 38px;
+    flex-shrink: 0;
+}
+
+.fp-density-mat {
+    color: var(--text-muted);
+    opacity: 0.75;
+    font-size: 12px;
+}
+
+.fp-density-fallback .fp-density-val,
+.fp-density-fallback .fp-density-mat {
+    opacity: 0.45;
+    font-style: italic;
+}

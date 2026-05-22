@@ -38,7 +38,7 @@ const DEFAULT_COMPANY: CompanyInfo = {
 
 const DEFAULT_CLIENT: ClientInfo = {
   company: 'NEXTENGINEERING Co, Ltd.',
-  contact: 'MR. Masahiro Hasegawa',
+  contact: 'MR. Masahiko Hasegawa',
   address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
   phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013',
 }

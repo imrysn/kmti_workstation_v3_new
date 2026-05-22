@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { calculateExcelBatchWeight } from '../utils/materialMath'
 import { useModal } from '../components/ModalContext'
+import FormulaPanel from '../components/FormulaPanel'
+import SolutionsPanel from '../components/SolutionsPanel'
 import './MaterialCalculator.css'
 
 export default function MaterialCalculator() {
@@ -76,16 +78,12 @@ export default function MaterialCalculator() {
 
       if (processed.length > 0 && input.trim()) {
         if (currentErrors === 0) {
-          // Success Path
           const text = processed.map(r => r.value).join('\n')
           navigator.clipboard.writeText(text).catch(() => { })
-
-          // Notify on success transition or significant change
           if (lastErrorCount.current > 0 || !lastErrorCount.current) {
             notify('Calculated & Copied!', 'success')
           }
         } else {
-          // Error Path - Only notify if count changed to avoid spam
           if (currentErrors !== lastErrorCount.current) {
             notify(`Found ${currentErrors} invalid line(s)`, 'warning')
           }
@@ -94,40 +92,37 @@ export default function MaterialCalculator() {
       } else if (!input.trim()) {
         lastErrorCount.current = 0
       }
-    }, 400) // Slightly longer debounce for real-time notifications
+    }, 400)
     return () => clearTimeout(timer)
   }, [input, performCalculation, notify])
 
   // ── Handlers ───────────────────────────────────────────────────
-  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const pastedText = e.clipboardData.getData('text')
-    if (!pastedText) return
-
-    const lines = pastedText.split('\n')
-    const formatted = lines.map(line => {
+  const formatPastedLines = (raw: string): string =>
+    raw.split('\n').map(line => {
       const trimmed = line.trim()
       if (!trimmed) return ''
       const parts = trimmed.split(/\s+/)
-      if (parts.length >= 3) {
-        return `${parts[0]}\t${parts[1]}\t${parts[2]}`
-      } else if (parts.length === 2) {
-        return `${parts[0]}\t${parts[1]}`
-      }
+      if (parts.length >= 3) return `${parts[0]}\t${parts[1]}\t${parts[2]}`
+      if (parts.length === 2) return `${parts[0]}\t${parts[1]}`
       return trimmed
     }).join('\n')
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     e.preventDefault()
+    const pastedText = e.clipboardData.getData('text')
+    if (!pastedText || !inputRef.current) return
 
-    // Use execCommand to preserve Undo/Redo stack
-    const success = document.execCommand('insertText', false, formatted);
+    const el = inputRef.current
+    const start = el.selectionStart ?? 0
+    const end = el.selectionEnd ?? 0
+    const formatted = formatPastedLines(pastedText)
+    const newVal = input.substring(0, start) + formatted + input.substring(end)
+    setInput(newVal)
 
-    // Fallback if execCommand fails
-    if (!success) {
-      const start = inputRef.current?.selectionStart || 0
-      const end = inputRef.current?.selectionEnd || 0
-      const newVal = input.substring(0, start) + formatted + input.substring(end)
-      setInput(newVal)
-    }
+    requestAnimationFrame(() => {
+      const cursor = start + formatted.length
+      el.setSelectionRange(cursor, cursor)
+    })
   }
 
   const syncScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -150,12 +145,12 @@ export default function MaterialCalculator() {
     if (results.length === 0) return
     const text = results.map(r => r.value).join('\n')
     navigator.clipboard.writeText(text)
-    notify('Results copied to clipboard!', 'success')
+      .then(() => notify('Results copied to clipboard!', 'success'))
+      .catch(() => notify('Copy failed. Check browser permissions.', 'warning'))
   }
 
-  const renderHighlightLines = () => {
-    const lines = input.split('\n')
-    return lines.map((_, i) => {
+  const highlightLines = useMemo(() =>
+    input.split('\n').map((_, i) => {
       const result = results[i]
       const isError = result?.isError && result?.value !== ''
       const isActive = activeLineIndex === i
@@ -165,111 +160,131 @@ export default function MaterialCalculator() {
           className={`highlight-line ${isError ? 'error' : ''} ${isActive ? 'active' : ''}`}
         />
       )
-    })
-  }
+    }),
+    [input, results, activeLineIndex]
+  )
+
+  // ── Solutions Panel data ───────────────────────────────────────
+  const inputLines = useMemo(() => input.split('\n'), [input])
+  const hasContent = input.trim().length > 0
 
   const errorCount = results.filter(r => r.isError && r.value !== '').length
 
   return (
-    <div className="page-container calc-page">
-      <div className="glass-panel">
-        <div className="scratchpad-grid">
-          <div className="box-label input-label">
-            <span>INPUT MATERIAL</span>
-          </div>
-          <div className="box-label output-label">
-            <span>TOTAL WEIGHT (KG)</span>
-          </div>
+    <>
+      {/* Fixed left: Formula reference */}
+      <FormulaPanel />
 
-          <div className="textarea-wrapper input-area">
-            <div className="highlight-backdrop" ref={inputBackdropRef}>
-              {renderHighlightLines()}
+      {/* Fixed right: Complete Solutions — only when there's content */}
+      {hasContent && (
+        <SolutionsPanel
+          lines={inputLines}
+          activeIndex={activeLineIndex}
+        />
+      )}
+
+      <div className="page-container calc-page">
+        <div className="calc-layout">
+          <div className="glass-panel">
+            <div className="scratchpad-grid">
+              <div className="box-label input-label">
+                <span>INPUT MATERIAL</span>
+              </div>
+              <div className="box-label output-label">
+                <span>TOTAL WEIGHT (KG)</span>
+              </div>
+
+              <div className="textarea-wrapper input-area">
+                <div className="highlight-backdrop" ref={inputBackdropRef}>
+                  {highlightLines}
+                </div>
+                <textarea
+                  ref={inputRef}
+                  className="scratchpad-textarea"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onPaste={handlePaste}
+                  onScroll={syncScroll}
+                  onKeyUp={updateActiveLine}
+                  onMouseUp={updateActiveLine}
+                  onClick={updateActiveLine}
+                  onBlur={() => setActiveLineIndex(null)}
+                  placeholder="Example:&#10;SS400  □12×500  1"
+                  spellCheck={false}
+                />
+              </div>
+
+              <div className="textarea-wrapper output-area">
+                <div className="highlight-backdrop" ref={outputBackdropRef}>
+                  {highlightLines}
+                </div>
+                <textarea
+                  ref={outputRef}
+                  className="scratchpad-textarea readonly"
+                  value={results.map(r => r.value).join('\n')}
+                  readOnly
+                  onScroll={syncScroll}
+                  placeholder="Results..."
+                  spellCheck={false}
+                />
+              </div>
             </div>
-            <textarea
-              ref={inputRef}
-              className="scratchpad-textarea"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onPaste={handlePaste}
-              onScroll={syncScroll}
-              onKeyUp={updateActiveLine}
-              onMouseUp={updateActiveLine}
-              onClick={updateActiveLine}
-              onBlur={() => setActiveLineIndex(null)}
-              placeholder="Example:&#10;SS400  □12×500  1"
-              spellCheck={false}
-            />
-          </div>
 
-          <div className="textarea-wrapper output-area">
-            <div className="highlight-backdrop" ref={outputBackdropRef}>
-              {renderHighlightLines()}
+            <div className="scratchpad-actions">
+              <div className="footer-info">
+                <div className="info-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="8" />
+                  </svg>
+                </div>
+                {errorCount > 0 ? (
+                  <span className="error-text">{errorCount} line(s) have invalid input.</span>
+                ) : (
+                  <span>Paste input data from Excel.</span>
+                )}
+              </div>
+
+              <div className="action-group">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const processed = performCalculation(input)
+                    const errors = processed.filter(r => r.isError && r.value !== '')
+                    if (errors.length > 0) {
+                      notify(`Found ${errors.length} invalid line(s). Please check red-highlighted rows.`, 'warning')
+                    } else {
+                      const text = processed.map(r => r.value).join('\n')
+                      navigator.clipboard.writeText(text)
+                        .then(() => notify('Calculated & Copied!', 'success'))
+                        .catch(() => notify('Copy failed. Check browser permissions.', 'warning'))
+                    }
+                  }}
+                  disabled={!input.trim()}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Calculate
+                </button>
+
+                <button className="btn btn-ghost" onClick={copyToClipboard} disabled={results.length === 0}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  Copy Results
+                </button>
+
+                <button className="btn btn-ghost btn-clear" onClick={() => { setInput(''); setResults([]) }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  Clear All
+                </button>
+              </div>
             </div>
-            <textarea
-              ref={outputRef}
-              className="scratchpad-textarea readonly"
-              value={results.map(r => r.value).join('\n')}
-              readOnly
-              onScroll={syncScroll}
-              placeholder="Results..."
-              spellCheck={false}
-            />
-          </div>
-        </div>
-
-        <div className="scratchpad-actions">
-          <div className="footer-info">
-            <div className="info-icon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="8" />
-              </svg>
-            </div>
-            {errorCount > 0 ? (
-              <span className="error-text">{errorCount} line(s) have invalid input.</span>
-            ) : (
-              <span>Paste input data from Excel.</span>
-            )}
-          </div>
-
-          <div className="action-group">
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                const processed = performCalculation(input);
-                const errors = processed.filter(r => r.isError && r.value !== '');
-
-                if (errors.length > 0) {
-                  notify(`Found ${errors.length} invalid line(s). Please check red-highlighted rows.`, 'warning');
-                } else {
-                  const text = processed.map(r => r.value).join('\n');
-                  navigator.clipboard.writeText(text);
-                  notify('Calculated & Copied!', 'success');
-                }
-              }}
-              disabled={!input.trim()}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-              Calculate
-            </button>
-
-            <button className="btn btn-ghost" onClick={copyToClipboard} disabled={results.length === 0}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
-              Copy Results
-            </button>
-
-            <button className="btn btn-ghost btn-clear" onClick={() => { setInput(''); setResults([]); }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" /><path d="M19 6v14a2 2 0 0 1-2-2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              Clear All
-            </button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

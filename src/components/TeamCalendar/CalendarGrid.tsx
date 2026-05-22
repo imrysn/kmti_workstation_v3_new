@@ -1,5 +1,5 @@
-import { ICalendarEvent } from '../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, getEngineerColor } from '../../utils/teamCalendarUtils'
+import { ICalendarEvent, ITodo } from '../../services/teamCalendarService'
+import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor } from '../../utils/teamCalendarUtils'
 import { GlobeIcon, LockIcon, BriefcaseIcon } from './Icons'
 
 interface CalendarGridProps {
@@ -11,7 +11,7 @@ interface CalendarGridProps {
   showClaims: boolean
   showAbsences: boolean
   showSpans: boolean
-  claimingTask: any
+  claimingTask: ITodo | null
   claimStartDate: string | null
   handleCellClick: (day: Date, dateStr: string) => void
   setSelectedEvent: (event: ICalendarEvent | null) => void
@@ -120,7 +120,9 @@ export default function CalendarGrid({
                   const isAbsence = event.event_type === 'Day_Off'
                   const isCompanyEvent = event.event_type === 'Company_Event'
                   const displayName = event.engineer_name || event.username
-                  const engColor = getEngineerColor(event.user_id)
+                  const taskType = inferTaskType(event.todo_title, event.todo_description)
+                  const taskColor = getTaskTypeColor(taskType)
+                  const teamAccent = getTeamColor(event.team)
                   
                   // Due date detection (for FMS assignments with explicit due_date)
                   const hasDueDate = event.due_date != null
@@ -161,13 +163,16 @@ export default function CalendarGrid({
                                   : 'claim-badge'
                       }`}
                       style={(!isAbsence && !isCompanyEvent) ? {
-                        background: engColor.bg,
-                        borderLeftColor: engColor.border,
-                        color: engColor.text
+                        background: taskColor.bg,
+                        borderLeftColor: teamAccent !== 'transparent' ? teamAccent : taskColor.border,
+                        color: taskColor.text,
+                        cursor: 'default'
                       } : undefined}
                       onClick={(e) => {
-                        e.stopPropagation()
-                        setSelectedEvent(event)
+                        if (event.event_type !== 'Task_Claim') {
+                          e.stopPropagation()
+                          setSelectedEvent(event)
+                        }
                       }}
                       title={
                         isCompanyEvent 

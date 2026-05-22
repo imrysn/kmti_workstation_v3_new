@@ -157,8 +157,9 @@ async def get_team_grid(
             "user_id": e.user_id,
             "username": uname,
             "engineer_name": e.engineer_name,
+            "team": None,  # backfilled after FMS user load
             "todo_id": e.todo_id,
-            "todo_title": (todo.title[6:] if todo.title.startswith(" ") else todo.title) if todo else None,
+            "todo_title": (todo.title[todo.title.index("] ") + 2:] if todo.title.startswith("[FMS") and "] " in todo.title else todo.title) if todo else None,
             "todo_description": todo.description if todo else None,
             "todo_priority": todo.priority if todo else None,
             "todo_status": todo.status if todo else None,
@@ -189,10 +190,15 @@ async def get_team_grid(
         fms_assign_res = await fms_db.execute(fms_assign_query)
         fms_assignments = fms_assign_res.scalars().all()
         
-        # Load FMS users for mapping names
+        # Load FMS users for name + team mapping (single shared query)
         fms_users_res = await fms_db.execute(select(FmsUser))
         fms_users_list = fms_users_res.scalars().all()
         fms_user_id_to_obj = {u.id: u for u in fms_users_list}
+        fms_username_to_team = {u.username.lower(): u.team for u in fms_users_list}
+
+        # Backfill team onto already-built local events
+        for ev in response_events:
+            ev["team"] = fms_username_to_team.get(ev["username"].lower())
         
         for fa in fms_assignments:
             # Determine assignment start and due dates
@@ -230,6 +236,7 @@ async def get_team_grid(
                     "user_id": l_user_id,
                     "username": fms_u.username,
                     "engineer_name": fms_u.fullName,
+                    "team": fms_u.team,
                     "todo_id": None,
                     "todo_title": fa.title,
                     "todo_description": fa.description,
@@ -267,7 +274,7 @@ async def get_backlog(
     backlog_items = [
         {
             "id": t.id,
-            "title": t.title[6:] if t.title.startswith("[FMS] ") else t.title,
+            "title": (t.title[t.title.index("] ") + 2:] if t.title.startswith("[FMS") and "] " in t.title else t.title),
             "description": t.description,
             "status": t.status,
             "priority": t.priority,
@@ -283,11 +290,19 @@ async def get_backlog(
         fms_assignments = fms_res.scalars().all()
         
         for fa in fms_assignments:
+            # Map FMS status to local status model
+            if fa.status == "completed":
+                fms_local_status = "Completed"
+            elif fa.status in ("in_progress", "in-progress", "active"):
+                fms_local_status = "Claimed"
+            else:
+                fms_local_status = "Pending"
+
             backlog_items.append({
                 "id": -(4000000 + fa.id),
                 "title": fa.title,
                 "description": fa.description,
-                "status": "Pending",
+                "status": fms_local_status,
                 "priority": "Normal",
                 "created_at": fa.created_at.isoformat() if fa.created_at else None,
             })
@@ -344,15 +359,15 @@ async def claim_task(
         if not fms_assign:
             raise HTTPException(status_code=404, detail="FMS Assignment not found.")
         
-        # Check if local shadow todo exists
-        title_val = fms_assign.title
+        # Use FMS-ID-encoded title as a unique key to prevent same-name collisions
+        shadow_title = f"[FMS:{fms_id}] {fms_assign.title}"
         from team_calendar.infrastructure.models import DbTodo
-        res = await db.execute(select(DbTodo).where(DbTodo.title == title_val))
+        res = await db.execute(select(DbTodo).where(DbTodo.title == shadow_title))
         db_todo = res.scalar_one_or_none()
         
         if not db_todo:
             db_todo = DbTodo(
-                title=title_val,
+                title=shadow_title,
                 description=fms_assign.description,
                 status="Pending",
                 priority="Normal",
@@ -659,15 +674,15 @@ async def assign_task(
         if not fms_assign:
             raise HTTPException(status_code=404, detail="FMS Assignment not found.")
         
-        # Check if local shadow todo exists
-        title_val = fms_assign.title
+        # Use FMS-ID-encoded title as a unique key to prevent same-name collisions
+        shadow_title = f"[FMS:{fms_id}] {fms_assign.title}"
         from team_calendar.infrastructure.models import DbTodo
-        res = await db.execute(select(DbTodo).where(DbTodo.title == title_val))
+        res = await db.execute(select(DbTodo).where(DbTodo.title == shadow_title))
         db_todo = res.scalar_one_or_none()
         
         if not db_todo:
             db_todo = DbTodo(
-                title=title_val,
+                title=shadow_title,
                 description=fms_assign.description,
                 status="Pending",
                 priority="Normal",

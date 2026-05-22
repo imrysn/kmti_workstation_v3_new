@@ -5,7 +5,10 @@ import { teamCalendarApi, ICalendarEvent, ITodo, IActiveUser, IPendingApproval }
 import {
   formatLocalDate,
   getPhilippineHolidays,
-  getEngineerColor
+  inferTaskType,
+  getTeamColor,
+  TASK_TYPE_COLORS,
+  type TaskType
 } from '../utils/teamCalendarUtils'
 
 export function useTeamCalendar() {
@@ -36,7 +39,7 @@ export function useTeamCalendar() {
   const [newTodoTitle, setNewTodoTitle] = useState('')
   const [newTodoDesc, setNewTodoDesc] = useState('')
   const [newTodoPriority, setNewTodoPriority] = useState<'Low' | 'Normal' | 'High' | 'Critical'>('Normal')
-  const [dayOffLeaveType, setDayOffLeaveType] = useState<string>('Absence')
+  const [dayOffLeaveType, setDayOffLeaveType] = useState<string>('Vacation')
   const [isAddingTodo, setIsAddingTodo] = useState(false)
   const [isAddingDayOff, setIsAddingDayOff] = useState(false)
   const [isAddingCompanyEvent, setIsAddingCompanyEvent] = useState(false)
@@ -227,7 +230,7 @@ export function useTeamCalendar() {
         }
         setDayOffStart('')
         setDayOffEnd('')
-        setDayOffLeaveType('Absence')
+        setDayOffLeaveType('Vacation')
         setIsAddingDayOff(false)
         loadData()
       }
@@ -436,7 +439,8 @@ export function useTeamCalendar() {
     }
 
     if (viewMode === 'month') {
-      newDate.setDate(currentDate.getDate() + (direction === 'prev' ? -28 : 28))
+      if (direction === 'prev') newDate.setMonth(currentDate.getMonth() - 1)
+      else newDate.setMonth(currentDate.getMonth() + 1)
     } else {
       newDate.setDate(currentDate.getDate() + (direction === 'prev' ? -7 : 7))
     }
@@ -467,19 +471,22 @@ export function useTeamCalendar() {
     }
   }
 
-  const visibleEngineers = useMemo(() => {
-    const map = new Map<number, { username: string; engineerName: string | null }>()
+  const visibleTaskTypes = useMemo(() => {
+    const seen = new Set<TaskType>()
     events.forEach(e => {
-      if (e.event_type === 'Company_Event') return
-      if (!map.has(e.user_id)) {
-        map.set(e.user_id, { username: e.username, engineerName: e.engineer_name })
-      }
+      if (e.event_type !== 'Task_Claim') return
+      seen.add(inferTaskType(e.todo_title, e.todo_description))
     })
-    return Array.from(map.entries()).map(([userId, data]) => ({
-      userId,
-      name: data.engineerName || data.username,
-      color: getEngineerColor(userId)
-    }))
+    return (Object.keys(TASK_TYPE_COLORS) as TaskType[]).filter(t => seen.has(t))
+  }, [events])
+
+  const visibleTeams = useMemo(() => {
+    const map = new Map<string, string>()
+    events.forEach(e => {
+      if (!e.team || e.team.toLowerCase() === 'general') return
+      if (!map.has(e.team)) map.set(e.team, getTeamColor(e.team))
+    })
+    return Array.from(map.entries()).map(([team, color]) => ({ team, color }))
   }, [events])
 
   const agendaDays = useMemo(() => {
@@ -608,7 +615,8 @@ export function useTeamCalendar() {
     displayDate,
     monthName,
     yearNum,
-    visibleEngineers,
+    visibleTaskTypes,
+    visibleTeams,
     agendaDays,
     filteredBacklogPending,
     filteredBacklogClaimed,

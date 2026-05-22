@@ -12,6 +12,15 @@
   animation: fadeIn 0.4s ease-out;
 }
 
+/* Horizontal wrapper: glass-panel takes full width */
+.calc-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -24,8 +33,6 @@
   }
 }
 
-
-
 /* Flat Panel */
 .glass-panel {
   background: var(--bg-secondary);
@@ -36,7 +43,7 @@
   flex-direction: column;
   position: relative;
   flex: 1;
-  /* Make it take up the full available height */
+  min-width: 0;
   transition: all 0.3s ease;
   box-shadow: 0 0 40px rgba(56, 189, 248, 0.06), var(--shadow-lg);
 }
@@ -51,12 +58,10 @@
   display: grid;
   grid-template-columns: 1fr 380px;
   grid-template-rows: 60px 1fr;
-  /* Fixed header row height */
   flex: 1;
   padding: 32px;
   gap: 0 40px;
   background: var(--bg-primary);
-  /* Reverted to primary for depth */
   position: relative;
   transition: background 0.3s ease;
 }
@@ -67,7 +72,6 @@
   justify-content: center;
   gap: 10px;
   height: 60px;
-  /* Fixed height for alignment */
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border-subtle);
@@ -169,11 +173,9 @@
   position: relative;
   z-index: 1;
   background: #0f172a;
-  /* Slate-900: DARK PAPER for Light Theme */
   flex: 1;
   min-height: 0;
   color: #f8fafc !important;
-  /* Light text for Dark Paper */
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-radius: 12px;
   padding: 16px 20px;
@@ -185,7 +187,6 @@
   outline: none !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* High-Fidelity Drafting Grid */
   background-image:
     linear-gradient(rgba(255, 217, 0, 0.336) 1px, transparent 1px);
   background-size: 100px 32px, 32px 100px;
@@ -198,16 +199,14 @@
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* PAPER MODE: White Paper in Dark Theme as requested */
+/* PAPER MODE: White Paper in Dark Theme */
 .dark-theme .scratchpad-textarea {
   position: relative;
   z-index: 1;
   background: #ffffff;
-  /* Slate-900: DARK PAPER for Light Theme */
   flex: 1;
   min-height: 0;
   color: #000000 !important;
-  /* Light text for Dark Paper */
   border: 1px solid rgba(0, 0, 0, 0.1) !important;
   border-radius: 12px;
   padding: 16px 20px;
@@ -219,7 +218,6 @@
   outline: none !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* High-Fidelity Drafting Grid */
   background-image:
     linear-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px);
   background-size: 100px 32px, 32px 100px;

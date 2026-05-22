@@ -6,6 +6,7 @@ export interface ICalendarEvent {
   user_id: number
   username: string
   engineer_name: string | null
+  team: string | null
   todo_id: number | null
   todo_title: string | null
   todo_description: string | null

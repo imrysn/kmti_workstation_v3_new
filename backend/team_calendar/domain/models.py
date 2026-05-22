@@ -44,10 +44,10 @@ class DomainTodo:
     due_date: Optional[date] = None
 
     @property
-
     def is_claimable(self) -> bool:
         return self.status == "Pending"
 
+    @property
     def is_completed(self) -> bool:
         return self.status == "Completed"
 

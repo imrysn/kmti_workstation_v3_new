@@ -86,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Save for persistence
       sessionStorage.setItem('kmti_token', data.access_token)
       sessionStorage.setItem('kmti_user', JSON.stringify(data.user))
+      sessionStorage.removeItem('kmti_landing_agenda_shown')
+      localStorage.removeItem('kmti_suppress_agenda_date')
       
       setToken(data.access_token)
 
@@ -113,6 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Clear persistence
     sessionStorage.removeItem('kmti_token')
     sessionStorage.removeItem('kmti_user')
+    sessionStorage.removeItem('kmti_landing_agenda_shown')
+    localStorage.removeItem('kmti_suppress_agenda_date')
     
     setToken(null)
     setUser(null)

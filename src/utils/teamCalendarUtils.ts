@@ -33,10 +33,10 @@ export const getWorkingDaysCount = (startStr: string, endStr: string) => {
   const startParts = startStr.split('-')
   const endParts = endStr.split('-')
   if (startParts.length !== 3 || endParts.length !== 3) return 0
-  
+
   const start = new Date(parseInt(startParts[0], 10), parseInt(startParts[1], 10) - 1, parseInt(startParts[2], 10))
   const end = new Date(parseInt(endParts[0], 10), parseInt(endParts[1], 10) - 1, parseInt(endParts[2], 10))
-  
+
   let count = 0
   const current = new Date(start)
   while (current <= end) {
@@ -52,28 +52,63 @@ export const getWorkingDaysCount = (startStr: string, endStr: string) => {
 export const formatDurationRange = (startStr: string, endStr: string) => {
   if (!startStr) return ''
   if (!endStr) return formatDisplayDate(startStr)
-  
+
   const startFormatted = formatDisplayDate(startStr)
   const endFormatted = formatDisplayDate(endStr)
   const workingDays = getWorkingDaysCount(startStr, endStr)
   const daysText = workingDays === 1 ? '1 day' : `${workingDays} days`
-  
+
   return `${startFormatted} to ${endFormatted} (${daysText})`
 }
 
-// Deterministic per-engineer color palette (cycles through 8 colors by user_id)
-export const ENGINEER_COLORS = [
-  { bg: 'var(--eng-color-1)', border: 'var(--eng-color-1)', text: '#fff' },
-  { bg: 'var(--eng-color-2)', border: 'var(--eng-color-2)', text: '#fff' },
-  { bg: 'var(--eng-color-3)', border: 'var(--eng-color-3)', text: '#fff' },
-  { bg: 'var(--eng-color-4)', border: 'var(--eng-color-4)', text: '#fff' },
-  { bg: 'var(--eng-color-5)', border: 'var(--eng-color-5)', text: '#fff' },
-  { bg: 'var(--eng-color-6)', border: 'var(--eng-color-6)', text: '#fff' },
-  { bg: 'var(--eng-color-7)', border: 'var(--eng-color-7)', text: '#fff' },
-  { bg: 'var(--eng-color-8)', border: 'var(--eng-color-8)', text: '#fff' },
-]
+// ─── Task-Type Inference ──────────────────────────────────────────────────────
+// Infers task category by scanning the title + description for keywords.
+// Team leaders consistently include keywords like "3D Modelling" or "2D Detailing".
 
-export const getEngineerColor = (userId: number) => ENGINEER_COLORS[userId % ENGINEER_COLORS.length]
+export type TaskType = '3D' | '2D' | 'Checking' | 'Other'
+
+const TASK_TYPE_KEYWORDS: Record<string, string[]> = {
+  '3D': ['3d', 'solidworks', 'solid model', '3d model', '3d design', '3d drawing', 'inventor'],
+  '2D': ['2d', 'drafting', 'drawing', 'autocad', '2d detail', 'detailing', '2d drawing'],
+  'Checking': ['checking', 'check', 'review', 'qa', 'qc', 'inspection', 'verify', 'approval'],
+}
+
+export function inferTaskType(
+  title: string | null,
+  description: string | null
+): TaskType {
+  const haystack = `${title ?? ''} ${description ?? ''}`.toLowerCase()
+  for (const [type, keywords] of Object.entries(TASK_TYPE_KEYWORDS)) {
+    if (keywords.some(kw => haystack.includes(kw))) return type as TaskType
+  }
+  return 'Other'
+}
+
+// ─── Task-Type Color Map ──────────────────────────────────────────────────────
+export const TASK_TYPE_COLORS: Record<TaskType, { bg: string; border: string; text: string }> = {
+  '3D': { bg: 'rgba(37,  99,  235, 0.10)', border: '#2563eb', text: '#2563eb' }, // blue
+  '2D': { bg: 'rgba(220, 38, 38, 0)', border: '#dc2626', text: '#dc2626' }, // red
+  'Checking': { bg: 'rgba(234, 90, 12, 0)', border: '#ea580c', text: '#ea580c' }, // orange
+  'Other': { bg: 'rgba(107, 114, 128, 0)', border: '#6b7280', text: '#6b7280' }, // gray
+}
+
+export const getTaskTypeColor = (type: TaskType) => TASK_TYPE_COLORS[type]
+
+// ─── Team Color Map ───────────────────────────────────────────────────────────
+// Left-border accent on event badges and sidebar legend dots.
+// "General" team is excluded (admin-only, no tasks).
+// Unknown teams get a deterministic hue derived from the team name string.
+
+export function getTeamColor(team: string | null | undefined): string {
+  if (!team || team.toLowerCase() === 'general') return 'transparent'
+  // Deterministic hash → hue so every unknown team gets a consistent color
+  let hash = 0
+  for (let i = 0; i < team.length; i++) {
+    hash = (hash * 31 + team.charCodeAt(i)) & 0xffffffff
+  }
+  const hue = Math.abs(hash) % 360
+  return `hsl(${hue}, 60%, 58%)`
+}
 
 const getEasterSunday = (year: number): Date => {
   const a = year % 19

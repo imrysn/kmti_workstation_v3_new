@@ -1,0 +1,436 @@
+/* ── Panel Shell ─────────────────────────────────────────────── */
+.solutions-panel {
+  position: fixed;
+  right: 0;
+  top: var(--titlebar-height);
+  width: 350px;
+  /* mirrors FormulaPanel width — fills the right gutter exactly */
+  height: calc(100vh - var(--titlebar-height));
+  display: flex;
+  flex-direction: column;
+  z-index: 50;
+  padding: 32px 20px 20px 14px;
+}
+
+@media (max-width: 1200px) {
+  .solutions-panel {
+    width: 64px;
+    padding: 32px 8px 20px 8px;
+  }
+}
+
+@media (max-width: 1050px) {
+  .solutions-panel {
+    display: none;
+  }
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.sp-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 2px 18px;
+  flex-shrink: 0;
+}
+
+.sp-header-icon {
+  color: var(--text-muted);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.sp-header>span {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  flex: 1;
+}
+
+.sp-header-badges {
+  display: flex;
+  gap: 5px;
+}
+
+.sp-hbadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 99px;
+}
+
+.sp-hbadge--ok {
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--success);
+}
+
+.sp-hbadge--err {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--danger);
+}
+
+/* ── Scroll area ─────────────────────────────────────────────── */
+.sp-scroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.sp-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sp-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sp-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+.sp-card {
+  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sp-card--ok {
+  border-left: 3px solid var(--success);
+}
+
+.sp-card--error {
+  border-left: 3px solid var(--danger);
+  background: rgba(220, 38, 38, 0.03);
+}
+
+.sp-card--active {
+  box-shadow: 0 0 0 2px var(--accent);
+  border-color: var(--accent);
+}
+
+/* ── Card header ─────────────────────────────────────────────── */
+.sp-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sp-line-num {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.sp-raw-line {
+  font-size: 14px;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-result-badge {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--success);
+  background: rgba(5, 150, 105, 0.1);
+  padding: 2px 7px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.sp-error-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--danger);
+  background: rgba(220, 38, 38, 0.1);
+  padding: 2px 7px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.sp-chevron {
+  color: var(--text-muted);
+  opacity: 0.5;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  margin-left: 2px;
+  flex-shrink: 0;
+}
+
+.sp-chevron--expanded {
+  transform: rotate(180deg);
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.sp-card-header:hover .sp-chevron {
+  opacity: 0.9;
+}
+
+/* ── Meta row: material + density + shape ────────────────────── */
+.sp-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
+}
+
+.sp-meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+}
+
+.sp-meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sp-meta-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.sp-fallback-tag {
+  font-size: 9px;
+  color: var(--warning);
+  font-style: italic;
+  font-weight: 500;
+}
+
+.sp-meta-dot {
+  color: var(--text-muted);
+  opacity: 0.3;
+  font-size: 12px;
+}
+
+.sp-shape-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--accent);
+  opacity: 0.8;
+  font-family: var(--font-mono);
+}
+
+/* ── Detailed Solver Steps ───────────────────────────────────── */
+.sp-card-body {
+  padding-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px dashed var(--border-subtle);
+  margin-top: 4px;
+}
+
+.sp-detailed-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sp-detailed-step {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.sp-step-num-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.sp-detailed-step-num {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  border: 1px solid rgba(2, 132, 199, 0.15);
+}
+
+.sp-step-line {
+  width: 1.5px;
+  background: var(--border-subtle);
+  flex: 1;
+  margin-top: 4px;
+  margin-bottom: -14px; /* flow straight into next number circle */
+}
+
+.sp-step-content-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sp-detailed-step-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  opacity: 0.95;
+}
+
+.sp-detailed-step-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+/* ── Math Block ─────────────────────────────────────────────── */
+.sp-math-block {
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: var(--bg-surface-subtle);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.sp-math-row-item {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sp-math-label {
+  font-size: 8.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.sp-math-formula,
+.sp-math-equation {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.sp-math-equation {
+  color: var(--success);
+}
+
+/* ── Error block ─────────────────────────────────────────────── */
+.sp-error-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 6px 8px;
+  background: rgba(220, 38, 38, 0.06);
+  border-radius: 5px;
+  border-left: 2px solid var(--danger);
+}
+
+.sp-error-icon {
+  color: var(--danger);
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0.8;
+}
+
+.sp-error-reason {
+  font-size: 11px;
+  color: var(--danger);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  opacity: 0.85;
+}
+
+/* ── Suggestions ─────────────────────────────────────────────── */
+.sp-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.sp-suggest-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--warning);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}
+
+.sp-suggest-chip {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-surface-hover);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: default;
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+/* Dark theme adjustments */
+.dark-theme .sp-card {
+  background: var(--bg-secondary);
+}
+
+.dark-theme .sp-card--error {
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.dark-theme .sp-detailed-step-num {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.25);
+  color: var(--accent);
+}
+
+.dark-theme .sp-math-block {
+  background: rgba(255, 255, 255, 0.02);
+}

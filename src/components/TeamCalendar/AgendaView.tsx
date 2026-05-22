@@ -1,5 +1,5 @@
 import { ICalendarEvent } from '../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, getEngineerColor, formatDurationRange } from '../../utils/teamCalendarUtils'
+import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange } from '../../utils/teamCalendarUtils'
 import { GlobeIcon, LockIcon, BriefcaseIcon } from './Icons'
 
 interface AgendaViewProps {
@@ -86,32 +86,42 @@ export default function AgendaView({
                   const isAbsence = event.event_type === 'Day_Off'
                   const isCompanyEvent = event.event_type === 'Company_Event'
                   const displayName = event.engineer_name || event.username
-                  const engColor = getEngineerColor(event.user_id)
+                  const taskType = inferTaskType(event.todo_title, event.todo_description)
+                  const taskColor = getTaskTypeColor(taskType)
+                  const teamAccent = getTeamColor(event.team)
+                  const accentColor = (!isAbsence && !isCompanyEvent)
+                    ? (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
+                    : isCompanyEvent ? '#6366f1' : 'var(--cal-text-muted)'
+
                   const isOverdue = event.event_type === 'Task_Claim' && event.todo_status === 'Claimed' && event.end_date < formatLocalDate(new Date())
 
                   return (
                     <div
                       key={event.id}
                       className={`agenda-event-card ${isCompanyEvent ? 'company-card' : isAbsence ? 'absence-card' : 'claim-card'} ${isOverdue ? 'overdue' : ''}`}
-                      onClick={() => setSelectedEvent(event)}
+                      onClick={() => {
+                        if (event.event_type !== 'Task_Claim') {
+                          setSelectedEvent(event)
+                        }
+                      }}
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '6px',
                         padding: '12px',
                         borderRadius: '8px',
-                        border: `1px solid ${isCompanyEvent ? '#6366f1' : isAbsence ? 'var(--cal-card-border)' : engColor.border}`,
+                        border: `1px solid ${accentColor}`,
                         background: isCompanyEvent
                           ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))'
-                          : 'var(--bg-surface-subtle)',
-                        borderLeft: `4.5px solid ${isCompanyEvent ? '#6366f1' : isAbsence ? 'var(--cal-text-muted)' : engColor.border}`,
-                        cursor: 'pointer',
+                          : (!isAbsence ? taskColor.bg : 'var(--bg-surface-subtle)'),
+                        borderLeft: `4.5px solid ${accentColor}`,
+                        cursor: isAbsence || isCompanyEvent ? 'pointer' : 'default',
                         transition: 'all 0.15s ease'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span className="event-icon" style={{ display: 'flex', alignItems: 'center', color: isCompanyEvent ? '#6366f1' : isAbsence ? 'var(--cal-text-muted)' : engColor.border }}>
+                          <span className="event-icon" style={{ display: 'flex', alignItems: 'center', color: accentColor }}>
                             {isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : <BriefcaseIcon />}
                           </span>
                           <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--cal-text-primary)', textTransform: isCompanyEvent || isAbsence ? undefined : 'uppercase', letterSpacing: isCompanyEvent || isAbsence ? undefined : '0.3px' }}>

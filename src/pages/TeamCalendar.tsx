@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useTeamCalendar } from '../hooks/useTeamCalendar'
 import CalendarSidebar from '../components/TeamCalendar/CalendarSidebar'
 import CalendarToolbar from '../components/TeamCalendar/CalendarToolbar'
@@ -10,11 +11,36 @@ import DayOffModal from '../components/TeamCalendar/modals/DayOffModal'
 import CompanyEventModal from '../components/TeamCalendar/modals/CompanyEventModal'
 import EventDetailsModal from '../components/TeamCalendar/modals/EventDetailsModal'
 import DayEventsPopover from '../components/TeamCalendar/modals/DayEventsPopover'
+import LandingAgendaModal from '../components/TeamCalendar/modals/LandingAgendaModal'
 
+import { formatLocalDate } from '../utils/teamCalendarUtils'
 import './TeamCalendar.css'
 
 export default function TeamCalendar() {
   const cal = useTeamCalendar()
+  const [showLandingAgenda, setShowLandingAgenda] = useState(false)
+  const [pcName, setPcName] = useState<string>('')
+
+  useEffect(() => {
+    const todayStr = formatLocalDate(new Date())
+    const suppressedDate = localStorage.getItem('kmti_suppress_agenda_date')
+    const shownThisSession = sessionStorage.getItem('kmti_landing_agenda_shown') === 'true'
+
+    if (suppressedDate !== todayStr && !shownThisSession) {
+      setShowLandingAgenda(true)
+      sessionStorage.setItem('kmti_landing_agenda_shown', 'true')
+    }
+
+    if (window.electronAPI?.getWorkstationInfo) {
+      window.electronAPI.getWorkstationInfo()
+        .then(info => {
+          if (info?.computerName) {
+            setPcName(info.computerName)
+          }
+        })
+        .catch(err => console.error("Failed to get workstation info:", err))
+    }
+  }, [])
 
   return (
     <div className="team-calendar-page page-container">
@@ -35,7 +61,8 @@ export default function TeamCalendar() {
 
       <div className="team-calendar-layout">
         <CalendarSidebar
-          visibleEngineers={cal.visibleEngineers}
+          visibleTaskTypes={cal.visibleTaskTypes}
+          visibleTeams={cal.visibleTeams}
           showClaims={cal.showClaims}
           setShowClaims={cal.setShowClaims}
           showAbsences={cal.showAbsences}
@@ -179,6 +206,17 @@ export default function TeamCalendar() {
           setCompanyEventCategory={cal.setCompanyEventCategory}
           setIsAddingCompanyEvent={cal.setIsAddingCompanyEvent}
           onClose={() => cal.setActivePopoverDate(null)}
+        />
+      )}
+      {showLandingAgenda && (
+        <LandingAgendaModal
+          events={cal.events}
+          currentUser={cal.user}
+          pcName={pcName}
+          showClaims={cal.showClaims}
+          showAbsences={cal.showAbsences}
+          showSpans={cal.showSpans}
+          onClose={() => setShowLandingAgenda(false)}
         />
       )}
     </div>

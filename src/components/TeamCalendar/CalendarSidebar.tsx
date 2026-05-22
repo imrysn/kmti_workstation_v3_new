@@ -1,10 +1,8 @@
+import { TASK_TYPE_COLORS, type TaskType } from '../../utils/teamCalendarUtils'
 
 interface CalendarSidebarProps {
-  visibleEngineers: Array<{
-    userId: number
-    name: string
-    color: { bg: string; border: string; text: string }
-  }>
+  visibleTaskTypes: TaskType[]
+  visibleTeams: Array<{ team: string; color: string }>
   showClaims: boolean
   setShowClaims: (val: boolean) => void
   showAbsences: boolean
@@ -13,8 +11,16 @@ interface CalendarSidebarProps {
   setShowSpans: (val: boolean) => void
 }
 
+const TASK_TYPE_LABELS: Record<TaskType, string> = {
+  '3D': '3D Modelling',
+  '2D': '2D Detailing',
+  'Checking': 'Checking / Review',
+  'Other': 'Other Tasks',
+}
+
 export default function CalendarSidebar({
-  visibleEngineers,
+  visibleTaskTypes,
+  visibleTeams,
   showClaims,
   setShowClaims,
   showAbsences,
@@ -24,33 +30,67 @@ export default function CalendarSidebar({
 }: CalendarSidebarProps) {
   return (
     <aside className="calendar-sidebar">
-      {/* Employee Legend */}
-      {visibleEngineers.length > 0 && (
+
+      {/* Task Type Legend — dynamic, only shows types in current view */}
+      {visibleTaskTypes.length > 0 && (
         <div className="sidebar-section-container filter-legend-section" style={{ borderTop: 'none', paddingTop: '0', marginBottom: '16px' }}>
-          <h4 className="section-title-label">Employee Legend</h4>
-          <div className="engineer-legend-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px 12px', maxHeight: '360px', overflowY: 'auto' }}>
-            {visibleEngineers.map(eng => (
-              <div key={eng.userId} className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span
-                  className="legend-color-dot"
-                  style={{
-                    width: '10px',
-                    height: '10px',
-                    borderRadius: '50%',
-                    backgroundColor: eng.color.border,
-                    flexShrink: 0
-                  }}
-                />
-                <span className="legend-name" title={eng.name} style={{ fontSize: '12px', color: 'var(--cal-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {eng.name}
-                </span>
-              </div>
-            ))}
+          <h4 className="section-title-label">LEGEND</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            {visibleTaskTypes.map(type => {
+              const c = TASK_TYPE_COLORS[type]
+              return (
+                <div key={type} className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '3px',
+                      backgroundColor: c.border,
+                      flexShrink: 0,
+                      opacity: 0.9,
+                    }}
+                  />
+                  <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>
+                    {TASK_TYPE_LABELS[type]}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* Show/Hide Toggles (Calendar Legends) */}
+      {/* Team Legend — dynamic, teams present in current view (General excluded) */}
+      {visibleTeams.length > 0 && (
+        <div className="sidebar-section-container filter-legend-section" style={{ marginBottom: '16px' }}>
+          <h4 className="section-title-label">Teams</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+            {visibleTeams.map(({ team, color }) => (
+              <div key={team} className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: '4px',
+                    height: '16px',
+                    borderRadius: '2px',
+                    backgroundColor: color,
+                    flexShrink: 0,
+                  }}
+                />
+                <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>
+                  {team}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: '10.5px', color: 'var(--cal-text-muted)', marginTop: '6px', lineHeight: '1.4' }}>
+            Left border color on task badges
+          </p>
+        </div>
+      )}
+
+      {/* Show/Hide Toggles */}
       <div className="sidebar-section-container filter-legend-section">
         <h4 className="section-title-label">Visible Events</h4>
         <div className="filter-legend-item">
