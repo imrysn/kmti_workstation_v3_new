@@ -213,6 +213,8 @@ export const quotationApi = {
     api.get<{ history: IQuotationHistory[] }>(`/quotations/${id}/history`),
   restoreHistory: (qId: number, hId: number) => 
     api.get<any>(`/quotations/${qId}/history/${hId}`),
+  updateBilling: (id: number, data: Partial<IQuotation>) =>
+    api.patch<{ success: boolean }>(`/quotations/${id}/billing`, data),
 }
 
 // --- Stopwatch Records ---

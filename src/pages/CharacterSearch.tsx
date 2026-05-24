@@ -108,7 +108,8 @@ export default function CharacterSearch() {
     { name: 'PIPE', items: ['φ×-', '××-'] },
     { name: 'BAR', items: ['□×', 'φ×'] },
     { name: 'PLATE', items: ['××', '×φ'] },
-    { name: 'INDIVIDUAL', items: ['φ', '□', '×', '-'] },
+    { name: 'INDIVIDUAL', items: ['φ', '□', '×', '-'], fullWidth: true },
+    { name: 'SYMBOLS', items: ['※', '±', '°'], fullWidth: true },
   ]
 
   const handleCopy = (text: string, id: string) => {
@@ -300,7 +301,7 @@ export default function CharacterSearch() {
             </h2>
             <div className="char-templates-container">
               {templateGroups.map((group) => (
-                <div key={group.name} className="char-template-group">
+                <div key={group.name} className={`char-template-group ${group.fullWidth ? 'full-width' : ''}`}>
                   <div className="char-group-label">{group.name}</div>
                   <div className="char-group-items">
                     {group.items.map((tpl, i) => (

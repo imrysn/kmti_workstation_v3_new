@@ -339,12 +339,16 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     debouncedSyncDb()
   }, [updateCompanyInfo, emitBatchPatch, debouncedSyncDb])
 
-  const syncClientInfo = useCallback((updates: typeof clientInfo) => {
-    updateClientInfo(updates)
+  const syncClientInfo = useCallback((updates: Partial<typeof clientInfo>) => {
+    updateClientInfo(prev => ({ ...prev, ...updates }))
     const patches = Object.entries(updates).map(([k, v]) => ({ path: clientInfoPath(k as any), value: v }))
+    if (updates.company !== undefined) {
+      updateBillingDetails({ billTo: updates.company })
+      patches.push({ path: billingDetailsPath('billTo'), value: updates.company })
+    }
     emitBatchPatch(patches)
     debouncedSyncDb()
-  }, [updateClientInfo, emitBatchPatch, debouncedSyncDb])
+  }, [updateClientInfo, updateBillingDetails, emitBatchPatch, debouncedSyncDb])
 
   const syncQuotationDetails = useCallback((updates: Partial<typeof quotationDetails>) => {
     updateQuotationDetails(updates)
@@ -922,6 +926,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             onManualOverrideChange={updateManualOverrides}
             onQuotationDetailsChange={isPreview ? undefined : syncQuotationDetails}
             onBillingDetailsChange={isPreview ? undefined : syncBillingDetails}
+            onClientInfoChange={isPreview ? undefined : syncClientInfo}
             autoStartTutorial={isTutorialOpen}
             onCompleteTutorial={handleTutorialClose}
             layoutVariant={layoutVariant}

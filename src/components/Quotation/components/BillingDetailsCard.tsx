@@ -18,7 +18,7 @@ const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder
   { key: 'branchCode',    label: 'Branch Code',         placeholder: 'e.g. 358' },
 ]
 
-const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling, layoutVariant }: Props) => {
+const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 
@@ -160,6 +160,53 @@ const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling, layoutVarian
                 </span>
               </div>
             ))}
+
+            {/* Status & Tracking display */}
+            <div className="billing-card-section-label">Status & Tracking</div>
+            <div className="qdcard-row">
+              <span className="qdcard-label">Quotation Status</span>
+              <span className="qdcard-value">
+                <span className={`status-badge ${
+                  billingDetails.quotationStatus === 'Approved' ? 'status-q-approved' :
+                  billingDetails.quotationStatus === 'Partial Billing' ? 'status-q-partial' :
+                  billingDetails.quotationStatus === 'Billing Completion' ? 'status-q-completion' :
+                  billingDetails.quotationStatus === 'CANCELLED' ? 'status-q-cancelled' :
+                  'status-q-for-approval'
+                }`}>
+                  {billingDetails.quotationStatus || 'For Approval'}
+                </span>
+              </span>
+            </div>
+            <div className="qdcard-row">
+              <span className="qdcard-label">Project Status</span>
+              <span className="qdcard-value">
+                <span className={`status-badge ${
+                  billingDetails.projectStatus === 'Finished' ? 'status-p-finished' :
+                  billingDetails.projectStatus === 'CANCELLED' ? 'status-p-cancelled' :
+                  'status-p-ongoing'
+                }`}>
+                  {billingDetails.projectStatus || 'On Going'}
+                </span>
+              </span>
+            </div>
+            <div className="qdcard-row">
+              <span className="qdcard-label">Project Incharge</span>
+              <span className="qdcard-value">
+                {billingDetails.projectInCharge || '—'}
+              </span>
+            </div>
+            <div className="qdcard-row">
+              <span className="qdcard-label">Bill To</span>
+              <span className="qdcard-value">
+                {billingDetails.billTo || '—'}
+              </span>
+            </div>
+            <div className="qdcard-row">
+              <span className="qdcard-label">Submitted to Admin</span>
+              <span className="qdcard-value">
+                {billingDetails.submittedToAdminAt || '—'}
+              </span>
+            </div>
           </div>
         )}
       </div>

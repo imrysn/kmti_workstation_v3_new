@@ -104,7 +104,7 @@ export function calculateOverhead(subtotal: number, overheadPercentage: number):
 
 /**
  * Returns the unit/page count for a task, respecting manual overrides.
- * A main task counts as 1 + number of its sub-tasks unless overridden.
+ * A main task (assembly) only counts the number of its sub-tasks (sub-assembly/parts) unless overridden.
  */
 export function getUnitPageCount(
   taskId: number,
@@ -113,8 +113,12 @@ export function getUnitPageCount(
 ): number {
   const override = (manualOverrides?.tasks || {})[taskId]
   if (override?.unitPage !== undefined) return override.unitPage
+
+  const task = allTasks.find(t => t.id === taskId)
+  const isMain = task ? (task.parentId === null || task.isMainTask || task.level === 0) : true
   const subTaskCount = allTasks.filter(t => t.parentId === taskId).length
-  return 1 + subTaskCount
+
+  return isMain ? subTaskCount : (1 + subTaskCount)
 }
 
 /**

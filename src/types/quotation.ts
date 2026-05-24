@@ -94,6 +94,12 @@ export interface BillingDetails {
   bankAddress: string
   swiftCode: string
   branchCode: string
+  quotationStatus?: string
+  projectStatus?: string
+  submittedToAdminAt?: string | null
+  updateDetail?: string | null
+  projectInCharge?: string
+  billTo?: string
 }
 
 // ── Signatures ──────────────────────────────────────────────────────────────

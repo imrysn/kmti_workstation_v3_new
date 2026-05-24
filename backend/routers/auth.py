@@ -14,6 +14,10 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
+# Valid workstation roles — used to exclude kmtifms.users rows that may
+# bleed into the primary DB session (both live on the same NAS MySQL server).
+VALID_WORKSTATION_ROLES = [r.value for r in UserRole]  # ['user', 'admin', 'it']
+
 
 @router.post("/login")
 async def login(
@@ -70,13 +74,22 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
-    """Returns all users. Restricted to Admin and IT roles."""
-    query = select(User).order_by(User.username)
-    
+    """Returns all workstation users. Restricted to Admin and IT roles.
+
+    Explicitly filters to valid workstation roles (user/admin/it) to prevent
+    kmtifms.users rows from appearing — both DBs live on the same NAS MySQL
+    server and can share visibility depending on the DB user's grants.
+    """
+    query = (
+        select(User)
+        .where(User.role.in_(VALID_WORKSTATION_ROLES))
+        .order_by(User.username)
+    )
+
     # Hide IT accounts from Admin-level users
     if current_user.role == UserRole.admin:
         query = query.where(User.role != UserRole.it)
-        
+
     result = await db.execute(query)
     users = result.scalars().all()
     return [

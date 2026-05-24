@@ -62,6 +62,12 @@ const DEFAULT_BILLING_DETAILS: BillingDetails = {
   bankAddress: "RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE",
   swiftCode: 'RCBCPHMM',
   branchCode: '358',
+  quotationStatus: 'For Approval',
+  projectStatus: 'On Going',
+  submittedToAdminAt: '',
+  updateDetail: '',
+  projectInCharge: '',
+  billTo: '',
 }
 
 const DEFAULT_SIGNATURES: Signatures = {
@@ -487,6 +493,12 @@ export function useInvoiceState() {
       ...(data.billingDetails || {}),
       invoiceNo:  data.billingDetails?.invoiceNo  ?? qd.invoiceNo  ?? '',
       jobOrderNo: data.billingDetails?.jobOrderNo ?? qd.jobOrderNo ?? '',
+      quotationStatus: data.billingDetails?.quotationStatus ?? 'For Approval',
+      projectStatus: data.billingDetails?.projectStatus ?? 'On Going',
+      submittedToAdminAt: data.billingDetails?.submittedToAdminAt ?? '',
+      updateDetail: data.billingDetails?.updateDetail ?? '',
+      projectInCharge: data.billingDetails?.projectInCharge ?? '',
+      billTo: data.billingDetails?.billTo ?? '',
     }
     const resolvedVariant = data.layoutVariant || 'special'
     let resolvedTasks = data.tasks || [makeBlankTask()]

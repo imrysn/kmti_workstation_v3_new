@@ -182,7 +182,81 @@ async def join_doc(sid: str, data: dict):
         print(f"[COLLAB] No existing users in room 'quot_{q_id}' to sync from.")
 
 # ─── Internal Helpers ────────────────────────────────────────────────────────
-async def _sync_metadata(q_id: int, data: dict, db: AsyncSession):
+def calculate_grand_total(data: dict) -> float:
+    try:
+        variant = data.get("layoutVariant", "special")
+        tasks = data.get("tasks", [])
+        manual_overrides = data.get("manualOverrides", {}) or {}
+        task_overrides = manual_overrides.get("tasks", {}) or {}
+        
+        # Helper to compute task total
+        def get_task_subtotal(task: dict) -> float:
+            t_id = task.get("id")
+            if not t_id:
+                return 0.0
+            # Check override first
+            override = task_overrides.get(str(t_id)) or task_overrides.get(t_id) or {}
+            if override.get("total") is not None:
+                return float(override["total"])
+                
+            if variant == "kemco":
+                # Find children
+                children = [t for t in tasks if t.get("parentId") == t_id]
+                if children:
+                    return sum(get_task_subtotal(child) for child in children)
+                return float(task.get("amount") or task.get("unitPrice") or 0.0)
+                
+            # Standard "Special" logic
+            rates = data.get("baseRates", {}) or {}
+            charge_2d = rates.get("timeChargeRate2D", 2700)
+            charge_3d = rates.get("timeChargeRate3D", 2700)
+            charge_others = rates.get("timeChargeRateOthers", 0)
+            ot_rate = rates.get("overtimeRate", 3300)
+            sw_rate = rates.get("softwareRate", 500)
+            
+            def get_rate(t_type):
+                if t_type == "2D":
+                    return charge_2d
+                if t_type == "3D" or not t_type:
+                    return charge_3d
+                return charge_others
+                
+            hours = float(task.get("hours") or 0) + float(task.get("minutes") or 0) / 60.0
+            ot_hours = float(task.get("overtimeHours") or 0)
+            sw_units = float(task.get("softwareUnits") or 0)
+            
+            # Sub-tasks sum (if this is a main task)
+            if task.get("isMainTask", False):
+                sub_tasks = [t for t in tasks if t.get("parentId") == t_id]
+                for sub in sub_tasks:
+                    hours += float(sub.get("hours") or 0) + float(sub.get("minutes") or 0) / 60.0
+                    ot_hours += float(sub.get("overtimeHours") or 0)
+                    sw_units += float(sub.get("softwareUnits") or 0)
+                    
+            rate = get_rate(task.get("type"))
+            return (hours * rate) + (ot_hours * ot_rate) + (sw_units * sw_rate)
+
+        # Sum of main tasks
+        main_tasks = [t for t in tasks if t.get("isMainTask", False) or (variant == "kemco" and t.get("level", 0) == 0)]
+        subtotal = sum(get_task_subtotal(m) for m in main_tasks)
+        
+        if variant == "kemco":
+            return round(subtotal, 2)
+            
+        # Add overhead and adjustment for standard layout
+        rates = data.get("baseRates", {}) or {}
+        overhead_pct = rates.get("overheadPercentage", 20)
+        footer = manual_overrides.get("footer", {}) or {}
+        
+        overhead = float(footer.get("overhead")) if footer.get("overhead") is not None else (subtotal * overhead_pct / 100.0)
+        adjustment = float(footer.get("adjustment") or 0.0)
+        
+        return round(subtotal + overhead + adjustment, 2)
+    except Exception as e:
+        print(f"Error calculating grand total: {e}")
+        return 0.0
+
+async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Optional[str] = None):
     """Synchronizes DB columns with the inner JSON data blob."""
     stmt = select(Quotation).where(Quotation.id == q_id)
     res = await db.execute(stmt)
@@ -197,17 +271,68 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession):
     if not quot.display_name or quot.display_name == quot.quotation_no:
         new_display = new_q_no
         
+    client_contact = data.get("clientInfo", {}).get("contact", "")
+    g_total = calculate_grand_total(data)
+
+    # Sync Status & Tracking Columns
+    billing_details = data.get("billingDetails", {})
+    q_status = billing_details.get("quotationStatus") or quot.quotation_status or "For Approval"
+    p_status = billing_details.get("projectStatus") or quot.project_status or "On Going"
+    submitted_at_str = billing_details.get("submittedToAdminAt")
+    upd_detail = billing_details.get("updateDetail") or quot.update_detail or ""
+
+    p_incharge = billing_details.get("projectInCharge") or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
+    b_to = data.get("clientInfo", {}).get("company", "")
+
+    if q_status == "CANCELLED":
+        p_status = "CANCELLED"
+        upd_detail = "CANCELLED"
+        billing_details["quotationStatus"] = "CANCELLED"
+        billing_details["projectStatus"] = "CANCELLED"
+        billing_details["updateDetail"] = "CANCELLED"
+
+    billing_details["projectInCharge"] = p_incharge
+    billing_details["billTo"] = b_to
+    
+    if username:
+        billing_details["updatedBy"] = username
+        billing_details["lastUpdatedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M")
+
+    data["billingDetails"] = billing_details
+
+    submitted_datetime = None
+    if submitted_at_str:
+        try:
+            submitted_datetime = datetime.strptime(submitted_at_str[:10], "%Y-%m-%d")
+        except Exception:
+            submitted_datetime = None
+    elif quot.submitted_to_admin_at:
+        submitted_datetime = quot.submitted_to_admin_at
+    
+    values = {
+        "data": json.dumps(data, ensure_ascii=False),
+        "quotation_no": new_q_no,
+        "display_name": new_display,
+        "updated_at": datetime.now(timezone.utc),
+        "client_name": data.get("clientInfo", {}).get("company", ""),
+        "designer_name": p_incharge,
+        "grand_total": g_total,
+        "customer_incharge": client_contact,
+        "quotation_status": q_status,
+        "project_status": p_status,
+        "submitted_to_admin_at": submitted_datetime,
+        "bill_to": b_to,
+        "update_detail": upd_detail
+    }
+    
+    if username:
+        values["updated_by"] = username
+        values["last_updated_at"] = datetime.now(timezone.utc)
+
     await db.execute(
         update(Quotation)
         .where(Quotation.id == q_id)
-        .values(
-            data=json.dumps(data, ensure_ascii=False),
-            quotation_no=new_q_no,
-            display_name=new_display,
-            updated_at=datetime.now(timezone.utc),
-            client_name=data.get("clientInfo", {}).get("company", ""),
-            designer_name=data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
-        )
+        .values(**values)
     )
     await db.commit()
 
@@ -444,6 +569,30 @@ async def list_quotations(
     result = await db.execute(stmt)
     items = result.scalars().all()
     
+    # Auto-backfill grand_total and other synced fields if they are missing
+    backfilled_any = False
+    for i in items:
+        if (i.grand_total == 0.0 or not i.grand_total) and i.data:
+            try:
+                data = json.loads(i.data)
+                g_total = calculate_grand_total(data)
+                if g_total > 0:
+                    i.grand_total = g_total
+                    client_contact = data.get("clientInfo", {}).get("contact", "")
+                    p_incharge = data.get("billingDetails", {}).get("projectInCharge") or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
+                    b_to = data.get("clientInfo", {}).get("company", "")
+                    
+                    i.customer_incharge = client_contact
+                    i.designer_name = p_incharge
+                    i.bill_to = b_to
+                    
+                    db.add(i)
+                    backfilled_any = True
+            except Exception as e:
+                print(f"Error backfilling quotation {i.id}: {e}")
+    if backfilled_any:
+        await db.commit()
+    
     is_admin = current_user.role in [UserRole.admin, UserRole.it]
     
     return {
@@ -459,7 +608,19 @@ async def list_quotations(
                 "isActive": i.is_active,
                 "hasPassword": bool(i.password),
                 "password": i.password if is_admin else None, # Elevated view for recovery
-                "displayName": i.display_name or i.quotation_no
+                "displayName": i.display_name or i.quotation_no,
+                
+                # New fields for Billing Monitoring
+                "grandTotal": float(i.grand_total or 0.0),
+                "customerIncharge": i.customer_incharge or "",
+                "quotationStatus": i.quotation_status or "For Approval",
+                "projectStatus": i.project_status or "On Going",
+                "submittedToAdminAt": i.submitted_to_admin_at.strftime("%Y-%m-%d") if i.submitted_to_admin_at else None,
+                "billTo": i.bill_to or "",
+                "datePaid": i.date_paid.strftime("%Y-%m-%d") if i.date_paid else None,
+                "updatedBy": i.updated_by or "",
+                "lastUpdatedAt": i.last_updated_at.strftime("%Y-%m-%d %H:%M") if i.last_updated_at else None,
+                "updateDetail": i.update_detail or ""
             } for i in items
         ]
     }
@@ -544,13 +705,18 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
     if res.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Quotation number already exists")
     
+    client_contact = ci.get("contact", "")
+    g_total = calculate_grand_total(data)
+
     new_q = Quotation(
         quotation_no=q_no,
         client_name=ci.get("company", ""),
         designer_name=sig.get("name", ""),
         workstation=workstation,
         data=json.dumps(data, ensure_ascii=False),
-        display_name=q_no
+        display_name=q_no,
+        grand_total=g_total,
+        customer_incharge=client_contact
     )
     db.add(new_q)
     await db.commit()
@@ -566,12 +732,130 @@ async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
     quot = result.scalar_one_or_none()
     if not quot:
         raise HTTPException(status_code=404, detail="Quotation not found")
-    return json.loads(quot.data)
+    
+    data = json.loads(quot.data) if quot.data else {}
+    if "billingDetails" not in data:
+        data["billingDetails"] = {}
+        
+    data["billingDetails"]["quotationStatus"] = quot.quotation_status or "For Approval"
+    data["billingDetails"]["projectStatus"] = quot.project_status or "On Going"
+    data["billingDetails"]["submittedToAdminAt"] = (
+        quot.submitted_to_admin_at.isoformat()[:10] if quot.submitted_to_admin_at else None
+    )
+    data["billingDetails"]["updateDetail"] = quot.update_detail or ""
+    data["billingDetails"]["projectInCharge"] = quot.designer_name or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
+    data["billingDetails"]["billTo"] = data.get("clientInfo", {}).get("company", "") or quot.bill_to or ""
+    
+    return data
 
 @router.patch("/{q_id}")
-async def update_quotation(q_id: int, data: dict, db: AsyncSession = Depends(get_db)):
+async def update_quotation(
+    q_id: int, 
+    data: dict, 
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Full update of quotation data."""
-    await _sync_metadata(q_id, data, db)
+    await _sync_metadata(q_id, data, db, current_user.username)
+    return {"success": True}
+
+@router.patch("/{q_id}/billing")
+async def update_billing_monitoring(
+    q_id: int,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update billing tracking fields for admin roles."""
+    if current_user.role not in [UserRole.admin, UserRole.it]:
+        raise HTTPException(status_code=403, detail="Access Denied")
+        
+    stmt = select(Quotation).where(Quotation.id == q_id)
+    res = await db.execute(stmt)
+    quot = res.scalar_one_or_none()
+    if not quot:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+        
+    # Editable billing tracking fields
+    if "quotationStatus" in payload:
+        quot.quotation_status = payload["quotationStatus"]
+    if "projectStatus" in payload:
+        quot.project_status = payload["projectStatus"]
+    if "submittedToAdminAt" in payload:
+        val = payload["submittedToAdminAt"]
+        if val:
+            try:
+                quot.submitted_to_admin_at = datetime.strptime(val[:10], "%Y-%m-%d")
+            except ValueError:
+                quot.submitted_to_admin_at = None
+        else:
+            quot.submitted_to_admin_at = None
+    if "billTo" in payload:
+        quot.bill_to = payload["billTo"]
+        quot.client_name = payload["billTo"]
+    if "projectInCharge" in payload:
+        quot.designer_name = payload["projectInCharge"]
+    if "datePaid" in payload:
+        val = payload["datePaid"]
+        if val:
+            try:
+                quot.date_paid = datetime.strptime(val[:10], "%Y-%m-%d")
+            except ValueError:
+                quot.date_paid = None
+        else:
+            quot.date_paid = None
+    if "updateDetail" in payload:
+        quot.update_detail = payload["updateDetail"]
+        
+    # Enforce cascade logic
+    if quot.quotation_status == "CANCELLED":
+        quot.project_status = "CANCELLED"
+        quot.update_detail = "CANCELLED"
+
+    if "updatedBy" in payload:
+        quot.updated_by = payload["updatedBy"]
+    else:
+        quot.updated_by = current_user.username
+    quot.last_updated_at = datetime.now(timezone.utc)
+    
+    # Sync with inner JSON
+    try:
+        data = json.loads(quot.data) if quot.data else {}
+        if "billingDetails" not in data:
+            data["billingDetails"] = {}
+        data["billingDetails"]["quotationStatus"] = quot.quotation_status
+        data["billingDetails"]["projectStatus"] = quot.project_status
+        data["billingDetails"]["submittedToAdminAt"] = (
+            quot.submitted_to_admin_at.isoformat()[:10] if quot.submitted_to_admin_at else None
+        )
+        data["billingDetails"]["updateDetail"] = quot.update_detail
+        data["billingDetails"]["projectInCharge"] = quot.designer_name or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
+        data["billingDetails"]["billTo"] = quot.bill_to or ""
+        data["billingDetails"]["updatedBy"] = quot.updated_by
+        data["billingDetails"]["lastUpdatedAt"] = quot.last_updated_at.strftime("%Y-%m-%d %H:%M")
+        if "clientInfo" not in data:
+            data["clientInfo"] = {}
+        data["clientInfo"]["company"] = quot.bill_to or ""
+        quot.data = json.dumps(data, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error syncing JSON in update_billing_monitoring: {e}")
+
+    await db.commit()
+
+    # Emit Socket.IO patches for active editors to update live
+    room_name = f"quot_{q_id}"
+    patches = [
+        {"path": "billingDetails.quotationStatus", "value": quot.quotation_status},
+        {"path": "billingDetails.projectStatus", "value": quot.project_status},
+        {"path": "billingDetails.submittedToAdminAt", "value": (quot.submitted_to_admin_at.isoformat()[:10] if quot.submitted_to_admin_at else None)},
+        {"path": "billingDetails.updateDetail", "value": quot.update_detail},
+        {"path": "billingDetails.projectInCharge", "value": quot.designer_name},
+        {"path": "billingDetails.billTo", "value": quot.bill_to},
+        {"path": "clientInfo.company", "value": quot.bill_to}
+    ]
+    for patch in patches:
+        await sio.emit("remote_patch", {"sid": "system", "patch": patch}, room=room_name)
+
     return {"success": True}
 
 @router.get("/{q_id}/history")

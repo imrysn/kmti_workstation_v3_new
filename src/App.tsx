@@ -17,6 +17,7 @@ import TeamCalendar from './pages/TeamCalendar'
 import FeatureClosed from './pages/FeatureClosed'
 import Maintenance from './pages/Maintenance'
 import Login from './pages/Login'
+import BillingMonitoring from './pages/BillingMonitoring'
 import ProtectedRoute from './components/ProtectedRoute'
 import { ModalProvider } from './components/ModalContext'
 import { ModalContainer } from './components/modals'
@@ -220,6 +221,14 @@ function WorkstationShell() {
               element={
                 <ProtectedRoute roles={['admin', 'it']}>
                   <AdminHelpCenter />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/billing-monitoring"
+              element={
+                <ProtectedRoute roles={['admin', 'it']}>
+                  <BillingMonitoring />
                 </ProtectedRoute>
               }
             />

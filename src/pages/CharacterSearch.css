@@ -133,20 +133,20 @@
   gap: 6px;
 }
 
-/* Make the Individual symbols span the bottom row horizontally */
-.char-template-group:last-child {
+/* Make the Individual and Symbol groups span the bottom row horizontally */
+.char-template-group.full-width {
   grid-column: 1 / span 3;
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--border-subtle);
 }
 
-.char-template-group:last-child .char-group-items {
+.char-template-group.full-width .char-group-items {
   flex-direction: row;
   justify-content: space-between;
 }
 
-.char-template-group:last-child .char-tpl-btn {
+.char-template-group.full-width .char-tpl-btn {
   flex: 1;
 }
 

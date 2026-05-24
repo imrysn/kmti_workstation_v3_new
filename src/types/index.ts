@@ -85,6 +85,17 @@ export interface IQuotation {
   hasPassword?: boolean,
   password?: string, // Plain-text for Admin recovery
   displayName?: string
+  // Billing & Monitoring fields
+  grandTotal?: number
+  customerIncharge?: string
+  quotationStatus?: string
+  projectStatus?: string
+  submittedToAdminAt?: string | null
+  billTo?: string | null
+  datePaid?: string | null
+  updatedBy?: string | null
+  lastUpdatedAt?: string | null
+  updateDetail?: string | null
 }
 
 export interface IQuotationHistory {

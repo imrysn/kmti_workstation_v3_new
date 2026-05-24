@@ -28,6 +28,7 @@ interface Props {
   onManualOverrideChange: (updater: (prev: ManualOverrides) => ManualOverrides) => void
   onQuotationDetailsChange?: (updates: Partial<QuotationDetails>) => void
   onBillingDetailsChange?: (updates: Partial<BillingDetails>) => void
+  onClientInfoChange?: (updates: Partial<ClientInfo>) => void
   autoStartTutorial?: boolean
   onCompleteTutorial?: () => void
   layoutVariant?: 'special' | 'kemco'
@@ -107,7 +108,7 @@ const PrintPreviewModal = memo(({
   isOpen, onClose,
   companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
   manualOverrides, onManualOverrideChange,
-  onQuotationDetailsChange, onBillingDetailsChange,
+  onQuotationDetailsChange, onBillingDetailsChange, onClientInfoChange,
   autoStartTutorial, onCompleteTutorial,
   layoutVariant = 'special',
   canViewBilling = false,
@@ -193,7 +194,7 @@ const PrintPreviewModal = memo(({
   // ── Print style injection helper ────────────────────────────────
   // Shared between handlePrint and handleDownloadPDF to avoid duplication.
   const buildPrintStyleContent = () => `
-    .ppm-header, .ppm-footer-bar, .ppm-backdrop,
+    .ppm-header, .ppm-footer-bar, .ppm-backdrop, .ppm-sidebar,
     .ppm-page-break-indicator { display: none !important; }
     .ppm-container, .ppm-body, .ppm-scroll-area {
       position: static !important; display: block !important;
@@ -368,6 +369,17 @@ const PrintPreviewModal = memo(({
     }
   }, [printMode, quotationDetails, clientInfo, billingDetails, tasks, baseRates, manualOverrides, signatures])
 
+  // ── Status tracking change handler ─────────────────────────────
+  const handleQuotationStatusChange = useCallback((val: string) => {
+    if (!onBillingDetailsChange) return
+    const updates: Partial<BillingDetails> = { quotationStatus: val }
+    if (val === 'CANCELLED') {
+      updates.projectStatus = 'CANCELLED'
+      updates.updateDetail = 'CANCELLED'
+    }
+    onBillingDetailsChange(updates)
+  }, [onBillingDetailsChange])
+
   // ── Zoom controls ──────────────────────────────────────────────
   const ZOOM_LEVELS = useMemo(() => [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3], [])
 
@@ -499,49 +511,127 @@ const PrintPreviewModal = memo(({
 
         {/* ── Body ────────────────────────────────────────────────── */}
         <div className="ppm-body" ref={containerRef}>
-          <div className="ppm-scroll-area">
-            <div
-              className="ppm-a4-scaler"
-              style={{ width: `${A4_W_PX * actualScale}px`, height: `${scalerHeight}px` }}
-            >
-              <div style={{ transform: `scale(${actualScale})`, transformOrigin: 'top left', width: `${A4_W_PX}px` }}>
-                <div ref={previewRef} className="preview-content">
-                  {pages.map((page, pageIndex) => {
-                    const isLastPage = pageIndex === pages.length - 1
-                    const finalLimit = printMode === 'billing' ? TASKS_PER_PAGE_BILLING_FINAL : TASKS_PER_PAGE_QUOTATION_FINAL
-                    const showAdmin = manualOverrides.footer?.showAdmin !== false
+          <div className="ppm-body-content">
+            <div className="ppm-scroll-area">
+              <div
+                className="ppm-a4-scaler"
+                style={{ width: `${A4_W_PX * actualScale}px`, height: `${scalerHeight}px` }}
+              >
+                <div style={{ transform: `scale(${actualScale})`, transformOrigin: 'top left', width: `${A4_W_PX}px` }}>
+                  <div ref={previewRef} className="preview-content">
+                    {pages.map((page, pageIndex) => {
+                      const isLastPage = pageIndex === pages.length - 1
+                      const finalLimit = printMode === 'billing' ? TASKS_PER_PAGE_BILLING_FINAL : TASKS_PER_PAGE_QUOTATION_FINAL
+                      const showAdmin = manualOverrides.footer?.showAdmin !== false
 
-                    return (
-                      <div key={pageIndex}>
-                        {pageIndex > 0 && (
-                          <div className="ppm-page-break-indicator">PAGE {pageIndex + 1}</div>
-                        )}
-                        <PrintPage
-                          {...sharedPageProps}
-                          allTasks={tasks}
-                          isFirstPage={pageIndex === 0}
-                          isContinuation={pageIndex > 0}
-                          pageTasks={page.tasks.map(t => ({ ...t, unitPage: resolveUnitPage(t) }))}
-                          pageTotals={page.totals}
-                          startIndex={page.startIndex}
-                          isLastPage={isLastPage}
-                          onTaskOverride={handleTaskOverride}
-                          showAdmin={showAdmin}
-                          fillerRowCount={(() => {
-                            // Strictly ensure exactly 10 rows total (or 14 for billing):
-                            // Tasks + Admin + Nothing Follow + Fillers = finalLimit
-                            const isKemco = layoutVariant === 'kemco'
-                            const overheadCount = (!isKemco && showAdmin) ? 1 : 0
-                            const nothingFollowCount = isKemco ? 0 : 1
-                            const totalSoFar = page.tasks.length + overheadCount + nothingFollowCount
+                      return (
+                        <div key={pageIndex}>
+                          {pageIndex > 0 && (
+                            <div className="ppm-page-break-indicator">PAGE {pageIndex + 1}</div>
+                          )}
+                          <PrintPage
+                            {...sharedPageProps}
+                            allTasks={tasks}
+                            isFirstPage={pageIndex === 0}
+                            isContinuation={pageIndex > 0}
+                            pageTasks={page.tasks.map(t => ({ ...t, unitPage: resolveUnitPage(t) }))}
+                            pageTotals={page.totals}
+                            startIndex={page.startIndex}
+                            isLastPage={isLastPage}
+                            onTaskOverride={handleTaskOverride}
+                            showAdmin={showAdmin}
+                            fillerRowCount={(() => {
+                              // Strictly ensure exactly 10 rows total (or 14 for billing):
+                              // Tasks + Admin + Nothing Follow + Fillers = finalLimit
+                              const isKemco = layoutVariant === 'kemco'
+                              const overheadCount = (!isKemco && showAdmin) ? 1 : 0
+                              const nothingFollowCount = isKemco ? 0 : 1
+                              const totalSoFar = page.tasks.length + overheadCount + nothingFollowCount
 
-                            // Return exactly how many fillers are needed to hit the limit
-                            return Math.max(0, finalLimit - totalSoFar)
-                          })()}
-                        />
-                      </div>
-                    )
-                  })}
+                              // Return exactly how many fillers are needed to hit the limit
+                              return Math.max(0, finalLimit - totalSoFar)
+                            })()}
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar Status & Tracking Controls */}
+            <div className="ppm-sidebar">
+              <div className="ppm-sidebar-header">
+                <h3>Quotation Status</h3>
+              </div>
+              <div className="ppm-sidebar-body">
+                <div className="ppm-sidebar-group">
+                  <label htmlFor="ppm-sidebar-pincharge">Project Incharge</label>
+                  <input
+                    type="text"
+                    id="ppm-sidebar-pincharge"
+                    className="ppm-sidebar-input"
+                    placeholder="Name"
+                    value={billingDetails?.projectInCharge || ''}
+                    disabled={billingDetails?.quotationStatus === 'CANCELLED'}
+                    onChange={e => onBillingDetailsChange?.({ projectInCharge: e.target.value })}
+                  />
+                </div>
+
+                <div className="ppm-sidebar-group">
+                  <label htmlFor="ppm-sidebar-customer">Customer</label>
+                  <input
+                    type="text"
+                    id="ppm-sidebar-customer"
+                    className="ppm-sidebar-input"
+                    placeholder="NIKKO"
+                    value={clientInfo?.company || ''}
+                    disabled={billingDetails?.quotationStatus === 'CANCELLED'}
+                    onChange={e => onClientInfoChange?.({ company: e.target.value })}
+                  />
+                </div>
+
+                <div className="ppm-sidebar-group">
+                  <label htmlFor="ppm-sidebar-qstatus">Quotation Status</label>
+                  <select
+                    id="ppm-sidebar-qstatus"
+                    className="ppm-sidebar-select"
+                    value={billingDetails?.quotationStatus || 'For Approval'}
+                    onChange={e => handleQuotationStatusChange(e.target.value)}
+                  >
+                    <option value="For Approval">For Approval</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Partial Billing">Partial Billing</option>
+                    <option value="Billing Completion">Billing Completion</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                  </select>
+                </div>
+
+                <div className="ppm-sidebar-group">
+                  <label htmlFor="ppm-sidebar-pstatus">Project Status</label>
+                  <select
+                    id="ppm-sidebar-pstatus"
+                    className="ppm-sidebar-select"
+                    value={billingDetails?.projectStatus || 'On Going'}
+                    disabled={billingDetails?.quotationStatus === 'CANCELLED'}
+                    onChange={e => onBillingDetailsChange?.({ projectStatus: e.target.value })}
+                  >
+                    <option value="On Going">On Going</option>
+                    <option value="Finished">Finished</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                  </select>
+                </div>
+
+                <div className="ppm-sidebar-group">
+                  <label htmlFor="ppm-sidebar-submitted">Submitted to Admin</label>
+                  <input
+                    type="date"
+                    id="ppm-sidebar-submitted"
+                    className="ppm-sidebar-input"
+                    value={billingDetails?.submittedToAdminAt || ''}
+                    onChange={e => onBillingDetailsChange?.({ submittedToAdminAt: e.target.value || null })}
+                  />
                 </div>
               </div>
             </div>

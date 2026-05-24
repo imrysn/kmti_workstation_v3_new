@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from db.database import Base
@@ -18,6 +18,18 @@ class Quotation(Base):
     is_active = Column(Boolean, default=False)
     password = Column(String(255), nullable=True)
     display_name = Column(String(255), nullable=True)
+    
+    # Billing & Monitoring fields
+    grand_total = Column(Numeric(10, 2), default=0.0)
+    customer_incharge = Column(String(255), nullable=True)
+    quotation_status = Column(String(50), default="For Approval")
+    project_status = Column(String(50), default="On Going")
+    submitted_to_admin_at = Column(DateTime, nullable=True)
+    bill_to = Column(String(255), nullable=True)
+    date_paid = Column(DateTime, nullable=True)
+    updated_by = Column(String(255), nullable=True)
+    last_updated_at = Column(DateTime, nullable=True)
+    update_detail = Column(Text, nullable=True)
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
