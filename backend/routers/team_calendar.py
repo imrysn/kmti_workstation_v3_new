@@ -11,6 +11,7 @@ from core.auth import get_current_user
 from models.user import User, UserRole
 from models.fms import FmsUser, FmsAssignment, FmsAssignmentMember
 from core.cache import cache_get, cache_set, cache_delete
+from socket_manager import sio
 
 _last_fms_sync_time = 0.0
 
@@ -353,6 +354,7 @@ async def create_todo(
     todo = await use_case.execute(payload.title, payload.description, payload.priority)
     await cache_delete("tc_grid")
     await cache_delete("tc_todos")
+    await sio.emit('calendar_updated')
     return {
         "success": True,
         "todo": {
@@ -419,6 +421,7 @@ async def claim_task(
         )
         await cache_delete("tc_grid")
         await cache_delete("tc_todos")
+        await sio.emit('calendar_updated')
         return {
             "success": True,
             "message": "Task successfully claimed on your calendar.",
@@ -474,6 +477,7 @@ async def request_day_off(
         )
         await cache_delete("tc_grid")
         await cache_delete("tc_todos")
+        await sio.emit('calendar_updated')
         return {
             "success": True,
             "message": "Day off requested successfully." if status_val == "Pending" else "Day off scheduled successfully.",
@@ -529,6 +533,7 @@ async def create_company_event(
     await db.refresh(new_event)
     await cache_delete("tc_grid")
     await cache_delete("tc_todos")
+    await sio.emit('calendar_updated')
     
     return {
         "success": True,
@@ -581,6 +586,7 @@ async def delete_todo(
     await todo_repo.delete(todo_id)
     await cache_delete("tc_grid")
     await cache_delete("tc_todos")
+    await sio.emit('calendar_updated')
 
     return {
         "success": True,
@@ -604,6 +610,7 @@ async def complete_todo(
         await use_case.execute(todo_id)
         await cache_delete("tc_grid")
         await cache_delete("tc_todos")
+        await sio.emit('calendar_updated')
         return {
             "success": True,
             "message": "Task marked as completed."
@@ -647,6 +654,7 @@ async def delete_event(
     await event_repo.delete(event_id)
     await cache_delete("tc_grid")
     await cache_delete("tc_todos")
+    await sio.emit('calendar_updated')
     return {
         "success": True,
         "message": "Calendar event canceled successfully."
@@ -677,6 +685,7 @@ async def approve_event(
         await use_case.execute(event_id)
         await cache_delete("tc_grid")
         await cache_delete("tc_todos")
+        await sio.emit('calendar_updated')
         return {
             "success": True,
             "message": "Calendar event approved successfully."
@@ -747,6 +756,7 @@ async def assign_task(
         )
         await cache_delete("tc_grid")
         await cache_delete("tc_todos")
+        await sio.emit('calendar_updated')
         return {
             "success": True,
             "message": "Task assigned successfully.",

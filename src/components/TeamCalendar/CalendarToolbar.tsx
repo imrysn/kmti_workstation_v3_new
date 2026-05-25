@@ -2,8 +2,8 @@ import { ChevronLeftIcon, ChevronRightIcon, LockIcon } from './Icons'
 import { formatLocalDate } from '../../utils/teamCalendarUtils'
 
 interface CalendarToolbarProps {
-  viewMode: 'month' | 'week' | 'agenda'
-  setViewMode: (mode: 'month' | 'week' | 'agenda') => void
+  viewMode: 'month' | 'week' | 'agenda' | 'timeline'
+  setViewMode: (mode: 'month' | 'week' | 'agenda' | 'timeline') => void
   monthName: string
   yearNum: number
   navigateDate: (direction: 'prev' | 'next' | 'today') => void
@@ -31,7 +31,9 @@ export default function CalendarToolbar({
               ? `${monthName} ${yearNum}`
               : viewMode === 'week'
                 ? `Week View — ${monthName}`
-                : `Agenda — Next 14 Days`}
+                : viewMode === 'timeline'
+                  ? `Timeline — ${monthName}`
+                  : `Agenda — Next 14 Days`}
           </h2>
           <div className="work-hours-badge" style={{
             display: 'flex',
@@ -85,6 +87,12 @@ export default function CalendarToolbar({
             onClick={() => setViewMode('agenda')}
           >
             Agenda
+          </button>
+          <button
+            className={`view-toggle-btn ${viewMode === 'timeline' ? 'active' : ''}`}
+            onClick={() => setViewMode('timeline')}
+          >
+            Timeline
           </button>
         </div>
 

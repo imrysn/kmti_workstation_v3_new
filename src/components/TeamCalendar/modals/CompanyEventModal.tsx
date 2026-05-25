@@ -59,7 +59,7 @@ export default function CompanyEventModal({
               style={{ width: '100%', padding: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--cal-card-border)', borderRadius: '4px', color: 'var(--cal-text-primary)' }}
             >
               <option value="Other">Other Event</option>
-              <option value="Holiday">Company Holiday</option>
+              <option value="Holiday">Offset Holiday</option>
               <option value="Birthday">Birthday Celebration</option>
               <option value="Outing">Company Outing / Activity</option>
               <option value="Meeting">Meeting / Assembly</option>

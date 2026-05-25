@@ -21,7 +21,7 @@ class StopwatchRecordUpdate(BaseModel):
 
 @router.get("/")
 async def list_records(
-    workstation: str,
+    workstation: Optional[str] = Query(None),
     user_name: Optional[str] = None,
     db: AsyncSession = Depends(get_db)
 ):
@@ -29,6 +29,9 @@ async def list_records(
     List last 50 stopwatch records for a SPECIFIC workstation.
     Privacy enforcement: Records are partitioned by workstation.
     """
+    if not workstation:
+        return []
+        
     query = select(StopwatchRecord).where(StopwatchRecord.workstation == workstation)
     if user_name:
         query = query.where(StopwatchRecord.user_name == user_name)

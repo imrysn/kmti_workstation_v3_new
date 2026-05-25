@@ -373,6 +373,7 @@ app.whenReady().then(() => {
   */
 
   ipcMain.handle('open-stopwatch-folder', async () => {
+    const stopwatchDir = path.join(app.getPath('documents'), 'Stopwatch Recordings')
     if (!fs.existsSync(stopwatchDir)) fs.mkdirSync(stopwatchDir, { recursive: true })
     shell.openPath(stopwatchDir)
   })

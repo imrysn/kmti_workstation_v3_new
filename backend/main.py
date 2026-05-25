@@ -67,9 +67,6 @@ async def lifespan(app: FastAPI):
     if indexer:
         indexer.start()
     
-    # 3. Initialize Search Suggestions (Trie Engine)
-    from core.trie_engine import warm_up_trie
-    asyncio.create_task(warm_up_trie())
     
     # Start the background polling task
     asyncio.create_task(sync_service.poll_github())
@@ -137,8 +134,10 @@ app.include_router(materials.router, prefix="/api/materials", tags=["Materials"]
 # FastAPI's CORSMiddleware runs. We must therefore pass cors_allowed_origins here
 # at the outer wrapper level, otherwise Electron (file:// origin) gets a 403.
 import socketio as _sio_module
+from socket_manager import sio as global_sio
+
 combined_app = _sio_module.ASGIApp(
-    quotations.sio, 
+    global_sio, 
     app, 
     static_files={},
     socketio_path='socket.io'

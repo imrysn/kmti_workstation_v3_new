@@ -4,9 +4,8 @@ import CalendarSidebar from '../components/TeamCalendar/CalendarSidebar'
 import CalendarToolbar from '../components/TeamCalendar/CalendarToolbar'
 import CalendarGrid from '../components/TeamCalendar/CalendarGrid'
 import AgendaView from '../components/TeamCalendar/AgendaView'
+import CalendarTimeline from '../components/TeamCalendar/CalendarTimeline'
 
-import ConfirmClaimModal from '../components/TeamCalendar/modals/ConfirmClaimModal'
-import AssignTaskModal from '../components/TeamCalendar/modals/AssignTaskModal'
 import DayOffModal from '../components/TeamCalendar/modals/DayOffModal'
 import CompanyEventModal from '../components/TeamCalendar/modals/CompanyEventModal'
 import EventDetailsModal from '../components/TeamCalendar/modals/EventDetailsModal'
@@ -44,20 +43,7 @@ export default function TeamCalendar() {
 
   return (
     <div className="team-calendar-page page-container">
-      {cal.claimingTask && (
-        <div className="interactive-claim-banner">
-          <div className="banner-content">
-            <span className="pulse-dot"></span>
-            <span>
-              Claiming Task: <strong>{cal.claimingTask.title}</strong>.{' '}
-              {!cal.claimStartDate
-                ? "Click on the start day in the calendar grid."
-                : `Selected Start: ${cal.claimStartDate}. Now click on the end day.`}
-            </span>
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={cal.cancelClaimMode}>Cancel Claim</button>
-        </div>
-      )}
+
 
       <div className="team-calendar-layout">
         <CalendarSidebar
@@ -83,7 +69,7 @@ export default function TeamCalendar() {
             setDayOffEnd={cal.setDayOffEnd}
           />
 
-          <div className="calendar-grid-container custom-scrollbar">
+          <div className={`calendar-grid-container ${cal.viewMode !== 'timeline' ? 'custom-scrollbar' : ''}`} style={cal.viewMode === 'timeline' ? { overflow: 'hidden' } : {}}>
             {cal.viewMode === 'agenda' ? (
               <AgendaView
                 agendaDays={cal.agendaDays}
@@ -94,8 +80,19 @@ export default function TeamCalendar() {
                 showSpans={cal.showSpans}
                 setSelectedEvent={cal.setSelectedEvent}
               />
+            ) : cal.viewMode === 'timeline' ? (
+              <CalendarTimeline
+                isLoading={cal.isLoading}
+                calendarDays={cal.calendarDays}
+                events={cal.events}
+                phHolidays={cal.phHolidays}
+                showClaims={cal.showClaims}
+                showAbsences={cal.showAbsences}
+                setSelectedEvent={cal.setSelectedEvent}
+              />
             ) : (
               <CalendarGrid
+                isLoading={cal.isLoading}
                 viewMode={cal.viewMode}
                 calendarDays={cal.calendarDays}
                 displayDate={cal.displayDate}
@@ -104,8 +101,6 @@ export default function TeamCalendar() {
                 showClaims={cal.showClaims}
                 showAbsences={cal.showAbsences}
                 showSpans={cal.showSpans}
-                claimingTask={cal.claimingTask}
-                claimStartDate={cal.claimStartDate}
                 handleCellClick={cal.handleCellClick}
                 setSelectedEvent={cal.setSelectedEvent}
                 setActivePopoverDate={cal.setActivePopoverDate}
@@ -115,37 +110,7 @@ export default function TeamCalendar() {
         </main>
       </div>
 
-      {/* ── INTERACTIVE CLAIM CONFIRMATION MODAL ───────────────────── */}
-      {cal.confirmingClaim && (
-        <ConfirmClaimModal
-          confirmingClaim={cal.confirmingClaim}
-          engineerName={cal.engineerName}
-          handleNameChange={cal.handleNameChange}
-          handleConfirmClaimSubmit={cal.handleConfirmClaimSubmit}
-          onClose={() => cal.setConfirmingClaim(null)}
-        />
-      )}
 
-      {/* ── ADMIN ASSIGN TASK MODAL ────────────────────────────────── */}
-      {cal.assigningTask && (
-        <AssignTaskModal
-          assigningTask={cal.assigningTask}
-          assignSelectedTodoId={cal.assignSelectedTodoId}
-          setAssignSelectedTodoId={cal.setAssignSelectedTodoId}
-          backlog={cal.backlog}
-          assignUserId={cal.assignUserId}
-          setAssignUserId={cal.setAssignUserId}
-          assignEngineerName={cal.assignEngineerName}
-          setAssignEngineerName={cal.setAssignEngineerName}
-          activeUsers={cal.activeUsers}
-          assignStartDate={cal.assignStartDate}
-          setAssignStartDate={cal.setAssignStartDate}
-          assignEndDate={cal.assignEndDate}
-          setAssignEndDate={cal.setAssignEndDate}
-          handleAssignTaskSubmit={cal.handleAssignTaskSubmit}
-          onClose={() => cal.setAssigningTask(null)}
-        />
-      )}
 
       {/* ── DAY OFF / ABSENCE LOCK MODAL ───────────────────────────── */}
       {cal.isAddingDayOff && (

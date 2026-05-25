@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { io } from 'socket.io-client'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../components/ModalContext'
 import { teamCalendarApi, ICalendarEvent, ITodo, IActiveUser, IPendingApproval } from '../services/teamCalendarService'
@@ -17,8 +18,9 @@ export function useTeamCalendar() {
 
   const isAdminOrIT = hasRole('admin', 'it')
 
-  // --- Layout State ---
-  const [viewMode, setViewMode] = useState<'month' | 'week' | 'agenda'>('month')
+  // --- Layout & Network State ---
+  const [isLoading, setIsLoading] = useState(true)
+  const [viewMode, setViewMode] = useState<'month' | 'week' | 'agenda' | 'timeline'>('month')
   const [activeSidebarTab, setActiveSidebarTab] = useState<'backlog' | 'claims' | 'completed'>('backlog')
   const [currentDate, setCurrentDate] = useState<Date>(new Date())
   const [events, setEvents] = useState<ICalendarEvent[]>([])
@@ -103,6 +105,8 @@ export function useTeamCalendar() {
       start.setDate(currentDate.getDate() - dow) // Sunday of current week
       end.setTime(start.getTime())
       end.setDate(start.getDate() + 6) // Sunday to Saturday (7 days)
+    } else if (viewMode === 'timeline') {
+      end.setDate(currentDate.getDate() + 13) // Rolling 14 days
     } else {
       // Agenda: 14 calendar days from currentDate
       end.setDate(currentDate.getDate() + 13)
@@ -115,7 +119,13 @@ export function useTeamCalendar() {
   }, [currentDate, viewMode])
 
   // --- API Load Data ---
+  const isFirstLoad = useRef(true)
+  
   const loadData = useCallback(async () => {
+    if (isFirstLoad.current) {
+      setIsLoading(true)
+    }
+    
     try {
       const gridRes = await teamCalendarApi.getGrid(fetchRange.start, fetchRange.end)
       if (gridRes.success) {
@@ -136,8 +146,24 @@ export function useTeamCalendar() {
     } catch (err: any) {
       console.error(err)
       notify('Failed to load team calendar data.', 'error')
+    } finally {
+      setIsLoading(false)
+      isFirstLoad.current = false
     }
   }, [fetchRange, notify, isAdminOrIT])
+
+  useEffect(() => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    const socket = io(API_URL, { path: '/socket.io' })
+
+    socket.on('calendar_updated', () => {
+      loadData()
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [loadData])
 
   useEffect(() => {
     loadData()
@@ -352,35 +378,9 @@ export function useTeamCalendar() {
     }
   }
 
-  // --- Click Grid Cell (Interactive Claim Trigger) ---
+  // --- Click Grid Cell ---
   const handleCellClick = (day: Date, dateStr: string) => {
-    if (!claimingTask) {
-      setActivePopoverDate(day)
-      return
-    }
-
-    if (!claimStartDate) {
-      setClaimStartDate(dateStr)
-      notify(`Start date: ${dateStr}. Now select the End date.`, 'info')
-      return
-    }
-
-    const start = new Date(claimStartDate)
-    const end = new Date(dateStr)
-
-    if (end < start) {
-      notify('End date cannot be earlier than Start date. Reselecting start...', 'warning')
-      setClaimStartDate(dateStr)
-      return
-    }
-
-    setConfirmingClaim({
-      todo: claimingTask,
-      start: claimStartDate,
-      end: dateStr
-    })
-    setClaimingTask(null)
-    setClaimStartDate(null)
+    setActivePopoverDate(day)
   }
 
   const cancelClaimMode = () => {
@@ -537,6 +537,7 @@ export function useTeamCalendar() {
     user,
     hasRole,
     isAdminOrIT,
+    isLoading,
     viewMode,
     setViewMode,
     activeSidebarTab,

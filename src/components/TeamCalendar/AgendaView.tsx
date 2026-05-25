@@ -1,6 +1,6 @@
 import { ICalendarEvent } from '../../services/teamCalendarService'
 import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, BriefcaseIcon } from './Icons'
+import { GlobeIcon, LockIcon, BriefcaseIcon, CheckIcon, TargetIcon } from './Icons'
 
 interface AgendaViewProps {
   agendaDays: Date[]
@@ -89,16 +89,22 @@ export default function AgendaView({
                   const taskType = inferTaskType(event.todo_title, event.todo_description)
                   const taskColor = getTaskTypeColor(taskType)
                   const teamAccent = getTeamColor(event.team)
-                  const accentColor = (!isAbsence && !isCompanyEvent)
-                    ? (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
-                    : isCompanyEvent ? '#6366f1' : 'var(--cal-text-muted)'
-
+                  
+                  const isCompleted = event.todo_status === 'Completed'
                   const isOverdue = event.event_type === 'Task_Claim' && event.todo_status === 'Claimed' && event.end_date < formatLocalDate(new Date())
+
+                  const accentColor = isCompleted 
+                    ? '#059669' 
+                    : isOverdue 
+                      ? '#dc2626' 
+                      : (!isAbsence && !isCompanyEvent)
+                        ? (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
+                        : isCompanyEvent ? '#6366f1' : 'var(--cal-text-muted)'
 
                   return (
                     <div
                       key={event.id}
-                      className={`agenda-event-card ${isCompanyEvent ? 'company-card' : isAbsence ? 'absence-card' : 'claim-card'} ${isOverdue ? 'overdue' : ''}`}
+                      className={`agenda-event-card ${isCompanyEvent ? 'company-card' : isAbsence ? 'absence-card' : 'claim-card'} ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}
                       onClick={() => {
                         if (event.event_type !== 'Task_Claim') {
                           setSelectedEvent(event)
@@ -113,7 +119,11 @@ export default function AgendaView({
                         border: `1px solid ${accentColor}`,
                         background: isCompanyEvent
                           ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))'
-                          : (!isAbsence ? taskColor.bg : 'var(--bg-surface-subtle)'),
+                          : isCompleted
+                            ? 'rgba(5, 150, 105, 0.08)'
+                            : isOverdue
+                              ? 'rgba(220, 38, 38, 0.08)'
+                              : (!isAbsence ? taskColor.bg : 'var(--bg-surface-subtle)'),
                         borderLeft: `4.5px solid ${accentColor}`,
                         cursor: isAbsence || isCompanyEvent ? 'pointer' : 'default',
                         transition: 'all 0.15s ease'
@@ -122,7 +132,13 @@ export default function AgendaView({
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span className="event-icon" style={{ display: 'flex', alignItems: 'center', color: accentColor }}>
-                            {isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : <BriefcaseIcon />}
+                            {isCompanyEvent 
+                              ? <GlobeIcon /> 
+                              : isAbsence 
+                                ? <LockIcon /> 
+                                : isCompleted
+                                  ? <CheckIcon />
+                                  : <TargetIcon />}
                           </span>
                           <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--cal-text-primary)', textTransform: isCompanyEvent || isAbsence ? undefined : 'uppercase', letterSpacing: isCompanyEvent || isAbsence ? undefined : '0.3px' }}>
                             {isCompanyEvent
@@ -137,6 +153,9 @@ export default function AgendaView({
                             <span className="priority-badge priority-normal" style={{ background: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.4)', color: '#a5b4fc' }}>
                               {event.leave_type || 'Event'}
                             </span>
+                          )}
+                          {!isAbsence && !isCompanyEvent && isCompleted && (
+                            <span className="priority-badge priority-normal" style={{ background: 'rgba(5, 150, 105, 0.2)', border: '1px solid rgba(5, 150, 105, 0.4)', color: '#10b981' }}>Completed</span>
                           )}
                           {!isAbsence && !isCompanyEvent && isOverdue && (
                             <span className="priority-badge priority-critical" style={{ animation: 'pulse 1.5s infinite' }}>Overdue</span>

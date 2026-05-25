@@ -32,16 +32,7 @@ from core.auth import get_current_user
 from core.config import BASE_DIR
 from core.cache import cache_get, cache_set, cache_delete
 
-# ─── Socket.IO Server ─────────────────────────────────────────────────────────
-# cors_allowed_origins MUST be the string "*" (not a list) — the string form
-# triggers python-engineio's unconditional allow-all code path.
-sio = socketio.AsyncServer(
-    async_mode="asgi",
-    cors_allowed_origins="*",
-    logger=False,
-    engineio_logger=False,
-)
-socket_app = socketio.ASGIApp(sio)
+from socket_manager import sio
 
 # Tracks connected users per document room: { quotation_id -> { sid -> { name, color } } }
 # Room metadata is now persisted in the DB (is_active, password, display_name)

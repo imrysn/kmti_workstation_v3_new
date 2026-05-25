@@ -22,11 +22,22 @@ router = APIRouter()
 
 # NAS Storage Path for network accessibility
 STORAGE_DIR = r"\\KMTI-NAS\Shared\data\storage\feedback"
-os.makedirs(STORAGE_DIR, exist_ok=True)
+try:
+    os.makedirs(STORAGE_DIR, exist_ok=True)
+except Exception as e:
+    import logging
+    logging.getLogger("kmti_backend.help_center").warning(
+        f"Failed to initialize STORAGE_DIR at '{STORAGE_DIR}' on boot: {e}. Screenshot uploads may fail until path is restored."
+    )
 
 async def _save_screenshots(screenshots: List[UploadFile]) -> Optional[str]:
     saved_paths = []
     if screenshots:
+        try:
+            os.makedirs(STORAGE_DIR, exist_ok=True)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Screenshot storage directory is unreachable: {e}")
+            
         for screenshot in screenshots:
             if not screenshot.filename:
                 continue

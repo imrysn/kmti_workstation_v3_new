@@ -61,6 +61,25 @@ export default function CalendarSidebar({
         </div>
       )}
 
+      {/* Task Status Legend */}
+      <div className="sidebar-section-container filter-legend-section" style={{ marginBottom: '16px' }}>
+        <h4 className="section-title-label">Task Status</h4>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+          <div className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#059669', flexShrink: 0, opacity: 0.9 }} />
+            <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>Completed</span>
+          </div>
+          <div className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#dc2626', flexShrink: 0, opacity: 0.9 }} />
+            <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>Overdue</span>
+          </div>
+          <div className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--cal-card-border)', flexShrink: 0, opacity: 0.9 }} />
+            <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>Active</span>
+          </div>
+        </div>
+      </div>
+
       {/* Team Legend — dynamic, teams present in current view (General excluded) */}
       {visibleTeams.length > 0 && (
         <div className="sidebar-section-container filter-legend-section" style={{ marginBottom: '16px' }}>

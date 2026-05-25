@@ -1429,17 +1429,26 @@
 
 /* 3. Overdue Claims Badge Highlights */
 .overdue-claim-badge {
-  background: rgba(245, 158, 11, 0.12) !important;
-  color: #f59e0b !important;
-  border-left: 3.5px solid #f59e0b !important;
+  background: rgba(220, 38, 38, 0.12) !important;
+  color: #dc2626 !important;
+  border-left: 3.5px solid #dc2626 !important;
   font-weight: 700;
-  border: 1px dashed rgba(245, 158, 11, 0.4);
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.2);
+  border: 1px dashed rgba(220, 38, 38, 0.4);
+  box-shadow: 0 0 6px rgba(220, 38, 38, 0.2);
 }
 
 .overdue-claim-badge::before {
   content: '⚠ ';
   font-size: 10px;
+}
+
+.completed-claim-badge {
+  background: rgba(5, 150, 105, 0.12) !important;
+  color: #059669 !important;
+  border-left: 3.5px solid #059669 !important;
+  font-weight: 700;
+  border: 1px solid rgba(5, 150, 105, 0.3);
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.15);
 }
 
 /* 4. Premium Sidebar Tabs */
@@ -1783,4 +1792,109 @@
 
 .btn-agenda-dismiss:active {
   transform: translateY(0);
+}
+
+/* Company Holiday block styling */
+.company-holiday-block {
+  background: repeating-linear-gradient(45deg,
+      transparent 0px,
+      transparent 10px,
+      rgba(99, 102, 241, 0.05) 10px,
+      rgba(99, 102, 241, 0.05) 20px);
+}
+
+/* Skeleton Loading State */
+@keyframes pulse {
+  0% { background-color: rgba(148, 163, 184, 0.1); }
+  50% { background-color: rgba(148, 163, 184, 0.25); }
+  100% { background-color: rgba(148, 163, 184, 0.1); }
+}
+
+.skeleton-cell {
+  animation: pulse 1.5s infinite ease-in-out;
+  border-radius: 4px;
+  margin: 4px;
+  min-height: 100px;
+}
+
+/* Tooltip Styles */
+.calendar-tooltip {
+  position: absolute;
+  z-index: 9999;
+  width: 320px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--cal-card-border);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  font-size: 13px;
+  color: var(--cal-text-primary);
+  backdrop-filter: blur(10px);
+}
+
+.calendar-tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--cal-text-primary);
+}
+
+.calendar-tooltip-icon {
+  display: flex;
+  color: var(--cal-text-muted);
+}
+
+.calendar-tooltip-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.calendar-tooltip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.calendar-tooltip-row {
+  display: flex;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.calendar-tooltip-label {
+  color: var(--cal-text-muted);
+  font-weight: 500;
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.calendar-tooltip-value {
+  color: var(--cal-text-primary);
+  font-weight: 500;
+}
+
+.calendar-tooltip-desc {
+  color: var(--cal-text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+}
+
+/* Timeline View Animations */
+.timeline-view {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.timeline-task-bar {
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.timeline-task-bar:hover {
+  transform: translateY(-2px) !important;
+  filter: brightness(0.95) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10;
 }

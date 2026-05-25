@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
 import { inferTaskType, getTaskTypeColor, getTeamColor, formatLocalDate } from '../../../utils/teamCalendarUtils'
-import { BriefcaseIcon, LockIcon, GlobeIcon, CalendarIcon } from '../Icons'
+import { BriefcaseIcon, LockIcon, GlobeIcon, CalendarIcon, CheckIcon, TargetIcon } from '../Icons'
 
 // ── Premium SVG Icons (Replacing Emojis) ────────────────────────
 const SunIcon = () => (
@@ -215,22 +215,29 @@ export default function LandingAgendaModal({
             <div className="landing-agenda-list custom-scrollbar">
               {todayEvents.map(event => {
                 const isAbsence = event.event_type === 'Day_Off'
-                const isCompanyEvent = event.event_type === 'Company_Event'
+                const isOffsetHoliday = event.event_type === 'Company_Event' && event.leave_type === 'Holiday'
+                const isCompanyEvent = event.event_type === 'Company_Event' && event.leave_type !== 'Holiday'
                 const displayName = event.engineer_name || event.username
                 const taskType = inferTaskType(event.todo_title, event.todo_description)
                 const taskColor = getTaskTypeColor(taskType)
                 const teamAccent = getTeamColor(event.team)
 
+                const isCompleted = event.todo_status === 'Completed'
+                const accentColor = isCompleted ? '#059669' : (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
+
                 return (
                   <div
                     key={event.id}
                     className="landing-agenda-item"
-                    style={(!isAbsence && !isCompanyEvent) ? {
-                      borderLeft: `4px solid ${teamAccent !== 'transparent' ? teamAccent : taskColor.border}`,
-                      background: taskColor.bg
+                    style={(!isAbsence && !isCompanyEvent && !isOffsetHoliday) ? {
+                      borderLeft: `4px solid ${accentColor}`,
+                      background: isCompleted ? 'rgba(5, 150, 105, 0.08)' : taskColor.bg
                     } : isCompanyEvent ? {
                       borderLeft: `4px solid #6366f1`,
                       background: 'rgba(99, 102, 241, 0.04)'
+                    } : isOffsetHoliday ? {
+                      borderLeft: `4px solid #d97706`,
+                      background: 'rgba(245, 158, 11, 0.04)'
                     } : {
                       borderLeft: `4px solid var(--cal-text-muted)`,
                       background: 'rgba(148, 163, 184, 0.04)'
@@ -238,32 +245,37 @@ export default function LandingAgendaModal({
                   >
                     <div className="landing-agenda-item-left">
                       <span className="landing-agenda-item-icon" style={{
-                        color: (!isAbsence && !isCompanyEvent)
-                          ? (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
-                          : isCompanyEvent ? '#6366f1' : 'var(--cal-text-muted)'
+                        color: (!isAbsence && !isCompanyEvent && !isOffsetHoliday)
+                          ? accentColor
+                          : isCompanyEvent ? '#6366f1' : isOffsetHoliday ? '#d97706' : 'var(--cal-text-muted)'
                       }}>
-                        {isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : <BriefcaseIcon />}
+                        {isOffsetHoliday ? <LockIcon /> : isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : isCompleted ? <CheckIcon /> : <TargetIcon />}
                       </span>
                       <div className="landing-agenda-item-content">
                         <span className="landing-agenda-item-title">
-                          {isCompanyEvent
-                            ? `Company Event: ${event.engineer_name}`
-                            : isAbsence
-                              ? `${displayName} (Absence)`
-                              : event.todo_title}
+                          {isOffsetHoliday ? `Holiday: ${event.engineer_name}` : isCompanyEvent ? `Event: ${event.engineer_name}` : isAbsence ? `${displayName} (Absence)` : event.todo_title}
                         </span>
                         <div className="landing-agenda-item-meta">
-                          {(!isAbsence && !isCompanyEvent) && (
+                          {(!isAbsence && !isCompanyEvent && !isOffsetHoliday) && (
                             <span className="landing-agenda-meta-team">{event.team || 'No Team'}</span>
                           )}
                           {isCompanyEvent && (
-                            <span className="landing-agenda-meta-team">{event.leave_type || 'Event'}</span>
+                            <>
+                              <span className="landing-agenda-meta-separator">•</span>
+                              <span>{event.leave_type || 'Event'}</span>
+                            </>
                           )}
                           {isAbsence && (
                             <span className="landing-agenda-meta-team">{event.leave_type || 'Leave'}</span>
                           )}
-                          <span className="landing-agenda-meta-separator">•</span>
-                          <span>{isCompanyEvent ? "All Teams" : displayName}</span>
+                          {isOffsetHoliday && (
+                            <>
+                              <span className="landing-agenda-meta-separator">•</span>
+                              <span style={{ color: '#d97706', fontWeight: 650 }}>Offset Holiday</span>
+                            </>
+                          )}
+                          {!isOffsetHoliday && <span className="landing-agenda-meta-separator">•</span>}
+                          {!isOffsetHoliday && <span>{isCompanyEvent ? "All Teams" : displayName}</span>}
                         </div>
                       </div>
                     </div>
@@ -279,20 +291,23 @@ export default function LandingAgendaModal({
                 const taskColor = getTaskTypeColor(taskType)
                 const teamAccent = getTeamColor(event.team)
 
+                const isCompleted = event.todo_status === 'Completed'
+                const accentColor = isCompleted ? '#059669' : (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
+
                 return (
                   <div
                     key={event.id}
                     className="landing-agenda-item"
                     style={{
-                      borderLeft: `4px solid ${teamAccent !== 'transparent' ? teamAccent : taskColor.border}`,
-                      background: taskColor.bg
+                      borderLeft: `4px solid ${accentColor}`,
+                      background: isCompleted ? 'rgba(5, 150, 105, 0.08)' : taskColor.bg
                     }}
                   >
                     <div className="landing-agenda-item-left">
                       <span className="landing-agenda-item-icon" style={{
-                        color: teamAccent !== 'transparent' ? teamAccent : taskColor.border
+                        color: accentColor
                       }}>
-                        <BriefcaseIcon />
+                        {isCompleted ? <CheckIcon /> : <TargetIcon />}
                       </span>
                       <div className="landing-agenda-item-content">
                         <span className="landing-agenda-item-title">{event.todo_title}</span>

@@ -34,7 +34,6 @@ class CreateProjectRequest(BaseModel):
     root_path: str
     category: str = "PROJECTS"
 
-from core.trie_engine import trie_service
 from core.cache import cache_get, cache_set, cache_delete
 from typing import List, Optional
 
@@ -70,9 +69,14 @@ async def get_suggestions(
         res = await db.execute(stmt)
         return res.scalars().all()
     else:
-        # Search for suggestions in both file names and parent paths (assembly context)
-        # This helps find drawing numbers when typing assembly names
-        return trie_service.search(q, limit=12)
+        # Query distinct file names starting with the prefix utilizing the database index
+        stmt = (
+            select(distinct(CadFileIndex.file_name))
+            .where(CadFileIndex.file_name.like(f"{q}%"))
+            .limit(12)
+        )
+        res = await db.execute(stmt)
+        return res.scalars().all()
 
 cad_extensions = {'.icd', '.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'}
 

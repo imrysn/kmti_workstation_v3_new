@@ -22,7 +22,8 @@ class TTSEngine:
         
         self.kokoro = None
         self._initialized = True
-        self.initialize_model()
+        # Do not initialize the model here synchronously during import.
+        # It will be lazy loaded on demand or asynchronously in the background during FastAPI startup lifespan.
 
     def initialize_model(self):
         """Lazy load the Kokoro model to save startup time if not used."""
