@@ -22,6 +22,32 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.5',
+    date: 'May 25, 2026',
+    entries: [
+      { type: 'new', text: 'Billing Monitoring — A dedicated page to track, audit and update invoice statuses and payment states across all quotations.' },
+      { type: 'new', text: 'Billing Dashboard Charts — Two chart views: "Total Sales" (area chart with Billing Completed, Approved & Active, Pending, Cancelled lines) and "Sales per Client" (monthly bar chart per company, Jan–Dec).' },
+      { type: 'new', text: 'Sales per Client Bar Chart — See monthly sales broken down per company side-by-side on a Jan–December timeline. Supports year filtering.' },
+      { type: 'new', text: 'Billing Spreadsheet Table — Inline-editable spreadsheet with per-cell editing for Bill To, Status, Project Status, Designer, and more. Supports optimistic updates with auto-rollback on failure.' },
+      { type: 'new', text: 'Materials tab page — New dedicated module for viewing and managing parts and materials inventory.' },
+      { type: 'new', text: 'Editable Billing Print Preview — Inline editing support for billing fields directly inside the print preview modal.' },
+      { type: 'new', text: 'Formula Panel — New dedicated panel in the Material Calculator displaying formulas for all shapes and materials in real time.' },
+      { type: 'new', text: 'Solutions Panel — Complete step-by-step calculation breakdown panel in the Material Calculator with smart navigation between steps.' },
+      { type: 'new', text: 'Team Calendar — New Calendar feature with live data fetched from kmtfms app.' },
+      { type: 'new', text: 'Landing Agenda Modal — Quick agenda overview modal when opening the Team Calendar.' },
+      { type: 'improvement', text: 'Independent Chart Filters — Dashboard charts and KPI cards now operate on raw unfiltered data, completely independent of the Records table search and filter controls.' },
+      { type: 'improvement', text: 'Calendar-Aligned Year View — The YEAR chart now spans January 1 to December 31 of the selected year (previously showed a rolling 12-month window).' },
+      { type: 'improvement', text: 'Backend Caching — Added in-memory caching for quotations, parts, auth, and team calendar endpoints for faster response times.' },
+      { type: 'improvement', text: 'KPI Cards Vertical Layout — Billing KPI status cards now display in a clean vertical column layout alongside the chart panel.' },
+      { type: 'improvement', text: 'Billing API — Extended quotation endpoints with billing-specific PATCH support, filtering, and status field management.' },
+      { type: 'improvement', text: 'Team Calendar Due Dates — Tasks now show due dates with visual indicators across the calendar grid, sidebar, and agenda views.' },
+      { type: 'improvement', text: 'ESC Key to Close — All modals now respond to the Escape key for faster dismissal.' },
+      { type: 'improvement', text: 'Strict Material Input — Material Calculator now enforces strict input rules — no invalid symbols, accidental characters, or malformed expressions.' },
+      { type: 'improvement', text: 'Solutions Panel Error Handling — Better error recovery and fallback messages when formula computation fails.' },
+      { type: 'fix', text: 'Special Layout Print — Fixed an issue with PDF/print rendering for the Special Project quotation layout.' },
+    ],
+  },
+  {
     version: '3.7.4',
     date: 'May 18, 2026',
     entries: [

@@ -487,6 +487,12 @@ export function useBillingMonitoring() {
     ).sort() as string[]
   }, [quotations])
 
+  const uniqueInchargeValues = useMemo(() => {
+    return Array.from(
+      new Set(quotations.map(q => q.designerName).filter(Boolean))
+    ).sort((a, b) => a!.toLowerCase().localeCompare(b!.toLowerCase())) as string[]
+  }, [quotations])
+
   const statusStats = useMemo(() => {
     const stats: IStatusStats = {
       'Billing Completion': { count: 0, total: 0 },
@@ -610,6 +616,7 @@ export function useBillingMonitoring() {
     totalPages,
     paginatedQuotations,
     uniqueBillToValues,
+    uniqueInchargeValues,
     statusStats,
     chartData,
     invoicesCount,

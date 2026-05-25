@@ -9,7 +9,7 @@ interface BillingFiltersProps {
   setSelectedPStatus: (val: string) => void
   selectedBillTo: string
   setSelectedBillTo: (val: string) => void
-  designers: string[]
+  uniqueInchargeValues: string[]
   uniqueBillToValues: string[]
   resetFilters: () => void
 }
@@ -25,7 +25,7 @@ export default function BillingFilters({
   setSelectedPStatus,
   selectedBillTo,
   setSelectedBillTo,
-  designers,
+  uniqueInchargeValues,
   uniqueBillToValues,
   resetFilters
 }: BillingFiltersProps) {
@@ -66,8 +66,8 @@ export default function BillingFilters({
           onChange={e => setSelectedDesigner(e.target.value)}
         >
           <option value="">All Incharges</option>
-          {designers.map(d => (
-            <option key={d} value={d}>{d}</option>
+          {uniqueInchargeValues.map(v => (
+            <option key={v} value={v}>{v}</option>
           ))}
         </select>
       </div>
