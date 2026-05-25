@@ -3,6 +3,32 @@ import { quotationApi, designersApi } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import type { IQuotation } from '../types'
 
+export interface IBillingChartPoint {
+  name: string
+  completed: number
+  approvedActive: number
+  pending: number
+  cancelled: number
+  displayDate: string
+}
+
+export interface IClientSalesPoint {
+  name: string
+  sales: number
+}
+
+export interface IStatusStat {
+  count: number
+  total: number
+}
+
+export type IStatusStats = Record<string, IStatusStat>
+
+export interface IActiveCell {
+  id: number
+  field: string
+}
+
 export function useBillingMonitoring() {
   const [quotations, setQuotations] = useState<IQuotation[]>([])
   const [designers, setDesigners] = useState<string[]>([])
@@ -20,13 +46,24 @@ export function useBillingMonitoring() {
   const [itemsPerPage, setItemsPerPage] = useState(50)
 
   // Per-Cell Editing State
-  const [activeCell, setActiveCell] = useState<{ id: number; field: string } | null>(null)
+  const [activeCell, setActiveCell] = useState<IActiveCell | null>(null)
   const [editForm, setEditForm] = useState<Partial<IQuotation>>({})
 
   // UI / Chart States
   const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>('month')
-  const [showPositive, setShowPositive] = useState(true)
-  const [showGhost, setShowGhost] = useState(true)
+  const [showCompleted, setShowCompleted] = useState(true)
+  const [showApprovedActive, setShowApprovedActive] = useState(true)
+  const [showPending, setShowPending] = useState(true)
+  const [showCancelled, setShowCancelled] = useState(true)
+  const [chartView, setChartView] = useState<'total-sales' | 'client-sales'>('total-sales')
+  const [clientColors, setClientColors] = useState<Record<string, string>>({})
+  const [selectedYear, setSelectedYear] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (chartView === 'client-sales') {
+      setTimeframe('year')
+    }
+  }, [chartView])
 
   const { notify } = useModal()
 
@@ -127,9 +164,25 @@ export function useBillingMonitoring() {
     return maxTime > 0 ? new Date(maxTime) : new Date()
   }, [quotations])
 
+  const uniqueYears = useMemo<number[]>(() => {
+    const years = new Set<number>()
+    quotations.forEach(q => {
+      if (q.date) {
+        const y = new Date(q.date).getFullYear()
+        if (!isNaN(y)) years.add(y)
+      }
+    })
+    if (years.size === 0) {
+      years.add(new Date().getFullYear())
+    }
+    return Array.from(years).sort((a, b) => b - a)
+  }, [quotations])
+
+  const activeYear = selectedYear ?? uniqueYears[0] ?? new Date().getFullYear()
+
   // Timeframe / Chart aggregate computations
-  const { chartData, invoicesCount, revenueSum, trendPercent, timeframeLabel } = useMemo(() => {
-    const endDate = new Date(refDate)
+  const { chartData, clientChartData, invoicesCount, revenueSum, trendPercent, timeframeLabel } = useMemo(() => {
+    let endDate = new Date(refDate)
     endDate.setHours(23, 59, 59, 999)
     
     let startDate = new Date(refDate)
@@ -164,35 +217,42 @@ export function useBillingMonitoring() {
       pointsCount = 30
       timeframeLabel = 'MOM'
     } else {
-      startDate.setMonth(refDate.getMonth() - 11)
-      startDate.setDate(1)
-      startDate.setHours(0, 0, 0, 0)
+      startDate = new Date(activeYear, 0, 1, 0, 0, 0, 0)
+      endDate = new Date(activeYear, 11, 31, 23, 59, 59, 999)
       
-      prevEndDate.setDate(startDate.getDate() - 1)
-      prevEndDate.setHours(23, 59, 59, 999)
-      prevStartDate.setMonth(prevEndDate.getMonth() - 11)
-      prevStartDate.setDate(1)
-      prevStartDate.setHours(0, 0, 0, 0)
+      prevStartDate = new Date(activeYear - 1, 0, 1, 0, 0, 0, 0)
+      prevEndDate = new Date(activeYear - 1, 11, 31, 23, 59, 59, 999)
       
       formatTick = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' })
-      pointsCount = 12
+      
+      const currentYear = new Date().getFullYear()
+      if (activeYear === currentYear) {
+        pointsCount = new Date().getMonth() + 1
+      } else {
+        pointsCount = 12
+      }
       timeframeLabel = 'YOY'
     }
 
-    const currentQuotations = filteredQuotations.filter(q => {
+    const currentQuotations = quotations.filter(q => {
       if (!q.date) return false
       const t = new Date(q.date).getTime()
       return t >= startDate.getTime() && t <= endDate.getTime()
     })
 
-    const prevQuotations = filteredQuotations.filter(q => {
+    const prevQuotations = quotations.filter(q => {
       if (!q.date) return false
       const t = new Date(q.date).getTime()
       return t >= prevStartDate.getTime() && t <= prevEndDate.getTime()
     })
 
-    const currentRevenue = currentQuotations.reduce((sum, q) => sum + (q.grandTotal || 0), 0)
-    const prevRevenue = prevQuotations.reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+    const positiveStatuses = ['Billing Completion', 'Approved', 'Partial Billing']
+    const currentRevenue = currentQuotations
+      .filter(q => positiveStatuses.includes(q.quotationStatus || ''))
+      .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+    const prevRevenue = prevQuotations
+      .filter(q => positiveStatuses.includes(q.quotationStatus || ''))
+      .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
     let trend = 0
     if (prevRevenue > 0) {
@@ -201,13 +261,23 @@ export function useBillingMonitoring() {
       trend = 100
     }
 
-    const points: any[] = []
+    const points: IBillingChartPoint[] = []
+    const clientChartPoints: any[] = []
+    
+    const uniqueClients = Array.from(
+      new Set(
+        quotations
+          .filter(q => positiveStatuses.includes(q.quotationStatus || ''))
+          .map(q => q.billTo?.trim() || 'Unknown Client')
+      )
+    )
     
     if (timeframe === 'week' || timeframe === 'month') {
       let tempDate = new Date(startDate)
-      let runningSum = 0
-      let runningSumPositive = 0
-      let runningSumGhost = 0
+      let runningCompleted = 0
+      let runningApprovedActive = 0
+      let runningPending = 0
+      let runningCancelled = 0
       
       for (let i = 0; i < pointsCount; i++) {
         const dayStart = new Date(tempDate)
@@ -221,40 +291,63 @@ export function useBillingMonitoring() {
           return t >= dayStart.getTime() && t <= dayEnd.getTime()
         })
         
-        const dayAmount = dayQuots.reduce((sum, q) => sum + (q.grandTotal || 0), 0)
-
-        // Positive = Billing Completion + Approved + Partial Billing
-        const dayPositive = dayQuots
-          .filter(q => q.quotationStatus === 'Billing Completion' ||
-                       q.quotationStatus === 'Approved' ||
-                       q.quotationStatus === 'Partial Billing')
+        const dayCompleted = dayQuots
+          .filter(q => q.quotationStatus === 'Billing Completion')
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
-        // Ghost = For Approval + CANCELLED (uncertain / risky revenue)
-        const dayGhost = dayQuots
-          .filter(q => q.quotationStatus === 'For Approval' ||
-                       q.quotationStatus === 'CANCELLED')
+        const dayApprovedActive = dayQuots
+          .filter(q => q.quotationStatus === 'Approved' || q.quotationStatus === 'Partial Billing')
+          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+
+        const dayPending = dayQuots
+          .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
+          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+
+        const dayCancelled = dayQuots
+          .filter(q => q.quotationStatus === 'CANCELLED')
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
         
-        runningSum += dayAmount
-        runningSumPositive += dayPositive
-        runningSumGhost += dayGhost
+        runningCompleted += dayCompleted
+        runningApprovedActive += dayApprovedActive
+        runningPending += dayPending
+        runningCancelled += dayCancelled
         
         points.push({
           name: formatTick(tempDate),
-          revenue: runningSum,
-          positive: runningSumPositive,
-          ghost: runningSumGhost,
+          completed: runningCompleted,
+          approvedActive: runningApprovedActive,
+          pending: runningPending,
+          cancelled: runningCancelled,
           displayDate: tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        })
+
+        // Client stacked absolute sales per day
+        const dayClientSales: Record<string, number> = {}
+        uniqueClients.forEach(c => {
+          dayClientSales[c] = 0
+        })
+        dayQuots.forEach(q => {
+          const status = q.quotationStatus || 'For Approval'
+          if (positiveStatuses.includes(status)) {
+            const client = q.billTo?.trim() || 'Unknown Client'
+            dayClientSales[client] = (dayClientSales[client] || 0) + (q.grandTotal || 0)
+          }
+        })
+
+        clientChartPoints.push({
+          name: formatTick(tempDate),
+          displayDate: tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          ...dayClientSales
         })
         
         tempDate.setDate(tempDate.getDate() + 1)
       }
     } else {
       let tempDate = new Date(startDate)
-      let runningSum = 0
-      let runningSumPositive = 0
-      let runningSumGhost = 0
+      let runningCompleted = 0
+      let runningApprovedActive = 0
+      let runningPending = 0
+      let runningCancelled = 0
       
       for (let i = 0; i < pointsCount; i++) {
         const mStart = new Date(tempDate.getFullYear(), tempDate.getMonth(), 1, 0, 0, 0, 0)
@@ -266,29 +359,53 @@ export function useBillingMonitoring() {
           return t >= mStart.getTime() && t <= mEnd.getTime()
         })
         
-        const mAmount = mQuots.reduce((sum, q) => sum + (q.grandTotal || 0), 0)
-
-        const mPositive = mQuots
-          .filter(q => q.quotationStatus === 'Billing Completion' ||
-                       q.quotationStatus === 'Approved' ||
-                       q.quotationStatus === 'Partial Billing')
+        const mCompleted = mQuots
+          .filter(q => q.quotationStatus === 'Billing Completion')
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
-        const mGhost = mQuots
-          .filter(q => q.quotationStatus === 'For Approval' ||
-                       q.quotationStatus === 'CANCELLED')
+        const mApprovedActive = mQuots
+          .filter(q => q.quotationStatus === 'Approved' || q.quotationStatus === 'Partial Billing')
+          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+
+        const mPending = mQuots
+          .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
+          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+
+        const mCancelled = mQuots
+          .filter(q => q.quotationStatus === 'CANCELLED')
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
         
-        runningSum += mAmount
-        runningSumPositive += mPositive
-        runningSumGhost += mGhost
+        runningCompleted += mCompleted
+        runningApprovedActive += mApprovedActive
+        runningPending += mPending
+        runningCancelled += mCancelled
         
         points.push({
           name: formatTick(tempDate),
-          revenue: runningSum,
-          positive: runningSumPositive,
-          ghost: runningSumGhost,
+          completed: runningCompleted,
+          approvedActive: runningApprovedActive,
+          pending: runningPending,
+          cancelled: runningCancelled,
           displayDate: tempDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        })
+
+        // Client stacked absolute sales per month
+        const mClientSales: Record<string, number> = {}
+        uniqueClients.forEach(c => {
+          mClientSales[c] = 0
+        })
+        mQuots.forEach(q => {
+          const status = q.quotationStatus || 'For Approval'
+          if (positiveStatuses.includes(status)) {
+            const client = q.billTo?.trim() || 'Unknown Client'
+            mClientSales[client] = (mClientSales[client] || 0) + (q.grandTotal || 0)
+          }
+        })
+
+        clientChartPoints.push({
+          name: formatTick(tempDate),
+          displayDate: tempDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+          ...mClientSales
         })
         
         tempDate.setMonth(tempDate.getMonth() + 1)
@@ -297,12 +414,13 @@ export function useBillingMonitoring() {
 
     return {
       chartData: points,
+      clientChartData: clientChartPoints,
       invoicesCount: currentQuotations.length,
       revenueSum: currentRevenue,
       trendPercent: trend,
       timeframeLabel
     }
-  }, [filteredQuotations, timeframe, refDate, formatDateToSlash])
+  }, [quotations, timeframe, refDate, formatDateToSlash, activeYear])
 
   // End month text label
   const currentEndMonth = useMemo(() => {
@@ -311,25 +429,47 @@ export function useBillingMonitoring() {
 
   // Single Field Save Handler
   const handleSingleFieldSave = async (id: number, updates: Partial<IQuotation>) => {
-    try {
-      const finalUpdates = { ...updates }
-      if (updates.quotationStatus === 'CANCELLED') {
-        finalUpdates.projectStatus = 'CANCELLED'
-        finalUpdates.updateDetail = 'CANCELLED'
-      }
+    const finalUpdates = { ...updates }
+    if (updates.quotationStatus === 'CANCELLED') {
+      finalUpdates.projectStatus = 'CANCELLED'
+      finalUpdates.updateDetail = 'CANCELLED'
+    }
 
+    // Save previous state for potential rollback
+    const previousQuotations = [...quotations]
+
+    // Optimistically update local state immediately
+    setQuotations(prev =>
+      prev.map(q => {
+        if (q.id === id) {
+          return {
+            ...q,
+            ...finalUpdates,
+            lastUpdatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          }
+        }
+        return q
+      })
+    )
+
+    try {
       const res = await quotationApi.updateBilling(id, finalUpdates)
       if (res.data?.success) {
         notify('Saved successfully', 'success')
-        // Reload list directly
-        const qRes = await quotationApi.list({ limit: 1000 })
-        setQuotations(qRes.data.quotations || [])
+        // Background list reload to keep in sync with actual database values (e.g. lastUpdatedAt, specific triggers)
+        quotationApi.list({ limit: 1000 }).then(qRes => {
+          setQuotations(qRes.data.quotations || [])
+        }).catch(err => {
+          console.warn('Background quotation list reload failed', err)
+        })
       } else {
         notify('Failed to save changes', 'error')
+        setQuotations(previousQuotations)
       }
     } catch (err: any) {
       console.error(err)
       notify(err.response?.data?.detail || 'Error saving changes', 'error')
+      setQuotations(previousQuotations)
     }
   }
 
@@ -348,7 +488,7 @@ export function useBillingMonitoring() {
   }, [quotations])
 
   const statusStats = useMemo(() => {
-    const stats: Record<string, { count: number; total: number }> = {
+    const stats: IStatusStats = {
       'Billing Completion': { count: 0, total: 0 },
       'Partial Billing': { count: 0, total: 0 },
       'Approved': { count: 0, total: 0 },
@@ -356,7 +496,7 @@ export function useBillingMonitoring() {
       'CANCELLED': { count: 0, total: 0 }
     }
 
-    filteredQuotations.forEach(q => {
+    quotations.forEach(q => {
       const status = q.quotationStatus || 'For Approval'
       if (stats[status]) {
         stats[status].count++
@@ -365,7 +505,64 @@ export function useBillingMonitoring() {
     })
 
     return stats
-  }, [filteredQuotations])
+  }, [quotations])
+
+  const clientSalesData = useMemo<IClientSalesPoint[]>(() => {
+    const clientsMap: Record<string, number> = {}
+    const positiveStatuses = ['Billing Completion', 'Approved', 'Partial Billing']
+    
+    const yearStart = new Date(activeYear, 0, 1, 0, 0, 0, 0)
+    const yearEnd   = new Date(activeYear, 11, 31, 23, 59, 59, 999)
+
+    quotations.forEach(q => {
+      if (!q.date) return
+      const t = new Date(q.date).getTime()
+      if (t < yearStart.getTime() || t > yearEnd.getTime()) return
+      const client = q.billTo?.trim() || 'Unknown Client'
+      const status = q.quotationStatus || 'For Approval'
+      if (positiveStatuses.includes(status)) {
+        clientsMap[client] = (clientsMap[client] || 0) + (q.grandTotal || 0)
+      }
+    })
+    
+    return Object.entries(clientsMap)
+      .map(([name, sales]) => ({ name, sales }))
+      .sort((a, b) => b.sales - a.sales)
+  }, [quotations, activeYear])
+
+  useEffect(() => {
+    if (clientSalesData.length === 0) return
+    const presetColors = [
+      '#3b82f6', // Premium Blue
+      '#10b981', // Active Green
+      '#8b5cf6', // Indigo
+      '#f59e0b', // Amber/Orange
+      '#ec4899', // Pink
+      '#06b6d4', // Cyan
+      '#eab308', // Yellow
+      '#f43f5e', // Rose
+      '#14b8a6', // Teal
+      '#a855f7'  // Purple
+    ]
+    setClientColors(prev => {
+      let updated = false
+      const nextColors = { ...prev }
+      clientSalesData.forEach((pt, i) => {
+        if (!nextColors[pt.name]) {
+          nextColors[pt.name] = presetColors[i % presetColors.length]
+          updated = true
+        }
+      })
+      return updated ? nextColors : prev
+    })
+  }, [clientSalesData])
+
+  const updateClientColor = useCallback((clientName: string, color: string) => {
+    setClientColors(prev => ({
+      ...prev,
+      [clientName]: color
+    }))
+  }, [])
 
   return {
     quotations,
@@ -391,10 +588,23 @@ export function useBillingMonitoring() {
     setEditForm,
     timeframe,
     setTimeframe,
-    showPositive,
-    setShowPositive,
-    showGhost,
-    setShowGhost,
+    showCompleted,
+    setShowCompleted,
+    showApprovedActive,
+    setShowApprovedActive,
+    showPending,
+    setShowPending,
+    showCancelled,
+    setShowCancelled,
+    chartView,
+    setChartView,
+    clientColors,
+    clientSalesData,
+    clientChartData,
+    updateClientColor,
+    uniqueYears,
+    activeYear,
+    setSelectedYear,
     filteredQuotations,
     totalItems,
     totalPages,

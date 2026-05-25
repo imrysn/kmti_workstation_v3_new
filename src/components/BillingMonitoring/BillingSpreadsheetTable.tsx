@@ -1,4 +1,5 @@
 import type { IQuotation } from '../../types'
+import type { IActiveCell } from '../../hooks/useBillingMonitoring'
 
 interface BillingSpreadsheetTableProps {
   loading: boolean
@@ -9,8 +10,8 @@ interface BillingSpreadsheetTableProps {
   setCurrentPage: (page: number | ((prev: number) => number)) => void
   totalItems: number
   totalPages: number
-  activeCell: { id: number; field: string } | null
-  setActiveCell: (cell: { id: number; field: string } | null) => void
+  activeCell: IActiveCell | null
+  setActiveCell: (cell: IActiveCell | null) => void
   editForm: Partial<IQuotation>
   setEditForm: (form: Partial<IQuotation>) => void
   handleSingleFieldSave: (id: number, updates: Partial<IQuotation>) => Promise<void>
@@ -60,20 +61,20 @@ export default function BillingSpreadsheetTable({
               <thead>
                 <tr>
                   <th style={{ width: '40px' }}>#</th>
-                  <th style={{ width: '130px' }}>Project Incharge</th>
-                  <th style={{ width: '130px' }}>Customer Incharge</th>
+                  <th style={{ width: '130px' }}>Project<br />Incharge</th>
+                  <th style={{ width: '130px' }}>Customer<br />Incharge</th>
                   <th style={{ width: '150px' }}>Customer</th>
-                  <th style={{ width: '140px' }}>Quotation Number</th>
-                  <th style={{ width: '100px' }}>Date</th>
+                  <th style={{ width: '140px' }}>Quotation<br />Number</th>
+                  <th style={{ width: '80px' }}>Date</th>
                   <th style={{ width: '110px', textAlign: 'right' }}>Amount</th>
-                  <th style={{ width: '160px' }}>Quotation Status</th>
-                  <th style={{ width: '130px' }}>Project Status</th>
-                  <th style={{ width: '140px' }}>Submitted To Admin</th>
+                  <th style={{ width: '160px' }}>Quotation<br />Status</th>
+                  <th style={{ width: '130px' }}>Project<br />Status</th>
+                  <th style={{ width: '120px' }}>Submitted To<br />Admin</th>
                   <th style={{ width: '150px' }}>Bill To</th>
                   <th style={{ width: '120px' }}>Date Paid</th>
-                  <th style={{ width: '110px' }}>Update By</th>
-                  <th style={{ width: '110px' }}>Update Date</th>
-                  <th style={{ width: '180px' }}>Update Detail</th>
+                  <th style={{ width: '80px' }}>Update<br />By</th>
+                  <th style={{ width: '100px' }}>Update<br />Date</th>
+                  <th style={{ width: '120px' }}>Update<br />Detail</th>
                 </tr>
               </thead>
               <tbody>
@@ -88,7 +89,7 @@ export default function BillingSpreadsheetTable({
                       isEven ? 'row-stripe' : ''
                     ].filter(Boolean).join(' ')}>
                       {/* Index */}
-                      <td className="cell-index sticky-col-index">{rowNumber}</td>
+                      <td className="cell-index sticky-col-index" title={`Row ${rowNumber}`}>{rowNumber}</td>
 
                       {/* Project Incharge (Designer Name) */}
                       <td className="sticky-col-name" title={q.designerName || ''}>
@@ -109,13 +110,13 @@ export default function BillingSpreadsheetTable({
                       <td className="cell-qno" title={q.quotationNo || ''}>{q.quotationNo || <span className="cell-empty">—</span>}</td>
 
                       {/* Date */}
-                      <td>{formatDateToSlash(q.date) !== '-' ? formatDateToSlash(q.date) : <span className="cell-empty">—</span>}</td>
+                      <td title={formatDateToSlash(q.date)}>{formatDateToSlash(q.date) !== '-' ? formatDateToSlash(q.date) : <span className="cell-empty">—</span>}</td>
 
                       {/* Amount */}
-                      <td className="cell-amount">{formatCurrency(q.grandTotal)}</td>
+                      <td className="cell-amount" title={formatCurrency(q.grandTotal)}>{formatCurrency(q.grandTotal)}</td>
 
                       {/* Quotation Status */}
-                      <td className={activeCell?.id === q.id && activeCell?.field === 'quotationStatus' ? 'editing-cell' : ''}>
+                      <td className={activeCell?.id === q.id && activeCell?.field === 'quotationStatus' ? 'editing-cell' : ''} title={q.quotationStatus || 'For Approval'}>
                         {activeCell?.id === q.id && activeCell?.field === 'quotationStatus' ? (
                           <select
                             autoFocus
@@ -157,7 +158,7 @@ export default function BillingSpreadsheetTable({
                       </td>
 
                       {/* Project Status */}
-                      <td className={activeCell?.id === q.id && activeCell?.field === 'projectStatus' ? 'editing-cell' : ''}>
+                      <td className={activeCell?.id === q.id && activeCell?.field === 'projectStatus' ? 'editing-cell' : ''} title={q.projectStatus || 'On Going'}>
                         {activeCell?.id === q.id && activeCell?.field === 'projectStatus' ? (
                           <select
                             autoFocus
@@ -197,7 +198,7 @@ export default function BillingSpreadsheetTable({
                       </td>
 
                       {/* Submitted to Admin */}
-                      <td className={activeCell?.id === q.id && activeCell?.field === 'submittedToAdminAt' ? 'editing-cell' : ''}>
+                      <td className={activeCell?.id === q.id && activeCell?.field === 'submittedToAdminAt' ? 'editing-cell' : ''} title={formatDateToSlash(q.submittedToAdminAt)}>
                         {activeCell?.id === q.id && activeCell?.field === 'submittedToAdminAt' ? (
                           <input
                             type="date"
@@ -239,7 +240,7 @@ export default function BillingSpreadsheetTable({
                       </td>
 
                       {/* Bill To */}
-                      <td className={activeCell?.id === q.id && activeCell?.field === 'billTo' ? 'editing-cell' : ''}>
+                      <td className={activeCell?.id === q.id && activeCell?.field === 'billTo' ? 'editing-cell' : ''} title={q.billTo || '-'}>
                         {activeCell?.id === q.id && activeCell?.field === 'billTo' ? (
                           <>
                             <input
@@ -249,17 +250,19 @@ export default function BillingSpreadsheetTable({
                               value={editForm.billTo || ''}
                               onChange={e => setEditForm({ ...editForm, billTo: e.target.value })}
                               onBlur={async () => {
-                                const val = q.billTo || ''
-                                if (editForm.billTo !== val) {
-                                  await handleSingleFieldSave(q.id, { billTo: editForm.billTo || '' })
+                                const val = (q.billTo || '').trim()
+                                const typed = (editForm.billTo || '').trim()
+                                if (typed !== val) {
+                                  await handleSingleFieldSave(q.id, { billTo: typed })
                                 }
                                 setActiveCell(null)
                               }}
                               onKeyDown={async e => {
                                 if (e.key === 'Enter') {
-                                  const val = q.billTo || ''
-                                  if (editForm.billTo !== val) {
-                                    await handleSingleFieldSave(q.id, { billTo: editForm.billTo || '' })
+                                  const val = (q.billTo || '').trim()
+                                  const typed = (editForm.billTo || '').trim()
+                                  if (typed !== val) {
+                                    await handleSingleFieldSave(q.id, { billTo: typed })
                                   }
                                   setActiveCell(null)
                                 } else if (e.key === 'Escape') {
@@ -288,7 +291,7 @@ export default function BillingSpreadsheetTable({
                       </td>
 
                       {/* Date Paid */}
-                      <td className={activeCell?.id === q.id && activeCell?.field === 'datePaid' ? 'editing-cell' : ''}>
+                      <td className={activeCell?.id === q.id && activeCell?.field === 'datePaid' ? 'editing-cell' : ''} title={formatDateToSlash(q.datePaid)}>
                         {activeCell?.id === q.id && activeCell?.field === 'datePaid' ? (
                           <input
                             type="date"
@@ -338,24 +341,26 @@ export default function BillingSpreadsheetTable({
                             className="cell-input"
                             value={editForm.updatedBy || ''}
                             onChange={e => setEditForm({ ...editForm, updatedBy: e.target.value })}
-                            onBlur={async () => {
-                              const val = q.updatedBy || ''
-                              if (editForm.updatedBy !== val) {
-                                await handleSingleFieldSave(q.id, { updatedBy: editForm.updatedBy || '' })
-                              }
-                              setActiveCell(null)
-                            }}
-                            onKeyDown={async e => {
-                              if (e.key === 'Enter') {
-                                const val = q.updatedBy || ''
-                                if (editForm.updatedBy !== val) {
-                                  await handleSingleFieldSave(q.id, { updatedBy: editForm.updatedBy || '' })
-                                }
-                                setActiveCell(null)
-                              } else if (e.key === 'Escape') {
-                                setActiveCell(null)
-                              }
-                            }}
+                             onBlur={async () => {
+                               const val = (q.updatedBy || '').trim()
+                               const typed = (editForm.updatedBy || '').trim()
+                               if (typed !== val) {
+                                 await handleSingleFieldSave(q.id, { updatedBy: typed })
+                               }
+                               setActiveCell(null)
+                             }}
+                             onKeyDown={async e => {
+                               if (e.key === 'Enter') {
+                                 const val = (q.updatedBy || '').trim()
+                                 const typed = (editForm.updatedBy || '').trim()
+                                 if (typed !== val) {
+                                   await handleSingleFieldSave(q.id, { updatedBy: typed })
+                                 }
+                                 setActiveCell(null)
+                               } else if (e.key === 'Escape') {
+                                 setActiveCell(null)
+                               }
+                             }}
                             placeholder="Name..."
                           />
                         ) : (
@@ -385,24 +390,26 @@ export default function BillingSpreadsheetTable({
                             className="cell-input"
                             value={editForm.updateDetail || ''}
                             onChange={e => setEditForm({ ...editForm, updateDetail: e.target.value })}
-                            onBlur={async () => {
-                              const val = q.updateDetail || ''
-                              if (editForm.updateDetail !== val) {
-                                await handleSingleFieldSave(q.id, { updateDetail: editForm.updateDetail || '' })
-                              }
-                              setActiveCell(null)
-                            }}
-                            onKeyDown={async e => {
-                              if (e.key === 'Enter') {
-                                const val = q.updateDetail || ''
-                                if (editForm.updateDetail !== val) {
-                                  await handleSingleFieldSave(q.id, { updateDetail: editForm.updateDetail || '' })
-                                }
-                                setActiveCell(null)
-                              } else if (e.key === 'Escape') {
-                                setActiveCell(null)
-                              }
-                            }}
+                             onBlur={async () => {
+                               const val = (q.updateDetail || '').trim()
+                               const typed = (editForm.updateDetail || '').trim()
+                               if (typed !== val) {
+                                 await handleSingleFieldSave(q.id, { updateDetail: typed })
+                               }
+                               setActiveCell(null)
+                             }}
+                             onKeyDown={async e => {
+                               if (e.key === 'Enter') {
+                                 const val = (q.updateDetail || '').trim()
+                                 const typed = (editForm.updateDetail || '').trim()
+                                 if (typed !== val) {
+                                   await handleSingleFieldSave(q.id, { updateDetail: typed })
+                                 }
+                                 setActiveCell(null)
+                               } else if (e.key === 'Escape') {
+                                 setActiveCell(null)
+                               }
+                             }}
                             placeholder="Enter details..."
                           />
                         ) : (

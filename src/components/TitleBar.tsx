@@ -265,11 +265,9 @@ export default function TitleBar() {
             </NavLink>
             <NavLink to="/billing-monitoring" className={({ isActive }) => `titlebar-btn${isActive ? ' active' : ''}`} title="Billing Monitoring">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                <line x1="9" y1="3" x2="9" y2="21" />
-                <line x1="15" y1="3" x2="15" y2="21" />
-                <line x1="3" y1="9" x2="21" y2="9" />
-                <line x1="3" y1="15" x2="21" y2="15" />
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <path d="M6 15h2.5l1.5-4.5 2 7.5 1.5-5 1 2h3.5" />
               </svg>
             </NavLink>
             <NavLink to="/admin-help" className={({ isActive }) => `titlebar-btn${isActive ? ' active' : ''}`} title="Help Center">

@@ -12,6 +12,7 @@ export default function BillingMonitoring() {
   const [activeView, setActiveView] = useState<BillingView>('dashboard')
 
   const {
+    quotations,
     loading,
     search,
     setSearch,
@@ -33,10 +34,14 @@ export default function BillingMonitoring() {
     setEditForm,
     timeframe,
     setTimeframe,
-    showPositive,
-    setShowPositive,
-    showGhost,
-    setShowGhost,
+    showCompleted,
+    setShowCompleted,
+    showApprovedActive,
+    setShowApprovedActive,
+    showPending,
+    setShowPending,
+    showCancelled,
+    setShowCancelled,
     totalItems,
     totalPages,
     paginatedQuotations,
@@ -49,6 +54,15 @@ export default function BillingMonitoring() {
     trendPercent,
     timeframeLabel,
     currentEndMonth,
+    chartView,
+    setChartView,
+    clientColors,
+    clientSalesData,
+    clientChartData,
+    updateClientColor,
+    uniqueYears,
+    activeYear,
+    setSelectedYear,
     formatDateToSlash,
     formatDateTimeToSlash,
     formatCurrency,
@@ -109,52 +123,72 @@ export default function BillingMonitoring() {
         </div>
       </div>
 
-      {/* Search & Filtering Bar — always visible */}
-      <BillingFilters
-        search={search}
-        setSearch={setSearch}
-        selectedDesigner={selectedDesigner}
-        setSelectedDesigner={setSelectedDesigner}
-        selectedQStatus={selectedQStatus}
-        setSelectedQStatus={setSelectedQStatus}
-        selectedPStatus={selectedPStatus}
-        setSelectedPStatus={setSelectedPStatus}
-        selectedBillTo={selectedBillTo}
-        setSelectedBillTo={setSelectedBillTo}
-        designers={designers}
-        uniqueBillToValues={uniqueBillToValues}
-        resetFilters={resetFilters}
-      />
+      {/* Search & Filtering Bar — visible in table view only */}
+      {activeView === 'table' && (
+        <BillingFilters
+          search={search}
+          setSearch={setSearch}
+          selectedDesigner={selectedDesigner}
+          setSelectedDesigner={setSelectedDesigner}
+          selectedQStatus={selectedQStatus}
+          setSelectedQStatus={setSelectedQStatus}
+          selectedPStatus={selectedPStatus}
+          setSelectedPStatus={setSelectedPStatus}
+          selectedBillTo={selectedBillTo}
+          setSelectedBillTo={setSelectedBillTo}
+          designers={designers}
+          uniqueBillToValues={uniqueBillToValues}
+          resetFilters={resetFilters}
+        />
+      )}
 
       {/* ── DASHBOARD VIEW ─────────────────────────────── */}
       {activeView === 'dashboard' && (
         <div className="billing-view billing-view-dashboard">
           {/* KPI Summary Cards */}
-          <BillingKpiCards
-            statusStats={statusStats}
-            totalItems={totalItems}
-            revenueSum={revenueSum}
-            trendPercent={trendPercent}
-            formatCurrency={formatCurrency}
-          />
+          {/* Side-by-Side Analytics Grid (Completely eliminates dead space) */}
+          <div className="analytics-grid" style={{ gridTemplateColumns: '3fr 7fr' }}>
+            {/* Left Column: KPI Summary Column */}
+            <BillingKpiCards
+              statusStats={statusStats}
+              totalItems={quotations.length}
+              revenueSum={revenueSum}
+              trendPercent={trendPercent}
+              formatCurrency={formatCurrency}
+              vertical={true}
+            />
 
-          {/* Crypto-Style Revenue Chart */}
-          <BillingChart
-            chartData={chartData}
-            timeframe={timeframe}
-            setTimeframe={setTimeframe}
-            revenueSum={revenueSum}
-            invoicesCount={invoicesCount}
-            trendPercent={trendPercent}
-            timeframeLabel={timeframeLabel}
-            showPositive={showPositive}
-            setShowPositive={setShowPositive}
-            showGhost={showGhost}
-            setShowGhost={setShowGhost}
-            statusStats={statusStats}
-            currentEndMonth={currentEndMonth}
-            formatCurrency={formatCurrency}
-          />
+            {/* Right Column: Crypto-Style Sales Chart */}
+            <BillingChart
+              chartData={chartData}
+              timeframe={timeframe}
+              setTimeframe={setTimeframe}
+              revenueSum={revenueSum}
+              invoicesCount={invoicesCount}
+              trendPercent={trendPercent}
+              timeframeLabel={timeframeLabel}
+              showCompleted={showCompleted}
+              setShowCompleted={setShowCompleted}
+              showApprovedActive={showApprovedActive}
+              setShowApprovedActive={setShowApprovedActive}
+              showPending={showPending}
+              setShowPending={setShowPending}
+              showCancelled={showCancelled}
+              setShowCancelled={setShowCancelled}
+              statusStats={statusStats}
+              currentEndMonth={currentEndMonth}
+              formatCurrency={formatCurrency}
+              chartView={chartView}
+              setChartView={setChartView}
+              clientColors={clientColors}
+              clientSalesData={clientSalesData}
+              clientChartData={clientChartData}
+              updateClientColor={updateClientColor}
+              uniqueYears={uniqueYears}
+              activeYear={activeYear}
+              setSelectedYear={setSelectedYear}
+            />
+          </div>
         </div>
       )}
 
