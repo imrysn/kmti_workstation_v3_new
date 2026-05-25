@@ -418,18 +418,18 @@
 }
 
 .nav-controls {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   background: var(--bg-surface-subtle);
   border: 1px solid var(--cal-card-border);
-  border-radius: 30px;
+  border-radius: 99px;
   padding: 4px;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .nav-chevron-btn {
-  background: none;
+  background: transparent;
   border: none;
   width: 32px;
   height: 32px;
@@ -439,18 +439,19 @@
   justify-content: center;
   color: var(--cal-text-secondary);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
 
 .nav-chevron-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--cal-text-primary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: var(--bg-primary);
+  color: var(--cal-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 
 .nav-today-btn {
-  background: none;
+  background: transparent;
   border: none;
   padding: 0 16px;
   height: 32px;
@@ -459,13 +460,15 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
 }
 
 .nav-today-btn:hover {
-  background: var(--bg-secondary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background: var(--bg-primary);
+  color: var(--cal-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: translateY(-1px);
 }
 
 .toolbar-right {
@@ -1889,12 +1892,85 @@
 }
 
 .timeline-task-bar {
-  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease !important;
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease !important;
+  animation: barSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .timeline-task-bar:hover {
-  transform: translateY(-2px) !important;
-  filter: brightness(0.95) !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px) scale(1.01) !important;
+  box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.13), 0 2px 4px -1px rgba(0, 0, 0, 0.07) !important;
   z-index: 10;
+}
+
+/* Early completion bar — premium animated treatment */
+.timeline-task-bar--early {
+  animation: barSlideIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.timeline-task-bar--early:hover {
+  transform: translateY(-2px) scale(1.01) !important;
+  box-shadow: 0 6px 20px -2px rgba(22, 163, 74, 0.45) !important;
+}
+
+/* Shimmer sweep across the solid green fill */
+.timeline-bar-shimmer {
+  position: absolute;
+  top: 0; left: -60%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.22) 50%,
+    transparent 80%
+  );
+  animation: shimmerSweep 2.8s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: 6px 0 0 6px;
+}
+
+/* Ghost tail breathing pulse */
+.timeline-bar-ghost-tail {
+  animation: ghostBreath 3s ease-in-out infinite;
+}
+
+/* Zap badge pulse ring */
+.timeline-bar-zap-badge {
+  animation: zapPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes barSlideIn {
+  from {
+    opacity: 0;
+    transform: scaleX(0.88) translateY(3px);
+    transform-origin: left center;
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1) translateY(0);
+    transform-origin: left center;
+  }
+}
+
+@keyframes shimmerSweep {
+  0%   { left: -60%; opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { left: 110%; opacity: 0; }
+}
+
+@keyframes ghostBreath {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+@keyframes zapPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.5),
+                0 1px 4px rgba(22, 163, 74, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(22, 163, 74, 0),
+                0 1px 4px rgba(22, 163, 74, 0.4);
+  }
 }

@@ -28,6 +28,20 @@ export const formatDisplayDate = (dateStr: string) => {
   return dateStr
 }
 
+export const formatDisplayDateTime = (dateStr: string) => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return d.toLocaleString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  })
+}
+
 export const getWorkingDaysCount = (startStr: string, endStr: string) => {
   if (!startStr || !endStr) return 0
   const startParts = startStr.split('-')

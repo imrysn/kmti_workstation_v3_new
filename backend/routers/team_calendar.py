@@ -182,6 +182,7 @@ async def get_team_grid(
             "start_date": e.start_date.isoformat(),
             "end_date": e.end_date.isoformat(),
             "due_date": (todo.due_date.isoformat() if todo.due_date else e.end_date.isoformat()) if todo else None,
+            "completed_at": (todo.updated_at.isoformat() if todo.updated_at else (todo.due_date.isoformat() if todo.due_date else e.end_date.isoformat())) if todo and todo.status == "Completed" else None,
             "status": e.status,
             "leave_type": e.leave_type,
         })
@@ -261,6 +262,7 @@ async def get_team_grid(
                     "start_date": start_date_obj.isoformat(),  # When work begins
                     "end_date": due_date_obj.isoformat(),      # When work must be done
                     "due_date": due_date_obj.isoformat(),      # EXPLICIT due date field
+                    "completed_at": (member.submitted_at.isoformat() if member.submitted_at else (fa.updated_at.isoformat() if fa.updated_at else due_date_obj.isoformat())) if t_status == "Completed" else None,
                     "status": "Approved",
                     "leave_type": None,
                 })

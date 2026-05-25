@@ -15,6 +15,7 @@ export interface ICalendarEvent {
   start_date: string // YYYY-MM-DD - when work starts
   end_date: string // YYYY-MM-DD - when work ends or is due
   due_date?: string // YYYY-MM-DD - explicit due date (for FMS assignments)
+  completed_at?: string | null // ISO Date
   status: string
   leave_type: string | null
 }
@@ -27,6 +28,7 @@ export interface ITodo {
   priority: 'Low' | 'Normal' | 'High' | 'Critical'
   created_at: string | null
   due_date?: string | null // YYYY-MM-DD
+  completed_at?: string | null // YYYY-MM-DD
 }
 
 export interface IActiveUser {

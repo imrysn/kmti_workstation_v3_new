@@ -1,5 +1,5 @@
 import { ICalendarEvent } from '../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange } from '../../utils/teamCalendarUtils'
+import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
 import { GlobeIcon, LockIcon, BriefcaseIcon, CheckIcon, TargetIcon } from './Icons'
 
 interface AgendaViewProps {
@@ -175,6 +175,11 @@ export default function AgendaView({
                       <div style={{ fontSize: '11px', color: 'var(--cal-text-muted)', paddingLeft: '22px' }}>
                         Duration: {formatDurationRange(event.start_date, event.end_date)}
                       </div>
+                      {event.completed_at && (
+                        <div style={{ fontSize: '11px', color: 'var(--cal-text-muted)', paddingLeft: '22px', marginTop: '2px' }}>
+                          Completed: {formatDisplayDateTime(event.completed_at)}
+                        </div>
+                      )}
                     </div>
                   )
                 })

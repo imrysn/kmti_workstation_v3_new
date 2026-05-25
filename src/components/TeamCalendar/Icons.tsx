@@ -65,6 +65,20 @@ export const TargetIcon = () => (
   </svg>
 )
 
+export const ZapIcon = () => (
+  <svg viewBox="0 0 24 24" width="10" height="10" fill="#f0fdf4" stroke="#bbf7d0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+)
+
+export const AlertIcon = () => (
+  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="#fca5a5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="#7f1d1d" stroke="#fca5a5" />
+    <line x1="12" y1="9" x2="12" y2="13" stroke="#fca5a5" strokeWidth="2" />
+    <circle cx="12" cy="17" r="0.8" fill="#fca5a5" stroke="none" />
+  </svg>
+)
+
 export const CheckIcon = () => (
   <svg className="svg-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />

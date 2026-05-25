@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { ICalendarEvent } from '../../services/teamCalendarService'
 import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
+import { GlobeIcon, LockIcon, CheckIcon, TargetIcon, ZapIcon, AlertIcon } from './Icons'
 import EventTooltip from './EventTooltip'
 
 interface CalendarTimelineProps {
@@ -171,6 +171,7 @@ export default function CalendarTimeline({
                         let bgColor = '#ffffff'
                         let textColor = '#334155'
                         let borderColor = '#cbd5e1'
+                        let progressPercentage = 100
 
                         if (isAbsence || isOffsetHoliday) {
                           bgColor = 'rgba(239, 68, 68, 0.1)'
@@ -182,26 +183,52 @@ export default function CalendarTimeline({
                           borderColor = 'rgba(168, 85, 247, 0.3)'
                         } else if (event.event_type === 'Task_Claim') {
                           if (isCompleted) {
-                            bgColor = '#f0fdf4'
-                            textColor = '#16a34a'
-                            borderColor = '#bbf7d0'
+                            if (event.completed_at) {
+                              // Use YYYY-MM-DD string comparison — avoids UTC vs local midnight mismatch
+                              const completedDateStr = event.completed_at.slice(0, 10)
+                              const cIdx = calendarDays.findIndex(d => {
+                                const y = d.getFullYear()
+                                const m = String(d.getMonth() + 1).padStart(2, '0')
+                                const day = String(d.getDate()).padStart(2, '0')
+                                return `${y}-${m}-${day}` === completedDateStr
+                              })
+                              if (cIdx !== -1 && cIdx >= actualStart && cIdx <= actualEnd) {
+                                progressPercentage = Math.round(((cIdx - actualStart + 1) / (actualEnd - actualStart + 1)) * 100)
+                              }
+                            }
+
+                            if (progressPercentage < 99) {
+                              bgColor = '__early__'
+                              textColor = '#14532d'
+                              borderColor = '#16a34a'
+                            } else {
+                              bgColor = '#bbf7d0'
+                              textColor = '#15803d'
+                              borderColor = '#86efac'
+                            }
                           } else if (isOverdue) {
-                            bgColor = '#fef2f2'
-                            textColor = '#dc2626'
-                            borderColor = '#fecaca'
+                            bgColor = '__overdue__'
+                            textColor = '#fca5a5'
+                            borderColor = '#ef4444'
                           }
                         }
+
+                        const isEarlyBar = bgColor === '__early__'
+                        // Days saved = total span minus days used
+                        const totalDays = actualEnd - actualStart + 1
+                        const daysSaved = Math.round(totalDays * (1 - progressPercentage / 100))
 
                         return (
                           <div
                             key={event.id}
-                            className="timeline-task-bar"
+                            className={`timeline-task-bar${isEarlyBar ? ' timeline-task-bar--early' : ''}`}
                             style={{
                               gridColumn: `${actualStart + 1} / span ${actualEnd - actualStart + 1}`,
-                              background: bgColor,
+                              position: 'relative',
+                              background: isEarlyBar ? 'transparent' : bgColor,
                               color: textColor,
-                              border: `1px solid ${borderColor}`,
-                              borderRadius: '6px',
+                              border: isEarlyBar ? '1.5px solid #16a34a' : `1px solid ${borderColor}`,
+                              borderRadius: '7px',
                               padding: '2px 8px',
                               fontSize: '12px',
                               fontWeight: 500,
@@ -213,27 +240,104 @@ export default function CalendarTimeline({
                               whiteSpace: 'nowrap',
                               textOverflow: 'ellipsis',
                               margin: '0 4px',
-                              transition: 'transform 0.1s ease, filter 0.1s ease'
+                              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                              boxShadow: isEarlyBar ? '0 1px 4px rgba(22,163,74,0.15)' : 'none',
                             }}
                             onClick={(e) => {
                               e.stopPropagation()
                               if (event.event_type !== 'Task_Claim') setSelectedEvent(event)
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.filter = 'brightness(0.95)'
                               e.currentTarget.style.transform = 'translateY(-1px)'
+                              e.currentTarget.style.boxShadow = isEarlyBar
+                                ? '0 4px 12px rgba(22,163,74,0.35)'
+                                : '0 2px 8px rgba(0,0,0,0.12)'
                               handleMouseEnter(e, event)
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.filter = 'none'
                               e.currentTarget.style.transform = 'none'
+                              e.currentTarget.style.boxShadow = isEarlyBar ? '0 1px 4px rgba(22,163,74,0.15)' : 'none'
                               handleMouseLeave()
                             }}
                           >
-                            <span style={{ display: 'flex', flexShrink: 0 }}>
+                            {isEarlyBar && (
+                              <>
+                                {/* Glassy solid green fill — work done */}
+                                <div style={{
+                                  position: 'absolute', top: 0, left: 0, bottom: 0,
+                                  width: `${progressPercentage}%`,
+                                  background: 'linear-gradient(180deg, #4ade80 0%, #22c55e 60%, #16a34a 100%)',
+                                  borderRadius: '6px 0 0 6px',
+                                  pointerEvents: 'none',
+                                  overflow: 'hidden',
+                                }}>
+                                  {/* Shimmer sweep */}
+                                  <div className="timeline-bar-shimmer" />
+                                </div>
+                                {/* Gloss highlight on solid fill */}
+                                <div style={{
+                                  position: 'absolute', top: 0, left: 0,
+                                  height: '45%',
+                                  width: `${progressPercentage}%`,
+                                  background: 'linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 100%)',
+                                  borderRadius: '6px 0 0 0',
+                                  pointerEvents: 'none',
+                                }} />
+                                {/* Ghost tail — time saved, breathing */}
+                                <div className="timeline-bar-ghost-tail" style={{
+                                  position: 'absolute', top: '18%', bottom: '18%',
+                                  left: `calc(${progressPercentage}% + 10px)`,
+                                  right: '4px',
+                                  border: '1.5px dashed #86efac',
+                                  borderRadius: '4px',
+                                  background: 'rgba(187,247,208,0.18)',
+                                  pointerEvents: 'none',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  overflow: 'hidden',
+                                }} >
+                                  {daysSaved > 0 && (
+                                    <span style={{
+                                      fontSize: '9px',
+                                      fontWeight: 700,
+                                      color: '#15803d',
+                                      letterSpacing: '0.04em',
+                                      opacity: 0.8,
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      +{daysSaved}d saved
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Lightning badge at the split — pulsing ring */}
+                                <div className="timeline-bar-zap-badge" style={{
+                                  position: 'absolute',
+                                  top: '50%',
+                                  left: `${progressPercentage}%`,
+                                  transform: 'translate(-50%, -50%)',
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  background: '#15803d',
+                                  border: '2px solid #f0fdf4',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  zIndex: 2,
+                                  pointerEvents: 'none',
+                                }}>
+                                  <ZapIcon />
+                                </div>
+                              </>
+                            )}
+                            <span style={{ position: 'relative', display: 'flex', flexShrink: 0, zIndex: 1 }}>
                               {isAbsence || isOffsetHoliday ? <LockIcon /> : isCompanyEvent ? <GlobeIcon /> : isCompleted ? <CheckIcon /> : <TargetIcon />}
                             </span>
-                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span style={{ position: 'relative', overflow: 'hidden', textOverflow: 'ellipsis', zIndex: 1,
+                              color: isEarlyBar ? '#fff' : textColor,
+                              textShadow: isEarlyBar ? '0 1px 2px rgba(0,0,0,0.2)' : 'none',
+                            }}>
                               {isOffsetHoliday ? 'Offset Holiday' : isAbsence ? 'On Leave' : isCompanyEvent ? event.leave_type : event.todo_title}
                             </span>
                           </div>

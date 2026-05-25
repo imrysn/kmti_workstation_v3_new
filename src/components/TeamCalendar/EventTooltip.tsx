@@ -2,6 +2,7 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 import { ICalendarEvent } from '../../services/teamCalendarService'
 import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
+import { formatLocalDate, formatDisplayDate, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
 
 interface EventTooltipProps {
   event: ICalendarEvent
@@ -49,15 +50,16 @@ export default function EventTooltip({ event, position, isVisible }: EventToolti
           {event.due_date && (
             <div className="calendar-tooltip-row">
               <span className="calendar-tooltip-label">Due Date:</span>
-              <span className="calendar-tooltip-value">{event.due_date}</span>
+              <span className="calendar-tooltip-value">{formatDisplayDate(event.due_date)}</span>
             </div>
           )}
-          {event.todo_priority && (
+          {event.completed_at && (
             <div className="calendar-tooltip-row">
-              <span className="calendar-tooltip-label">Priority:</span>
-              <span className="calendar-tooltip-value">{event.todo_priority}</span>
+              <span className="calendar-tooltip-label">Completed At:</span>
+              <span className="calendar-tooltip-value">{formatDisplayDateTime(event.completed_at)}</span>
             </div>
           )}
+
           {event.todo_description && (
             <div className="calendar-tooltip-row" style={{ marginTop: '8px' }}>
               <span className="calendar-tooltip-desc">

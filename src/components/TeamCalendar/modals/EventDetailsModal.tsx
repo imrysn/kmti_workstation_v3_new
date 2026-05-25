@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
-import { formatDurationRange } from '../../../utils/teamCalendarUtils'
+import { formatDurationRange, formatLocalDate, formatDisplayDate, formatDisplayDateTime } from '../../../utils/teamCalendarUtils'
 
 interface EventDetailsModalProps {
   selectedEvent: ICalendarEvent
@@ -79,16 +79,14 @@ export default function EventDetailsModal({
                 <strong>Task Title:</strong> {selectedEvent.todo_title}
               </p>
               <p>
-                <strong>Due Date:</strong> {selectedEvent.due_date || selectedEvent.end_date}
+                <strong>Due Date:</strong> {formatDisplayDate(selectedEvent.due_date || selectedEvent.end_date)}
               </p>
-              {selectedEvent.todo_priority && (
+              {selectedEvent.completed_at && (
                 <p>
-                  <strong>Priority:</strong>{' '}
-                  <span className={`priority-badge priority-${selectedEvent.todo_priority.toLowerCase()}`}>
-                    {selectedEvent.todo_priority}
-                  </span>
+                  <strong>Completed At:</strong> {formatDisplayDateTime(selectedEvent.completed_at)}
                 </p>
               )}
+
               {selectedEvent.todo_description && (
                 <p>
                   <strong>Description:</strong> {selectedEvent.todo_description}
@@ -108,7 +106,7 @@ export default function EventDetailsModal({
               </button>
             )}
 
-            {(selectedEvent.user_id === currentUser?.id || isAdminOrIT) && (
+            {isAdminOrIT && (
               <button
                 className="btn btn-danger btn-block"
                 onClick={() => handleCancelEvent(selectedEvent)}
