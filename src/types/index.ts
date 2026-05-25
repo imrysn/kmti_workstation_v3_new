@@ -49,6 +49,12 @@ export interface IHeatTreatment {
   japaneseChar: string
 }
 
+export interface IMaterial {
+  id?: number
+  englishName: string
+  japaneseName: string
+}
+
 export interface IDesigner {
   id?: number
   category?: string

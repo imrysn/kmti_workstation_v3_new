@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials
 from routers import team_calendar as team_calendar_router
 import time
 import logging
@@ -130,6 +130,7 @@ app.include_router(stopwatch.router, prefix="/api/stopwatch", tags=["Stopwatch R
 app.include_router(tts.router, prefix="/api/tts", tags=["TTS"])
 app.include_router(team_calendar_router.router, prefix="/api/team-calendar", tags=["Team Calendar"])
 app.include_router(fms.router, prefix="/api/fms", tags=["FMS Integration"])
+app.include_router(materials.router, prefix="/api/materials", tags=["Materials"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
 # IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE

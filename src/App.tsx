@@ -7,6 +7,7 @@ import PurchasedParts from './pages/PurchasedParts'
 import CharacterSearch from './pages/CharacterSearch'
 import HeatTreatment from './pages/HeatTreatment'
 import Designers from './pages/Designers'
+import Materials from './pages/Materials'
 import MaterialCalculator from './pages/MaterialCalculator'
 import Settings from './pages/Settings'
 import Users from './pages/Users'
@@ -158,6 +159,16 @@ function WorkstationShell() {
                 <ProtectedRoute>
                   <ModuleGuard visibleKey="designers_enabled" maintKey="designers_maintenance">
                     <Designers />
+                  </ModuleGuard>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/materials"
+              element={
+                <ProtectedRoute>
+                  <ModuleGuard visibleKey="materials_enabled" maintKey="materials_maintenance">
+                    <Materials />
                   </ModuleGuard>
                 </ProtectedRoute>
               }

@@ -119,6 +119,17 @@ export const charsApi = {
   deleteHeatTreatment: (id: number) => api.delete(`/chars/heat-treatment/${id}`),
 }
 
+// --- Materials ---
+export const materialsApi = {
+  list: (q?: string, limit: number = 50, offset: number = 0) =>
+    api.get('/materials/', { params: { q, limit, offset } }),
+  create: (data: { englishName: string; japaneseName: string }) =>
+    api.post('/materials/', data),
+  update: (id: number, data: { englishName?: string; japaneseName?: string }) =>
+    api.patch(`/materials/${id}`, data),
+  delete: (id: number) => api.delete(`/materials/${id}`),
+}
+
 // --- Designers ---
 export const designersApi = {
   getCategories: () => api.get('/designers/categories'),

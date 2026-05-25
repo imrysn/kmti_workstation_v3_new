@@ -1,0 +1,26 @@
+/* Materials page — reuses HeatTreatment styles, no sidebar */
+
+.materials-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.materials-content {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px 24px;
+}
+
+.materials-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Inherit shared table/modal/action styles from HeatTreatment.css */

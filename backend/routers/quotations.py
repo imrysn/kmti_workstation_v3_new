@@ -569,23 +569,43 @@ async def list_quotations(
     result = await db.execute(stmt)
     items = result.scalars().all()
     
-    # Auto-backfill grand_total and other synced fields if they are missing
+    # Auto-backfill grand_total and other synced fields if they are missing or desynced
     backfilled_any = False
     for i in items:
-        if (i.grand_total == 0.0 or not i.grand_total) and i.data:
+        if i.data:
             try:
                 data = json.loads(i.data)
                 g_total = calculate_grand_total(data)
-                if g_total > 0:
+                client_contact = data.get("clientInfo", {}).get("contact", "")
+                p_incharge = data.get("billingDetails", {}).get("projectInCharge") or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
+                b_to = data.get("clientInfo", {}).get("company", "") or data.get("billingDetails", {}).get("billTo", "")
+                
+                needs_update = False
+                
+                # Check grand_total
+                curr_gt = float(i.grand_total or 0.0)
+                if abs(curr_gt - g_total) > 0.01:
                     i.grand_total = g_total
-                    client_contact = data.get("clientInfo", {}).get("contact", "")
-                    p_incharge = data.get("billingDetails", {}).get("projectInCharge") or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
-                    b_to = data.get("clientInfo", {}).get("company", "")
+                    needs_update = True
                     
+                # Check customer_incharge
+                if i.customer_incharge != client_contact:
                     i.customer_incharge = client_contact
-                    i.designer_name = p_incharge
-                    i.bill_to = b_to
+                    needs_update = True
                     
+                # Check designer_name
+                if i.designer_name != p_incharge:
+                    i.designer_name = p_incharge
+                    needs_update = True
+                    
+                # Check bill_to
+                if i.bill_to != b_to:
+                    i.bill_to = b_to
+                    if b_to:
+                        i.client_name = b_to
+                    needs_update = True
+                    
+                if needs_update:
                     db.add(i)
                     backfilled_any = True
             except Exception as e:

@@ -67,3 +67,12 @@ class Designer(Base):
     english_name = Column(String(255), index=True)
     email = Column(String(255), nullable=True)
     japanese_name = Column(String(255), index=True)
+
+
+class Material(Base):
+    """Maps to `materials` table — English/Japanese material name mappings."""
+    __tablename__ = "materials"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    english_name = Column(String(500), nullable=False, index=True)
+    japanese_name = Column(String(500), nullable=False)
