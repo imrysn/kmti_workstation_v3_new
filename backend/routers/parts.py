@@ -35,6 +35,7 @@ class CreateProjectRequest(BaseModel):
     category: str = "PROJECTS"
 
 from core.trie_engine import trie_service
+from core.cache import cache_get, cache_set, cache_delete
 from typing import List, Optional
 
 class CreateFolderRequest(BaseModel):
@@ -113,12 +114,17 @@ async def browse_folder():
 
 @router.get("/projects")
 async def get_projects(category: str = None, db: AsyncSession = Depends(get_db)):
+    cache_key = f"category:{category}"
+    cached_val = await cache_get("projects", cache_key)
+    if cached_val is not None:
+        return cached_val
+
     query = select(Project)
     if category:
         query = query.where(Project.category == category)
     result = await db.execute(query)
     projs = result.scalars().all()
-    return [{
+    res = [{
         "id": p.id,
         "name": p.name,
         "rootPath": p.root_path,
@@ -126,6 +132,8 @@ async def get_projects(category: str = None, db: AsyncSession = Depends(get_db))
         "cadFiles": p.cad_files,
         "isScanning": p.is_scanning
     } for p in projs]
+    await cache_set("projects", cache_key, res)
+    return res
 
 @router.post("/projects")
 async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_db), _user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
@@ -159,6 +167,8 @@ async def add_project(req: CreateProjectRequest, db: AsyncSession = Depends(get_
     # Trigger scan
     p.is_scanning = True
     await db.commit()
+    await cache_delete("projects")
+    await cache_delete("categories")
     if indexer:
         asyncio.create_task(indexer.scan_project_async(p.id, p.root_path))
 
@@ -172,6 +182,10 @@ async def delete_project(project_id: int, db: AsyncSession = Depends(get_db), _u
         
     await db.delete(proj)
     await db.commit()
+    await cache_delete("projects")
+    await cache_delete("categories")
+    await cache_delete("tree")
+    await cache_delete("parts_list")
     return {"success": True}
 
 @router.post("/projects/{project_id}/scan")
@@ -181,6 +195,7 @@ async def scan_project_endpoint(project_id: int, db: AsyncSession = Depends(get_
         raise HTTPException(status_code=404, detail="Project not found")
     proj.is_scanning = True
     await db.commit()
+    await cache_delete("projects")
     if indexer:
         asyncio.create_task(indexer.scan_project_async(proj.id, proj.root_path))
     return {"success": True, "message": "Scan started"}
@@ -217,6 +232,10 @@ async def delete_projects_by_category(category: str, db: AsyncSession = Depends(
         await db.delete(proj)
         
     await db.commit()
+    await cache_delete("projects")
+    await cache_delete("categories")
+    await cache_delete("tree")
+    await cache_delete("parts_list")
     return {"success": True, "count": len(projs)}
 
 @router.get("/projects/{project_id}/scan-status")
@@ -282,6 +301,11 @@ async def scan_status_stream(project_id: int, db: AsyncSession = Depends(get_db)
 
 @router.get("/tree/{project_id}")
 async def get_project_tree(project_id: int, parent_path: str = Query(None), db: AsyncSession = Depends(get_db)):
+    cache_key = f"{project_id}:{parent_path or ''}"
+    cached_val = await cache_get("tree", cache_key)
+    if cached_val is not None:
+        return cached_val
+
     proj = await db.get(Project, project_id)
     if not proj:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -290,7 +314,7 @@ async def get_project_tree(project_id: int, parent_path: str = Query(None), db: 
     
     # 1. Base Case: No parent_path provided -> Return the Root Node only
     if not parent_path:
-        return [{
+        res_nodes = [{
             "name": proj.name,
             "path": root_path,
             "depth": 0,
@@ -298,6 +322,8 @@ async def get_project_tree(project_id: int, parent_path: str = Query(None), db: 
             "fileType": "",
             "hasChildren": True # Assume projects have content
         }]
+        await cache_set("tree", cache_key, res_nodes)
+        return res_nodes
 
     # 2. Fetch direct children of parent_path at the SQL level (NON-RECURSIVE)
     query = select(CadFileIndex.file_path, CadFileIndex.file_name, CadFileIndex.is_folder, CadFileIndex.file_type).where(CadFileIndex.project_id == project_id)
@@ -324,6 +350,7 @@ async def get_project_tree(project_id: int, parent_path: str = Query(None), db: 
             "fileType": ftype or ""
         })
         
+    await cache_set("tree", cache_key, nodes)
     return nodes
 
 # --- PARTS/FILES API ---
@@ -334,6 +361,10 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
     Dynamically lists the top-level folders in the 'Purchased Parts' root.
     This allows the UI to sync filters with the actual folder structure on the NAS.
     """
+    cached_val = await cache_get("categories", "all")
+    if cached_val is not None:
+        return cached_val
+
     try:
         from sqlalchemy import select
         # Use findr's primary project for "Purchased Parts" (usually ID 1 or the one with category='PURCHASED')
@@ -357,7 +388,9 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
             if entry.is_dir() and not entry.name.startswith('.'):
                 categories.append(entry.name.upper())
                 
-        return sorted(list(set(categories)))
+        res = sorted(list(set(categories)))
+        await cache_set("categories", "all", res)
+        return res
     except Exception as e:
         import logging
         logging.getLogger("kmti_backend").error(f"Category discovery failed: {str(e)}")
@@ -377,6 +410,13 @@ async def list_parts(
     offset: int = 0,
     db: AsyncSession = Depends(get_db)
 ):
+    is_searching = bool(search and search.strip())
+    if not is_searching:
+        cache_key = f"{project_id}:{cad_only}:{include_folders}:{folder_path or ''}:{recursive}:{limit}:{offset}"
+        cached_val = await cache_get("parts_list", cache_key)
+        if cached_val is not None:
+            return cached_val
+
     query = select(CadFileIndex)
     
     # 1. Project Filter
@@ -390,7 +430,6 @@ async def list_parts(
         
         # If searching, respect the recursive toggle. 
         # If just browsing (no search), ALWAYS be non-recursive for the file list.
-        is_searching = bool(search and search.strip())
         effective_recursive = recursive if is_searching else False
         
         if effective_recursive:
@@ -407,7 +446,6 @@ async def list_parts(
         if proj:
             root_norm = normalize_path(proj.root_path)
             # Check if we are searching (which usually implies recursive)
-            is_searching = bool(search and search.strip())
             effective_recursive = recursive if is_searching else False
             
             if not effective_recursive:
@@ -485,7 +523,7 @@ async def list_parts(
     rows = result.scalars().all()
     
     # 7. Final Response
-    return {
+    res_dict = {
         "total": total_count,
         "showing": len(rows),
         "capped": total_count > (offset + limit),
@@ -507,6 +545,9 @@ async def list_parts(
             for r in rows
         ]
     }
+    if not is_searching:
+        await cache_set("parts_list", cache_key, res_dict)
+    return res_dict
 
 @router.get("/preview/{file_id}")
 async def get_preview(file_id: int, full: bool = False, db: AsyncSession = Depends(get_db)):
@@ -593,6 +634,8 @@ async def delete_item(file_id: int, db: AsyncSession = Depends(get_db), _user: U
         await db.delete(record)
         
     await db.commit()
+    await cache_delete("tree")
+    await cache_delete("parts_list")
     
     # Rescan project to fix counts asynchronously.
     # Fetch the project to get the actual root_path — passing "" caused silent scan failures.

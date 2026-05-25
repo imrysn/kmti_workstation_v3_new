@@ -10,6 +10,7 @@ from db.database import get_db
 from models.user import User, UserRole
 from core.auth import verify_password, create_access_token, get_current_user, require_role, hash_password
 from pydantic import BaseModel
+from core.cache import cache_get, cache_set, cache_delete
 
 
 router = APIRouter()
@@ -80,6 +81,12 @@ async def list_users(
     kmtifms.users rows from appearing — both DBs live on the same NAS MySQL
     server and can share visibility depending on the DB user's grants.
     """
+    role_str = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
+    cache_key = f"role:{role_str}"
+    cached_val = await cache_get("users", cache_key)
+    if cached_val is not None:
+        return cached_val
+
     query = (
         select(User)
         .where(User.role.in_(VALID_WORKSTATION_ROLES))
@@ -92,7 +99,7 @@ async def list_users(
 
     result = await db.execute(query)
     users = result.scalars().all()
-    return [
+    res_list = [
         {
             "id": u.id,
             "username": u.username,
@@ -102,6 +109,8 @@ async def list_users(
         }
         for u in users
     ]
+    await cache_set("users", cache_key, res_list)
+    return res_list
 
 
 # --- CRUD Models ---
@@ -138,6 +147,7 @@ async def create_user(
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
+    await cache_delete("users")
     return {"id": new_user.id, "username": new_user.username, "role": new_user.role.value}
 
 
@@ -171,6 +181,7 @@ async def update_user(
         user.is_active = payload.is_active
 
     await db.commit()
+    await cache_delete("users")
     return {
         "id": user.id,
         "username": user.username,
@@ -204,4 +215,5 @@ async def delete_user(
 
     await db.delete(user)
     await db.commit()
+    await cache_delete("users")
     return {"status": "ok", "message": f"User {user.username} deleted."}

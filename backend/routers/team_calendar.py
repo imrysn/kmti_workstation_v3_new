@@ -10,6 +10,9 @@ from db.database import get_db, get_fms_db
 from core.auth import get_current_user
 from models.user import User, UserRole
 from models.fms import FmsUser, FmsAssignment, FmsAssignmentMember
+from core.cache import cache_get, cache_set, cache_delete
+
+_last_fms_sync_time = 0.0
 
 from team_calendar.domain.rules import DomainException
 from team_calendar.infrastructure.models import DbCalendarEvent
@@ -70,6 +73,13 @@ async def sync_fms_users_to_local(db: AsyncSession, fms_db: AsyncSession):
     Synchronizes users from the remote FMS database to the local kmti_users database,
     ensuring they have valid local accounts with the user role.
     """
+    global _last_fms_sync_time
+    import time
+    now = time.time()
+    if now - _last_fms_sync_time < 300:
+        return
+    _last_fms_sync_time = now
+
     try:
         # Query FMS users
         fms_result = await fms_db.execute(select(FmsUser))
@@ -125,6 +135,11 @@ async def get_team_grid(
     Fetch the complete team calendar grid data within a date range.
     Queries all task claims and absences.
     """
+    cache_key = f"{start_date}:{end_date}"
+    cached_val = await cache_get("tc_grid", cache_key)
+    if cached_val is not None:
+        return cached_val
+
     # 1. Synchronize users from FMS on-the-fly
     await sync_fms_users_to_local(db, fms_db)
 
@@ -253,10 +268,12 @@ async def get_team_grid(
         logger = logging.getLogger("uvicorn.error")
         logger.warning(f"Failed to query FMS assignments for grid: {e}")
 
-    return {
+    res_dict = {
         "success": True,
         "events": response_events
     }
+    await cache_set("tc_grid", cache_key, res_dict)
+    return res_dict
 
 
 @router.get("/todos")
@@ -268,6 +285,9 @@ async def get_backlog(
     """
     Get the unassigned task backlog. Includes uncompleted FMS assignments.
     """
+    cached_val = await cache_get("tc_todos", "all")
+    if cached_val is not None:
+        return cached_val
     todo_repo = SqlAlchemyTodoRepository(db)
     todos = await todo_repo.get_all_backlog()
     
@@ -311,10 +331,12 @@ async def get_backlog(
         logger = logging.getLogger("uvicorn.error")
         logger.warning(f"Failed to query FMS backlog assignments: {e}")
         
-    return {
+    res_dict = {
         "success": True,
         "todos": backlog_items
     }
+    await cache_set("tc_todos", "all", res_dict)
+    return res_dict
 
 
 @router.post("/todos")
@@ -329,6 +351,8 @@ async def create_todo(
     todo_repo = SqlAlchemyTodoRepository(db)
     use_case = CreateTodoUseCase(todo_repo)
     todo = await use_case.execute(payload.title, payload.description, payload.priority)
+    await cache_delete("tc_grid")
+    await cache_delete("tc_todos")
     return {
         "success": True,
         "todo": {
@@ -393,6 +417,8 @@ async def claim_task(
             end_date=payload.end_date,
             engineer_name=payload.engineer_name
         )
+        await cache_delete("tc_grid")
+        await cache_delete("tc_todos")
         return {
             "success": True,
             "message": "Task successfully claimed on your calendar.",
@@ -446,6 +472,8 @@ async def request_day_off(
             status=status_val,
             leave_type=payload.leave_type
         )
+        await cache_delete("tc_grid")
+        await cache_delete("tc_todos")
         return {
             "success": True,
             "message": "Day off requested successfully." if status_val == "Pending" else "Day off scheduled successfully.",
@@ -499,6 +527,8 @@ async def create_company_event(
     db.add(new_event)
     await db.commit()
     await db.refresh(new_event)
+    await cache_delete("tc_grid")
+    await cache_delete("tc_todos")
     
     return {
         "success": True,
@@ -549,6 +579,8 @@ async def delete_todo(
 
     # Delete the todo itself
     await todo_repo.delete(todo_id)
+    await cache_delete("tc_grid")
+    await cache_delete("tc_todos")
 
     return {
         "success": True,
@@ -570,6 +602,8 @@ async def complete_todo(
 
     try:
         await use_case.execute(todo_id)
+        await cache_delete("tc_grid")
+        await cache_delete("tc_todos")
         return {
             "success": True,
             "message": "Task marked as completed."
@@ -611,6 +645,8 @@ async def delete_event(
         await todo_repo.update_status(event.todo_id, "Pending")
 
     await event_repo.delete(event_id)
+    await cache_delete("tc_grid")
+    await cache_delete("tc_todos")
     return {
         "success": True,
         "message": "Calendar event canceled successfully."
@@ -639,6 +675,8 @@ async def approve_event(
 
     try:
         await use_case.execute(event_id)
+        await cache_delete("tc_grid")
+        await cache_delete("tc_todos")
         return {
             "success": True,
             "message": "Calendar event approved successfully."
@@ -707,6 +745,8 @@ async def assign_task(
             end_date=payload.end_date,
             engineer_name=payload.engineer_name
         )
+        await cache_delete("tc_grid")
+        await cache_delete("tc_todos")
         return {
             "success": True,
             "message": "Task assigned successfully.",

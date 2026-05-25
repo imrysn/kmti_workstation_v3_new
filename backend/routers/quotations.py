@@ -30,6 +30,7 @@ from models.quotation import Quotation, QuotationHistory
 from models.user import User, UserRole
 from core.auth import get_current_user
 from core.config import BASE_DIR
+from core.cache import cache_get, cache_set, cache_delete
 
 # ─── Socket.IO Server ─────────────────────────────────────────────────────────
 # cors_allowed_origins MUST be the string "*" (not a list) — the string form
@@ -335,6 +336,8 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Opti
         .values(**values)
     )
     await db.commit()
+    await cache_delete("quot_list")
+    await cache_delete("quot_sessions")
 
 @sio.event
 async def update_field(sid: str, data: dict):
@@ -555,6 +558,12 @@ async def list_quotations(
     current_user: User = Depends(get_current_user)
 ):
     """List quotations from DB with filtering."""
+    is_admin = current_user.role in [UserRole.admin, UserRole.it]
+    cache_key = f"{q or ''}:{designer or ''}:{limit}:{offset}:{is_admin}"
+    cached_val = await cache_get("quot_list", cache_key)
+    if cached_val is not None:
+        return cached_val
+
     stmt = select(Quotation).order_by(desc(Quotation.updated_at))
     
     if q:
@@ -569,53 +578,7 @@ async def list_quotations(
     result = await db.execute(stmt)
     items = result.scalars().all()
     
-    # Auto-backfill grand_total and other synced fields if they are missing or desynced
-    backfilled_any = False
-    for i in items:
-        if i.data:
-            try:
-                data = json.loads(i.data)
-                g_total = calculate_grand_total(data)
-                client_contact = data.get("clientInfo", {}).get("contact", "")
-                p_incharge = data.get("billingDetails", {}).get("projectInCharge") or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
-                b_to = data.get("clientInfo", {}).get("company", "") or data.get("billingDetails", {}).get("billTo", "")
-                
-                needs_update = False
-                
-                # Check grand_total
-                curr_gt = float(i.grand_total or 0.0)
-                if abs(curr_gt - g_total) > 0.01:
-                    i.grand_total = g_total
-                    needs_update = True
-                    
-                # Check customer_incharge
-                if i.customer_incharge != client_contact:
-                    i.customer_incharge = client_contact
-                    needs_update = True
-                    
-                # Check designer_name
-                if i.designer_name != p_incharge:
-                    i.designer_name = p_incharge
-                    needs_update = True
-                    
-                # Check bill_to
-                if i.bill_to != b_to:
-                    i.bill_to = b_to
-                    if b_to:
-                        i.client_name = b_to
-                    needs_update = True
-                    
-                if needs_update:
-                    db.add(i)
-                    backfilled_any = True
-            except Exception as e:
-                print(f"Error backfilling quotation {i.id}: {e}")
-    if backfilled_any:
-        await db.commit()
-    
-    is_admin = current_user.role in [UserRole.admin, UserRole.it]
-    
-    return {
+    res_dict = {
         "quotations": [
             {
                 "id": i.id,
@@ -644,6 +607,8 @@ async def list_quotations(
             } for i in items
         ]
     }
+    await cache_set("quot_list", cache_key, res_dict)
+    return res_dict
 
 @router.get("/sessions")
 async def list_active_sessions(db: AsyncSession = Depends(get_db)):
@@ -653,6 +618,10 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
     This provides a resilient list that doesn't disappear if the socket hasn't 
     finished handshaking or if the server recently restarted.
     """
+    cached_val = await cache_get("quot_sessions", "all")
+    if cached_val is not None:
+        return cached_val
+
     # 1. Start with all quotations marked active in DB
     stmt = select(Quotation).where(Quotation.is_active == True).order_by(desc(Quotation.updated_at))
     result = await db.execute(stmt)
@@ -672,7 +641,9 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
             "workstation": i.workstation
         })
     
-    return {"sessions": sessions}
+    res_sessions = {"sessions": sessions}
+    await cache_set("quot_sessions", "all", res_sessions)
+    return res_sessions
 
 @router.post("/")
 async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
@@ -708,6 +679,8 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
         db.add(new_q)
         await db.commit()
         await db.refresh(new_q)
+        await cache_delete("quot_list")
+        await cache_delete("quot_sessions")
         return {"success": True, "id": new_q.id, "quotNo": q_no, "displayName": display}
 
     # ── Full document save (from within editor) ───────────────────
@@ -741,6 +714,8 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
     db.add(new_q)
     await db.commit()
     await db.refresh(new_q)
+    await cache_delete("quot_list")
+    await cache_delete("quot_sessions")
     return {"success": True, "id": new_q.id}
 
 
@@ -861,6 +836,8 @@ async def update_billing_monitoring(
         print(f"Error syncing JSON in update_billing_monitoring: {e}")
 
     await db.commit()
+    await cache_delete("quot_list")
+    await cache_delete("quot_sessions")
 
     # Emit Socket.IO patches for active editors to update live
     room_name = f"quot_{q_id}"
@@ -941,5 +918,7 @@ async def delete_quotation(
     await db.execute(delete(QuotationHistory).where(QuotationHistory.quotation_id == q_id))
     await db.execute(delete(Quotation).where(Quotation.id == q_id))
     await db.commit()
+    await cache_delete("quot_list")
+    await cache_delete("quot_sessions")
     
     return {"success": True}
