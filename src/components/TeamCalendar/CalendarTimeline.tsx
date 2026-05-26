@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { ICalendarEvent } from '../../services/teamCalendarService'
 import { IHoliday } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, CheckIcon, TargetIcon, ZapIcon } from './Icons'
+import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
 import EventTooltip from './EventTooltip'
 
 interface CalendarTimelineProps {
@@ -25,6 +25,7 @@ export default function CalendarTimeline({
 }: CalendarTimelineProps) {
   const [tooltipEvent, setTooltipEvent] = useState<ICalendarEvent | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,9 +47,13 @@ export default function CalendarTimeline({
   const handleMouseEnter = (e: React.MouseEvent, event: ICalendarEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
     setTooltipPos({ x: rect.left, y: rect.bottom + 4 })
+    setTooltipRect(rect)
     setTooltipEvent(event)
   }
-  const handleMouseLeave = () => setTooltipEvent(null)
+  const handleMouseLeave = () => {
+    setTooltipEvent(null)
+    setTooltipRect(null)
+  }
 
   const visibleEvents = events.filter(e => {
     if (e.event_type === 'Task_Claim' && !showClaims) return false
@@ -310,25 +315,20 @@ export default function CalendarTimeline({
                                     </span>
                                   )}
                                 </div>
-                                {/* Lightning badge at the split — pulsing ring */}
-                                <div className="timeline-bar-zap-badge" style={{
+                                {/* Split marker indicator — clean pulsing dot */}
+                                <div className="timeline-bar-split-marker" style={{
                                   position: 'absolute',
                                   top: '50%',
                                   left: `${progressPercentage}%`,
                                   transform: 'translate(-50%, -50%)',
-                                  width: '18px',
-                                  height: '18px',
+                                  width: '10px',
+                                  height: '10px',
                                   borderRadius: '50%',
-                                  background: '#15803d',
-                                  border: '2px solid #f0fdf4',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
+                                  background: '#22c55e',
+                                  border: '2.5px solid #ffffff',
                                   zIndex: 2,
                                   pointerEvents: 'none',
-                                }}>
-                                  <ZapIcon />
-                                </div>
+                                }} />
                               </>
                             )}
                             <span style={{ position: 'relative', display: 'flex', flexShrink: 0, zIndex: 1 }}>
@@ -351,7 +351,7 @@ export default function CalendarTimeline({
           )}
         </div>
       </div>
-      <EventTooltip event={tooltipEvent!} position={tooltipPos} isVisible={!!tooltipEvent} />
+      <EventTooltip event={tooltipEvent!} position={tooltipPos} anchorRect={tooltipRect} isVisible={!!tooltipEvent} />
     </div>
   )
 }

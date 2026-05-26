@@ -35,6 +35,7 @@ export default function CalendarGrid({
 }: CalendarGridProps) {
   const [tooltipEvent, setTooltipEvent] = useState<ICalendarEvent | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null)
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth <= 1024)
 
   useEffect(() => {
@@ -49,11 +50,13 @@ export default function CalendarGrid({
     const rect = e.currentTarget.getBoundingClientRect()
     // position tooltip slightly below and right of the badge
     setTooltipPos({ x: rect.left, y: rect.bottom + 4 })
+    setTooltipRect(rect)
     setTooltipEvent(event)
   }
 
   const handleMouseLeave = () => {
     setTooltipEvent(null)
+    setTooltipRect(null)
   }
 
   return (
@@ -240,7 +243,7 @@ export default function CalendarGrid({
           )
         })}
       </div>
-      <EventTooltip event={tooltipEvent!} position={tooltipPos} isVisible={!!tooltipEvent} />
+      <EventTooltip event={tooltipEvent!} position={tooltipPos} anchorRect={tooltipRect} isVisible={!!tooltipEvent} />
     </>
   )
 }

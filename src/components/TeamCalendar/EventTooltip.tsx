@@ -2,14 +2,51 @@ import { createPortal } from 'react-dom'
 import { ICalendarEvent } from '../../services/teamCalendarService'
 import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
 import { formatDisplayDate, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
+import { useState, useRef, useLayoutEffect } from 'react'
 
 interface EventTooltipProps {
   event: ICalendarEvent
   position: { x: number; y: number }
+  anchorRect?: DOMRect | { left: number; top: number; bottom: number; right: number } | null
   isVisible: boolean
 }
 
-export default function EventTooltip({ event, position, isVisible }: EventTooltipProps) {
+export default function EventTooltip({ event, position, anchorRect, isVisible }: EventTooltipProps) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [coords, setCoords] = useState<{ left: number; top: number } | null>(null)
+
+  useLayoutEffect(() => {
+    if (!isVisible || !ref.current) {
+      setCoords(null)
+      return
+    }
+
+    const tooltipHeight = ref.current.offsetHeight
+    const tooltipWidth = ref.current.offsetWidth
+
+    let left = position.x
+    let top = position.y
+
+    if (anchorRect) {
+      top = anchorRect.bottom + 4
+      left = anchorRect.left
+      if (top + tooltipHeight > window.innerHeight) {
+        top = anchorRect.top - tooltipHeight - 4
+      }
+    } else {
+      if (top + tooltipHeight > window.innerHeight) {
+        top = window.innerHeight - tooltipHeight - 12
+      }
+    }
+
+    if (left + tooltipWidth > window.innerWidth) {
+      left = window.innerWidth - tooltipWidth - 12
+    }
+    if (left < 0) left = 12
+
+    setCoords({ left, top })
+  }, [isVisible, position.x, position.y, anchorRect, event])
+
   if (!isVisible || !event) return null
 
   const isCompanyEvent = event.event_type === 'Company_Event' && event.leave_type !== 'Holiday'
@@ -17,12 +54,17 @@ export default function EventTooltip({ event, position, isVisible }: EventToolti
   const isAbsence = event.event_type === 'Day_Off'
   const isCompleted = event.todo_status === 'Completed'
 
+  const displayCoords = coords || { left: position.x, top: position.y }
+
   return createPortal(
     <div
+      ref={ref}
       className="calendar-tooltip"
       style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`
+        left: `${displayCoords.left}px`,
+        top: `${displayCoords.top}px`,
+        opacity: coords ? 1 : 0,
+        transition: 'opacity 0.15s ease'
       }}
     >
       <div className="calendar-tooltip-header">
