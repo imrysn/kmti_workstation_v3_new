@@ -47,15 +47,27 @@ logger = logging.getLogger("kmti_backend")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info(">>> KMTI Workstation Backend v3.7.1 Starting Up...")
     try:
+        logger.info(">>> KMTI Workstation Backend v3.7.1 Starting Up...")
         # Robust DB Initialization (Handle busy connections during restarts)
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("  [SUCCESS] Database connection established.")
+
+        # Safe dynamic column migration for status_message
+        async with engine.connect() as conn:
+            try:
+                res = await conn.execute(text("SHOW COLUMNS FROM kmti_workstation_status LIKE 'status_message'"))
+                column = res.fetchone()
+                if not column:
+                    logger.info("  [MIGRATION] Adding 'status_message' column to 'kmti_workstation_status'...")
+                    await conn.execute(text("ALTER TABLE kmti_workstation_status ADD COLUMN status_message VARCHAR(200) DEFAULT NULL"))
+                    await conn.commit()
+                    logger.info("  [SUCCESS] 'status_message' column added successfully.")
+            except Exception as migrate_err:
+                logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate status_message column: {migrate_err}")
     except Exception as e:
         logger.error(f"  [ERROR] Database initialization failed: {e}")
-        # We continue anyway so the GUI can at least show the error state
 
     try:
         async with fms_engine.connect() as conn:

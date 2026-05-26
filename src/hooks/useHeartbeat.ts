@@ -33,6 +33,36 @@ export function useHeartbeat() {
     }
   }, []);
 
+  // Play native cute Web Audio arpeggio chime sound (Triangle wave chiptune arpeggio)
+  const playCuteChime = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      const playNote = (freq: number, start: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle'; // Soft retro chime tone
+        osc.frequency.setValueAtTime(freq, start);
+        gain.gain.setValueAtTime(0.06, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration);
+      };
+      
+      const now = ctx.currentTime;
+      playNote(523.25, now, 0.12);        // C5
+      playNote(659.25, now + 0.06, 0.12);  // E5
+      playNote(783.99, now + 0.12, 0.12);  // G5
+      playNote(1046.50, now + 0.18, 0.25); // C6
+    } catch (e) {
+      console.warn('[CHIME] Synthetic sound arpeggio failed:', e);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
 
@@ -63,11 +93,24 @@ export function useHeartbeat() {
         }
 
         const res = await telemetryApi.heartbeat(formData);
+        
+        // Handle nudge version check
         if (res.data && res.data.nudge_version) {
           const event = new CustomEvent('kmti:update-nudge', {
             detail: { version: res.data.nudge_version }
           });
           window.dispatchEvent(event);
+        }
+
+        // Handle incoming waves / pings
+        if (res.data && Array.isArray(res.data.waves) && res.data.waves.length > 0) {
+          playCuteChime();
+
+          res.data.waves.forEach((sender: string) => {
+            window.dispatchEvent(new CustomEvent('kmti:wave-received', {
+              detail: { sender }
+            }));
+          });
         }
       } catch {
         // Silent fail for heartbeats
@@ -80,7 +123,6 @@ export function useHeartbeat() {
     // Set up interval for every 60 seconds
     const interval = setInterval(sendHeartbeat, 60000);
 
-    // Also send heartbeat immediately when the app is minimized or restored
     document.addEventListener('visibilitychange', sendHeartbeat);
 
     return () => {

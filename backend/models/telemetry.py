@@ -14,4 +14,5 @@ class WorkstationStatus(Base):
     active_module = Column(String(50), nullable=True)
     current_user = Column(String(100), nullable=True)
     version = Column(String(20), nullable=True)
+    status_message = Column(String(200), nullable=True)
     last_ping = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())

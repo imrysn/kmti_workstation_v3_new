@@ -12,6 +12,10 @@ router = APIRouter()
 # In-memory dictionary to queue update nudges for specific workstations
 pending_nudges = {}  # key: computer_name or ip_address -> latest_version
 
+# In-memory dictionary to queue real-time waved pings for specific workstations
+# key: target computer_name (or IP) -> list of sender names/PC names
+pending_waves = {}
+
 @router.post("/heartbeat")
 async def heartbeat(
     request: Request,
@@ -19,9 +23,10 @@ async def heartbeat(
     user_name: str = Form(None),
     version: str = Form(None),
     computer_name: str = Form(None),
+    status_message: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Update current workstation status."""
+    """Update current workstation status and retrieve queued nudges/waves."""
     ip = request.client.host
     
     # Implementation-agnostic upsert (simpler approach for multi-DB support)
@@ -36,6 +41,7 @@ async def heartbeat(
     status.current_user = user_name
     status.version = version
     status.computer_name = computer_name
+    status.status_message = status_message
     status.last_ping = datetime.now()
     
     await db.commit()
@@ -47,9 +53,18 @@ async def heartbeat(
     elif ip in pending_nudges:
         nudge_version = pending_nudges.pop(ip)
 
+    # Check if there are real-time waved pings for this client
+    waves = []
+    if computer_name and computer_name in pending_waves:
+        waves = pending_waves.pop(computer_name)
+    elif ip in pending_waves:
+        waves = pending_waves.pop(ip)
+
     response_data = {"success": True}
     if nudge_version:
         response_data["nudge_version"] = nudge_version
+    if waves:
+        response_data["waves"] = waves
 
     return response_data
 
@@ -71,6 +86,7 @@ async def get_all_status(db: AsyncSession = Depends(get_db)):
                 "current_user": s.current_user,
                 "active_module": s.active_module,
                 "version": s.version,
+                "status_message": s.status_message,
                 "last_ping": s.last_ping.isoformat() if s.last_ping else None,
             }
             for s in statuses
@@ -85,3 +101,21 @@ async def nudge_workstation(
     """Queue a silent update nudge for a workstation."""
     pending_nudges[computer_name] = latest_version
     return {"success": True, "message": f"Nudge queued for {computer_name}"}
+
+@router.post("/wave")
+async def wave_workstation(
+    from_computer: str = Form(...),
+    to_computer: str = Form(...)
+):
+    """Queue a real-time wave/ping from one workstation to another."""
+    target = to_computer.strip()
+    sender = from_computer.strip()
+    
+    if target not in pending_waves:
+        pending_waves[target] = []
+    
+    # Avoid duplicate waves stacking up
+    if sender not in pending_waves[target]:
+        pending_waves[target].append(sender)
+        
+    return {"success": True, "message": f"Wave queued for {target} from {sender}"}

@@ -189,6 +189,12 @@ export const telemetryApi = {
     fd.append('computer_name', computerName);
     fd.append('latest_version', latestVersion);
     return api.post('/telemetry/nudge', fd);
+  },
+  wave: (fromComputer: string, toComputer: string) => {
+    const fd = new FormData();
+    fd.append('from_computer', fromComputer);
+    fd.append('to_computer', toComputer);
+    return api.post('/telemetry/wave', fd);
   }
 }
 
