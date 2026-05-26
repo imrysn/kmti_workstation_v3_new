@@ -184,6 +184,7 @@ export const helpApi = {
 export const telemetryApi = {
   heartbeat: (formData: FormData) => api.post('/telemetry/heartbeat', formData),
   getStatuses: () => api.get('/telemetry/status'),
+  getStats: () => api.get('/telemetry/stats'),
   nudge: (computerName: string, latestVersion: string) => {
     const fd = new FormData();
     fd.append('computer_name', computerName);
@@ -195,6 +196,18 @@ export const telemetryApi = {
     fd.append('from_computer', fromComputer);
     fd.append('to_computer', toComputer);
     return api.post('/telemetry/wave', fd);
+  },
+  unlockAchievement: (computerName: string, achievement: string) => {
+    const fd = new FormData();
+    fd.append('computer_name', computerName);
+    fd.append('achievement', achievement);
+    return api.post('/telemetry/achievement', fd);
+  },
+  recordEvent: (computerName: string, eventType: 'ai_session' | 'broadcast' | 'help_ticket' | 'stopwatch') => {
+    const fd = new FormData();
+    fd.append('computer_name', computerName);
+    fd.append('event_type', eventType);
+    return api.post('/telemetry/event', fd);
   }
 }
 

@@ -1,0 +1,388 @@
+/* ─── Achievement Unlock Modal — Theme-Aware ────────────────────────────── */
+
+/* ── Local design tokens (override per theme below) ── */
+.achievement-modal-overlay {
+  --ach-overlay-bg:    rgba(15, 23, 42, 0.55);
+  --ach-card-bg:       var(--bg-secondary);
+  --ach-card-border:   var(--border);
+  --ach-card-shadow:   0 32px 64px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border);
+  --ach-text-primary:  var(--text-primary);
+  --ach-text-muted:    var(--text-secondary);
+  --ach-pill-bg:       rgba(0, 0, 0, 0.05);
+  --ach-pill-border:   var(--border);
+  --ach-dismiss-bg:    var(--bg-surface);
+  --ach-dismiss-color: var(--text-secondary);
+  --ach-icon-bg:       var(--bg-surface);
+  --ach-progress-bg:   var(--border);
+}
+
+/* Dark theme overrides */
+body.dark-theme .achievement-modal-overlay {
+  --ach-overlay-bg:    rgba(2, 6, 23, 0.75);
+  --ach-card-bg:       #1e293b;
+  --ach-card-border:   rgba(255, 255, 255, 0.08);
+  --ach-card-shadow:   0 32px 64px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255,255,255,0.04);
+  --ach-pill-bg:       rgba(255, 255, 255, 0.06);
+  --ach-pill-border:   rgba(255, 255, 255, 0.1);
+  --ach-dismiss-bg:    rgba(255, 255, 255, 0.07);
+  --ach-dismiss-color: #94a3b8;
+  --ach-icon-bg:       rgba(255, 255, 255, 0.06);
+  --ach-progress-bg:   rgba(255, 255, 255, 0.07);
+}
+
+/* Void theme overrides */
+body.void-theme .achievement-modal-overlay {
+  --ach-overlay-bg:    rgba(0, 0, 0, 0.88);
+  --ach-card-bg:       #0a0a0c;
+  --ach-card-border:   rgba(255, 0, 64, 0.2);
+  --ach-card-shadow:   0 32px 64px rgba(0, 0, 0, 0.9), 0 0 60px rgba(255, 0, 64, 0.15);
+  --ach-text-primary:  #ff2040;
+  --ach-text-muted:    #991020;
+  --ach-pill-bg:       rgba(255, 0, 64, 0.08);
+  --ach-pill-border:   rgba(255, 0, 64, 0.25);
+  --ach-dismiss-bg:    rgba(255, 0, 64, 0.08);
+  --ach-dismiss-color: #ff2040;
+  --ach-icon-bg:       rgba(255, 0, 64, 0.08);
+  --ach-progress-bg:   rgba(255, 0, 64, 0.1);
+}
+
+/* ── Overlay ── */
+.achievement-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ach-overlay-bg);
+  backdrop-filter: blur(12px);
+  animation: ach-overlay-in 0.3s ease-out;
+}
+
+@keyframes ach-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ── Card ── */
+.achievement-modal-card {
+  position: relative;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  background: var(--ach-card-bg);
+  border-radius: 20px;
+  border: 1px solid var(--ach-card-border);
+  box-shadow: var(--ach-card-shadow);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 32px 28px;
+  gap: 0;
+  overflow: hidden;
+  animation: ach-card-pop 0.45s cubic-bezier(0.19, 1, 0.22, 1);
+  text-align: center;
+}
+
+@keyframes ach-card-pop {
+  from { opacity: 0; transform: scale(0.85) translateY(24px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ── Rarity ambient glow (layered on top of the base card shadow) ── */
+.achievement-modal-overlay.rarity-common .achievement-modal-card {
+  box-shadow: var(--ach-card-shadow), 0 0 60px rgba(34, 197, 94, 0.1);
+}
+.achievement-modal-overlay.rarity-rare .achievement-modal-card {
+  box-shadow: var(--ach-card-shadow), 0 0 80px rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+.achievement-modal-overlay.rarity-legendary .achievement-modal-card {
+  box-shadow: var(--ach-card-shadow), 0 0 100px rgba(234, 179, 8, 0.22);
+  border-color: rgba(234, 179, 8, 0.2);
+}
+
+/* Light-theme adjustments for glow (less aggressive) */
+body:not(.dark-theme):not(.void-theme) .achievement-modal-overlay.rarity-common .achievement-modal-card {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 0 40px rgba(34, 197, 94, 0.07), 0 0 0 1px var(--border);
+}
+body:not(.dark-theme):not(.void-theme) .achievement-modal-overlay.rarity-rare .achievement-modal-card {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 0 48px rgba(99, 102, 241, 0.1), 0 0 0 1px rgba(99,102,241,0.18);
+}
+body:not(.dark-theme):not(.void-theme) .achievement-modal-overlay.rarity-legendary .achievement-modal-card {
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 0 56px rgba(234, 179, 8, 0.12), 0 0 0 1px rgba(234,179,8,0.2);
+}
+
+/* ── Shine sweep ── */
+.achievement-shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 80%
+  );
+  animation: ach-shine 0.8s ease-out 0.2s both;
+  pointer-events: none;
+  border-radius: inherit;
+}
+/* Light theme: more visible shine */
+body:not(.dark-theme):not(.void-theme) .achievement-shine {
+  background: linear-gradient(
+    120deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 80%
+  );
+}
+@keyframes ach-shine {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* ── Particles ── */
+.achievement-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.achievement-particle {
+  --i: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: hsl(calc(var(--i) * 22.5), 85%, 58%);
+  animation: ach-particle 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) calc(var(--i) * 0.03s) both;
+}
+@keyframes ach-particle {
+  0%   { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% {
+    transform:
+      translate(
+        calc(-50% + cos(calc(var(--i) * 22.5deg)) * 160px),
+        calc(-50% + sin(calc(var(--i) * 22.5deg)) * 120px)
+      )
+      scale(0);
+    opacity: 0;
+  }
+}
+
+/* ── Rarity label pill ── */
+.achievement-label-row {
+  margin-bottom: 20px;
+}
+.achievement-rarity-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--ach-pill-bg);
+  border: 1px solid var(--ach-pill-border);
+  color: var(--ach-text-muted);
+}
+/* Rarity-coloured pills */
+.rarity-common  .achievement-rarity-pill { color: #16a34a; border-color: rgba(22,163,74,0.3);   background: rgba(22,163,74,0.08); }
+.rarity-rare    .achievement-rarity-pill { color: #6366f1; border-color: rgba(99,102,241,0.35); background: rgba(99,102,241,0.08); }
+.rarity-legendary .achievement-rarity-pill { color: #d97706; border-color: rgba(217,119,6,0.35); background: rgba(217,119,6,0.08); }
+
+body.dark-theme .rarity-common    .achievement-rarity-pill { color: #4ade80; border-color: rgba(74,222,128,0.3);   background: rgba(74,222,128,0.08); }
+body.dark-theme .rarity-rare      .achievement-rarity-pill { color: #818cf8; border-color: rgba(129,140,248,0.35); background: rgba(99,102,241,0.1); }
+body.dark-theme .rarity-legendary .achievement-rarity-pill { color: #fbbf24; border-color: rgba(251,191,36,0.4);   background: rgba(234,179,8,0.12); }
+
+body.void-theme .rarity-common    .achievement-rarity-pill,
+body.void-theme .rarity-rare      .achievement-rarity-pill,
+body.void-theme .rarity-legendary .achievement-rarity-pill { color: #ff2040; border-color: rgba(255,32,64,0.4); background: rgba(255,32,64,0.1); }
+
+/* ── Icon ── */
+.achievement-icon-wrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.achievement-icon-inner {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--ach-icon-bg);
+  border: 1px solid var(--ach-card-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+  animation: ach-icon-bounce 0.6s cubic-bezier(0.19, 1, 0.22, 1) 0.15s both;
+}
+@keyframes ach-icon-bounce {
+  from { transform: scale(0) rotate(-20deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Rarity glow on icon — all themes */
+.rarity-common  .achievement-icon-inner { box-shadow: 0 0 28px rgba(22,163,74,0.2); }
+.rarity-rare    .achievement-icon-inner { box-shadow: 0 0 36px rgba(99,102,241,0.25); }
+.rarity-legendary .achievement-icon-inner {
+  box-shadow: 0 0 44px rgba(217,119,6,0.25);
+  animation: ach-icon-bounce 0.6s cubic-bezier(0.19, 1, 0.22, 1) 0.15s both, ach-legendary-glow 2s ease-in-out 0.8s infinite alternate;
+}
+body.dark-theme .rarity-common    .achievement-icon-inner { box-shadow: 0 0 32px rgba(74,222,128,0.25); }
+body.dark-theme .rarity-rare      .achievement-icon-inner { box-shadow: 0 0 40px rgba(99,102,241,0.35); }
+body.dark-theme .rarity-legendary .achievement-icon-inner {
+  box-shadow: 0 0 48px rgba(234,179,8,0.4);
+  animation: ach-icon-bounce 0.6s cubic-bezier(0.19, 1, 0.22, 1) 0.15s both, ach-legendary-glow-dark 2s ease-in-out 0.8s infinite alternate;
+}
+@keyframes ach-legendary-glow {
+  from { box-shadow: 0 0 44px rgba(217,119,6,0.2); }
+  to   { box-shadow: 0 0 64px rgba(217,119,6,0.45); }
+}
+@keyframes ach-legendary-glow-dark {
+  from { box-shadow: 0 0 48px rgba(234,179,8,0.35); }
+  to   { box-shadow: 0 0 72px rgba(234,179,8,0.6); }
+}
+
+/* Spinning ring */
+.achievement-icon-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  animation: ach-ring-spin 3s linear infinite;
+}
+.rarity-common   .achievement-icon-ring { border-top-color: rgba(22,163,74,0.5);   border-right-color: rgba(22,163,74,0.15); }
+.rarity-rare     .achievement-icon-ring { border-top-color: rgba(99,102,241,0.6);  border-right-color: rgba(99,102,241,0.2); }
+.rarity-legendary .achievement-icon-ring { border-top-color: rgba(217,119,6,0.7);  border-right-color: rgba(217,119,6,0.25); }
+body.dark-theme .rarity-common   .achievement-icon-ring { border-top-color: rgba(74,222,128,0.5);   border-right-color: rgba(74,222,128,0.2); }
+body.dark-theme .rarity-rare     .achievement-icon-ring { border-top-color: rgba(129,140,248,0.6);  border-right-color: rgba(129,140,248,0.2); }
+body.dark-theme .rarity-legendary .achievement-icon-ring { border-top-color: rgba(251,191,36,0.7); border-right-color: rgba(251,191,36,0.3); }
+@keyframes ach-ring-spin { to { transform: rotate(360deg); } }
+
+/* ── Title & description ── */
+.achievement-text { margin-bottom: 24px; }
+
+.achievement-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ach-text-primary);
+  margin: 0 0 8px;
+  font-family: 'Outfit', sans-serif;
+  animation: ach-text-in 0.5s ease-out 0.25s both;
+}
+/* Rarity tint on title */
+.rarity-common    .achievement-title { color: #15803d; }
+.rarity-rare      .achievement-title { color: #4f46e5; }
+.rarity-legendary .achievement-title { color: #b45309; }
+body.dark-theme .rarity-common    .achievement-title { color: #86efac; }
+body.dark-theme .rarity-rare      .achievement-title { color: #a5b4fc; }
+body.dark-theme .rarity-legendary .achievement-title { color: #fde68a; }
+body.void-theme .achievement-title,
+body.void-theme .rarity-common    .achievement-title,
+body.void-theme .rarity-rare      .achievement-title,
+body.void-theme .rarity-legendary .achievement-title { color: #ff2040; }
+
+.achievement-desc {
+  font-size: 13px;
+  color: var(--ach-text-muted);
+  line-height: 1.6;
+  margin: 0;
+  animation: ach-text-in 0.5s ease-out 0.35s both;
+}
+@keyframes ach-text-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Dismiss button ── */
+.achievement-dismiss-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 24px;
+  border-radius: 99px;
+  border: 1px solid var(--ach-pill-border);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: var(--ach-dismiss-bg);
+  color: var(--ach-dismiss-color);
+  margin-bottom: 20px;
+  animation: ach-text-in 0.5s ease-out 0.45s both;
+}
+.achievement-dismiss-btn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+/* Rarity tinted dismiss buttons */
+.rarity-common   .achievement-dismiss-btn { background: rgba(22,163,74,0.08);   color: #15803d;  border-color: rgba(22,163,74,0.25); }
+.rarity-common   .achievement-dismiss-btn:hover { background: rgba(22,163,74,0.15); }
+.rarity-rare     .achievement-dismiss-btn { background: rgba(99,102,241,0.08);  color: #4f46e5; border-color: rgba(99,102,241,0.25); }
+.rarity-rare     .achievement-dismiss-btn:hover { background: rgba(99,102,241,0.15); }
+.rarity-legendary .achievement-dismiss-btn { background: rgba(217,119,6,0.08); color: #b45309; border-color: rgba(217,119,6,0.25); }
+.rarity-legendary .achievement-dismiss-btn:hover { background: rgba(217,119,6,0.15); }
+
+body.dark-theme .rarity-common   .achievement-dismiss-btn { background: rgba(74,222,128,0.1);   color: #4ade80; border-color: rgba(74,222,128,0.3); }
+body.dark-theme .rarity-common   .achievement-dismiss-btn:hover { background: rgba(74,222,128,0.2); }
+body.dark-theme .rarity-rare     .achievement-dismiss-btn { background: rgba(99,102,241,0.15);  color: #818cf8; border-color: rgba(99,102,241,0.3); }
+body.dark-theme .rarity-rare     .achievement-dismiss-btn:hover { background: rgba(99,102,241,0.25); }
+body.dark-theme .rarity-legendary .achievement-dismiss-btn { background: rgba(234,179,8,0.15); color: #fbbf24; border-color: rgba(234,179,8,0.35); }
+body.dark-theme .rarity-legendary .achievement-dismiss-btn:hover { background: rgba(234,179,8,0.25); }
+
+body.void-theme .achievement-dismiss-btn,
+body.void-theme .rarity-common   .achievement-dismiss-btn,
+body.void-theme .rarity-rare     .achievement-dismiss-btn,
+body.void-theme .rarity-legendary .achievement-dismiss-btn { background: rgba(255,32,64,0.08); color: #ff2040; border-color: rgba(255,32,64,0.3); }
+body.void-theme .achievement-dismiss-btn:hover,
+body.void-theme .rarity-common   .achievement-dismiss-btn:hover,
+body.void-theme .rarity-rare     .achievement-dismiss-btn:hover,
+body.void-theme .rarity-legendary .achievement-dismiss-btn:hover { background: rgba(255,32,64,0.18); }
+
+/* ── Auto-close progress bar ── */
+.achievement-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ach-progress-bg);
+  border-radius: 0 0 20px 20px;
+  overflow: hidden;
+}
+.achievement-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--border);
+  animation: ach-progress 6s linear forwards;
+  transform-origin: left;
+}
+/* Rarity coloured fill */
+.rarity-common   .achievement-progress-fill { background: rgba(22,163,74,0.55); }
+.rarity-rare     .achievement-progress-fill { background: rgba(99,102,241,0.65); }
+.rarity-legendary .achievement-progress-fill { background: rgba(217,119,6,0.65); }
+body.dark-theme .rarity-common   .achievement-progress-fill { background: rgba(74,222,128,0.6); }
+body.dark-theme .rarity-rare     .achievement-progress-fill { background: rgba(99,102,241,0.7); }
+body.dark-theme .rarity-legendary .achievement-progress-fill { background: rgba(234,179,8,0.7); }
+body.void-theme .achievement-progress-fill,
+body.void-theme .rarity-common   .achievement-progress-fill,
+body.void-theme .rarity-rare     .achievement-progress-fill,
+body.void-theme .rarity-legendary .achievement-progress-fill { background: rgba(255,32,64,0.7); }
+@keyframes ach-progress {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}
