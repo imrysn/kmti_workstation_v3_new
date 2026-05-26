@@ -379,7 +379,7 @@ export function useTeamCalendar() {
   }
 
   // --- Click Grid Cell ---
-  const handleCellClick = (day: Date, dateStr: string) => {
+  const handleCellClick = (day: Date, _dateStr: string) => {
     setActivePopoverDate(day)
   }
 

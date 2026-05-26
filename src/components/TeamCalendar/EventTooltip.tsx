@@ -1,8 +1,7 @@
-import React from 'react'
 import { createPortal } from 'react-dom'
 import { ICalendarEvent } from '../../services/teamCalendarService'
 import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
-import { formatLocalDate, formatDisplayDate, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
+import { formatDisplayDate, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
 
 interface EventTooltipProps {
   event: ICalendarEvent

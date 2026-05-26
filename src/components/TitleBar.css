@@ -276,3 +276,18 @@
 .titlebar-btn.void-armed {
   animation: void-arm-pulse 0.4s ease-in-out infinite;
 }
+
+.titlebar-online-dot {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-secondary);
+}
+
+.titlebar-btn.active .titlebar-online-dot {
+  border-color: rgba(0, 153, 255, 0.05);
+}

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
-import { formatDurationRange, formatLocalDate, formatDisplayDate, formatDisplayDateTime } from '../../../utils/teamCalendarUtils'
+import { formatDurationRange, formatDisplayDate, formatDisplayDateTime } from '../../../utils/teamCalendarUtils'
 
 interface EventDetailsModalProps {
   selectedEvent: ICalendarEvent
@@ -14,7 +14,7 @@ interface EventDetailsModalProps {
 export default function EventDetailsModal({
   selectedEvent,
   isAdminOrIT,
-  currentUser,
+  currentUser: _currentUser,
   handleApproveEvent,
   handleCancelEvent,
   onClose

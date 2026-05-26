@@ -8,7 +8,7 @@ using System.Drawing.Imaging;
 
 public class ThumbnailExtractor {
     [ComImport]
-    [Guid("BCC18210-4834-4531-9A95-96A199BBC512")]
+    [Guid("BCC18B79-BA16-442F-80C4-8A59C30C463B")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IShellItemImageFactory {
         [PreserveSig]
@@ -28,7 +28,7 @@ public class ThumbnailExtractor {
     public static void SaveThumbnail(string path, string outPath, int size) {
         try {
             IShellItemImageFactory factory;
-            Guid guid = new Guid("BCC18210-4834-4531-9A95-96A199BBC512");
+            Guid guid = new Guid("BCC18B79-BA16-442F-80C4-8A59C30C463B");
             SHCreateItemFromParsingName(path, IntPtr.Zero, guid, out factory);
             
             IntPtr hBitmap;

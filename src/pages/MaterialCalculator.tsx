@@ -494,23 +494,16 @@ export default function MaterialCalculator() {
   const errorCount = results.filter(r => r.isError && r.value !== '').length
 
   return (
-    <>
+    <div className="calc-page-container">
       {/* Fixed left: Formula reference */}
       <FormulaPanel />
 
-      {/* Fixed right: Complete Solutions — only when there's content */}
-      {(mode === 'scratchpad' ? hasContent : isFormComplete) && (
-        <SolutionsPanel
-          lines={inputLines}
-          activeIndex={mode === 'form' ? 0 : activeLineIndex}
-        />
-      )}
-
-      <div className="page-container calc-page">
-        <div className="calc-layout">
-          <div className="glass-panel">
-            {/* Mode Switch Segmented Header */}
-            <div className="calc-mode-header">
+      <div className="calc-main-area">
+        <div className="calc-page">
+          <div className="calc-layout">
+            <div className="glass-panel">
+              {/* Mode Switch Segmented Header */}
+              <div className="calc-mode-header">
               <div className="mode-segmented-control">
                 <div className={`mode-sliding-bg ${mode}`} />
                 <button
@@ -1169,6 +1162,15 @@ export default function MaterialCalculator() {
           </div>
         </div>
       </div>
-    </>
+      </div>
+
+      {/* Fixed right: Complete Solutions — only when there's content */}
+      {(mode === 'scratchpad' ? hasContent : isFormComplete) && (
+        <SolutionsPanel
+          lines={inputLines}
+          activeIndex={mode === 'form' ? 0 : activeLineIndex}
+        />
+      )}
+    </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { SettingsV6 } from '../types';
-import { STORAGE_KEY, THEMES, COLOR_PALETTES } from '../constants';
+import { STORAGE_KEY, THEMES, COLOR_PALETTES, SW_STATE_VERSION } from '../constants';
+
 
 export const useDateTimeSettings = () => {
   const initialSettings = useMemo(() => {
@@ -17,6 +18,18 @@ export const useDateTimeSettings = () => {
             ? (COLOR_PALETTES[data.bgPaletteIndex]?.hex || null)
             : null;
         }
+
+        // ── Version-guard: if this is a new install / upgrade, reset any
+        //    stale swRunning state so the stopwatch doesn't auto-resume.
+        if (data.swStateVersion !== SW_STATE_VERSION) {
+          data.swRunning = false;
+          data.swStartTime = null;
+          data.swStateVersion = SW_STATE_VERSION;
+          // Immediately write the sanitised state back so a crash/reload loop
+          // during first boot doesn't keep hitting this branch.
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
+
         return data;
       } catch (e) {
         console.error('Failed to parse settings', e);
@@ -31,9 +44,11 @@ export const useDateTimeSettings = () => {
       swRunning: false,
       swAccumulated: 0,
       swStartTime: null,
+      swStateVersion: SW_STATE_VERSION,
       expanded: false,
     } as SettingsV6;
   }, []);
+
 
   const [position, setPosition] = useState(initialSettings.position);
   const [themeIndex, setThemeIndex] = useState(initialSettings.themeIndex);

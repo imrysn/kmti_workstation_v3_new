@@ -7,7 +7,8 @@ import { ClockDisplay } from './components/ClockDisplay';
 import { StopwatchDisplay } from './components/StopwatchDisplay';
 import { ControlCenter } from './components/ControlCenter';
 import StopwatchLibraryModal from './components/StopwatchLibraryModal';
-import { STORAGE_KEY } from './constants';
+import { STORAGE_KEY, SW_STATE_VERSION } from './constants';
+
 import { SettingsV6 } from './types';
 import './DateTimeOverlay.css'; // Path will be updated if we move the CSS
 
@@ -44,10 +45,12 @@ const DateTimeOverlay: React.FC = () => {
       swRunning: stopwatch.swRunning,
       swAccumulated: stopwatch.swAccumulated,
       swStartTime: stopwatch.swStartTime,
+      swStateVersion: SW_STATE_VERSION,
       expanded: settings.isExpanded
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [settings, stopwatch.swRunning, stopwatch.swAccumulated, stopwatch.swStartTime]);
+
 
   // Keep overlay in bounds when window is resized
   useEffect(() => {

@@ -28,6 +28,7 @@ import FeedbackWidget from './components/FeedbackWidget'
 import BroadcastOverlay from './components/BroadcastOverlay'
 import BroadcastFAB from './components/BroadcastFAB'
 import AnniversaryOverlay from './components/AnniversaryOverlay'
+import OnlineDrawer from './components/OnlineDrawer'
 
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { UpdateProvider, useUpdate } from './context/UpdateContext'
@@ -258,6 +259,7 @@ function WorkstationShell() {
       <BroadcastFAB />
       <MandatoryUpdateOverlay />
       <UpdateToast />
+      <OnlineDrawer />
     </div>
   )
 }

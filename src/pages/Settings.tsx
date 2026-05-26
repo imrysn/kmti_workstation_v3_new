@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { settingsApi, SERVER_BASE } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import type { IAppSettings } from '../types'
@@ -26,8 +26,6 @@ export default function Settings() {
     downloadProgress, 
     updateError,
     checkForUpdate,
-    downloadUpdate,
-    installAndRestart,
     simulateUpdate,
     resetUpdateState
   } = useUpdate()
@@ -47,27 +45,21 @@ export default function Settings() {
     }
   }
 
-  const handleDownload = async () => {
-    try {
-      await downloadUpdate()
-    } catch (err: any) {
-      alert(err.message, 'Download Error')
-    }
-  }
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleInstall = () => {
-    confirm(
-      "The application will close now to install the update. Proceed?",
-      () => installAndRestart(),
-      undefined,
-      'info'
-    )
-  }
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
+    }
+  }, [])
 
   const handleSave = async () => {
     await settingsApi.save(settings)
     setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => setSaved(false), 2000)
   }
 
   const handleTestConn = async () => {
@@ -91,7 +83,8 @@ export default function Settings() {
           await settingsApi.clearCache()
           setCleared(true)
           notify("Cache cleared successfully", "success")
-          setTimeout(() => setCleared(false), 3000)
+          if (clearTimerRef.current) clearTimeout(clearTimerRef.current)
+          clearTimerRef.current = setTimeout(() => setCleared(false), 3000)
         } catch (err) {
           alert("Failed to clear cache", "Error")
         }

@@ -102,8 +102,8 @@ export const partsApi = {
 
 // --- Character Search (Drafting Notes) ---
 export const charsApi = {
-  search: (q: string, limit: number = 50, offset: number = 0) =>
-    api.get('/chars/', { params: { q, limit, offset } }),
+  search: (q: string, limit: number = 50, offset: number = 0, signal?: AbortSignal) =>
+    api.get('/chars/', { params: { q, limit, offset }, signal }),
   create: (data: { englishChar: string; japaneseChar: string }) =>
     api.post('/chars/', data),
   update: (id: number, data: { englishChar?: string; japaneseChar?: string }) =>

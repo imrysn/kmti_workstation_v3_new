@@ -37,7 +37,7 @@ export const PrintPage = memo(({
   grandTotal, overheadTotal, printMode,
   isCompressed, showAdmin, fillerRowCount, pageTotals,
   layoutVariant = 'special',
-  lastAssemblyId,
+  lastAssemblyId: _lastAssemblyId,
   onTaskOverride,
   allTasks,
   onQuotationDetailsChange,

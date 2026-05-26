@@ -33,5 +33,6 @@ export interface SettingsV6 {
   swRunning: boolean;
   swAccumulated: number;
   swStartTime: number | null;
+  swStateVersion?: string;   // build-version stamp — used to detect new installs
   expanded: boolean;
 }

@@ -45,7 +45,6 @@ export default function BillingMonitoring() {
     totalItems,
     totalPages,
     paginatedQuotations,
-    designers,
     uniqueBillToValues,
     uniqueInchargeValues,
     statusStats,
@@ -137,7 +136,6 @@ export default function BillingMonitoring() {
           setSelectedPStatus={setSelectedPStatus}
           selectedBillTo={selectedBillTo}
           setSelectedBillTo={setSelectedBillTo}
-          designers={designers}
           uniqueInchargeValues={uniqueInchargeValues}
           uniqueBillToValues={uniqueBillToValues}
           resetFilters={resetFilters}

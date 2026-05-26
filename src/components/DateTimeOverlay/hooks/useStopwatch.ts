@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { StopwatchRecord } from '../types';
+import { StopwatchRecord, SettingsV6 } from '../types';
 import { STORAGE_KEY } from '../constants';
 import { stopwatchApi } from '../../../services/api';
 
@@ -20,7 +20,7 @@ function persistSwState(swRunning: boolean, swAccumulated: number, swStartTime: 
   }
 }
 
-export const useStopwatch = (initialSettings: any) => {
+export const useStopwatch = (initialSettings: Partial<SettingsV6>) => {
   // If the app was closed/logged-out while running, reconstruct the elapsed
   // time from the saved startTime instead of starting from zero.
   const wasRunning = initialSettings.swRunning || false;
@@ -75,19 +75,22 @@ export const useStopwatch = (initialSettings: any) => {
     liveRef.current = { swRunning, swAccumulated, swStartTime, swCurrent };
   });
 
-  // Flush current state to localStorage on unmount (logout/page change safety net)
+  // Flush current state to localStorage on unmount (logout/page change safety net).
+  // IMPORTANT: Only flush when the watch is RUNNING at unmount time.
+  // If it was stopped, `toggleStopwatch` already called persistSwState(false, ...) immediately,
+  // so we must NOT overwrite that with a stale liveRef snapshot.
   useEffect(() => {
     return () => {
       const { swRunning, swAccumulated, swStartTime } = liveRef.current;
-      // Preserve running state — on next mount, the restore logic will
-      // reconstruct elapsed time from swStartTime and resume the ticker.
-      const finalAccumulated = swRunning && swStartTime
+      if (!swRunning) return; // Already stopped — correct state is already persisted.
+      const finalAccumulated = swStartTime
         ? swAccumulated + (Date.now() - swStartTime)
         : swAccumulated;
       // Keep swRunning: true so login restore knows to continue ticking
-      persistSwState(swRunning, finalAccumulated, swRunning ? Date.now() : null);
+      persistSwState(true, finalAccumulated, Date.now());
     };
   }, []);
+
 
   const toggleStopwatch = () => {
     if (swRunning) {

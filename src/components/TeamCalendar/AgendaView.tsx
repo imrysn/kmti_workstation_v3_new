@@ -1,6 +1,6 @@
 import { ICalendarEvent } from '../../services/teamCalendarService'
 import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, BriefcaseIcon, CheckIcon, TargetIcon } from './Icons'
+import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
 
 interface AgendaViewProps {
   agendaDays: Date[]

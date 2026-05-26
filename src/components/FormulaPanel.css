@@ -1,13 +1,11 @@
 /* ── Formula Panel Shell ─────────────────────────────────────── */
 .formula-panel {
-    position: fixed;
-    left: 0;
-    top: var(--titlebar-height);
     width: 400px;
-    height: calc(100vh - var(--titlebar-height));
+    height: 100%;
     display: flex;
     flex-direction: column;
-    z-index: 50;
+    flex-shrink: 0;
+    z-index: 10;
 }
 
 /* ── Panel Body ──────────────────────────────────────────────── */
@@ -416,4 +414,11 @@
 .fp-density-fallback .fp-density-mat {
     opacity: 0.45;
     font-style: italic;
+}
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 1400px) {
+    .formula-panel {
+        display: none;
+    }
 }

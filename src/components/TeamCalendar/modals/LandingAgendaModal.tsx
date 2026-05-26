@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
 import { inferTaskType, getTaskTypeColor, getTeamColor, formatLocalDate } from '../../../utils/teamCalendarUtils'
-import { BriefcaseIcon, LockIcon, GlobeIcon, CalendarIcon, CheckIcon, TargetIcon } from '../Icons'
+import { LockIcon, GlobeIcon, CalendarIcon, CheckIcon, TargetIcon } from '../Icons'
 
 // ── Premium SVG Icons (Replacing Emojis) ────────────────────────
 const SunIcon = () => (

@@ -7,14 +7,10 @@ export default function MandatoryUpdateOverlay() {
   const {
     updateStatus,
     updateInfo,
-    downloadProgress,
     updateError,
-    downloadUpdate,
-    installAndRestart,
-    checkForUpdate
   } = useUpdate()
 
-  const { hasRole, user } = useAuth()
+  const { user } = useAuth()
   const [bypassed, setBypassed] = useState(false)
 
   const NAS_PATH = '\\\\KMTI-NAS\\Shared\\Public\\APP DEVELOPMENT\\KMTI Workstation'

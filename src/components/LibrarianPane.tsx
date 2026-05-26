@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import { SERVER_BASE, librarianApi } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import kmtiLogo from '../assets/kmti_logo.png'
+import type { IPurchasedPart } from '../types'
 import './LibrarianPane.css'
 
 interface Message {
@@ -19,9 +20,10 @@ interface ChatSession {
 
 interface LibrarianPaneProps {
   compact?: boolean;
+  contextFile?: IPurchasedPart | null;
 }
 
-const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
+const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false, contextFile = null }) => {
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -161,13 +163,19 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
     setInput('')
     setIsTyping(true)
 
+    let finalContent = userText;
+    if (contextFile) {
+      const boundsStr = contextFile.boundX ? ` Bounds: ${contextFile.boundX}x${contextFile.boundY}.` : '';
+      finalContent = `[Context: User is currently viewing file "${contextFile.fileName}" located at "${contextFile.filePath}". Size: ${contextFile.size} bytes. Type: ${contextFile.fileType || 'Directory'}.${boundsStr}]\n\n${userText}`;
+    }
+
     try {
       const response = await fetch(`${SERVER_BASE}/api/librarian/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: sid,
-          messages: [{ role: 'user', content: userText }] // Pass current message
+          messages: [{ role: 'user', content: finalContent }] // Pass current message with hidden context
         })
       })
 
@@ -208,9 +216,12 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
   }
 
   const renderMessageContent = (content: string) => {
+    // Strip hidden context metadata for clean UI rendering
+    const displayContent = content.replace(/^\[Context: .*?\]\n\n/, '');
+
     // We transform [PATH:...] into a unique inline code block marker.
     // This bypasses Markdown link sanitization and URL-parsing issues with special characters.
-    const processed = content
+    const processed = displayContent
       .replace(/\[PATH:(.*?)\]/g, '`KMTI_PATH:$1`')
       .replace(/\[PROJECT:(.*?)\]/g, '`KMTI_PROJECT:$1`')
 
@@ -398,7 +409,13 @@ const LibrarianPane: React.FC<LibrarianPaneProps> = ({ compact = false }) => {
 
         {/* Input area */}
         <div className="lib-input-wrapper">
-          <div className="lib-input-container">
+          {contextFile && (
+            <div style={{ fontSize: 11, padding: '6px 12px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path></svg>
+              Attached: <span style={{ color: 'var(--text-primary)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contextFile.fileName}</span>
+            </div>
+          )}
+          <div className={`lib-input-container ${contextFile ? 'has-context' : ''}`} style={contextFile ? { borderTopLeftRadius: 0, borderTopRightRadius: 0 } : {}}>
             <textarea
               ref={inputRef}
               placeholder="How can I help you today?"

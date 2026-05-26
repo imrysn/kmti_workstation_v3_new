@@ -23,7 +23,7 @@ interface Props {
  */
 export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const { hasRole } = useAuth()
-  const { notify, confirm, alert } = useModal()
+  const { notify, confirm } = useModal()
 
   // ── State ───────────────────────────────────────────────────────
   const [quotations, setQuotations] = useState<IQuotation[]>([])

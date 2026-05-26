@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDate, formatDisplayDateTime } from '../../../utils/teamCalendarUtils'
-import { CalendarIcon, GlobeIcon, LockIcon, BriefcaseIcon, CheckIcon, TargetIcon } from '../Icons'
+import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDateTime } from '../../../utils/teamCalendarUtils'
+import { CalendarIcon, GlobeIcon, LockIcon, CheckIcon, TargetIcon } from '../Icons'
 
 interface DayEventsPopoverProps {
   activePopoverDate: Date

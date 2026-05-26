@@ -16,7 +16,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
   const [isZoomed, setIsZoomed] = useState(false);
   
   const previewUrl = `${API_BASE}/parts/preview/${fileId}`;
-  const cadExtensions = ['.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'];
+  const cadExtensions = ['.icd', '.sldprt', '.sldasm', '.slddrw', '.dwg', '.dxf', '.step', '.stp', '.iges', '.igs'];
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.svg'];
   
   const isImage = imageExtensions.includes(fileType.toLowerCase());
@@ -27,10 +27,17 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
     setLoading(true);
     setError(false);
   }, [fileId]);
+  const closeZoom = () => setIsZoomed(false);
 
-  if (!isImage && !isCad && !isPdf) {
-    return null;
-  }
+  // ESC to close lightbox
+  useEffect(() => {
+    if (!isZoomed) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeZoom();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isZoomed]);
 
   const handleLoad = () => {
     setLoading(false);
@@ -46,17 +53,9 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
     setIsZoomed(!isZoomed);
   };
 
-  const closeZoom = () => setIsZoomed(false);
-
-  // ESC to close lightbox
-  useEffect(() => {
-    if (!isZoomed) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeZoom();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isZoomed]);
+  if (!isImage && !isCad && !isPdf) {
+    return null;
+  }
 
   return (
     <>

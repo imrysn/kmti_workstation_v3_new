@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { ICalendarEvent } from '../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, CheckIcon, TargetIcon, ZapIcon, AlertIcon } from './Icons'
+import { IHoliday } from '../../utils/teamCalendarUtils'
+import { GlobeIcon, LockIcon, CheckIcon, TargetIcon, ZapIcon } from './Icons'
 import EventTooltip from './EventTooltip'
 
 interface CalendarTimelineProps {
@@ -18,7 +18,7 @@ export default function CalendarTimeline({
   isLoading,
   calendarDays,
   events,
-  phHolidays,
+  phHolidays: _phHolidays,
   showClaims,
   showAbsences,
   setSelectedEvent

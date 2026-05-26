@@ -35,3 +35,11 @@ export const COLOR_PALETTES: PaletteColor[] = [
 ];
 
 export const STORAGE_KEY = 'kmti_clock_settings_v6';
+
+/**
+ * Version stamp embedded at build time.
+ * Used to detect new installs so stale `swRunning: true` from the
+ * previous version is never blindly restored (causing phantom stopwatch runs).
+ */
+export const SW_STATE_VERSION: string =
+  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'unknown';

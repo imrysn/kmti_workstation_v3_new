@@ -7,7 +7,7 @@ import './DraftingNoteModal.css'
 interface DraftingNoteModalProps {
   isOpen: boolean
   onClose: () => void
-  onSaved: () => void
+  onSaved: (note: ICharacterMapping, isNew: boolean) => void
   editingNote: ICharacterMapping | null
 }
 
@@ -57,19 +57,20 @@ export default function DraftingNoteModal({
     setSaving(true)
     try {
       if (editingNote) {
-        await charsApi.update(editingNote.id, {
+        const res = await charsApi.update(editingNote.id, {
           englishChar: formEng,
           japaneseChar: formJp
         })
         notify("Note updated successfully", "success")
+        onSaved(res.data || { ...editingNote, englishChar: formEng, japaneseChar: formJp }, false)
       } else {
-        await charsApi.create({
+        const res = await charsApi.create({
           englishChar: formEng,
           japaneseChar: formJp
         })
         notify("Note created successfully", "success")
+        onSaved(res.data || { id: Date.now(), englishChar: formEng, japaneseChar: formJp }, true)
       }
-      onSaved()
     } catch (err: any) {
       notify(err.response?.data?.detail || "Failed to save note", "error")
     } finally {

@@ -45,7 +45,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const saved = sessionStorage.getItem('kmti_user')
     return saved ? JSON.parse(saved) : null
   })
-  const [token, setToken] = useState<string | null>(sessionStorage.getItem('kmti_token'))
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('kmti_token')
+    } catch {
+      return null
+    }
+  })
   const [isLoading, setIsLoading] = useState(false)
   const [loginSucceeded, setLoginSucceeded] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -117,6 +123,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.removeItem('kmti_user')
     sessionStorage.removeItem('kmti_landing_agenda_shown')
     localStorage.removeItem('kmti_suppress_agenda_date')
+    
+    // Clear all quot:* namespace keys (STOR-01)
+    try {
+      const keysToRemove: string[] = []
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i)
+        if (key && key.startsWith('quot:')) {
+          keysToRemove.push(key)
+        }
+      }
+      keysToRemove.forEach(k => sessionStorage.removeItem(k))
+    } catch {
+      // ignore
+    }
     
     setToken(null)
     setUser(null)

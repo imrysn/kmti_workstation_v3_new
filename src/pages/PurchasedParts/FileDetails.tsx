@@ -134,7 +134,7 @@ export function FileDetails({
             )}
           </>
         ) : (
-          <LibrarianPane compact />
+          <LibrarianPane compact contextFile={selectedResult} />
         )}
       </div>
     </div>

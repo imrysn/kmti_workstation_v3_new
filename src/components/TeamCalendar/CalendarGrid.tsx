@@ -1,7 +1,7 @@
-import React, { useState } from 'react'
-import { ICalendarEvent, ITodo } from '../../services/teamCalendarService'
+import React, { useState, useEffect } from 'react'
+import { ICalendarEvent } from '../../services/teamCalendarService'
 import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, BriefcaseIcon, CheckIcon, TargetIcon } from './Icons'
+import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
 import EventTooltip from './EventTooltip'
 
 interface CalendarGridProps {
@@ -35,6 +35,15 @@ export default function CalendarGrid({
 }: CalendarGridProps) {
   const [tooltipEvent, setTooltipEvent] = useState<ICalendarEvent | null>(null)
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 })
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth <= 1024)
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth <= 1024)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const handleMouseEnter = (e: React.MouseEvent, event: ICalendarEvent) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -105,8 +114,10 @@ export default function CalendarGrid({
           ].filter(Boolean).join(" ")
 
 
-          const shouldTruncate = viewMode === 'month' && visibleEvents.length > 2
-          const renderedEvents = shouldTruncate ? visibleEvents.slice(0, 2) : visibleEvents
+          // Small screen: 2 tasks → show both (good UI); 3+ → collapse to 1 + n more
+          const maxVisible = (isSmallScreen && visibleEvents.length > 2) ? 1 : 2
+          const shouldTruncate = viewMode === 'month' && visibleEvents.length > maxVisible
+          const renderedEvents = shouldTruncate ? visibleEvents.slice(0, maxVisible) : visibleEvents
           const overflowCount = visibleEvents.length - renderedEvents.length
 
           const isFirstOfMonth = day.getDate() === 1

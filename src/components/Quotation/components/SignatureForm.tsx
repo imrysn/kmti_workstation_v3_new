@@ -66,7 +66,7 @@ function SigPersonDisplay({ role, name, title }: { role: string; name: string; t
 const QuotationSignaturesCard = memo(({
   signatures,
   onUpdate,
-  layoutVariant,
+  layoutVariant: _layoutVariant,
 }: {
   signatures: Signatures
   onUpdate?: (type: keyof Signatures, field: string, value: any) => void

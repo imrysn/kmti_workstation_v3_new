@@ -11,10 +11,10 @@ from typing import Optional
 # ---------------------------------------------------------
 # Professional COM Interface Definitions
 # ---------------------------------------------------------
-# IExtractImage: {BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}
+# IID_IExtractImage: {BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}
 IID_IExtractImage = pythoncom.MakeIID("{BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}")
-# IShellItemImageFactory: {bcc18b79-ba16-442f-80c4-8059c18159ef}
-IID_IShellItemImageFactory = pythoncom.MakeIID("{bcc18b79-ba16-442f-80c4-8059c18159ef}")
+# IShellItemImageFactory: {BCC18B79-BA16-442F-80C4-8A59C30C463B}
+IID_IShellItemImageFactory = pythoncom.MakeIID("{BCC18B79-BA16-442F-80C4-8A59C30C463B}")
 
 def _hbitmap_to_pil(hbitmap):
     """Converts a Windows HBITMAP to a PIL Image using professional GDI+ mapping."""
@@ -43,7 +43,7 @@ def _hbitmap_to_pil(hbitmap):
 def get_shell_thumbnail(file_path: str, size: int = 1024) -> Optional[Image.Image]:
     """
     State-of-the-Art Shell Image Extraction.
-    Uses IShellItemImageFactory (Tier 1) and IExtractImage (Tier 2).
+    Uses IShellItemImageFactory (Tier 1), IExtractImage (Tier 2), and PowerShell Dynamic C# compilation (Tier 3).
     """
     if not os.path.exists(file_path):
         return None
@@ -53,9 +53,6 @@ def get_shell_thumbnail(file_path: str, size: int = 1024) -> Optional[Image.Imag
     try:
         # Normalize and ensure UNC formatting for Windows Shell
         abs_path = os.path.abspath(file_path).replace('/', '\\')
-        if abs_path.startswith('\\\\') and not abs_path.startswith('\\\\\\\\'):
-            # Double-slash for UNC parsing stability in COM
-            pass 
 
         # --- Tier 1: Modern IShellItemImageFactory ---
         try:
@@ -75,9 +72,11 @@ def get_shell_thumbnail(file_path: str, size: int = 1024) -> Optional[Image.Imag
         # --- Tier 2: IExtractImage (CAD Industry Fallback) ---
         try:
             desktop = shell.SHGetDesktopFolder()
-            pidl, _ = desktop.ParseDisplayName(0, None, abs_path)
-            parent_shell_folder, relative_pidl = shell.SHBindToParent(pidl, shell.IID_IShellFolder)
-            extractor = parent_shell_folder.GetUIObjectOf(0, [relative_pidl], IID_IExtractImage, 0)
+            _, pidl, _ = desktop.ParseDisplayName(0, None, abs_path)
+            parent_pidl = pidl[:-1]
+            relative_pidl = [pidl[-1]]
+            parent_folder = desktop.BindToObject(parent_pidl, None, shell.IID_IShellFolder)
+            extractor = parent_folder.GetUIObjectOf(0, [relative_pidl], IID_IExtractImage, 0)
             
             # IEIFLAG_SCREEN (0x20) | IEIFLAG_QUALITY (0x100)
             render_size = (size, size)
@@ -94,6 +93,39 @@ def get_shell_thumbnail(file_path: str, size: int = 1024) -> Optional[Image.Imag
     finally:
         pythoncom.CoUninitialize()
     
+    # --- Tier 3: PowerShell Fallback (For missing pywin32 wrappers like IShellItemImageFactory) ---
+    import subprocess
+    import tempfile
+    try:
+        temp_dir = tempfile.gettempdir()
+        temp_out = os.path.join(temp_dir, f"kmti_thumb_{os.path.basename(file_path)}.png")
+        script_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "extract_thumb_v2.ps1")
+        
+        cmd = [
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-File", script_path,
+            "-path", abs_path,
+            "-outPath", temp_out,
+            "-size", str(size)
+        ]
+        
+        startupinfo = None
+        if os.name == 'nt':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            
+        res = subprocess.run(cmd, capture_output=True, text=True, startupinfo=startupinfo)
+        if os.path.exists(temp_out) and os.path.getsize(temp_out) > 0:
+            img = Image.open(temp_out)
+            img.load()
+            try:
+                os.remove(temp_out)
+            except Exception:
+                pass
+            return img
+    except Exception as e:
+        print(f"[PowerShell Thumbnail Fallback Error] {e}")
+
     return None
     
     return None

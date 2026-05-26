@@ -10,7 +10,7 @@ import win32gui
 # GUIDs for iCAD SX (Fujitsu) Compatible Interfaces
 # ---------------------------------------------------------
 # IExtractImage: {BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}
-IID_IExtractImage = pythoncom.IID("{BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}")
+IID_IExtractImage = pythoncom.MakeIID("{BB2E617C-0920-11d1-9A0B-00C04FC2D6C1}")
 
 def get_icad_thumbnail_professional(file_path, size=512):
     """
@@ -30,14 +30,12 @@ def get_icad_thumbnail_professional(file_path, size=512):
 
         # 2. Get the Shell Folder and Relative PIDL
         desktop = shell.SHGetDesktopFolder()
-        pidl, _ = desktop.ParseDisplayName(0, None, abs_path)
+        _, pidl, _ = desktop.ParseDisplayName(0, None, abs_path)
         
         # Get parent folder and relative PIDL
-        parent_folder_pidl, _ = shell.SHBindToParent(pidl, shell.IID_IShellFolder)
-        if not parent_folder_pidl:
-            return None, "Could not bind to parent folder"
-            
-        folder, relative_pidl = parent_folder_pidl
+        parent_pidl = pidl[:-1]
+        relative_pidl = [pidl[-1]]
+        folder = desktop.BindToObject(parent_pidl, None, shell.IID_IShellFolder)
         
         # 3. GET IExtractImage interface from the item
         try:
