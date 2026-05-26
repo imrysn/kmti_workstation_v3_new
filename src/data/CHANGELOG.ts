@@ -22,6 +22,13 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.6',
+    date: 'May 26, 2026',
+    entries: [
+      { type: 'fix', text: 'This version is contains all bug fixes.' },
+    ],
+  },
+  {
     version: '3.7.5',
     date: 'May 25, 2026',
     entries: [
