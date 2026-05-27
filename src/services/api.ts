@@ -208,6 +208,12 @@ export const telemetryApi = {
     fd.append('computer_name', computerName);
     fd.append('event_type', eventType);
     return api.post('/telemetry/event', fd);
+  },
+  saveEquippedSkin: (computerName: string, skinKey: string) => {
+    const fd = new FormData();
+    fd.append('computer_name', computerName);
+    fd.append('skin_key', skinKey);
+    return api.post('/telemetry/skin', fd);
   }
 }
 

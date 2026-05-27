@@ -61,7 +61,8 @@ async def get_suggestions(
             .where(
                 and_(
                     CadFileIndex.parent_path == norm_parent,
-                    CadFileIndex.file_name.ilike(f"{q}%")
+                    CadFileIndex.file_name.ilike(f"{q}%"),
+                    CadFileIndex.is_folder == False
                 )
             )
             .limit(10)
@@ -72,7 +73,12 @@ async def get_suggestions(
         # Query distinct file names starting with the prefix utilizing the database index
         stmt = (
             select(distinct(CadFileIndex.file_name))
-            .where(CadFileIndex.file_name.like(f"{q}%"))
+            .where(
+                and_(
+                    CadFileIndex.file_name.like(f"{q}%"),
+                    CadFileIndex.is_folder == False
+                )
+            )
             .limit(12)
         )
         res = await db.execute(stmt)
@@ -829,6 +835,86 @@ async def get_preview(file_id: int, full: bool = False, db: AsyncSession = Depen
     ext = record.file_type.lower() if record.file_type else ""
     
     return await get_cached_preview(file_path, ext, full=full)
+
+@router.get("/points/{file_id}")
+async def get_points(file_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(CadFileIndex).where(CadFileIndex.id == file_id))
+    record = result.scalar_one_or_none()
+    
+    if not record:
+        raise HTTPException(status_code=404, detail="File not found")
+        
+    file_path = record.file_path
+    ext = record.file_type.lower() if record.file_type else ""
+    
+    if ext != '.icd':
+        raise HTTPException(status_code=400, detail="Only .icd files support interactive 3D point cloud data")
+        
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File missing on disk")
+        
+    def _parse():
+        from core.icd_parser import SimpleICDParser
+        parser = SimpleICDParser()
+        if not parser.parse_file(file_path) or not parser.points:
+            return None
+        
+        # Filter zero coordinates
+        points = [p for p in parser.points if abs(p.x) > 1e-4 or abs(p.y) > 1e-4 or abs(p.z) > 1e-4]
+        if not points:
+            points = parser.points
+            
+        # IQR Filtering based on distance from center
+        import math
+        xs = [p.x for p in points]
+        ys = [p.y for p in points]
+        zs = [p.z for p in points]
+        cx = sum(xs) / len(points)
+        cy = sum(ys) / len(points)
+        cz = sum(zs) / len(points)
+
+        distances = []
+        for p in points:
+            d = math.sqrt((p.x - cx)**2 + (p.y - cy)**2 + (p.z - cz)**2)
+            distances.append((d, p))
+
+        sorted_d = sorted([item[0] for item in distances])
+        n = len(sorted_d)
+        q1 = sorted_d[int(n * 0.25)]
+        q3 = sorted_d[int(n * 0.75)]
+        iqr = q3 - q1
+        max_d_limit = q3 + 2.0 * iqr
+
+        filtered = [item[1] for item in distances if item[0] <= max_d_limit]
+                
+        if not filtered:
+            filtered = points
+            
+        # Recalculate bounds on filtered points
+        min_x = min(p.x for p in filtered)
+        max_x = max(p.x for p in filtered)
+        min_y = min(p.y for p in filtered)
+        max_y = max(p.y for p in filtered)
+        min_z = min(p.z for p in filtered)
+        max_z = max(p.z for p in filtered)
+        
+        bounds_size = {
+            "x": max_x - min_x,
+            "y": max_y - min_y,
+            "z": max_z - min_z
+        }
+        
+        return {
+            "points": [{"x": p.x, "y": p.y, "z": p.z} for p in filtered],
+            "bounds": bounds_size,
+            "part_name": parser.part_name
+        }
+
+    data = await asyncio.to_thread(_parse)
+    if not data:
+        raise HTTPException(status_code=500, detail="Failed to parse point cloud data")
+        
+    return data
 
 @router.get("/download")
 async def download_part(file_id: int, db: AsyncSession = Depends(get_db)):

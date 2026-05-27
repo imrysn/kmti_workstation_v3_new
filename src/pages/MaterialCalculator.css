@@ -923,3 +923,72 @@ body.void-theme .scale-weight-box {
     grid-column: span 2;
   }
 }
+
+
+/* ── 3-way Segmented Switch Controls ── */
+.unit-sliding-bg {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(33.333% - 5px);
+  height: calc(100% - 8px);
+  background: var(--accent);
+  border-radius: 8px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+  pointer-events: none;
+}
+
+.unit-sliding-bg.mm {
+  transform: translateX(0);
+}
+
+.unit-sliding-bg.cm {
+  transform: translateX(calc(100% + 4px));
+}
+
+.unit-sliding-bg.m {
+  transform: translateX(calc(200% + 8px));
+}
+
+/* ── Contextual Input Unit Select ── */
+.dim-input-wrapper.has-select .form-input {
+  padding-right: 68px;
+}
+
+.dim-unit-select {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  bottom: 4px;
+  width: 58px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  padding: 0 6px;
+  text-align: center;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 10px;
+  padding-right: 18px;
+  transition: all 0.2s ease;
+}
+
+.dim-unit-select:hover {
+  background-color: var(--bg-surface-hover);
+  border-color: var(--accent);
+}
+
+.dim-unit-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}

@@ -32,12 +32,8 @@ public class ThumbnailExtractor {
             SHCreateItemFromParsingName(path, IntPtr.Zero, guid, out factory);
             
             IntPtr hBitmap;
-            // SIIGBF_RESIZETOFIT = 0x0
-            int hr = factory.GetImage(new SIZE(size, size), 0x0, out hBitmap);
-            if (hr != 0) {
-                // Fallback to Icon
-                hr = factory.GetImage(new SIZE(size, size), 0x1, out hBitmap);
-            }
+            // SIIGBF_THUMBNAILONLY = 0x2
+            int hr = factory.GetImage(new SIZE(size, size), 0x2, out hBitmap);
             
             if (hr == 0 && hBitmap != IntPtr.Zero) {
                 using (Bitmap bmp = Bitmap.FromHbitmap(hBitmap)) {

@@ -555,3 +555,96 @@
 .dark-theme .sp-cat-badge.cat-constraint{ background: rgba(239, 68, 68, 0.15);   border-color: rgba(239, 68, 68, 0.3);  color: #ef4444; }
 .dark-theme .sp-cat-badge.cat-symbol    { background: rgba(192, 132, 252, 0.15); border-color: rgba(192, 132, 252, 0.3);color: #c084fc; }
 .dark-theme .sp-cat-badge.cat-lookup    { background: rgba(107, 114, 128, 0.18); border-color: rgba(107, 114, 128, 0.25); }
+
+
+/* ── DARK THEME LEGIBILITY & HIGH LEGIBILITY OVERRIDES ── */
+body.dark-theme .sp-header span,
+.dark-theme .sp-header span {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-header-icon,
+.dark-theme .sp-header-icon {
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-line-num,
+.dark-theme .sp-line-num {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-raw-line,
+.dark-theme .sp-raw-line {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-meta-label,
+.dark-theme .sp-meta-label {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-meta-value,
+.dark-theme .sp-meta-value {
+  color: #e2e8f0 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-detailed-step-title,
+.dark-theme .sp-detailed-step-title {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-detailed-step-desc,
+.dark-theme .sp-detailed-step-desc {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-math-label,
+.dark-theme .sp-math-label {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-math-formula,
+.dark-theme .sp-math-formula {
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-math-equation,
+.dark-theme .sp-math-equation {
+  color: #34d399 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-suggest-label,
+.dark-theme .sp-suggest-label {
+  color: #fb923c !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-suggest-chip,
+.dark-theme .sp-suggest-chip {
+  color: #ffffff !important;
+  background: var(--bg-surface-hover) !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .sp-suggest-chip:hover,
+.dark-theme .sp-suggest-chip:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  color: #38bdf8 !important;
+}
+
+body.dark-theme .sp-chevron,
+.dark-theme .sp-chevron {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}

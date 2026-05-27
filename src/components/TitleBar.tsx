@@ -322,7 +322,6 @@ export default function TitleBar() {
               <path d="M7.76 7.76a6 6 0 0 0 0 8.49" />
               <path d="M16.24 7.76a6 6 0 0 1 0 8.49" />
             </svg>
-            <span className="titlebar-online-dot"></span>
           </button>
         )}
 

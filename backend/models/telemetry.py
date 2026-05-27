@@ -15,4 +15,5 @@ class WorkstationStatus(Base):
     current_user = Column(String(100), nullable=True)
     version = Column(String(20), nullable=True)
     status_message = Column(String(200), nullable=True)
+    equipped_skin = Column(String(100), nullable=True)
     last_ping = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())

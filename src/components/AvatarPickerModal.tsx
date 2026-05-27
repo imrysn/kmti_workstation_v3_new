@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { WorkstationStatus } from './Achievement'
+import { telemetryApi } from '../services/api'
 import {
   AVATAR_SKINS,
   getUnlockedSkins,
@@ -56,9 +57,14 @@ export default function AvatarPickerModal({
     </svg>
   )
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isSelectedUnlocked) return
     saveEquippedSkin(computerName, selected)
+    try {
+      await telemetryApi.saveEquippedSkin(computerName, selected)
+    } catch (err) {
+      console.error('Failed to sync avatar skin to server:', err)
+    }
     onSaved()
     onClose()
   }

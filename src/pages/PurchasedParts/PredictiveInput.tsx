@@ -12,7 +12,6 @@ interface PredictiveInputProps {
 export const PredictiveInput: React.FC<PredictiveInputProps> = ({ value, onChange, placeholder, parentPath }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [focusedIndex, setFocusedIndex] = useState(-1);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Close suggestions on click outside
@@ -48,33 +47,13 @@ export const PredictiveInput: React.FC<PredictiveInputProps> = ({ value, onChang
     return () => clearTimeout(timer);
   }, [value, parentPath]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showSuggestions || suggestions.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setFocusedIndex(prev => (prev + 1) % suggestions.length);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setFocusedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
-    } else if (e.key === 'Enter') {
-      if (focusedIndex >= 0) {
-        e.preventDefault();
-        onSelect(suggestions[focusedIndex]);
-      }
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false);
-    }
-  };
-
   const onSelect = (val: string) => {
     onChange(val);
     setShowSuggestions(false);
-    setFocusedIndex(-1);
   };
 
   return (
-    <div className="predictive-input-wrapper" ref={wrapperRef} onKeyDown={handleKeyDown} style={{ position: 'relative', width: '100%' }}>
+    <div className="predictive-input-wrapper" ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
       <div className="findr-search-icon"><SearchIcon size={18} /></div>
       <input
         className="findr-search-input"
@@ -97,9 +76,8 @@ export const PredictiveInput: React.FC<PredictiveInputProps> = ({ value, onChang
             return (
               <div
                 key={i}
-                className={`predictive-suggestion-item ${i === focusedIndex ? 'active' : ''}`}
+                className="predictive-suggestion-item"
                 onClick={() => onSelect(s)}
-                onMouseEnter={() => setFocusedIndex(i)}
               >
                 <div className="predictive-suggestion-text">
                   {before}<span className="match">{match}</span>{after}

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { calculateExcelBatchWeight } from '../utils/materialMath'
 import { useModal } from '../components/ModalContext'
+import { materialsApi } from '../services/api'
 import FormulaPanel from '../components/FormulaPanel'
 import SolutionsPanel from '../components/SolutionsPanel'
 import './MaterialCalculator.css'
@@ -20,6 +21,20 @@ interface FormDims {
   c: number | '';
   profileType: string;
   profileSpec: string;
+}
+
+interface DimUnits {
+  diameter: 'mm' | 'cm' | 'm';
+  length: 'mm' | 'cm' | 'm';
+  od: 'mm' | 'cm' | 'm';
+  wt: 'mm' | 'cm' | 'm';
+  id: 'mm' | 'cm' | 'm';
+  side: 'mm' | 'cm' | 'm';
+  t: 'mm' | 'cm' | 'm';
+  w: 'mm' | 'cm' | 'm';
+  a: 'mm' | 'cm' | 'm';
+  b: 'mm' | 'cm' | 'm';
+  c: 'mm' | 'cm' | 'm';
 }
 
 const parseOrEmpty = (val: string): number | '' => {
@@ -180,6 +195,45 @@ function parseLineToFormState(line: string) {
   return null
 }
 
+const SHAPE_MATERIALS_DEFAULTS: Record<string, string[]> = {
+  RoundBar: ['SS400', 'S35C', 'S45C', 'S55C', 'SUS304', 'A5052', 'C3604', 'C1100', 'SUJ2'],
+  RoundPipe: ['STKM', 'STKM13A', 'STKM16A', 'SUS304TP', 'SGP', 'STPG370'],
+  SquareBar: ['SS400', 'S45C', 'SUS304'],
+  SquarePipe: ['STKR', 'STKR400', 'SUS304TP'],
+  Plate: ['SS400', 'SUS304', 'A5052', 'S50C', 'S55C', 'SPCC', 'SPHC', '縞鋼板'],
+  Block: ['FC200', 'FC250', 'FC300', 'FCD400', 'SS400'],
+  Profile: ['H形鋼', 'I形鋼', '溝形鋼', '山形鋼', 'STKR400', 'SUS304TP'],
+};
+
+function categorizeMaterial(matName: string, shape: string): boolean {
+  const name = matName.toUpperCase().trim();
+  if (shape === 'RoundBar') {
+    return (
+      (name.startsWith('SS') || name.startsWith('S2') || name.startsWith('S3') || name.startsWith('S4') || name.startsWith('S5') || name.startsWith('SU') || name.startsWith('A') || name.startsWith('C') || name.startsWith('SC') || name.startsWith('SK') || name.startsWith('TI')) &&
+      !name.includes('TP') && !name.includes('SGP') && !name.includes('STKM') && !name.includes('STKR') && !name.includes('鋼')
+    );
+  }
+  if (shape === 'RoundPipe') {
+    return name.includes('STKM') || name.includes('TP') || name.includes('SGP') || name.includes('STP') || name.includes('STS');
+  }
+  if (shape === 'SquareBar') {
+    return name.startsWith('SS') || name.startsWith('S45') || name.includes('SUS304') || name.includes('SPCC');
+  }
+  if (shape === 'SquarePipe') {
+    return name.includes('STKR') || name.includes('TP') || name.includes('STKM');
+  }
+  if (shape === 'Plate') {
+    return name.includes('SPCC') || name.includes('SPHC') || name.includes('SS') || name.includes('SUS') || name.includes('A50') || name.includes('S50') || name.includes('S55') || name.includes('ABREX') || name.includes('縞');
+  }
+  if (shape === 'Block') {
+    return name.startsWith('FC') || name.startsWith('FCD') || name.startsWith('FCMB') || name.includes('SS400');
+  }
+  if (shape === 'Profile') {
+    return name.includes('鋼') || name.includes('STKR') || name.includes('TP') || name.startsWith('H') || name.startsWith('I') || name.startsWith('溝') || name.startsWith('山');
+  }
+  return false;
+}
+
 export default function MaterialCalculator() {
   const { notify } = useModal()
 
@@ -198,7 +252,60 @@ export default function MaterialCalculator() {
   // ── Interactive Form State ──────────────────────────────────────
   const [formShape, setFormShape] = useState<string>('RoundBar')
   const [formMaterial, setFormMaterial] = useState<string>('SS400')
-  const [useCustomMaterial, setUseCustomMaterial] = useState<boolean>(false)
+  const [dimUnits, setDimUnits] = useState<DimUnits>({
+    diameter: 'mm',
+    length: 'mm',
+    od: 'mm',
+    wt: 'mm',
+    id: 'mm',
+    side: 'mm',
+    t: 'mm',
+    w: 'mm',
+    a: 'mm',
+    b: 'mm',
+    c: 'mm',
+  })
+
+  // Dynamic DB materials loading & filtering
+  const [dbMaterials, setDbMaterials] = useState<string[]>([])
+
+  useEffect(() => {
+    materialsApi.list(undefined, 1000)
+      .then(res => {
+        if (res && Array.isArray(res.data)) {
+          const names = res.data.map((m: any) => {
+            if (!m.englishName) return null
+            const match = m.englishName.match(/\(([^)]+)\)/)
+            return match ? match[1].trim() : m.englishName.trim()
+          }).filter(Boolean)
+          setDbMaterials(names)
+        }
+      })
+      .catch(err => console.error('Failed to load material grades from DB:', err))
+  }, [])
+
+  const availableMaterials = useMemo(() => {
+    const defaults = SHAPE_MATERIALS_DEFAULTS[formShape] || ['SS400']
+    const dynamic = dbMaterials.filter(name => categorizeMaterial(name, formShape))
+    
+    const combined = [...defaults]
+    for (const name of dynamic) {
+      if (!combined.includes(name)) {
+        combined.push(name)
+      }
+    }
+    return combined
+  }, [formShape, dbMaterials])
+
+  // Sync chosen material with available list for active shape type
+  useEffect(() => {
+    if (mode === 'form') {
+      if (availableMaterials.length > 0 && !availableMaterials.includes(formMaterial)) {
+        setFormMaterial(availableMaterials[0])
+      }
+    }
+  }, [formShape, availableMaterials, mode])
+
   const [formQty, setFormQty] = useState<number | ''>('')
   const [formDims, setFormDims] = useState<FormDims>({
     diameter: '',
@@ -304,33 +411,40 @@ export default function MaterialCalculator() {
   // ── Interactive Form String Generation ─────────────────────────
   const generateLine = useCallback(() => {
     const mat = formMaterial.trim() || 'SS400'
+    const s = (val: number | '', unitKey: keyof DimUnits) => {
+      if (val === '') return ''
+      const unit = dimUnits[unitKey]
+      const scale = unit === 'cm' ? 10 : unit === 'm' ? 1000 : 1
+      return parseFloat((val * scale).toFixed(4))
+    }
+
     if (formShape === 'RoundBar') {
-      return `${mat} φ${formDims.diameter}×${formDims.length} ${formQty}`
+      return `${mat} φ${s(formDims.diameter, 'diameter')}×${s(formDims.length, 'length')} ${formQty}`
     }
     if (formShape === 'RoundPipe') {
       if (formDims.pipeType === 'WT') {
-        return `${mat} φ${formDims.od}×${formDims.wt}-${formDims.length} ${formQty}`
+        return `${mat} φ${s(formDims.od, 'od')}×${s(formDims.wt, 'wt')}-${s(formDims.length, 'length')} ${formQty}`
       } else {
-        return `${mat} φ${formDims.od}×φ${formDims.id}-${formDims.length} ${formQty}`
+        return `${mat} φ${s(formDims.od, 'od')}×φ${s(formDims.id, 'id')}-${s(formDims.length, 'length')} ${formQty}`
       }
     }
     if (formShape === 'SquareBar') {
-      return `${mat} □${formDims.side}×${formDims.length} ${formQty}`
+      return `${mat} □${s(formDims.side, 'side')}×${s(formDims.length, 'length')} ${formQty}`
     }
     if (formShape === 'SquarePipe') {
-      return `${mat} □${formDims.od}×${formDims.wt}-${formDims.length} ${formQty}`
+      return `${mat} □${s(formDims.od, 'od')}×${s(formDims.wt, 'wt')}-${s(formDims.length, 'length')} ${formQty}`
     }
     if (formShape === 'Plate') {
-      return `${mat} ${formDims.t}×${formDims.w}-${formDims.length} ${formQty}`
+      return `${mat} ${s(formDims.t, 't')}×${s(formDims.w, 'w')}-${s(formDims.length, 'length')} ${formQty}`
     }
     if (formShape === 'Block') {
-      return `${mat} ${formDims.a}×${formDims.b}×${formDims.c} ${formQty}`
+      return `${mat} ${s(formDims.a, 'a')}×${s(formDims.b, 'b')}×${s(formDims.c, 'c')} ${formQty}`
     }
     if (formShape === 'Profile') {
-      return `${formDims.profileType} ${formDims.profileSpec}-${formDims.length} ${formQty}`
+      return `${formDims.profileType} ${formDims.profileSpec}-${s(formDims.length, 'length')} ${formQty}`
     }
     return ''
-  }, [formShape, formMaterial, formQty, formDims])
+  }, [formShape, formMaterial, formQty, formDims, dimUnits])
 
   const isFormComplete = useMemo(() => {
     if (mode !== 'form') return true
@@ -382,20 +496,33 @@ export default function MaterialCalculator() {
       const parsed = parseLineToFormState(activeLine)
       if (parsed) {
         setFormShape(parsed.shape)
-        const standardList = ['SS400', 'SUS304', 'A5052', 'C3604', 'C1100', 'FC200', 'S45C']
-        const cleanMat = parsed.material.trim().toUpperCase()
-        const isStandard = standardList.includes(cleanMat)
-        setUseCustomMaterial(!isStandard)
         setFormMaterial(parsed.material)
         setFormQty(parsed.qty)
+        
+        const scaleDown = (val: any, unitKey: keyof DimUnits) => {
+          if (val === '' || typeof val !== 'number') return ''
+          const unit = dimUnits[unitKey]
+          const scale = unit === 'cm' ? 10 : unit === 'm' ? 1000 : 1
+          return parseFloat((val / scale).toFixed(4))
+        }
+
+        const scaledDims: any = {}
+        Object.keys(parsed.dims).forEach((key) => {
+          const val = (parsed.dims as any)[key]
+          if (key === 'pipeType' || key === 'profileType' || key === 'profileSpec') {
+            scaledDims[key] = val
+          } else {
+            scaledDims[key] = scaleDown(val, key as keyof DimUnits)
+          }
+        })
+
         setFormDims(prev => ({
           ...prev,
-          ...parsed.dims
+          ...scaledDims
         }))
       } else {
         setFormShape('RoundBar')
         setFormMaterial('SS400')
-        setUseCustomMaterial(false)
         setFormQty('')
         setFormDims({
           diameter: '',
@@ -603,31 +730,15 @@ export default function MaterialCalculator() {
                       <div className="material-input-row">
                         <select
                           className="form-select"
-                          value={useCustomMaterial ? 'custom' : formMaterial}
-                          onChange={(e) => {
-                            if (e.target.value === 'custom') {
-                              setUseCustomMaterial(true)
-                              setFormMaterial('')
-                            } else {
-                              setUseCustomMaterial(false)
-                              setFormMaterial(e.target.value)
-                            }
-                          }}
+                          value={formMaterial}
+                          onChange={(e) => setFormMaterial(e.target.value)}
                         >
-                          {['SS400', 'SUS304', 'A5052', 'C3604', 'C1100', 'FC200', 'S45C'].map(m => (
-                            <option key={m} value={m}>{m}</option>
+                          {availableMaterials.map((m) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
                           ))}
-                          <option value="custom">Other...</option>
                         </select>
-                        {useCustomMaterial && (
-                          <input
-                            type="text"
-                            className="form-input custom-material-input"
-                            value={formMaterial}
-                            onChange={(e) => setFormMaterial(e.target.value.toUpperCase())}
-                            placeholder="Type grade..."
-                          />
-                        )}
                       </div>
                     </div>
 
@@ -639,19 +750,22 @@ export default function MaterialCalculator() {
                         value={formQty}
                         onChange={(e) => setFormQty(parseQtyOrEmpty(e.target.value))}
                         min="1"
+                        placeholder="1"
                       />
                     </div>
                   </div>
 
                   {/* Dimensions Section */}
                   <div className="form-group dimensions-section">
-                    <label className="form-label">Dimensions</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                      <label className="form-label" style={{ margin: 0 }}>Dimensions</label>
+                    </div>
                     <div className="dimensions-grid">
                       {formShape === 'RoundBar' && (
                         <>
                           <div className="dim-field">
                             <span className="dim-label">Diameter (D)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -660,12 +774,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.diameter}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, diameter: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field">
                             <span className="dim-label">Length (L)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -674,7 +796,15 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.length}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, length: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                         </>
@@ -684,7 +814,7 @@ export default function MaterialCalculator() {
                         <>
                           <div className="dim-field">
                             <span className="dim-label">Outer Diameter (OD)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -693,7 +823,15 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.od}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, od: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
 
@@ -720,7 +858,7 @@ export default function MaterialCalculator() {
                           {formDims.pipeType === 'WT' ? (
                             <div className="dim-field">
                               <span className="dim-label">Wall Thickness (WT)</span>
-                              <div className="dim-input-wrapper">
+                              <div className="dim-input-wrapper has-select">
                                 <input
                                   type="number"
                                   className="form-input"
@@ -729,13 +867,21 @@ export default function MaterialCalculator() {
                                   step="any"
                                   min="0"
                                 />
-                                <span className="dim-unit">mm</span>
+                                <select
+                                  className="dim-unit-select"
+                                  value={dimUnits.wt}
+                                  onChange={(e) => setDimUnits(prev => ({ ...prev, wt: e.target.value as any }))}
+                                >
+                                  <option value="mm">mm</option>
+                                  <option value="cm">cm</option>
+                                  <option value="m">m</option>
+                                </select>
                               </div>
                             </div>
                           ) : (
                             <div className="dim-field">
                               <span className="dim-label">Inner Diameter (ID)</span>
-                              <div className="dim-input-wrapper">
+                              <div className="dim-input-wrapper has-select">
                                 <input
                                   type="number"
                                   className="form-input"
@@ -744,23 +890,39 @@ export default function MaterialCalculator() {
                                   step="any"
                                   min="0"
                                 />
-                                <span className="dim-unit">mm</span>
+                                <select
+                                  className="dim-unit-select"
+                                  value={dimUnits.id}
+                                  onChange={(e) => setDimUnits(prev => ({ ...prev, id: e.target.value as any }))}
+                                >
+                                  <option value="mm">mm</option>
+                                  <option value="cm">cm</option>
+                                  <option value="m">m</option>
+                                </select>
                               </div>
                             </div>
                           )}
 
                           <div className="dim-field">
                             <span className="dim-label">Length (L)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
-                                type="number"
-                                className="form-input"
-                                value={formDims.length}
-                                onChange={(e) => setFormDims(prev => ({ ...prev, length: parseOrEmpty(e.target.value) }))}
-                                step="any"
-                                min="0"
-                              />
-                              <span className="dim-unit">mm</span>
+                                  type="number"
+                                  className="form-input"
+                                  value={formDims.length}
+                                  onChange={(e) => setFormDims(prev => ({ ...prev, length: parseOrEmpty(e.target.value) }))}
+                                  step="any"
+                                  min="0"
+                                />
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.length}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, length: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                         </>
@@ -770,7 +932,7 @@ export default function MaterialCalculator() {
                         <>
                           <div className="dim-field">
                             <span className="dim-label">Side (a)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -779,12 +941,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.side}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, side: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field">
                             <span className="dim-label">Length (L)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -793,7 +963,15 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.length}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, length: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                         </>
@@ -803,7 +981,7 @@ export default function MaterialCalculator() {
                         <>
                           <div className="dim-field">
                             <span className="dim-label">Outer Side (A)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -812,12 +990,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.od}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, od: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field">
                             <span className="dim-label">Wall Thickness (WT)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -826,12 +1012,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.wt}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, wt: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field full-width-sm">
                             <span className="dim-label">Length (L)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -840,7 +1034,15 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.length}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, length: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                         </>
@@ -850,7 +1052,7 @@ export default function MaterialCalculator() {
                         <>
                           <div className="dim-field">
                             <span className="dim-label">Thickness (T)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -859,12 +1061,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.t}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, t: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field">
                             <span className="dim-label">Width (W)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -873,12 +1083,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.w}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, w: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field full-width-sm">
                             <span className="dim-label">Length (L)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -887,7 +1105,15 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.length}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, length: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                         </>
@@ -897,7 +1123,7 @@ export default function MaterialCalculator() {
                         <>
                           <div className="dim-field">
                             <span className="dim-label">Dimension A</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -906,12 +1132,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.a}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, a: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field">
                             <span className="dim-label">Dimension B</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -920,12 +1154,20 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.b}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, b: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                           <div className="dim-field full-width-sm">
                             <span className="dim-label">Dimension C</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -934,7 +1176,15 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.c}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, c: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                         </>
@@ -966,7 +1216,7 @@ export default function MaterialCalculator() {
                           </div>
                           <div className="dim-field full-width-sm">
                             <span className="dim-label">Length (L)</span>
-                            <div className="dim-input-wrapper">
+                            <div className="dim-input-wrapper has-select">
                               <input
                                 type="number"
                                 className="form-input"
@@ -975,7 +1225,15 @@ export default function MaterialCalculator() {
                                 step="any"
                                 min="0"
                               />
-                              <span className="dim-unit">mm</span>
+                              <select
+                                className="dim-unit-select"
+                                value={dimUnits.length}
+                                onChange={(e) => setDimUnits(prev => ({ ...prev, length: e.target.value as any }))}
+                              >
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="m">m</option>
+                              </select>
                             </div>
                           </div>
                         </>
@@ -1147,7 +1405,6 @@ export default function MaterialCalculator() {
                       })
                       setFormQty('')
                       setFormMaterial('SS400')
-                      setUseCustomMaterial(false)
                       setFormShape('RoundBar')
                     }}
                   >

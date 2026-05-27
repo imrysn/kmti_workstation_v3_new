@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ExternalLinkIcon, SearchIcon } from './FileIcons';
 import { API_BASE } from '../services/api';
 import './FilePreview.css';
+import Interactive3DViewer from './Interactive3DViewer';
 
 interface FilePreviewProps {
   fileId: number;
@@ -118,6 +119,10 @@ const FilePreview: React.FC<FilePreviewProps> = ({ fileId, fileName, fileType, o
             
             {isPdf ? (
               <iframe src={`${previewUrl}?full=true`} className="preview-modal-image preview-modal-pdf-iframe" title={fileName} />
+            ) : fileType.toLowerCase() === '.icd' ? (
+              <div className="preview-modal-image" style={{ background: '#0f1115', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                <Interactive3DViewer fileId={fileId} fileName={fileName} height="100%" />
+              </div>
             ) : (
               <img src={`${previewUrl}?full=true`} alt={fileName} className="preview-modal-image" />
             )}

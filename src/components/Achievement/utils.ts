@@ -9,7 +9,7 @@ export function detectNewUnlockedAchievement(
   prevAchievements: Record<string, boolean>
 ): { key: string; info: Omit<AchievementInfo, 'key'> } | null {
   const myWs = newWorkstations.find(
-    ws => ws.computer_name === myComputerName || ws.current_user === username
+    ws => ws.computer_name === myComputerName && myComputerName !== ''
   );
   if (!myWs?.achievements) return null;
 

@@ -14,6 +14,7 @@ export interface WorkstationStatus {
   version: string;
   last_ping: string;
   status_message?: string;
+  equipped_skin?: string;
   streaks?: string[];
   achievements?: {
     isCalculatorVeteran: boolean;

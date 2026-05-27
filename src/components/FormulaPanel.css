@@ -422,3 +422,149 @@
         display: none;
     }
 }
+
+
+/* ── DARK THEME LEGIBILITY & HIGH LEGIBILITY OVERRIDES ── */
+body.dark-theme .fp-header-icon,
+.dark-theme .fp-header-icon {
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-header span,
+.dark-theme .fp-header span {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-section,
+.dark-theme .fp-section {
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+  font-weight: 800 !important;
+}
+
+body.dark-theme .fp-section-unit,
+.dark-theme .fp-section-unit {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-icon-wrap,
+.dark-theme .fp-icon-wrap {
+  opacity: 0.95 !important;
+}
+
+body.dark-theme .fp-short-label,
+.dark-theme .fp-short-label {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-sub-type,
+.dark-theme .fp-sub-type {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-formula-pill,
+.dark-theme .fp-formula-pill {
+  color: #38bdf8 !important; /* Brighter sky blue for formula in dark theme */
+  opacity: 1 !important;
+  font-weight: 600 !important;
+}
+
+body.dark-theme .fp-vol-formula,
+.dark-theme .fp-vol-formula {
+  color: #e2e8f0 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-description,
+.dark-theme .fp-description {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-variant-label,
+.dark-theme .fp-variant-label {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-math-display,
+.dark-theme .fp-math-display {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .math-numerator,
+.dark-theme .math-numerator {
+  border-bottom-color: #cbd5e1 !important;
+}
+
+body.dark-theme .fp-vars-header,
+.dark-theme .fp-vars-header {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-detailed-var-item,
+.dark-theme .fp-detailed-var-item {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-detailed-var-item::before,
+.dark-theme .fp-detailed-var-item::before {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-detailed-sym,
+.dark-theme .fp-detailed-sym {
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-ex-label,
+.dark-theme .fp-ex-label {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-example,
+.dark-theme .fp-example {
+  color: #e2e8f0 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-sym,
+.dark-theme .fp-sym {
+  color: #38bdf8 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-var-desc,
+.dark-theme .fp-var-desc {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-note,
+.dark-theme .fp-note {
+  color: #fb923c !important; /* Bright warm orange for warning notes */
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-density-val,
+.dark-theme .fp-density-val {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+body.dark-theme .fp-density-mat,
+.dark-theme .fp-density-mat {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}

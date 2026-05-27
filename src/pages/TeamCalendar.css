@@ -1799,18 +1799,26 @@
 
 /* Company Holiday block styling */
 .company-holiday-block {
-  background: repeating-linear-gradient(45deg,
+  background: repeating-linear-gradient(145deg,
       transparent 0px,
       transparent 10px,
-      rgba(99, 102, 241, 0.05) 10px,
-      rgba(99, 102, 241, 0.05) 20px);
+      rgba(255, 0, 0, 0.05) 10px,
+      rgba(17, 0, 255, 0.05) 20px);
 }
 
 /* Skeleton Loading State */
 @keyframes pulse {
-  0% { background-color: rgba(148, 163, 184, 0.1); }
-  50% { background-color: rgba(148, 163, 184, 0.25); }
-  100% { background-color: rgba(148, 163, 184, 0.1); }
+  0% {
+    background-color: rgba(148, 163, 184, 0.1);
+  }
+
+  50% {
+    background-color: rgba(148, 163, 184, 0.25);
+  }
+
+  100% {
+    background-color: rgba(148, 163, 184, 0.1);
+  }
 }
 
 .skeleton-cell {
@@ -1915,15 +1923,14 @@
 /* Gentle, slow pulsing glow across the completed green fill */
 .timeline-bar-shimmer {
   position: absolute;
-  top: 0; left: 0;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.22) 50%,
-    rgba(255, 255, 255, 0.05) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.22) 50%,
+      rgba(255, 255, 255, 0.05) 100%);
   animation: gentleGlow 3.5s ease-in-out infinite;
   pointer-events: none;
   border-radius: 6px 0 0 6px;
@@ -1945,6 +1952,7 @@
     transform: scaleX(0.88) translateY(3px);
     transform-origin: left center;
   }
+
   to {
     opacity: 1;
     transform: scaleX(1) translateY(0);
@@ -1953,27 +1961,40 @@
 }
 
 @keyframes gentleGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.35;
   }
+
   50% {
     opacity: 0.85;
   }
 }
 
 @keyframes ghostBreath {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.55; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
 }
 
 @keyframes markerPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55),
-                0 1px 3px rgba(0, 0, 0, 0.12);
+      0 1px 3px rgba(0, 0, 0, 0.12);
   }
+
   50% {
     box-shadow: 0 0 0 5px rgba(34, 197, 94, 0),
-                0 1px 3px rgba(0, 0, 0, 0.12);
+      0 1px 3px rgba(0, 0, 0, 0.12);
   }
 }
 
@@ -2010,12 +2031,14 @@
   .grid-cell {
     padding: 6px;
   }
+
   .day-number-label {
     width: 20px;
     height: 20px;
     font-size: 11px;
     margin-bottom: 4px;
   }
+
   .event-badge {
     padding: 2px 6px;
     font-size: 10px;
@@ -2063,28 +2086,33 @@
   .grid-cell {
     padding: 4px;
   }
+
   .day-number-label {
     width: 18px;
     height: 18px;
     font-size: 10px;
     margin-bottom: 2px;
   }
+
   .day-number-label.first-of-month-label {
     padding: 0 4px;
     font-size: 9px;
     min-width: 18px;
     height: 18px;
   }
+
   .event-badge {
     padding: 2px 4px;
     font-size: 9px;
     gap: 3px;
     border-radius: 4px;
   }
+
   .event-badge-icon svg {
     width: 10px;
     height: 10px;
   }
+
   .more-events-link {
     font-size: 9px;
     padding: 2px 4px;
@@ -2096,15 +2124,219 @@
   .calendar-grid-header div {
     font-size: 0 !important;
   }
+
   .calendar-grid-header div::after {
     font-size: 10px;
     font-weight: 700;
   }
-  .calendar-grid-header div:nth-child(1)::after { content: "S"; }
-  .calendar-grid-header div:nth-child(2)::after { content: "M"; }
-  .calendar-grid-header div:nth-child(3)::after { content: "T"; }
-  .calendar-grid-header div:nth-child(4)::after { content: "W"; }
-  .calendar-grid-header div:nth-child(5)::after { content: "T"; }
-  .calendar-grid-header div:nth-child(6)::after { content: "F"; }
-  .calendar-grid-header div:nth-child(7)::after { content: "S"; }
+
+  .calendar-grid-header div:nth-child(1)::after {
+    content: "S";
+  }
+
+  .calendar-grid-header div:nth-child(2)::after {
+    content: "M";
+  }
+
+  .calendar-grid-header div:nth-child(3)::after {
+    content: "T";
+  }
+
+  .calendar-grid-header div:nth-child(4)::after {
+    content: "W";
+  }
+
+  .calendar-grid-header div:nth-child(5)::after {
+    content: "T";
+  }
+
+  .calendar-grid-header div:nth-child(6)::after {
+    content: "F";
+  }
+
+  .calendar-grid-header div:nth-child(7)::after {
+    content: "S";
+  }
+}
+
+
+/* ── DARK THEME LEGIBILITY & GLOWING CONTRAST OVERRIDES ── */
+body.dark-theme {
+  --cal-primary: var(--accent);
+  --cal-primary-hover: var(--accent-hover);
+  --cal-accent: var(--danger);
+  --cal-accent-hover: var(--danger);
+  --cal-card-bg: var(--bg-surface);
+  --cal-card-border: var(--border);
+  --cal-grid-border: var(--border);
+  --cal-cell-hover: var(--bg-surface-hover);
+  --cal-text-muted: var(--text-muted);
+  --cal-text-primary: var(--text-primary);
+  --cal-text-secondary: var(--text-secondary);
+}
+
+body.dark-theme .event-badge {
+  /* High contrast text for standard active tasks */
+  color: #f8fafc !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+body.dark-theme .event-badge.completed-claim-badge {
+  color: #34d399 !important;
+  /* Vibrant emerald green text */
+  background: rgba(52, 211, 153, 0.15) !important;
+  border-color: rgba(52, 211, 153, 0.3) !important;
+  border-left: 3.5px solid #34d399 !important;
+}
+
+body.dark-theme .event-badge.overdue-claim-badge {
+  color: #f87171 !important;
+  /* Vibrant crimson red text */
+  background: rgba(248, 113, 113, 0.15) !important;
+  border-color: rgba(248, 113, 113, 0.35) !important;
+  border-left: 3.5px solid #f87171 !important;
+}
+
+body.dark-theme .event-badge.absence-badge {
+  color: #cbd5e1 !important;
+  /* Bright soft slate text */
+  background: rgba(148, 163, 184, 0.15) !important;
+  border-color: rgba(148, 163, 184, 0.25) !important;
+  border-left: 3.5px solid #94a3b8 !important;
+}
+
+body.dark-theme .event-badge.company-event-badge {
+  color: #c7d2fe !important;
+  /* Luminous indigo text */
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(139, 92, 246, 0.22)) !important;
+  border-color: rgba(99, 102, 241, 0.35) !important;
+  border-left: 3.5px solid #818cf8 !important;
+}
+
+body.dark-theme .more-events-link {
+  color: #38bdf8 !important;
+  /* Premium sky blue interactive link */
+  background: rgba(56, 189, 248, 0.1) !important;
+  border-color: rgba(56, 189, 248, 0.2) !important;
+}
+
+body.dark-theme .more-events-link:hover {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border-color: #38bdf8 !important;
+}
+
+
+/* ── DARK THEME SIDEBAR TEXT LEGIBILITY OVERRIDES ── */
+body.dark-theme .legend-name {
+  color: #f8fafc !important;
+  /* Bright near-white for legend names in dark mode */
+}
+
+body.dark-theme .checkbox-label {
+  color: #f8fafc !important;
+  /* Bright near-white for visible event checkbox labels in dark mode */
+}
+
+body.dark-theme .section-title-label {
+  color: #94a3b8 !important;
+  /* Brighter slate for sidebar section headers (LEGEND, Teams) */
+}
+
+
+/* ── DARK THEME CALENDAR GRID LEGIBILITY OVERRIDES ── */
+body.dark-theme .day-number-label {
+  color: #f8fafc !important;
+  /* Bright near-white for current month day numbers */
+}
+
+body.dark-theme .calendar-grid-header {
+  color: #cbd5e1 !important;
+  /* Crisper, brighter headers for SUN, MON, TUE... */
+}
+
+body.dark-theme .outside-month {
+  opacity: 0.4 !important;
+  /* Slightly darker to clearly signify outside month status */
+}
+
+body.dark-theme .outside-month .day-number-label {
+  color: #94a3b8 !important;
+  /* But keep the numbers themselves clearly readable */
+}
+
+body.dark-theme .weekend-cell::after {
+  color: #94a3b8 !important;
+  /* Slightly brighter "Non-working" text on weekends */
+  opacity: 0.45 !important;
+}
+
+body.dark-theme .friday-cell::after {
+  color: #cbd5e1 !important;
+  /* Brighter "7am - 4pm" working hours label on Fridays */
+  opacity: 0.65 !important;
+}
+
+
+/* ── DARK THEME TOOLBAR & HEADER LEGIBILITY OVERRIDES ── */
+body.dark-theme .calendar-month-title {
+  color: #ffffff !important;
+  /* Pure white for the main May 2026 header */
+}
+
+body.dark-theme .work-hours-badge {
+  color: #cbd5e1 !important;
+  /* Clear bright slate for the working hours sub-header */
+}
+
+body.dark-theme .work-hours-badge span {
+  color: #cbd5e1 !important;
+  /* Keep all text elements and pipes inside the badge highly legible */
+}
+
+body.dark-theme .nav-controls {
+  background: var(--bg-surface-hover) !important;
+  /* Distinct dark contrast for the Today navigation pill */
+  border-color: var(--border) !important;
+}
+
+body.dark-theme .nav-today-btn {
+  color: #ffffff !important;
+  /* Bright white text for the Today trigger */
+}
+
+body.dark-theme .nav-chevron-btn {
+  color: #ffffff !important;
+  /* Bright white color for chevron navigation arrows */
+}
+
+
+/* ── DARK THEME DAY CELL BACKGROUND CONTRAST OVERRIDES ── */
+body.dark-theme .grid-cell {
+  background: #000000 !important;
+  /* Lighter slate-grey background for active working days */
+}
+
+body.dark-theme .grid-cell:hover {
+  background: #444444 !important;
+  /* Slightly lighter highlight on hover */
+}
+
+body.dark-theme .weekend-cell {
+  background: #090d16 !important;
+  /* Dark slate-black background for weekends to make them recede */
+}
+
+body.dark-theme .outside-month {
+  background: #090d16 !important;
+  /* Darkest slate-black background for outside-month days */
+  opacity: 0.5 !important;
+}
+
+body.dark-theme .company-holiday-block {
+  background: repeating-linear-gradient(145deg,
+      transparent 0px,
+      transparent 10px,
+      rgba(0, 0, 0, 0.05) 10px,
+      rgba(0, 0, 0, 0.05) 20px) !important;
 }

@@ -23,10 +23,12 @@ function AchievementTooltipPortal({
   anchorRef,
   computerName,
   achievements,
+  equippedSkin,
 }: {
   anchorRef: React.RefObject<HTMLDivElement>
   computerName: string
   achievements: WorkstationStatus['achievements']
+  equippedSkin?: string
 }) {
   const [rect, setRect] = useState<DOMRect | null>(null)
   const [visible, setVisible] = useState(false)
@@ -61,7 +63,7 @@ function AchievementTooltipPortal({
   const left = rect.left - TOOLTIP_WIDTH - 20
   const top = rect.top + rect.height / 2
 
-  const skin = getEquippedSkin(computerName, achievements)
+  const skin = getEquippedSkin(computerName, achievements, equippedSkin)
 
   return createPortal(
     <div
@@ -133,7 +135,7 @@ function WorkstationCard({
     <div className={`online-user-card ${status}`}>
       <div className="avatar-container" ref={avatarRef}>
         <div className="user-avatar">
-          {renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements)}
+          {renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin)}
         </div>
         <span className={`status-badge-dot ${status}`} title={getStatusLabel(status)}></span>
 
@@ -156,6 +158,7 @@ function WorkstationCard({
           anchorRef={avatarRef}
           computerName={ws.computer_name || ws.ip_address}
           achievements={ws.achievements}
+          equippedSkin={ws.equipped_skin}
         />
       </div>
 
@@ -330,7 +333,7 @@ export default function OnlineDrawer() {
     }
 
     const myWs = newWorkstations.find(
-      ws => ws.computer_name === myComputerName || ws.current_user === user?.username
+      ws => ws.computer_name === myComputerName && myComputerName !== ''
     )
     if (myWs?.achievements) {
       prevAchievementsRef.current = { ...(myWs.achievements as Record<string, boolean>) }
@@ -589,7 +592,7 @@ export default function OnlineDrawer() {
           <div className="online-drawer-list">
             {filteredWorkstations.map(ws => {
               const status = getStatusClass(ws.last_ping, ws.active_module)
-              const isMe = (ws.computer_name === myComputerName) || (ws.current_user === user?.username && ws.current_user !== 'USER')
+              const isMe = ws.computer_name === myComputerName && myComputerName !== ''
 
               return (
                 <WorkstationCard
@@ -641,7 +644,7 @@ export default function OnlineDrawer() {
     {showAvatarSelector && (
       <AvatarPickerModal
         computerName={myComputerName}
-        achievements={workstations.find(ws => ws.computer_name === myComputerName || (user?.username && ws.current_user === user?.username && ws.current_user !== 'USER'))?.achievements}
+        achievements={workstations.find(ws => ws.computer_name === myComputerName && myComputerName !== '')?.achievements}
         onClose={() => setShowAvatarSelector(false)}
         onSaved={() => setEquippedSkinTrigger(prev => prev + 1)}
       />

@@ -23,6 +23,114 @@ DEFAULT_PLACEHOLDER = os.path.join(PLACEHOLDER_DIR, 'cad_document.png')
 MISSING_FILE_PLACEHOLDER = os.path.join(PLACEHOLDER_DIR, 'missing_file.png')
 ENGINE_MISSING_PLACEHOLDER = os.path.join(PLACEHOLDER_DIR, 'engine_missing.png')
 
+
+def render_icd_point_cloud_fallback(file_path: str, size: int = 512) -> bytes:
+    """Generates a high-quality 3D point cloud isometric projection of the model geometry."""
+    import math
+    from PIL import Image, ImageDraw
+    from core.icd_parser import SimpleICDParser
+
+    parser = SimpleICDParser()
+    if not parser.parse_file(file_path) or not parser.points:
+        raise ValueError("Failed to parse ICD geometry points")
+
+    # Filter out exact zero coordinates which are typically uninitialized binary blocks
+    points = [p for p in parser.points if abs(p.x) > 1e-4 or abs(p.y) > 1e-4 or abs(p.z) > 1e-4]
+    if not points:
+        points = parser.points
+
+    # Statistical outlier removal using distance-based IQR (Interquartile Range)
+    xs = [p.x for p in points]
+    ys = [p.y for p in points]
+    zs = [p.z for p in points]
+    cx = sum(xs) / len(points)
+    cy = sum(ys) / len(points)
+    cz = sum(zs) / len(points)
+
+    distances = []
+    for p in points:
+        d = math.sqrt((p.x - cx)**2 + (p.y - cy)**2 + (p.z - cz)**2)
+        distances.append((d, p))
+
+    sorted_d = sorted([item[0] for item in distances])
+    n = len(sorted_d)
+    q1 = sorted_d[int(n * 0.25)]
+    q3 = sorted_d[int(n * 0.75)]
+    iqr = q3 - q1
+    max_d_limit = q3 + 2.0 * iqr
+
+    filtered_points = [item[1] for item in distances if item[0] <= max_d_limit]
+
+    min_x = min(p.x for p in filtered_points)
+    max_x = max(p.x for p in filtered_points)
+    min_y = min(p.y for p in filtered_points)
+    max_y = max(p.y for p in filtered_points)
+    min_z = min(p.z for p in filtered_points)
+    max_z = max(p.z for p in filtered_points)
+
+    cx = (min_x + max_x) / 2
+    cy = (min_y + max_y) / 2
+    cz = (min_z + max_z) / 2
+
+    sz_x = max_x - min_x
+    sz_y = max_y - min_y
+    sz_z = max_z - min_z
+    max_dim = max(sz_x, sz_y, sz_z)
+    if max_dim == 0:
+        max_dim = 1
+
+    img = Image.new("RGBA", (size, size), (20, 24, 33, 255))
+    draw = ImageDraw.Draw(img)
+
+    scale = (size * 0.75) / max_dim
+
+    # Isometric projection rotation
+    theta = math.radians(20)
+    phi = math.radians(40)
+    cos_t, sin_t = math.cos(theta), math.sin(theta)
+    cos_p, sin_p = math.cos(phi), math.sin(phi)
+
+    scx, scy = size / 2, size / 2
+    projected = []
+
+    for p in filtered_points:
+        dx = p.x - cx
+        dy = p.y - cy
+        dz = p.z - cz
+
+        x1 = dx * cos_p - dz * sin_p
+        z1 = dx * sin_p + dz * cos_p
+        y2 = dy * cos_t - z1 * sin_t
+        z2 = dy * sin_t + z1 * cos_t
+
+        sx = scx + x1 * scale
+        sy = scy - y2 * scale
+        projected.append((z2, sx, sy))
+
+    projected.sort(key=lambda item: item[0])
+
+    for z_depth, sx, sy in projected:
+        if 0 <= sx < size and 0 <= sy < size:
+            depth_ratio = (z_depth + max_dim) / (2 * max_dim)
+            depth_ratio = max(0.1, min(1.0, depth_ratio))
+
+            r = int(0 + 120 * (1 - depth_ratio))
+            g = int(200 + 55 * depth_ratio)
+            b = int(220 + 35 * (1 - depth_ratio))
+
+            draw.ellipse([sx - 2, sy - 2, sx + 2, sy + 2], fill=(r, g, b, int(255 * depth_ratio)))
+
+    try:
+        draw.text((15, size - 35), "iCAD 3D Point-Cloud Preview (Pure Python)", fill=(200, 200, 200, 120))
+        if parser.part_name:
+            draw.text((15, 15), f"PART: {parser.part_name}", fill=(0, 255, 255, 200))
+    except Exception:
+        pass
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return buf.getvalue()
+
 async def get_cached_preview(file_path: str, ext: str, full: bool = False) -> Response:
     """Gets preview from disk cache or generates and caches it professionally"""
     # 0. Globalize path first to resolve drive letters to UNC
@@ -126,11 +234,21 @@ async def get_cached_preview(file_path: str, ext: str, full: bool = False) -> Re
             thumb_data = await asyncio.to_thread(_get_thumb)
             if thumb_data:
                 return return_and_cache(thumb_data)
-            else:
-                print(f">>> [PREVIEW DIAG] Professional engine skipped for {ext}. No handlers available.")
-                if os.path.exists(ENGINE_MISSING_PLACEHOLDER):
-                    return FileResponse(ENGINE_MISSING_PLACEHOLDER)
-                return Response(content=b"", status_code=204)
+            
+            # --- ICD FALLBACK POINT CLOUD RENDERING ---
+            if ext == '.icd':
+                print(f">>> [PREVIEW DIAG] Shell extension failed for .icd. Pivoting to pure-python 3D point cloud fallback for {file_path}")
+                try:
+                    fallback_data = await asyncio.to_thread(render_icd_point_cloud_fallback, file_path)
+                    if fallback_data:
+                        return return_and_cache(fallback_data)
+                except Exception as fe:
+                    print(f">>> [PREVIEW DIAG] Point cloud fallback failed: {fe}")
+
+            print(f">>> [PREVIEW DIAG] Professional engine skipped for {ext}. No handlers available.")
+            if os.path.exists(ENGINE_MISSING_PLACEHOLDER):
+                return FileResponse(ENGINE_MISSING_PLACEHOLDER)
+            return Response(content=b"", status_code=204)
         except Exception as e:
             print(f">>> [PREVIEW DIAG] Professional extraction failed for {file_path}: {e}")
 

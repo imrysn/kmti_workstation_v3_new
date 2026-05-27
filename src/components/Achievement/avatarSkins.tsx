@@ -1587,9 +1587,10 @@ export function getUnlockedSkins(
 /** Render the equipped skin for a workstation, falling back to rookie */
 export function renderEquippedSkin(
   computerName: string,
-  achievements: Record<string, boolean> | undefined | null
+  achievements: Record<string, boolean> | undefined | null,
+  equippedSkinOverride?: string
 ): React.ReactNode {
-  const equippedKey = loadEquippedSkin(computerName);
+  const equippedKey = equippedSkinOverride || loadEquippedSkin(computerName);
   const unlocked = getUnlockedSkins(computerName, achievements);
   const skin = unlocked.find(s => s.key === equippedKey) ?? unlocked[0]; // fallback to rookie
   return skin.render();
@@ -1597,9 +1598,10 @@ export function renderEquippedSkin(
 
 export function getEquippedSkin(
   computerName: string,
-  achievements: Record<string, boolean> | undefined | null
+  achievements: Record<string, boolean> | undefined | null,
+  equippedSkinOverride?: string
 ): AvatarSkin {
-  const equippedKey = loadEquippedSkin(computerName);
+  const equippedKey = equippedSkinOverride || loadEquippedSkin(computerName);
   const unlocked = getUnlockedSkins(computerName, achievements);
   return unlocked.find(s => s.key === equippedKey) ?? unlocked[0];
 }

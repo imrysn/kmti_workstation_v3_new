@@ -357,6 +357,7 @@ async def get_all_status(db: AsyncSession = Depends(get_db)):
                 "active_module": s.active_module,
                 "version": s.version,
                 "status_message": s.status_message,
+                "equipped_skin": s.equipped_skin,
                 "last_ping": s.last_ping.isoformat() if s.last_ping else None,
                 "streaks": get_active_streaks(s.computer_name, active_names),
                 "achievements": _build_achievements(s.computer_name, active_names),
@@ -453,3 +454,25 @@ async def record_event(computer_name: str = Form(...), event_type: str = Form(..
     elif event_type == "stopwatch":
         stopwatch_counts[c] = stopwatch_counts.get(c, 0) + 1
     return {"success": True}
+
+
+@router.post("/skin")
+async def save_equipped_skin(
+    computer_name: str = Form(...),
+    skin_key: str = Form(...),
+    db: AsyncSession = Depends(get_db)
+):
+    """Save the selected avatar skin key for the workstation."""
+    c = computer_name.strip()
+    result = await db.execute(
+        select(WorkstationStatus).where(WorkstationStatus.computer_name == c)
+    )
+    statuses = result.scalars().all()
+    if not statuses:
+        return {"success": False, "message": f"No active workstation status row found for {c}."}
+    
+    for s in statuses:
+        s.equipped_skin = skin_key
+    await db.commit()
+    return {"success": True, "message": f"Equipped skin '{skin_key}' saved for {c}."}
+
