@@ -11,6 +11,7 @@ CACHES: Dict[str, TTLCache] = {
     "categories": TTLCache(maxsize=1, ttl=300),
     "tree": TTLCache(maxsize=500, ttl=120),
     "parts_list": TTLCache(maxsize=200, ttl=120),
+    "search": TTLCache(maxsize=500, ttl=300),
     "quot_list": TTLCache(maxsize=10, ttl=30),
     "quot_sessions": TTLCache(maxsize=1, ttl=10),
     "tc_grid": TTLCache(maxsize=50, ttl=60),

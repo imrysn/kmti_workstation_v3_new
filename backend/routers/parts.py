@@ -270,6 +270,7 @@ async def delete_project(project_id: int, db: AsyncSession = Depends(get_db), _u
     await cache_delete("categories")
     await cache_delete("tree")
     await cache_delete("parts_list")
+    await cache_delete("search")
     return {"success": True}
 
 @router.post("/projects/{project_id}/scan")
@@ -320,6 +321,7 @@ async def delete_projects_by_category(category: str, db: AsyncSession = Depends(
     await cache_delete("categories")
     await cache_delete("tree")
     await cache_delete("parts_list")
+    await cache_delete("search")
     return {"success": True, "count": len(projs)}
 
 @router.get("/projects/{project_id}/scan-status")
@@ -489,7 +491,7 @@ def make_snippet(content: Optional[str], query: str) -> Optional[str]:
     first_word = words[0] if words else query.lower()
     idx = content_lower.find(first_word)
     if idx == -1:
-        return content[:120] + "..." if len(content) > 120 else content
+        return None
         
     start = max(0, idx - 40)
     end = min(len(content), idx + 80)
@@ -514,7 +516,12 @@ async def list_parts(
     db: AsyncSession = Depends(get_db)
 ):
     is_searching = bool(search and search.strip())
-    if not is_searching:
+    if is_searching:
+        search_key = f"{search.strip()}:{project_id}:{cad_only}:{include_folders}:{folder_path or ''}:{recursive}:{limit}:{offset}"
+        cached_val = await cache_get("search", search_key)
+        if cached_val is not None:
+            return cached_val
+    else:
         cache_key = f"{project_id}:{cad_only}:{include_folders}:{folder_path or ''}:{recursive}:{limit}:{offset}"
         cached_val = await cache_get("parts_list", cache_key)
         if cached_val is not None:
@@ -592,16 +599,8 @@ async def list_parts(
                 boolean_search = ""
 
         if boolean_search:
-            # SEMANTIC UPGRADE: We now treat the Folder Context (file_path) as metadata.
-            # This allows Numerical Drawings (DWG-001) to be found by Assembly Keywords (WHEEL).
-            # We also OR it with substring matching (LIKE %search%) to match text in the middle of words (e.g. separated by underscores)
-            query = query.where(
-                or_(
-                    text("MATCH(file_name, file_path, content_text) AGAINST(:val IN BOOLEAN MODE)"),
-                    CadFileIndex.file_name.like(f"%{search.strip()}%"),
-                    CadFileIndex.file_path.like(f"%{search.strip()}%")
-                )
-            )
+            # OPTIMISTIC STAGE: Search using FULLTEXT index only (sub-10ms)
+            query = query.where(text("MATCH(file_name, file_path, content_text) AGAINST(:val IN BOOLEAN MODE)"))
             
             # Ranking Algorithm:
             # 1. Exact Filename Match (DWG-101) -> 1000 pts
@@ -630,11 +629,64 @@ async def list_parts(
         # Default Sorting
         query = query.order_by(CadFileIndex.is_folder.desc(), CadFileIndex.file_name.asc())
 
-    # 6. Apply limit/offset to SQL query for performance
     # Count total matching results first
-    count_query = select(func.count()).select_from(query.subquery())
+    count_query = query.with_only_columns(func.count(CadFileIndex.id)).order_by(None)
     total_count_res = await db.execute(count_query)
     total_count = total_count_res.scalar_one()
+
+    # FALLBACK STAGE: If FTS query returns 0, try substring LIKE query (handles partial/middle-word substrings)
+    if total_count == 0 and is_searching:
+        fallback_query = select(CadFileIndex)
+        if project_id is not None:
+            fallback_query = fallback_query.where(CadFileIndex.project_id == project_id)
+        if folder_path:
+            norm_fp = normalize_path(folder_path)
+            prefix = norm_fp + "/"
+            effective_recursive = recursive
+            if effective_recursive:
+                fallback_query = fallback_query.where(CadFileIndex.file_path.ilike(f"{prefix}%"))
+            else:
+                fallback_query = fallback_query.where(CadFileIndex.parent_path == norm_fp)
+        elif project_id:
+            proj = await db.get(Project, project_id)
+            if proj:
+                root_norm = normalize_path(proj.root_path)
+                effective_recursive = recursive
+                if not effective_recursive:
+                    fallback_query = fallback_query.where(CadFileIndex.parent_path == root_norm)
+
+        if cad_only:
+            fallback_query = fallback_query.where(CadFileIndex.file_type.in_(cad_exts))
+        if not include_folders:
+            fallback_query = fallback_query.where(CadFileIndex.is_folder == False)
+
+        fallback_query = fallback_query.where(
+            or_(
+                CadFileIndex.file_name.like(f"%{search.strip()}%"),
+                CadFileIndex.file_path.like(f"%{search.strip()}%")
+            )
+        )
+        
+        fallback_query = fallback_query.order_by(
+            text("""
+                (CASE WHEN file_name = :raw THEN 1000 ELSE 0 END) +
+                (CASE WHEN file_name LIKE :pfx THEN 500 ELSE 0 END) +
+                (CASE WHEN file_path LIKE :pfx_path THEN 300 ELSE 0 END) DESC
+            """),
+            CadFileIndex.is_folder.desc(),
+            CadFileIndex.file_name.asc()
+        ).params(
+            raw=search.strip(), 
+            pfx=f"{search.strip()}%",
+            pfx_path=f"%{search.strip()}%"
+        )
+
+        fb_count_query = fallback_query.with_only_columns(func.count(CadFileIndex.id)).order_by(None)
+        fb_count_res = await db.execute(fb_count_query)
+        total_count = fb_count_res.scalar_one()
+
+        if total_count > 0:
+            query = fallback_query
 
     # Did You Mean Spell Check Fallback
     did_you_mean = None
@@ -709,7 +761,7 @@ async def list_parts(
                     pfx_path=f"%{corrected.strip()}%"
                 )
 
-                corr_count_query = select(func.count()).select_from(corrected_query.subquery())
+                corr_count_query = corrected_query.with_only_columns(func.count(CadFileIndex.id)).order_by(None)
                 corr_count_res = await db.execute(corr_count_query)
                 total_count = corr_count_res.scalar_one()
 
@@ -759,7 +811,9 @@ async def list_parts(
             import logging
             logging.getLogger("kmti_backend").error(f"Re-ranking failed: {e}")
 
-    if not is_searching:
+    if is_searching:
+        await cache_set("search", search_key, res_dict)
+    else:
         await cache_set("parts_list", cache_key, res_dict)
     return res_dict
 
@@ -850,6 +904,7 @@ async def delete_item(file_id: int, db: AsyncSession = Depends(get_db), _user: U
     await db.commit()
     await cache_delete("tree")
     await cache_delete("parts_list")
+    await cache_delete("search")
     
     # Rescan project to fix counts asynchronously.
     # Fetch the project to get the actual root_path — passing "" caused silent scan failures.

@@ -51,7 +51,7 @@ def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse
                 meta["bound_z"] = parser.bounds['size'].z
 
     # Extract text content for deep indexing
-    meta["content_text"] = None
+    meta["content_text"] = ""
     if not _is_dir and meta["file_type"] in {'.pdf', '.docx', '.xlsx', '.dxf'}:
         try:
             from core.document_parser import extract_document_content
@@ -60,6 +60,21 @@ def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse
                 meta["content_text"] = txt[:50000]
         except Exception:
             pass
+
+    # Tokenize filename stem to support FTS sub-word matches (e.g. underscores/dashes/alphanumeric transitions)
+    # Apply to both files and folders to enable fast directory search
+    if filepath:
+        import re
+        stem = filepath.name if _is_dir else filepath.stem
+        if stem:
+            # Split camelCase / alphanumeric transitions (e.g., '2921WAIP' -> '2921 WAIP')
+            tokens = re.findall(r'[a-zA-Z]+|[0-9]+', stem)
+            if tokens:
+                tokenized_stem = " ".join(tokens)
+                if meta["content_text"]:
+                    meta["content_text"] = tokenized_stem + " | " + meta["content_text"]
+                else:
+                    meta["content_text"] = tokenized_stem
 
     return meta
 

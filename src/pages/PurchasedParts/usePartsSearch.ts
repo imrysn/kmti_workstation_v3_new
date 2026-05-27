@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { partsApi } from '../../services/api';
 import type { IPurchasedPart } from '../../types';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -60,6 +60,8 @@ export function usePartsSearch(selectedProjectId?: number) {
     setOffset(0);
   }, [selectedProjectId]);
 
+  const requestCountRef = useRef(0);
+
   const handleSearch = useCallback(async (isLoadMore = false) => {
     if (!selectedProjectId && !search && selectedSpecs.length === 0) {
       setSearchResults([]);
@@ -68,6 +70,9 @@ export function usePartsSearch(selectedProjectId?: number) {
     }
 
     if (isLoadMore && (isLoadingMore || !resultCapped)) return;
+
+    requestCountRef.current += 1;
+    const reqId = requestCountRef.current;
 
     const start = performance.now();
     if (!isLoadMore) {
@@ -95,6 +100,10 @@ export function usePartsSearch(selectedProjectId?: number) {
         currentOffset
       );
       
+      if (reqId !== requestCountRef.current) {
+        return; // Ignore stale search result
+      }
+
       const payload = res.data;
       const items = Array.isArray(payload) ? payload : (payload.items ?? []);
       const total = Array.isArray(payload) ? payload.length : (payload.total ?? 0);
@@ -116,8 +125,10 @@ export function usePartsSearch(selectedProjectId?: number) {
     } catch (err) {
       console.error(err);
     } finally {
-      setIsSearching(false);
-      setIsLoadingMore(false);
+      if (reqId === requestCountRef.current) {
+        setIsSearching(false);
+        setIsLoadingMore(false);
+      }
     }
   }, [
     selectedProjectId, search, selectedSpecs, caseSensitive, cadOnly, 
