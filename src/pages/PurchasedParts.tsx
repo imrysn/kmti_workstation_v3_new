@@ -251,6 +251,7 @@ export default function PurchasedParts() {
           selectedSpecs={searchConfig.selectedSpecs}
           onSpecClick={searchConfig.toggleSelectedSpec}
           categories={searchConfig.categories}
+          didYouMean={searchConfig.didYouMean}
           onLoadMore={() => searchConfig.handleSearch(true)}
         />
 

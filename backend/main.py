@@ -54,18 +54,43 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
         logger.info("  [SUCCESS] Database connection established.")
 
-        # Safe dynamic column migration for status_message
+        # Safe dynamic column migration for status_message & content_text
         async with engine.connect() as conn:
             try:
                 res = await conn.execute(text("SHOW COLUMNS FROM kmti_workstation_status LIKE 'status_message'"))
-                column = res.fetchone()
-                if not column:
+                if not res.fetchone():
                     logger.info("  [MIGRATION] Adding 'status_message' column to 'kmti_workstation_status'...")
                     await conn.execute(text("ALTER TABLE kmti_workstation_status ADD COLUMN status_message VARCHAR(200) DEFAULT NULL"))
                     await conn.commit()
                     logger.info("  [SUCCESS] 'status_message' column added successfully.")
             except Exception as migrate_err:
                 logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate status_message column: {migrate_err}")
+
+            try:
+                # Use advisory locks to prevent concurrent worker processes deadlocking on DDL metadata locks
+                lock_res = await conn.execute(text("SELECT GET_LOCK('kmti_migration_lock', 10)"))
+                if lock_res.scalar() == 1:
+                    try:
+                        res = await conn.execute(text("SHOW COLUMNS FROM cad_file_index LIKE 'content_text'"))
+                        if not res.fetchone():
+                            logger.info("  [MIGRATION] Adding 'content_text' column to 'cad_file_index'...")
+                            await conn.execute(text("ALTER TABLE cad_file_index ADD COLUMN content_text LONGTEXT DEFAULT NULL"))
+                            await conn.commit()
+                            logger.info("  [SUCCESS] 'content_text' column added successfully.")
+                    finally:
+                        await conn.execute(text("SELECT RELEASE_LOCK('kmti_migration_lock')"))
+                        await conn.commit()
+            except Exception as migrate_err:
+                logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate content_text column: {migrate_err}")
+
+        # Setup FTS index on boot to match the columns list
+        try:
+            from core.nas_indexer import setup_fts
+            async with AsyncSessionLocal() as session:
+                await setup_fts(session)
+            logger.info("  [SUCCESS] MySQL FULLTEXT index verified.")
+        except Exception as fts_err:
+            logger.warning(f"  [WARNING] Failed to verify FULLTEXT index: {fts_err}")
     except Exception as e:
         logger.error(f"  [ERROR] Database initialization failed: {e}")
 

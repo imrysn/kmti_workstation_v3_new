@@ -31,6 +31,7 @@ export function usePartsSearch(selectedProjectId?: number) {
   const [searchResults, setSearchResults] = useState<IPurchasedPart[]>([]);
   const [resultTotal, setResultTotal] = useState(0);
   const [resultCapped, setResultCapped] = useState(false);
+  const [didYouMean, setDidYouMean] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
@@ -98,6 +99,7 @@ export function usePartsSearch(selectedProjectId?: number) {
       const items = Array.isArray(payload) ? payload : (payload.items ?? []);
       const total = Array.isArray(payload) ? payload.length : (payload.total ?? 0);
       const capped = !Array.isArray(payload) && !!payload.capped;
+      const dym = !Array.isArray(payload) ? (payload.didYouMean ?? null) : null;
 
       if (isLoadMore) {
         setSearchResults(prev => [...prev, ...items]);
@@ -109,6 +111,7 @@ export function usePartsSearch(selectedProjectId?: number) {
       
       setResultTotal(total);
       setResultCapped(capped);
+      setDidYouMean(dym);
       if (!isLoadMore) setSearchTime((performance.now() - start) / 1000);
     } catch (err) {
       console.error(err);
@@ -144,6 +147,7 @@ export function usePartsSearch(selectedProjectId?: number) {
     folderFilter, setFolderFilter,
     searchResults, setSearchResults,
     resultTotal, resultCapped,
+    didYouMean, setDidYouMean,
     isSearching, isLoadingMore, searchTime,
     handleSearch, offset, limit, setLimit
   };

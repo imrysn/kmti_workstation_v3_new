@@ -44,6 +44,7 @@ interface ResultsContentProps {
   selectedSpecs: string[]
   onSpecClick: (spec: string) => void
   categories: string[]
+  didYouMean: string | null
 }
 
 // --- Lazy Thumbnail Result Row ---
@@ -86,6 +87,20 @@ const StandardResultRow = React.memo(({
     <div className="findr-result-details">
       <div className="findr-result-name">{res.fileName}</div>
       <div className="findr-result-path">{res.filePath.split('\\').join('/')}</div>
+      {res.snippet && (
+        <div className="findr-result-snippet" style={{
+          fontSize: '11px',
+          color: 'var(--text-muted, #888)',
+          marginTop: '2px',
+          fontStyle: 'italic',
+          opacity: 0.8,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          Matches: {res.snippet}
+        </div>
+      )}
     </div>
     <div className="findr-result-meta">
       <div className="findr-result-size">{res.isFolder ? '--' : formatFileSize(res.size)}</div>
@@ -120,7 +135,7 @@ export const ResultsContent = React.memo(function ResultsContent({
   isSearching, isLoadingMore, resultCapped, resultTotal, searchResults, searchTime,
   focusedIndex, setFocusedIndex, resultsListRef, handleOpen,
   selectedResult, setSelectedResult, onLoadMore,
-  selectedSpecs, onSpecClick, categories
+  selectedSpecs, onSpecClick, categories, didYouMean
 }: ResultsContentProps) {
   
   const [isScrolling, setIsScrolling] = useState(false);
@@ -194,6 +209,38 @@ export const ResultsContent = React.memo(function ResultsContent({
           <label className="findr-filter"><input type="checkbox" checked={recursiveSearch} onChange={e => setRecursiveSearch(e.target.checked)} /> Recursive</label>
         </div>
       </div>
+
+      {didYouMean && (
+        <div className="findr-did-you-mean" style={{
+          padding: '8px 16px',
+          margin: '0 16px 12px 16px',
+          background: 'rgba(235, 94, 40, 0.08)',
+          borderLeft: '4px solid var(--accent-color, #eb5e28)',
+          borderRadius: '4px',
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          color: 'var(--text-muted)'
+        }}>
+          <span>Showing results for:</span>
+          <button 
+            onClick={() => setSearch(didYouMean)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent-color, #eb5e28)',
+              fontWeight: 700,
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              padding: 0,
+              fontSize: '14px'
+            }}
+          >
+            {didYouMean}
+          </button>
+        </div>
+      )}
 
       {selectedProject?.id === 1 && (
         <SpecFilter 

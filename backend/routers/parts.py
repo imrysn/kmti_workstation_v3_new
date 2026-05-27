@@ -105,6 +105,86 @@ def _word_match(text: str, query: str) -> bool:
         if word.startswith(query): return True
     return False
 
+# Engineering synonym mappings for search query expansion
+SYNONYMS = {
+    "bolt": ["screw", "fastener", "hexbolt"],
+    "screw": ["bolt", "fastener", "setscrew"],
+    "fastener": ["bolt", "screw", "rivet", "nut"],
+    "washer": ["spacer", "ring", "shim"],
+    "spacer": ["washer", "shim", "collar"],
+    "bearing": ["bushing", "sleeve", "ballbearing"],
+    "bracket": ["mount", "support", "holder", "brace"],
+    "plate": ["sheet", "flange", "flatbar"],
+    "motor": ["engine", "actuator", "drive"],
+    "pin": ["dowel", "cotter", "shaft"],
+    "shaft": ["rod", "pin", "spindle"],
+    "coupling": ["joint", "connector", "adapter"],
+}
+
+# Vocabulary cache for spell check / typo auto-correction
+_vocab_cache = set()
+_vocab_last_update = 0
+
+async def get_vocab(db: AsyncSession) -> set:
+    global _vocab_cache, _vocab_last_update
+    import time
+    if not _vocab_cache or time.time() - _vocab_last_update > 300:
+        try:
+            # Select distinct filenames to build word vocabulary
+            stmt = select(distinct(CadFileIndex.file_name))
+            res = await db.execute(stmt)
+            names = res.scalars().all()
+            new_vocab = set()
+            for name in names:
+                if name:
+                    words = re.split(r'[^a-zA-Z0-9]', name)
+                    for w in words:
+                        if len(w) > 2 and not w.isdigit():
+                            new_vocab.add(w.lower())
+            _vocab_cache = new_vocab
+            _vocab_last_update = time.time()
+        except Exception as e:
+            import logging
+            logging.getLogger("kmti_backend").error(f"Error building vocab cache: {e}")
+    return _vocab_cache
+
+def suggest_correction(query: str, vocab: set) -> Optional[str]:
+    words = re.split(r'([_\-\s\.]+)', query)
+    corrected = []
+    has_change = False
+    
+    for part in words:
+        if not part or re.match(r'^[^a-zA-Z0-9]+$', part) or len(part) <= 2 or part.isdigit():
+            corrected.append(part)
+            continue
+        
+        part_lower = part.lower()
+        if part_lower in vocab:
+            corrected.append(part)
+            continue
+            
+        best_word = part
+        min_dist = 999
+        candidates = [v for v in vocab if abs(len(v) - len(part)) <= 2]
+        
+        for cand in candidates:
+            dist = _levenshtein_distance(part_lower, cand)
+            if dist < min_dist and dist <= max(1, len(part) // 3):
+                min_dist = dist
+                best_word = cand
+                
+        if best_word.lower() != part_lower:
+            if part.isupper():
+                best_word = best_word.upper()
+            elif part[0].isupper():
+                best_word = best_word.capitalize()
+            corrected.append(best_word)
+            has_change = True
+        else:
+            corrected.append(part)
+            
+    return "".join(corrected) if has_change else None
+
 # --- PROJECTS API ---
 
 @router.get("/projects/browse")
@@ -401,6 +481,25 @@ async def get_categories(db: AsyncSession = Depends(get_db)):
         return []
 
 
+def make_snippet(content: Optional[str], query: str) -> Optional[str]:
+    if not content or not query:
+        return None
+    content_lower = content.lower()
+    words = query.lower().split()
+    first_word = words[0] if words else query.lower()
+    idx = content_lower.find(first_word)
+    if idx == -1:
+        return content[:120] + "..." if len(content) > 120 else content
+        
+    start = max(0, idx - 40)
+    end = min(len(content), idx + 80)
+    snippet = content[start:end]
+    if start > 0:
+        snippet = "..." + snippet
+    if end < len(content):
+        snippet = snippet + "..."
+    return snippet
+
 @router.get("/")
 async def list_parts(
     project_id: int = None,
@@ -478,15 +577,31 @@ async def list_parts(
         else:
             words = clean.split()
             if words:
-                # Add * for prefix match on each word
-                boolean_search = " ".join([f"+{w}*" for w in words])
+                # Add * for prefix match on each word, expanding with synonyms
+                boolean_parts = []
+                for w in words:
+                    w_lower = w.lower()
+                    if w_lower in SYNONYMS:
+                        syns = SYNONYMS[w_lower]
+                        terms = [f"{w}*"] + [f"{syn}*" for syn in syns]
+                        boolean_parts.append(f"+({' '.join(terms)})")
+                    else:
+                        boolean_parts.append(f"+{w}*")
+                boolean_search = " ".join(boolean_parts)
             else:
                 boolean_search = ""
 
         if boolean_search:
             # SEMANTIC UPGRADE: We now treat the Folder Context (file_path) as metadata.
             # This allows Numerical Drawings (DWG-001) to be found by Assembly Keywords (WHEEL).
-            query = query.where(text("MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE)"))
+            # We also OR it with substring matching (LIKE %search%) to match text in the middle of words (e.g. separated by underscores)
+            query = query.where(
+                or_(
+                    text("MATCH(file_name, file_path, content_text) AGAINST(:val IN BOOLEAN MODE)"),
+                    CadFileIndex.file_name.like(f"%{search.strip()}%"),
+                    CadFileIndex.file_path.like(f"%{search.strip()}%")
+                )
+            )
             
             # Ranking Algorithm:
             # 1. Exact Filename Match (DWG-101) -> 1000 pts
@@ -498,7 +613,7 @@ async def list_parts(
                     (CASE WHEN file_name = :raw THEN 1000 ELSE 0 END) +
                     (CASE WHEN file_name LIKE :pfx THEN 500 ELSE 0 END) +
                     (CASE WHEN file_path LIKE :pfx_path THEN 300 ELSE 0 END) +
-                    (MATCH(file_name, file_path) AGAINST(:val IN BOOLEAN MODE) * 10) DESC
+                    (MATCH(file_name, file_path, content_text) AGAINST(:val IN BOOLEAN MODE) * 10) DESC
                 """),
                 CadFileIndex.is_folder.desc(),
                 CadFileIndex.file_name.asc()
@@ -521,16 +636,102 @@ async def list_parts(
     total_count_res = await db.execute(count_query)
     total_count = total_count_res.scalar_one()
 
-    # Apply pagination and execute
-    query = query.limit(limit).offset(offset)
-    result = await db.execute(query)
-    rows = result.scalars().all()
+    # Did You Mean Spell Check Fallback
+    did_you_mean = None
+    if total_count == 0 and is_searching:
+        vocab = await get_vocab(db)
+        corrected = suggest_correction(search, vocab)
+        if corrected:
+            did_you_mean = corrected
+            corrected_clean = re.sub(r'[<()~*@]', ' ', corrected.strip())
+            if '"' in corrected_clean:
+                corrected_boolean = corrected_clean
+            else:
+                corrected_words = corrected_clean.split()
+                corr_bool_parts = []
+                for w in corrected_words:
+                    w_lower = w.lower()
+                    if w_lower in SYNONYMS:
+                        syns = SYNONYMS[w_lower]
+                        terms = [f"{w}*"] + [f"{syn}*" for syn in syns]
+                        corr_bool_parts.append(f"+({' '.join(terms)})")
+                    else:
+                        corr_bool_parts.append(f"+{w}*")
+                corrected_boolean = " ".join(corr_bool_parts)
+
+            if corrected_boolean:
+                corrected_query = select(CadFileIndex)
+                if project_id is not None:
+                    corrected_query = corrected_query.where(CadFileIndex.project_id == project_id)
+                
+                if folder_path:
+                    norm_fp = normalize_path(folder_path)
+                    prefix = norm_fp + "/"
+                    effective_recursive = recursive
+                    if effective_recursive:
+                        corrected_query = corrected_query.where(CadFileIndex.file_path.ilike(f"{prefix}%"))
+                    else:
+                        corrected_query = corrected_query.where(CadFileIndex.parent_path == norm_fp)
+                elif project_id:
+                    proj = await db.get(Project, project_id)
+                    if proj:
+                        root_norm = normalize_path(proj.root_path)
+                        effective_recursive = recursive
+                        if not effective_recursive:
+                            corrected_query = corrected_query.where(CadFileIndex.parent_path == root_norm)
+
+                if cad_only:
+                    corrected_query = corrected_query.where(CadFileIndex.file_type.in_(cad_exts))
+                if not include_folders:
+                    corrected_query = corrected_query.where(CadFileIndex.is_folder == False)
+
+                corrected_query = corrected_query.where(
+                    or_(
+                        text("MATCH(file_name, file_path, content_text) AGAINST(:val IN BOOLEAN MODE)"),
+                        CadFileIndex.file_name.like(f"%{corrected.strip()}%"),
+                        CadFileIndex.file_path.like(f"%{corrected.strip()}%")
+                    )
+                )
+                corrected_query = corrected_query.order_by(
+                    text("""
+                        (CASE WHEN file_name = :raw THEN 1000 ELSE 0 END) +
+                        (CASE WHEN file_name LIKE :pfx THEN 500 ELSE 0 END) +
+                        (CASE WHEN file_path LIKE :pfx_path THEN 300 ELSE 0 END) +
+                        (MATCH(file_name, file_path, content_text) AGAINST(:val IN BOOLEAN MODE) * 10) DESC
+                    """),
+                    CadFileIndex.is_folder.desc(),
+                    CadFileIndex.file_name.asc()
+                )
+                corrected_query = corrected_query.params(
+                    val=corrected_boolean, 
+                    raw=corrected.strip(), 
+                    pfx=f"{corrected.strip()}%",
+                    pfx_path=f"%{corrected.strip()}%"
+                )
+
+                corr_count_query = select(func.count()).select_from(corrected_query.subquery())
+                corr_count_res = await db.execute(corr_count_query)
+                total_count = corr_count_res.scalar_one()
+
+                corrected_query = corrected_query.limit(limit).offset(offset)
+                corr_result = await db.execute(corrected_query)
+                rows = corr_result.scalars().all()
+            else:
+                rows = []
+        else:
+            rows = []
+    else:
+        # Apply pagination and execute
+        query = query.limit(limit).offset(offset)
+        result = await db.execute(query)
+        rows = result.scalars().all()
     
     # 7. Final Response
     res_dict = {
         "total": total_count,
         "showing": len(rows),
         "capped": total_count > (offset + limit),
+        "didYouMean": did_you_mean,
         "items": [
             {
                 "id": r.id,
@@ -544,11 +745,20 @@ async def list_parts(
                 "partGeomName": r.part_geom_name,
                 "boundX": r.bound_x,
                 "boundY": r.bound_y,
-                "boundZ": r.bound_z
+                "boundZ": r.bound_z,
+                "snippet": make_snippet(r.content_text, search or did_you_mean or "")
             }
             for r in rows
         ]
     }
+    if is_searching and res_dict["items"]:
+        try:
+            from core.semantic_engine import semantic_engine
+            res_dict["items"] = semantic_engine.re_rank(search or did_you_mean or "", res_dict["items"])
+        except Exception as e:
+            import logging
+            logging.getLogger("kmti_backend").error(f"Re-ranking failed: {e}")
+
     if not is_searching:
         await cache_set("parts_list", cache_key, res_dict)
     return res_dict

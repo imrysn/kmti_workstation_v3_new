@@ -18,6 +18,7 @@ export interface IPurchasedPart {
   boundX?: number
   boundY?: number
   boundZ?: number
+  snippet?: string
 }
 
 export interface IProject {

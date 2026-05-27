@@ -50,6 +50,17 @@ def get_file_metadata(filepath: Path, project_id: int, project_root: Path, parse
                 meta["bound_y"] = parser.bounds['size'].y
                 meta["bound_z"] = parser.bounds['size'].z
 
+    # Extract text content for deep indexing
+    meta["content_text"] = None
+    if not _is_dir and meta["file_type"] in {'.pdf', '.docx', '.xlsx', '.dxf'}:
+        try:
+            from core.document_parser import extract_document_content
+            txt = extract_document_content(str(filepath))
+            if txt:
+                meta["content_text"] = txt[:50000]
+        except Exception:
+            pass
+
     return meta
 
 
@@ -69,13 +80,19 @@ async def setup_fts(session: AsyncSession):
         pass
 
     # 2. Add MySQL FULLTEXT index
-    # We use a try-except because 'ADD FULLTEXT' might fail if it already exists or on certain MariaDB versions
     try:
-        # Check if index already exists
+        from sqlalchemy import text
         res = await session.execute(text("SHOW INDEX FROM cad_file_index WHERE Key_name = 'ft_search'"))
-        if not res.fetchone():
+        rows = res.fetchall()
+        if len(rows) > 0:
+            # If the index does not cover the 3 required fields, drop and recreate
+            if len(rows) < 3:
+                print("Upgrading MySQL FULLTEXT index 'ft_search' to include content_text...")
+                await session.execute(text("ALTER TABLE cad_file_index DROP INDEX ft_search"))
+                await session.execute(text("ALTER TABLE cad_file_index ADD FULLTEXT INDEX ft_search (file_name, file_path, content_text)"))
+        else:
             print("Creating MySQL FULLTEXT index 'ft_search'...")
-            await session.execute(text("ALTER TABLE cad_file_index ADD FULLTEXT INDEX ft_search (file_name, file_path)"))
+            await session.execute(text("ALTER TABLE cad_file_index ADD FULLTEXT INDEX ft_search (file_name, file_path, content_text)"))
     except Exception as e:
         print(f"Warning: Could not create FULLTEXT index: {e}")
     
