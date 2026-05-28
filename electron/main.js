@@ -4,7 +4,7 @@ const path = require('path')
 const os = require('os')
 const fs = require('fs')
 
-// v3.6.4-HUD-optimized-modular-architecture
+// v3.7.8-HUD-optimized-modular-architecture
 // electron-updater — handles downloads from GitHub Releases
 let autoUpdater
 try {

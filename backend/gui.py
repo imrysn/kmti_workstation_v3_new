@@ -89,15 +89,16 @@ class QueueHandler(logging.Handler):
 
 # --- GUI Application ---
 class KMTIServerGUI(ctk.CTk):
+    VERSION = "3.7.8"
+
     def __init__(self, fastapi_app):
         super().__init__()
         self.app = fastapi_app
         self.server_thread = None
         self.should_exit = False
         
-        VERSION = "3.6.4"
         # Window Configuration
-        self.title(f"KMTI Workstation v{VERSION} — Control Center")
+        self.title(f"KMTI Workstation v{self.VERSION} — Control Center")
         self.geometry("900x600")
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -111,7 +112,7 @@ class KMTIServerGUI(ctk.CTk):
         self.logo_label = ctk.CTkLabel(self.sidebar, text="KMTI WORKSTATION", font=ctk.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         
-        self.subtitle_label = ctk.CTkLabel(self.sidebar, text="Backend Control Center v3.6.4", font=ctk.CTkFont(size=11), text_color="gray")
+        self.subtitle_label = ctk.CTkLabel(self.sidebar, text=f"Backend Control Center v{self.VERSION}", font=ctk.CTkFont(size=11), text_color="gray")
         self.subtitle_label.grid(row=1, column=0, padx=20, pady=(0, 20))
 
         # 🍱 Heartbeat Indicators
@@ -243,7 +244,7 @@ class KMTIServerGUI(ctk.CTk):
         logging.warning("[SYSTEM] Restarting server logic...")
         # Since uvicorn.run is already in a daemon thread, a true restart 
         # often locks Port 8000. Reverting to simple notify as requested.
-        tk.messagebox.showinfo("Restart Service", f"Backend Stability v{VERSION} active. The server logic has been notified. If features are not reflecting, please close and reopen the app.")
+        tk.messagebox.showinfo("Restart Service", f"Backend Stability v{self.VERSION} active. The server logic has been notified. If features are not reflecting, please close and reopen the app.")
 
     def open_logs_folder(self):
         from core.config import LOG_DIR
