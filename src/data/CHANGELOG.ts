@@ -22,6 +22,18 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.8',
+    date: 'May 28, 2026',
+    entries: [
+      { type: 'new', text: 'Quotation Navigation Link — Added an interactive launch link directly inside the Quotation Number spreadsheet cell. Clicking it opens the chosen quotation instantly in the Quotation Workspace.' },
+      { type: 'improvement', text: 'Partial Billing Splitting — Implemented an intelligent revenue-splitting engine. It automatically parses payment percentages from the Update Detail field (e.g. "Downpayment 30%") to divide the total between completed cash flow (solid green line) and remaining projection (dashed green line), defaulting to a 50% split.' },
+      { type: 'improvement', text: 'Sleeker Billing Dashboard — Reorganized KPI cards into 4 primary columns (Total Sales, Approved, Pending Approval, Cancelled), increased count badge sizing, and enlarged the main area chart container (occupying 78% width) for enhanced visual clarity.' },
+      { type: 'improvement', text: 'Glassmorphic Chart Tooltips — Replaced default tooltips with beautiful custom glassmorphic charts tooltips featuring soft drop-shadows and color-schemed indicator dots.' },
+      { type: 'improvement', text: 'Seamless Date Picker — Integrated the HTML5 showPicker API to automatically trigger the browser native popup calendar as soon as a user clicks to edit any date cell (Date, Submitted to Admin, Date Paid).' },
+      { type: 'fix', text: 'Excel Row Background Fill — Fixed a styling bug where empty columns (such as Date Paid) would skip the row-level background fill highlight due to ExcelJS cell iteration defaults.' }
+    ],
+  },
+  {
     version: '3.7.7',
     date: 'May 27, 2026',
     entries: [

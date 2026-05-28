@@ -174,7 +174,7 @@ export default function BillingMonitoring() {
         <div className="billing-view billing-view-dashboard">
           {/* KPI Summary Cards */}
           {/* Side-by-Side Analytics Grid (Completely eliminates dead space) */}
-          <div className="analytics-grid" style={{ gridTemplateColumns: '3fr 7fr' }}>
+          <div className="analytics-grid" style={{ gridTemplateColumns: '2.2fr 7.8fr' }}>
             {/* Left Column: KPI Summary Column */}
             <BillingKpiCards
               statusStats={statusStats}

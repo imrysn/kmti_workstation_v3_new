@@ -31,26 +31,16 @@ export default function BillingKpiCards({
   return (
     <div className={vertical ? "billing-kpi-column" : "billing-kpi-row"}>
 
-      {/* Total Sales */}
+      {/* Total Sales (Billing Completed + Paid portion of Partial Billing) */}
       <div className="kpi-card kpi-green">
         <div className="kpi-card-top" style={{ justifyContent: 'flex-end' }}>
-          <span className={`kpi-trend ${trendUp ? 'up' : 'down'}`}>
-            {trendUp ? '↑' : '↓'} {Math.abs(trendPercent).toFixed(0)}%
+          <span className="kpi-count-badge kpi-badge-green" style={{ color: '#10b981', background: 'rgba(16, 185, 129, 0.1)' }}>
+            {completedCount}
           </span>
         </div>
-        <div className="kpi-value">{formatCurrency(revenueSum)}</div>
-        <div className="kpi-label">Total Sales</div>
-        <div className="kpi-sub">{totalItems} quotation{totalItems !== 1 ? 's' : ''} in view</div>
-      </div>
-
-      {/* Completed / Collected */}
-      <div className="kpi-card kpi-purple">
-        <div className="kpi-card-top" style={{ justifyContent: 'flex-end' }}>
-          <span className="kpi-count-badge kpi-badge-purple">{completedCount}</span>
-        </div>
         <div className="kpi-value">{formatCurrency(completedTotal)}</div>
-        <div className="kpi-label">Billing Completed</div>
-        <div className="kpi-sub">Fully collected</div>
+        <div className="kpi-label">Total Sales</div>
+        <div className="kpi-sub">Collected revenue</div>
       </div>
 
       {/* Approved & Active */}
@@ -59,8 +49,8 @@ export default function BillingKpiCards({
           <span className="kpi-count-badge kpi-badge-blue">{activeCount}</span>
         </div>
         <div className="kpi-value">{formatCurrency(activeTotal)}</div>
-        <div className="kpi-label">Approved & Active</div>
-        <div className="kpi-sub">In progress</div>
+        <div className="kpi-label">Approved</div>
+        <div className="kpi-sub">In progress forecast</div>
       </div>
 
       {/* Pending Approval */}

@@ -3,6 +3,16 @@ import { quotationApi, designersApi } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import type { IQuotation } from '../types'
 
+const getPartialBillingPercentage = (detail?: string | null): number => {
+  if (!detail) return 50
+  const match = detail.match(/(\d+)\s*%/)
+  if (match) {
+    const percent = parseInt(match[1])
+    if (percent > 0 && percent < 100) return percent
+  }
+  return 50
+}
+
 export interface IBillingChartPoint {
   name: string
   completed: number
@@ -328,13 +338,24 @@ export function useBillingMonitoring() {
           return t >= dayStart.getTime() && t <= dayEnd.getTime()
         })
         
-        const dayCompleted = dayQuots
-          .filter(q => q.quotationStatus === 'Billing Completion')
-          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+        let dayCompleted = 0
+        let dayApprovedActive = 0
 
-        const dayApprovedActive = dayQuots
-          .filter(q => q.quotationStatus === 'Approved' || q.quotationStatus === 'Partial Billing')
-          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+        dayQuots.forEach(q => {
+          const status = q.quotationStatus || 'For Approval'
+          const amt = q.grandTotal || 0
+          if (status === 'Billing Completion') {
+            dayCompleted += amt
+          } else if (status === 'Approved') {
+            dayApprovedActive += amt
+          } else if (status === 'Partial Billing') {
+            const pct = getPartialBillingPercentage(q.updateDetail)
+            const completedAmt = amt * (pct / 100)
+            const activeAmt = amt * ((100 - pct) / 100)
+            dayCompleted += completedAmt
+            dayApprovedActive += activeAmt
+          }
+        })
 
         const dayPending = dayQuots
           .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
@@ -387,13 +408,24 @@ export function useBillingMonitoring() {
           return t >= mStart.getTime() && t <= mEnd.getTime()
         })
         
-        const mCompleted = mQuots
-          .filter(q => q.quotationStatus === 'Billing Completion')
-          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+        let mCompleted = 0
+        let mApprovedActive = 0
 
-        const mApprovedActive = mQuots
-          .filter(q => q.quotationStatus === 'Approved' || q.quotationStatus === 'Partial Billing')
-          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
+        mQuots.forEach(q => {
+          const status = q.quotationStatus || 'For Approval'
+          const amt = q.grandTotal || 0
+          if (status === 'Billing Completion') {
+            mCompleted += amt
+          } else if (status === 'Approved') {
+            mApprovedActive += amt
+          } else if (status === 'Partial Billing') {
+            const pct = getPartialBillingPercentage(q.updateDetail)
+            const completedAmt = amt * (pct / 100)
+            const activeAmt = amt * ((100 - pct) / 100)
+            mCompleted += completedAmt
+            mApprovedActive += activeAmt
+          }
+        })
 
         const mPending = mQuots
           .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
@@ -528,9 +560,21 @@ export function useBillingMonitoring() {
 
     quotations.forEach(q => {
       const status = q.quotationStatus || 'For Approval'
-      if (stats[status]) {
-        stats[status].count++
-        stats[status].total += (q.grandTotal || 0)
+      const amt = q.grandTotal || 0
+      
+      if (status === 'Partial Billing') {
+        stats['Partial Billing'].count++
+        const pct = getPartialBillingPercentage(q.updateDetail)
+        const completedAmt = amt * (pct / 100)
+        const activeAmt = amt * ((100 - pct) / 100)
+        
+        stats['Billing Completion'].total += completedAmt
+        stats['Partial Billing'].total += activeAmt
+      } else {
+        if (stats[status]) {
+          stats[status].count++
+          stats[status].total += amt
+        }
       }
     })
 

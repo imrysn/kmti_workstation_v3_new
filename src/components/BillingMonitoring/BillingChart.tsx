@@ -45,6 +45,59 @@ interface BillingChartProps {
   setEndMonth: (m: number) => void
 }
 
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const dataPoint = payload[0].payload;
+    const dateStr = dataPoint.displayDate || label;
+    return (
+      <div className="custom-chart-tooltip" style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border)',
+        borderRadius: '12px',
+        padding: '12px 16px',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
+        backdropFilter: 'blur(8px)',
+        textAlign: 'left'
+      }}>
+        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', borderBottom: '1px solid var(--border)', paddingBottom: '4px' }}>
+          {dateStr}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {payload.map((entry: any, index: number) => {
+            const labels: Record<string, string> = {
+              completed: 'Billing Completed',
+              approvedActive: 'Approved',
+              pending: 'Pending Approval',
+              cancelled: 'Cancelled'
+            };
+            const displayName = labels[entry.name] || entry.name;
+            return (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between', minWidth: '180px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: entry.color || entry.fill,
+                    display: 'inline-block'
+                  }}></span>
+                  <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                    {displayName}
+                  </span>
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'monospace', color: entry.color || entry.fill }}>
+                  ¥{Number(entry.value).toLocaleString()}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function BillingChart({
   chartData,
   timeframe,
@@ -239,7 +292,7 @@ export default function BillingChart({
           <div className="crypto-metric">
             <span className="crypto-metric-value">{formatCurrency(revenueSum)}</span>
             <span className="crypto-metric-label">
-              SALES 
+              SALES
               <span className={`crypto-trend-badge ${trendPercent >= 0 ? 'up' : 'down'}`}>
                 {trendPercent >= 0 ? '↑' : '↓'} {Math.abs(trendPercent).toFixed(0)}% {timeframeLabel}
               </span>
@@ -249,14 +302,14 @@ export default function BillingChart({
 
         {/* Segmented Toggle Control */}
         <div className="crypto-chart-type-toggles">
-          <button 
-            className={chartView === 'total-sales' ? 'active' : ''} 
+          <button
+            className={chartView === 'total-sales' ? 'active' : ''}
             onClick={() => setChartView('total-sales')}
           >
             Total Sales
           </button>
-          <button 
-            className={chartView === 'client-sales' ? 'active' : ''} 
+          <button
+            className={chartView === 'client-sales' ? 'active' : ''}
             onClick={() => setChartView('client-sales')}
           >
             Sales per Client
@@ -350,20 +403,20 @@ export default function BillingChart({
             <AreaChart data={chartData} margin={{ top: 15, right: 48, left: 8, bottom: 5 }}>
               <defs>
                 <linearGradient id="completedGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.16}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.16} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="approvedActiveGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.06}/>
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.06} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="pendingGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.06}/>
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0}/>
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.06} />
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
                 </linearGradient>
                 <linearGradient id="cancelledGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.06}/>
-                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0}/>
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.06} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0} />
                 </linearGradient>
               </defs>
 
@@ -389,29 +442,7 @@ export default function BillingChart({
                   return `¥${val}`
                 }}
               />
-              <ChartTooltip
-                contentStyle={{
-                  background: 'var(--bg-secondary)',
-                  borderColor: 'var(--border)',
-                  borderRadius: 10,
-                  fontSize: 12,
-                  color: 'var(--text-primary)',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)'
-                }}
-                labelFormatter={(label, items) => {
-                  if (items && items[0]) return items[0].payload.displayDate || label
-                  return label
-                }}
-                formatter={(value: any, name: any) => {
-                  const labels: Record<string, string> = {
-                    completed:      '↑ Billing Completed',
-                    approvedActive: '→ Approved & Active',
-                    pending:        '• Pending Approval',
-                    cancelled:      '↓ Cancelled'
-                  }
-                  return [`¥${Number(value).toLocaleString()}`, labels[name] || name]
-                }}
-              />
+              <ChartTooltip content={<CustomTooltip />} />
 
               {showCancelled && (
                 <Area
@@ -450,7 +481,7 @@ export default function BillingChart({
                   stroke="#10b981"
                   strokeWidth={2}
                   strokeDasharray="6 3"
-                  strokeOpacity={0.5}
+                  strokeOpacity={0.7}
                   fillOpacity={1}
                   fill="url(#approvedActiveGradient)"
                   dot={createDotRenderer('#10b981', 'approvedActive')}
@@ -502,24 +533,7 @@ export default function BillingChart({
                   return `¥${val}`
                 }}
               />
-              <ChartTooltip
-                contentStyle={{
-                  background: 'var(--bg-secondary)',
-                  borderColor: 'var(--border)',
-                  borderRadius: 10,
-                  fontSize: 12,
-                  color: 'var(--text-primary)',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)'
-                }}
-                labelFormatter={(label, items) => {
-                  if (items && items[0]) return items[0].payload.displayDate || label
-                  return label
-                }}
-                formatter={(value: any, name: any) => [
-                  `¥${Number(value).toLocaleString()}`,
-                  name
-                ]}
-              />
+              <ChartTooltip content={<CustomTooltip />} />
               {clientSalesData.map((client) => (
                 <Bar
                   key={client.name}
@@ -552,7 +566,7 @@ export default function BillingChart({
           >
             <span className="legend-dot approved-active-line"></span>
             <span className="legend-text">
-              → Approved & Active — {formatCurrency(approvedActiveTotal)}
+              → Approved — {formatCurrency(approvedActiveTotal)}
             </span>
           </button>
           <button
@@ -581,10 +595,10 @@ export default function BillingChart({
             return (
               <div key={`client-legend-${idx}`} className="client-legend-item">
                 <div className="client-color-dot-picker" style={{ backgroundColor: color }}>
-                  <input 
-                    type="color" 
-                    value={color} 
-                    onChange={(e) => updateClientColor(client.name, e.target.value)} 
+                  <input
+                    type="color"
+                    value={color}
+                    onChange={(e) => updateClientColor(client.name, e.target.value)}
                   />
                 </div>
                 <span>{client.name}</span>
