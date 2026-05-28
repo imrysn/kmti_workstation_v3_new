@@ -9,6 +9,8 @@ interface BillingFiltersProps {
   setSelectedPStatus: (val: string) => void
   selectedBillTo: string
   setSelectedBillTo: (val: string) => void
+  selectedMonth: string
+  setSelectedMonth: (val: string) => void
   uniqueInchargeValues: string[]
   uniqueBillToValues: string[]
   resetFilters: () => void
@@ -25,11 +27,13 @@ export default function BillingFilters({
   setSelectedPStatus,
   selectedBillTo,
   setSelectedBillTo,
+  selectedMonth,
+  setSelectedMonth,
   uniqueInchargeValues,
   uniqueBillToValues,
   resetFilters
 }: BillingFiltersProps) {
-  const activeFilterCount = [selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, search]
+  const activeFilterCount = [selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, search]
     .filter(Boolean).length
 
   return (
@@ -113,6 +117,29 @@ export default function BillingFilters({
           {uniqueBillToValues.map(bt => (
             <option key={bt} value={bt}>{bt}</option>
           ))}
+        </select>
+      </div>
+
+      <div className="filter-group">
+        <label className="filter-label">Month</label>
+        <select
+          className={`filter-input ${selectedMonth ? 'filter-active' : ''}`}
+          value={selectedMonth}
+          onChange={e => setSelectedMonth(e.target.value)}
+        >
+          <option value="">All Months</option>
+          <option value="0">January</option>
+          <option value="1">February</option>
+          <option value="2">March</option>
+          <option value="3">April</option>
+          <option value="4">May</option>
+          <option value="5">June</option>
+          <option value="6">July</option>
+          <option value="7">August</option>
+          <option value="8">September</option>
+          <option value="9">October</option>
+          <option value="10">November</option>
+          <option value="11">December</option>
         </select>
       </div>
 

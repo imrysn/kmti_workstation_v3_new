@@ -120,7 +120,7 @@ export default function CalendarSidebar({
               onChange={e => setShowClaims(e.target.checked)}
             />
             <span className="checkbox-custom claim-checkbox"></span>
-            <span className="checkbox-label">Task Claims</span>
+            <span className="checkbox-label">Deadlines</span>
           </label>
         </div>
         <div className="filter-legend-item">
@@ -131,7 +131,7 @@ export default function CalendarSidebar({
               onChange={e => setShowAbsences(e.target.checked)}
             />
             <span className="checkbox-custom absence-checkbox"></span>
-            <span className="checkbox-label">Protected Absences</span>
+            <span className="checkbox-label">On Leave</span>
           </label>
         </div>
         <div className="filter-legend-item">
@@ -142,7 +142,7 @@ export default function CalendarSidebar({
               onChange={e => setShowSpans(e.target.checked)}
             />
             <span className="checkbox-custom"></span>
-            <span className="checkbox-label">Display Task Spans</span>
+            <span className="checkbox-label">Task Spans</span>
           </label>
         </div>
       </div>

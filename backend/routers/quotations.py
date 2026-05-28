@@ -258,6 +258,14 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Opti
     qd = data.get("quotationDetails", {})
     new_q_no = qd.get("quotationNo", quot.quotation_no)
     
+    doc_date_str = qd.get("date")
+    doc_date = quot.date
+    if doc_date_str:
+        try:
+            doc_date = datetime.strptime(doc_date_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
+
     # Sync Logic: If display_name matches old q_no, or is empty, sync to new q_no
     new_display = quot.display_name
     if not quot.display_name or quot.display_name == quot.quotation_no:
@@ -305,6 +313,7 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Opti
         "data": json.dumps(data, ensure_ascii=False),
         "quotation_no": new_q_no,
         "display_name": new_display,
+        "date": doc_date,
         "updated_at": datetime.now(timezone.utc),
         "client_name": data.get("clientInfo", {}).get("company", ""),
         "designer_name": p_incharge,
@@ -692,11 +701,20 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
     client_contact = ci.get("contact", "")
     g_total = calculate_grand_total(data)
 
+    doc_date_str = qd.get("date")
+    doc_date = datetime.now(timezone.utc)
+    if doc_date_str:
+        try:
+            doc_date = datetime.strptime(doc_date_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
+
     new_q = Quotation(
         quotation_no=q_no,
         client_name=ci.get("company", ""),
         designer_name=sig.get("name", ""),
         workstation=workstation,
+        date=doc_date,
         data=json.dumps(data, ensure_ascii=False),
         display_name=q_no,
         grand_total=g_total,
@@ -790,6 +808,16 @@ async def update_billing_monitoring(
                 quot.date_paid = None
         else:
             quot.date_paid = None
+    if "date" in payload:
+        val = payload["date"]
+        if val:
+            try:
+                # We retain utc timezone so it's consistent
+                quot.date = datetime.strptime(val[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            except ValueError:
+                pass
+        else:
+            quot.date = None
     if "updateDetail" in payload:
         quot.update_detail = payload["updateDetail"]
         
@@ -822,6 +850,10 @@ async def update_billing_monitoring(
         if "clientInfo" not in data:
             data["clientInfo"] = {}
         data["clientInfo"]["company"] = quot.bill_to or ""
+        if "quotationDetails" not in data:
+            data["quotationDetails"] = {}
+        if "date" in payload:
+            data["quotationDetails"]["date"] = quot.date.isoformat()[:10] if quot.date else None
         quot.data = json.dumps(data, ensure_ascii=False)
     except Exception as e:
         print(f"Error syncing JSON in update_billing_monitoring: {e}")
@@ -839,7 +871,8 @@ async def update_billing_monitoring(
         {"path": "billingDetails.updateDetail", "value": quot.update_detail},
         {"path": "billingDetails.projectInCharge", "value": quot.designer_name},
         {"path": "billingDetails.billTo", "value": quot.bill_to},
-        {"path": "clientInfo.company", "value": quot.bill_to}
+        {"path": "clientInfo.company", "value": quot.bill_to},
+        {"path": "quotationDetails.date", "value": quot.date.isoformat()[:10] if quot.date else None}
     ]
     for patch in patches:
         await sio.emit("remote_patch", {"sid": "system", "patch": patch}, room=room_name)

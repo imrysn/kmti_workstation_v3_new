@@ -22,6 +22,15 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.7',
+    date: 'May 27, 2026',
+    entries: [
+      { type: 'improvement', text: 'Material Unit — Exposed individual unit selectors (mm, cm, m) contextually inside every numeric dimension field.' },
+      { type: 'improvement', text: 'Search Engine Optimization — improved search features.' },
+      { type: 'fix', text: 'Bug fixes — reported bugs fixed.' }
+    ],
+  },
+  {
     version: '3.7.6',
     date: 'May 26, 2026',
     entries: [

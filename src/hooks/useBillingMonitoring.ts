@@ -38,8 +38,9 @@ export function useBillingMonitoring() {
   const [search, setSearch] = useState('')
   const [selectedDesigner, setSelectedDesigner] = useState('')
   const [selectedQStatus, setSelectedQStatus] = useState('')
-  const [selectedPStatus, setSelectedPStatus] = useState('')
-  const [selectedBillTo, setSelectedBillTo] = useState('')
+  const [selectedPStatus, setSelectedPStatus] = useState<string>('')
+  const [selectedBillTo, setSelectedBillTo] = useState<string>('')
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1)
@@ -58,6 +59,23 @@ export function useBillingMonitoring() {
   const [chartView, setChartView] = useState<'total-sales' | 'client-sales'>('total-sales')
   const [clientColors, setClientColors] = useState<Record<string, string>>({})
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
+  const [startMonth, setStartMonth] = useState<number>(0)
+  const [endMonth, setEndMonth] = useState<number>(11)
+  const [sortColumn, setSortColumn] = useState<string | null>('date')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      if (sortDirection === 'desc') {
+        setSortColumn(null)
+      } else {
+        setSortDirection('desc')
+      }
+    } else {
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
 
   useEffect(() => {
     if (chartView === 'client-sales') {
@@ -126,11 +144,11 @@ export function useBillingMonitoring() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo])
+  }, [search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth])
 
   // Filter Logic
   const filteredQuotations = useMemo(() => {
-    return quotations.filter(q => {
+    let result = quotations.filter(q => {
       const matchesSearch = !search || 
         (q.quotationNo && q.quotationNo.toLowerCase().includes(search.toLowerCase())) ||
         (q.clientName && q.clientName.toLowerCase().includes(search.toLowerCase())) ||
@@ -141,10 +159,38 @@ export function useBillingMonitoring() {
       const matchesQStatus = !selectedQStatus || q.quotationStatus === selectedQStatus
       const matchesPStatus = !selectedPStatus || q.projectStatus === selectedPStatus
       const matchesBillTo = !selectedBillTo || q.billTo === selectedBillTo
+      const matchesMonth = !selectedMonth || (q.date && new Date(q.date).getMonth().toString() === selectedMonth)
 
-      return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo
+      return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth
     })
-  }, [quotations, search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo])
+
+    if (sortColumn) {
+      result = [...result].sort((a, b) => {
+        let valA: any = a[sortColumn as keyof IQuotation]
+        let valB: any = b[sortColumn as keyof IQuotation]
+
+        if (valA === null || valA === undefined) valA = ''
+        if (valB === null || valB === undefined) valB = ''
+
+        if (sortColumn === 'grandTotal') {
+          valA = Number(valA) || 0
+          valB = Number(valB) || 0
+        } else if (sortColumn === 'date' || sortColumn === 'datePaid' || sortColumn === 'submittedToAdminAt' || sortColumn === 'lastUpdatedAt') {
+          valA = valA ? new Date(valA).getTime() : 0
+          valB = valB ? new Date(valB).getTime() : 0
+        } else {
+          valA = String(valA).toLowerCase()
+          valB = String(valB).toLowerCase()
+        }
+
+        if (valA < valB) return sortDirection === 'asc' ? -1 : 1
+        if (valA > valB) return sortDirection === 'asc' ? 1 : -1
+        return 0
+      })
+    }
+
+    return result
+  }, [quotations, search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, sortColumn, sortDirection])
 
   // Pagination Computations
   const totalItems = filteredQuotations.length
@@ -217,20 +263,15 @@ export function useBillingMonitoring() {
       pointsCount = 30
       timeframeLabel = 'MOM'
     } else {
-      startDate = new Date(activeYear, 0, 1, 0, 0, 0, 0)
-      endDate = new Date(activeYear, 11, 31, 23, 59, 59, 999)
+      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
+      endDate = new Date(activeYear, endMonth + 1, 0, 23, 59, 59, 999)
       
-      prevStartDate = new Date(activeYear - 1, 0, 1, 0, 0, 0, 0)
-      prevEndDate = new Date(activeYear - 1, 11, 31, 23, 59, 59, 999)
+      prevStartDate = new Date(activeYear - 1, startMonth, 1, 0, 0, 0, 0)
+      prevEndDate = new Date(activeYear - 1, endMonth + 1, 0, 23, 59, 59, 999)
       
       formatTick = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' })
       
-      const currentYear = new Date().getFullYear()
-      if (activeYear === currentYear) {
-        pointsCount = new Date().getMonth() + 1
-      } else {
-        pointsCount = 12
-      }
+      pointsCount = Math.max(1, endMonth - startMonth + 1)
       timeframeLabel = 'YOY'
     }
 
@@ -274,10 +315,6 @@ export function useBillingMonitoring() {
     
     if (timeframe === 'week' || timeframe === 'month') {
       let tempDate = new Date(startDate)
-      let runningCompleted = 0
-      let runningApprovedActive = 0
-      let runningPending = 0
-      let runningCancelled = 0
       
       for (let i = 0; i < pointsCount; i++) {
         const dayStart = new Date(tempDate)
@@ -307,17 +344,12 @@ export function useBillingMonitoring() {
           .filter(q => q.quotationStatus === 'CANCELLED')
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
         
-        runningCompleted += dayCompleted
-        runningApprovedActive += dayApprovedActive
-        runningPending += dayPending
-        runningCancelled += dayCancelled
-        
         points.push({
           name: formatTick(tempDate),
-          completed: runningCompleted,
-          approvedActive: runningApprovedActive,
-          pending: runningPending,
-          cancelled: runningCancelled,
+          completed: dayCompleted,
+          approvedActive: dayApprovedActive,
+          pending: dayPending,
+          cancelled: dayCancelled,
           displayDate: tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         })
 
@@ -344,10 +376,6 @@ export function useBillingMonitoring() {
       }
     } else {
       let tempDate = new Date(startDate)
-      let runningCompleted = 0
-      let runningApprovedActive = 0
-      let runningPending = 0
-      let runningCancelled = 0
       
       for (let i = 0; i < pointsCount; i++) {
         const mStart = new Date(tempDate.getFullYear(), tempDate.getMonth(), 1, 0, 0, 0, 0)
@@ -375,17 +403,12 @@ export function useBillingMonitoring() {
           .filter(q => q.quotationStatus === 'CANCELLED')
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
         
-        runningCompleted += mCompleted
-        runningApprovedActive += mApprovedActive
-        runningPending += mPending
-        runningCancelled += mCancelled
-        
         points.push({
           name: formatTick(tempDate),
-          completed: runningCompleted,
-          approvedActive: runningApprovedActive,
-          pending: runningPending,
-          cancelled: runningCancelled,
+          completed: mCompleted,
+          approvedActive: mApprovedActive,
+          pending: mPending,
+          cancelled: mCancelled,
           displayDate: tempDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
         })
 
@@ -420,7 +443,7 @@ export function useBillingMonitoring() {
       trendPercent: trend,
       timeframeLabel
     }
-  }, [quotations, timeframe, refDate, formatDateToSlash, activeYear])
+  }, [quotations, timeframe, refDate, formatDateToSlash, activeYear, startMonth, endMonth])
 
   // End month text label
   const currentEndMonth = useMemo(() => {
@@ -479,6 +502,7 @@ export function useBillingMonitoring() {
     setSelectedQStatus('')
     setSelectedPStatus('')
     setSelectedBillTo('')
+    setSelectedMonth('')
   }
 
   const uniqueBillToValues = useMemo(() => {
@@ -517,8 +541,8 @@ export function useBillingMonitoring() {
     const clientsMap: Record<string, number> = {}
     const positiveStatuses = ['Billing Completion', 'Approved', 'Partial Billing']
     
-    const yearStart = new Date(activeYear, 0, 1, 0, 0, 0, 0)
-    const yearEnd   = new Date(activeYear, 11, 31, 23, 59, 59, 999)
+    const yearStart = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
+    const yearEnd   = new Date(activeYear, endMonth + 1, 0, 23, 59, 59, 999)
 
     quotations.forEach(q => {
       if (!q.date) return
@@ -534,7 +558,7 @@ export function useBillingMonitoring() {
     return Object.entries(clientsMap)
       .map(([name, sales]) => ({ name, sales }))
       .sort((a, b) => b.sales - a.sales)
-  }, [quotations, activeYear])
+  }, [quotations, activeYear, startMonth, endMonth])
 
   useEffect(() => {
     if (clientSalesData.length === 0) return
@@ -584,6 +608,8 @@ export function useBillingMonitoring() {
     setSelectedPStatus,
     selectedBillTo,
     setSelectedBillTo,
+    selectedMonth,
+    setSelectedMonth,
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -611,6 +637,13 @@ export function useBillingMonitoring() {
     uniqueYears,
     activeYear,
     setSelectedYear,
+    startMonth,
+    setStartMonth,
+    endMonth,
+    setEndMonth,
+    sortColumn,
+    sortDirection,
+    handleSort,
     filteredQuotations,
     totalItems,
     totalPages,

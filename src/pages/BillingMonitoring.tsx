@@ -4,6 +4,7 @@ import BillingChart from '../components/BillingMonitoring/BillingChart'
 import BillingFilters from '../components/BillingMonitoring/BillingFilters'
 import BillingKpiCards from '../components/BillingMonitoring/BillingKpiCards'
 import BillingSpreadsheetTable from '../components/BillingMonitoring/BillingSpreadsheetTable'
+import { exportBillingToExcel } from '../utils/exportBillingExcel'
 import './BillingMonitoring.css'
 
 type BillingView = 'dashboard' | 'table'
@@ -24,6 +25,8 @@ export default function BillingMonitoring() {
     setSelectedPStatus,
     selectedBillTo,
     setSelectedBillTo,
+    selectedMonth,
+    setSelectedMonth,
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -44,6 +47,7 @@ export default function BillingMonitoring() {
     setShowCancelled,
     totalItems,
     totalPages,
+    filteredQuotations,
     paginatedQuotations,
     uniqueBillToValues,
     uniqueInchargeValues,
@@ -63,6 +67,13 @@ export default function BillingMonitoring() {
     uniqueYears,
     activeYear,
     setSelectedYear,
+    startMonth,
+    setStartMonth,
+    endMonth,
+    setEndMonth,
+    sortColumn,
+    sortDirection,
+    handleSort,
     formatDateToSlash,
     formatDateTimeToSlash,
     formatCurrency,
@@ -113,6 +124,20 @@ export default function BillingMonitoring() {
             </button>
           </div>
 
+          <button
+            className="btn btn-excel-export"
+            onClick={() => exportBillingToExcel(filteredQuotations)}
+            title="Export current records to Excel"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Excel
+          </button>
+
           <button className="btn btn-ghost" onClick={loadData} title="Reload records">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
               <path d="M23 4v6h-6M1 20v-6h6" />
@@ -136,6 +161,8 @@ export default function BillingMonitoring() {
           setSelectedPStatus={setSelectedPStatus}
           selectedBillTo={selectedBillTo}
           setSelectedBillTo={setSelectedBillTo}
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
           uniqueInchargeValues={uniqueInchargeValues}
           uniqueBillToValues={uniqueBillToValues}
           resetFilters={resetFilters}
@@ -187,6 +214,10 @@ export default function BillingMonitoring() {
               uniqueYears={uniqueYears}
               activeYear={activeYear}
               setSelectedYear={setSelectedYear}
+              startMonth={startMonth}
+              setStartMonth={setStartMonth}
+              endMonth={endMonth}
+              setEndMonth={setEndMonth}
             />
           </div>
         </div>
@@ -212,6 +243,9 @@ export default function BillingMonitoring() {
             formatDateToSlash={formatDateToSlash}
             formatDateTimeToSlash={formatDateTimeToSlash}
             formatCurrency={formatCurrency}
+            sortColumn={sortColumn}
+            sortDirection={sortDirection}
+            handleSort={handleSort}
           />
         </div>
       )}

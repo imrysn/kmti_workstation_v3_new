@@ -39,6 +39,10 @@ interface BillingChartProps {
   uniqueYears: number[]
   activeYear: number
   setSelectedYear: (y: number) => void
+  startMonth: number
+  setStartMonth: (m: number) => void
+  endMonth: number
+  setEndMonth: (m: number) => void
 }
 
 export default function BillingChart({
@@ -68,8 +72,14 @@ export default function BillingChart({
   updateClientColor,
   uniqueYears,
   activeYear,
-  setSelectedYear
+  setSelectedYear,
+  startMonth,
+  setStartMonth,
+  endMonth,
+  setEndMonth
 }: BillingChartProps) {
+
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
   // Totals for all states
   const completedTotal = statusStats['Billing Completion']?.total || 0
@@ -275,6 +285,51 @@ export default function BillingChart({
                 {uniqueYears.map(y => (
                   <option key={y} value={y}>{y}</option>
                 ))}
+              </select>
+
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 8 }}>MONTHS:</span>
+              <select
+                value={startMonth}
+                onChange={(e) => {
+                  const val = Number(e.target.value)
+                  setStartMonth(val)
+                  if (val > endMonth) setEndMonth(val)
+                }}
+                style={{
+                  fontSize: 11,
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  outline: 'none'
+                }}
+              >
+                {months.map((m, i) => <option key={`s-${i}`} value={i}>{m}</option>)}
+              </select>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>-</span>
+              <select
+                value={endMonth}
+                onChange={(e) => {
+                  const val = Number(e.target.value)
+                  setEndMonth(val)
+                  if (val < startMonth) setStartMonth(val)
+                }}
+                style={{
+                  fontSize: 11,
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  outline: 'none'
+                }}
+              >
+                {months.map((m, i) => <option key={`e-${i}`} value={i}>{m}</option>)}
               </select>
             </div>
           )}
