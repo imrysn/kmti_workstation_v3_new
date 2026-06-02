@@ -11,6 +11,7 @@ export interface WorkstationStatus {
   computer_name?: string;
   active_module: string;
   current_user: string;
+  display_name?: string;
   version: string;
   last_ping: string;
   status_message?: string;

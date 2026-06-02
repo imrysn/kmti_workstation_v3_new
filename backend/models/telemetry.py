@@ -13,6 +13,7 @@ class WorkstationStatus(Base):
     computer_name = Column(String(100), nullable=True)
     active_module = Column(String(50), nullable=True)
     current_user = Column(String(100), nullable=True)
+    display_name = Column(String(255), nullable=True)
     version = Column(String(20), nullable=True)
     status_message = Column(String(200), nullable=True)
     equipped_skin = Column(String(100), nullable=True)

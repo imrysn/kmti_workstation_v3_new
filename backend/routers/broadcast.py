@@ -101,10 +101,13 @@ async def acknowledge_broadcast(
     await db.commit()
 
     # Emit socket event for real-time admin alert
+    display_name = getattr(current_user, "displayName", None) or getattr(current_user, "display_name", None)
     try:
         await sio.emit("broadcast_acknowledged", {
             "id": broadcast_id,
             "username": current_user.username,
+            "fullName": getattr(current_user, "fullName", current_user.username),
+            "displayName": display_name,
             "workstation": workstation,
             "time": datetime.now().strftime("%H:%M:%S")
         })
@@ -120,10 +123,30 @@ async def get_broadcast_acks(
 ):
     """List all acknowledgments for a specific broadcast. Admin/IT only."""
     from models.broadcast import BroadcastAcknowledgment
+    from sqlalchemy import select as sa_select
     result = await db.execute(
         select(BroadcastAcknowledgment)
         .where(BroadcastAcknowledgment.broadcast_id == broadcast_id)
         .order_by(BroadcastAcknowledgment.acknowledged_at.desc())
     )
     acks = result.scalars().all()
-    return {"data": acks}
+    # Enrich with display_name from kmti_users (if available)
+    enriched = []
+    for ack in acks:
+        display_name = None
+        if ack.username:
+            user_result = await db.execute(
+                select(User.display_name).where(User.username == ack.username)
+            )
+            dn = user_result.scalar_one_or_none()
+            display_name = dn
+        enriched.append({
+            "id": ack.id,
+            "broadcast_id": ack.broadcast_id,
+            "username": ack.username,
+            "displayName": display_name,
+            "fullName": None,
+            "workstation": ack.workstation,
+            "acknowledged_at": ack.acknowledged_at,
+        })
+    return {"data": enriched}

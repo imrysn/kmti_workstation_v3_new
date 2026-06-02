@@ -401,32 +401,7 @@ export function useTeamCalendar() {
     return days
   }, [fetchRange])
 
-  const displayDate = useMemo(() => {
-    if (viewMode === 'month' && calendarDays.length > 0) {
-      const monthCounts: Record<string, { count: number; date: Date }> = {}
-
-      calendarDays.forEach(day => {
-        const key = `${day.getFullYear()}-${day.getMonth()}`
-        if (!monthCounts[key]) {
-          monthCounts[key] = { count: 0, date: day }
-        }
-        monthCounts[key].count++
-      })
-
-      let dominantKey = ''
-      let maxCount = -1
-
-      Object.keys(monthCounts).forEach(key => {
-        if (monthCounts[key].count > maxCount) {
-          maxCount = monthCounts[key].count
-          dominantKey = key
-        }
-      })
-
-      return monthCounts[dominantKey]?.date || currentDate
-    }
-    return currentDate
-  }, [calendarDays, currentDate, viewMode])
+  const displayDate = useMemo(() => currentDate, [currentDate])
 
   const monthName = displayDate.toLocaleString('default', { month: 'long' })
   const yearNum = displayDate.getFullYear()
@@ -636,6 +611,7 @@ export function useTeamCalendar() {
     cancelClaimMode,
     navigateDate,
     handleCalendarWheel,
-    notify
+    notify,
+    confirm
   }
 }

@@ -63,22 +63,24 @@ def create_access_token(user: User, full_name: str | None = None) -> str:
         "username": user.username,
         # For shared/local accounts, fullName falls back to username
         "fullName": full_name or user.username,
+        "displayName": user.display_name or None,
         "role": user.role.value,
-        "source": "local",  # distinguishes from FMS-originated tokens
+        "source": "local",
         "exp": expire,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 
-def create_access_token_fms(fms_user_id: int, username: str, full_name: str, role: str) -> str:
+def create_access_token_fms(fms_user_id: int, username: str, full_name: str, role: str, display_name: str | None = None) -> str:
     """Create a JWT for a kmtifms.users account (no ORM object needed)."""
     expire = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRY_HOURS)
     payload = {
         "sub": str(fms_user_id),
         "username": username,
         "fullName": full_name,
+        "displayName": display_name or None,
         "role": role,
-        "source": "fms",    # marks this as an FMS-originated token
+        "source": "fms",
         "exp": expire,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -100,10 +102,11 @@ class FmsAuthUser:
     This allows all router code that uses current_user.username, .role, etc.
     to work transparently for both local and FMS users.
     """
-    def __init__(self, user_id: int, username: str, full_name: str, role_str: str):
+    def __init__(self, user_id: int, username: str, full_name: str, role_str: str, display_name: str | None = None):
         self.id = user_id
         self.username = username
         self.fullName = full_name
+        self.displayName = display_name
         self.role = UserRole(role_str)
         self.is_active = True
         self.hashed_password = None  # not available / not needed
@@ -139,9 +142,10 @@ async def get_current_user(
     if source == "fms":
         username = payload.get("username", "")
         full_name = payload.get("fullName", username)
+        display_name = payload.get("displayName")
         role_str = payload.get("role", "user")
         try:
-            return FmsAuthUser(int(user_id), username, full_name, role_str)
+            return FmsAuthUser(int(user_id), username, full_name, role_str, display_name)
         except (ValueError, KeyError):
             raise credentials_exc
 

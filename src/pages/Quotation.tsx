@@ -74,11 +74,8 @@ export default function Quotation() {
         console.warn('[lobby] Failed to fetch workstation info')
       }
 
-      // If FMS user, prioritize displayName or fullName. Otherwise fallback to computerName.
-      const isFms = user && user.fullName !== user.username
-      const workstation = isFms 
-        ? (user.displayName || user.fullName || '') 
-        : computerName
+      // For newly created quotations, use the user's fullName if logged in, otherwise fallback to computerName.
+      const workstation = user ? user.fullName : computerName
 
       // Generate a formal quotation number
       const today = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2)
@@ -119,11 +116,8 @@ export default function Quotation() {
         console.warn('[lobby] Failed to fetch workstation info for tutorial')
       }
 
-      // If FMS user, prioritize displayName or fullName. Otherwise fallback to computerName.
-      const isFms = user && user.fullName !== user.username
-      const workstation = isFms 
-        ? (user.displayName || user.fullName || '') 
-        : computerName
+      // For tutorial room, use user's fullName if logged in, otherwise fallback to computerName.
+      const workstation = user ? user.fullName : computerName
 
       // 2. Create a DB record
       const res = await quotationApi.create({ 

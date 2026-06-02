@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { telemetryApi } from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { getDisplayName } from '../utils/nameUtils'
 import { version as appVersion } from '../../package.json'
 import AchievementUnlockModal from './AchievementUnlockModal'
 import AvatarPickerModal from './AvatarPickerModal'
@@ -129,7 +130,6 @@ function WorkstationCard({
   const isMinimized = ws.active_module?.startsWith('💤')
   const cleanModule = stripEmoji(isMinimized ? ws.active_module.replace('💤', '').trim() : (ws.active_module || ''))
   const isOutdated = ws.version && ws.version !== appVersion
-  const userDisplayName = ws.current_user || 'Guest'
 
   return (
     <div className={`online-user-card ${status}`}>
@@ -165,7 +165,7 @@ function WorkstationCard({
       <div className="user-info-section">
         <div className="user-header-row">
           <span className="user-name" title={ws.computer_name || ws.ip_address}>
-            {ws.current_user || ws.computer_name || ws.ip_address}
+            {ws.display_name || getDisplayName(ws.current_user || '') || ws.current_user || ws.computer_name || ws.ip_address}
             {ws.streaks?.includes(myComputerName) && (
               <span className="streak-flame active" title={`You have an active wave streak with ${ws.computer_name || 'this workstation'}! 🔥`}>
                 🔥

@@ -1,6 +1,6 @@
 import { ICalendarEvent } from '../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
+import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDateTime, TASK_TYPE_PILL_LABELS, TASK_TYPE_COLORS } from '../../utils/teamCalendarUtils'
+import { GlobeIcon, LockIcon, CheckIcon } from './Icons'
 
 interface AgendaViewProps {
   agendaDays: Date[]
@@ -131,16 +131,33 @@ export default function AgendaView({
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span className="event-icon" style={{ display: 'flex', alignItems: 'center', color: accentColor }}>
-                            {isCompanyEvent 
-                              ? <GlobeIcon /> 
-                              : isAbsence 
-                                ? <LockIcon /> 
+                          <span className="event-icon" style={{ display: 'flex', alignItems: 'center', color: accentColor, flexShrink: 0 }}>
+                            {isCompanyEvent
+                              ? <GlobeIcon />
+                              : isAbsence
+                                ? <LockIcon />
                                 : isCompleted
                                   ? <CheckIcon />
-                                  : <TargetIcon />}
+                                  : TASK_TYPE_PILL_LABELS[taskType]
+                                    ? (
+                                      <span style={{
+                                        fontSize: '9px',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.05em',
+                                        padding: '2px 5px',
+                                        borderRadius: '4px',
+                                        background: TASK_TYPE_COLORS[taskType].bg,
+                                        color: TASK_TYPE_COLORS[taskType].text,
+                                        border: `1px solid ${TASK_TYPE_COLORS[taskType].border}`,
+                                        lineHeight: '1.4',
+                                        userSelect: 'none',
+                                      }}>
+                                        {TASK_TYPE_PILL_LABELS[taskType]}
+                                      </span>
+                                    )
+                                    : null}
                           </span>
-                          <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--cal-text-primary)', textTransform: isCompanyEvent || isAbsence ? undefined : 'uppercase', letterSpacing: isCompanyEvent || isAbsence ? undefined : '0.3px' }}>
+                          <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--cal-text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             {isCompanyEvent
                               ? `Company Event: ${event.engineer_name}`
                               : isAbsence

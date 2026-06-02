@@ -79,7 +79,8 @@ async def login(
             "user": {
                 "id": local_user.id,
                 "username": local_user.username,
-                "fullName": local_user.username,   # shared accounts use username as display
+                "fullName": local_user.username,
+                "displayName": local_user.display_name,
                 "role": local_user.role.value,
             },
         }
@@ -113,6 +114,7 @@ async def login(
                 "id": fms_user.id,
                 "username": fms_user.username,
                 "fullName": fms_user.fullName,
+                "displayName": None,
                 "role": mapped_role,
             },
         }
@@ -136,6 +138,7 @@ async def get_me(current_user=Depends(get_current_user)):
         "id": current_user.id,
         "username": current_user.username,
         "fullName": getattr(current_user, "fullName", current_user.username),
+        "displayName": getattr(current_user, "displayName", None) or getattr(current_user, "display_name", None),
         "role": current_user.role.value,
         "is_active": current_user.is_active,
     }

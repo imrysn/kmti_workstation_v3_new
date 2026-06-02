@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { broadcastApi, ttsApi } from '../services/api'
 import megaphoneIcon from '../assets/megaphone-icon.png'
 import { useAuth } from '../context/AuthContext'
+import { getDisplayName } from '../utils/nameUtils'
 import './BroadcastOverlay.css'
 
 interface Broadcast {
@@ -16,6 +17,8 @@ interface AckNotification {
   id: string
   workstation: string
   username: string
+  fullName: string
+  displayName: string | null
   time: string
 }
 
@@ -188,6 +191,8 @@ const BroadcastOverlay: React.FC = () => {
         id: Math.random().toString(36).substr(2, 9),
         workstation: data.workstation,
         username: data.username,
+        fullName: data.fullName || data.username,
+        displayName: data.displayName || null,
         time: data.time
       }
       setRecentAcks(prev => [newAck, ...prev].slice(0, 3))
@@ -251,7 +256,7 @@ const BroadcastOverlay: React.FC = () => {
           <div key={ack.id} className="ack-pill">
             <div className="ack-pill-icon">✓</div>
             <div className="ack-pill-content">
-              <strong>{ack.workstation}</strong> acknowledged
+              <strong>{ack.displayName || getDisplayName(ack.fullName) || ack.workstation}</strong> acknowledged
               <span>{ack.time}</span>
             </div>
           </div>

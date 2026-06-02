@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDateTime } from '../../../utils/teamCalendarUtils'
-import { CalendarIcon, GlobeIcon, LockIcon, CheckIcon, TargetIcon } from '../Icons'
+import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, formatDurationRange, formatDisplayDateTime, TASK_TYPE_PILL_LABELS, TASK_TYPE_COLORS } from '../../../utils/teamCalendarUtils'
+import { CalendarIcon, GlobeIcon, LockIcon, CheckIcon } from '../Icons'
 
 interface DayEventsPopoverProps {
   activePopoverDate: Date
@@ -119,6 +119,7 @@ export default function DayEventsPopover({
           ) : (
             dayEvents.map(event => {
               const isAbsence = event.event_type === 'Day_Off'
+              const isPendingAbsence = isAbsence && event.status === 'Pending'
               const isOffsetHoliday = event.event_type === 'Company_Event' && event.leave_type === 'Holiday'
               const isCompanyEvent = event.event_type === 'Company_Event' && event.leave_type !== 'Holiday'
               const displayName = event.engineer_name || event.username
@@ -131,13 +132,15 @@ export default function DayEventsPopover({
               todayMidnight.setHours(0, 0, 0, 0)
               const isOverdue = event.event_type === 'Task_Claim' && event.todo_status === 'Claimed' && hasDueDate && new Date(event.due_date!) < todayMidnight
 
-              const accentColor = isCompleted
-                ? '#059669'
-                : isOverdue
-                  ? '#dc2626'
-                  : (!isAbsence && !isCompanyEvent && !isOffsetHoliday)
-                    ? (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
-                    : isCompanyEvent ? '#6366f1' : 'var(--cal-text-muted)'
+              const accentColor = isPendingAbsence
+                ? '#dc2626'
+                : isCompleted
+                  ? '#059669'
+                  : isOverdue
+                    ? '#dc2626'
+                    : (!isAbsence && !isCompanyEvent && !isOffsetHoliday)
+                      ? (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
+                      : isCompanyEvent ? '#6366f1' : 'var(--cal-text-muted)'
 
               return (
                 <div
@@ -155,37 +158,69 @@ export default function DayEventsPopover({
                     gap: '6px',
                     padding: '14px',
                     borderRadius: '8px',
-                    border: `1px solid ${accentColor}`,
-                    background: isCompanyEvent
-                      ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))'
-                      : isOffsetHoliday
-                        ? 'var(--bg-surface-subtle)'
-                        : isCompleted
-                          ? 'rgba(5, 150, 105, 0.08)'
-                          : isOverdue
-                            ? 'rgba(220, 38, 38, 0.08)'
-                            : (!isAbsence ? taskColor.bg : 'var(--bg-surface-subtle)'),
-                    borderLeft: `5px solid ${accentColor}`,
+                    border: isPendingAbsence
+                      ? '1.5px dashed rgba(220, 38, 38, 0.6)'
+                      : `1px solid ${accentColor}`,
+                    background: isPendingAbsence
+                      ? 'rgba(220, 38, 38, 0.07)'
+                      : isCompanyEvent
+                        ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1))'
+                        : isOffsetHoliday
+                          ? 'var(--bg-surface-subtle)'
+                          : isCompleted
+                            ? 'rgba(5, 150, 105, 0.08)'
+                            : isOverdue
+                              ? 'rgba(220, 38, 38, 0.08)'
+                              : (!isAbsence ? taskColor.bg : 'var(--bg-surface-subtle)'),
+                    borderLeft: isPendingAbsence
+                      ? '5px dashed rgba(220, 38, 38, 0.6)'
+                      : `5px solid ${accentColor}`,
                     cursor: isAbsence || isCompanyEvent || isOffsetHoliday ? 'pointer' : 'default',
-                    transition: 'all 0.15s ease'
+                    transition: 'all 0.15s ease',
+                    animation: isPendingAbsence ? 'pendingPulse 2.5s ease-in-out infinite' : undefined,
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: accentColor, display: 'flex', alignItems: 'center' }}>
-                        {isOffsetHoliday ? <LockIcon /> : isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : isCompleted ? <CheckIcon /> : <TargetIcon />}
-                      </span>
-                      <span style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--cal-text-primary)', textTransform: isCompanyEvent || isAbsence ? undefined : 'uppercase', letterSpacing: isCompanyEvent || isAbsence ? undefined : '0.3px' }}>
-                        {isOffsetHoliday
-                          ? `Holiday: ${event.engineer_name}`
-                          : isCompanyEvent
-                            ? `Company Event: ${event.engineer_name}`
-                            : isAbsence
-                              ? displayName
-                              : event.todo_title}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <span style={{ color: accentColor, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                          {isOffsetHoliday ? <LockIcon /> : isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : isCompleted
+                            ? <CheckIcon />
+                            : TASK_TYPE_PILL_LABELS[taskType]
+                              ? (
+                                <span style={{
+                                  fontSize: '9px', fontWeight: 800, letterSpacing: '0.05em',
+                                  padding: '2px 5px', borderRadius: '4px',
+                                  background: TASK_TYPE_COLORS[taskType].bg,
+                                  color: TASK_TYPE_COLORS[taskType].text,
+                                  border: `1px solid ${TASK_TYPE_COLORS[taskType].border}`,
+                                  lineHeight: '1.4', userSelect: 'none',
+                                }}>
+                                  {TASK_TYPE_PILL_LABELS[taskType]}
+                                </span>
+                              ) : null}
+                        </span>
+                        <span style={{ fontSize: '13.5px', fontWeight: '700', color: isPendingAbsence ? '#dc2626' : 'var(--cal-text-primary)' }}>
+                          {isOffsetHoliday
+                            ? `Holiday: ${event.engineer_name}`
+                            : isCompanyEvent
+                              ? `Company Event: ${event.engineer_name}`
+                              : isAbsence
+                                ? displayName
+                                : event.todo_title}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {isPendingAbsence && (
+                          <span style={{
+                            fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.04em',
+                            padding: '2px 7px', borderRadius: '4px',
+                            background: 'rgba(220, 38, 38, 0.12)',
+                            color: '#dc2626',
+                            border: '1px dashed rgba(220, 38, 38, 0.5)',
+                          }}>
+                            Pending
+                          </span>
+                        )}
                       {isCompanyEvent && (
                         <span className="priority-badge priority-normal" style={{ background: 'rgba(99, 102, 241, 0.2)', border: '1px solid rgba(99, 102, 241, 0.4)', color: '#a5b4fc' }}>
                           {event.leave_type || 'Event'}

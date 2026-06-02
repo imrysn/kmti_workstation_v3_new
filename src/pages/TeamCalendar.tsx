@@ -55,6 +55,29 @@ export default function TeamCalendar() {
           setShowAbsences={cal.setShowAbsences}
           showSpans={cal.showSpans}
           setShowSpans={cal.setShowSpans}
+          pendingApprovals={cal.pendingApprovals}
+          isAdminOrIT={cal.isAdminOrIT}
+          onApproveLeave={cal.handleApproveEvent}
+          onCancelLeave={(eventId, name) =>
+            cal.confirm(
+              `Decline leave request from ${name}? This will remove the pending event.`,
+              async () => {
+                try {
+                  const { teamCalendarApi } = await import('../services/teamCalendarService')
+                  const res = await teamCalendarApi.deleteEvent(eventId)
+                  if (res.success) {
+                    cal.notify('Leave request declined.', 'success')
+                    cal.loadData()
+                  }
+                } catch {
+                  cal.notify('Failed to decline leave request.', 'error')
+                }
+              },
+              undefined,
+              'danger',
+              'Decline Leave Request'
+            )
+          }
         />
 
         <main className="calendar-main-content" onWheel={cal.handleCalendarWheel}>

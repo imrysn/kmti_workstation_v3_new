@@ -4,6 +4,7 @@ import { useModal } from './ModalContext'
 import { broadcastApi, SERVER_BASE } from '../services/api'
 import { io } from 'socket.io-client'
 import megaphoneIcon from '../assets/megaphone-icon.png'
+import { getDisplayName } from '../utils/nameUtils'
 import './BroadcastFAB.css'
 
 interface Position {
@@ -78,7 +79,8 @@ const BroadcastFAB: React.FC = () => {
     socket.on('broadcast_acknowledged', (data: any) => {
       playAckAlert()
       window.dispatchEvent(new CustomEvent('kmti:broadcast-update', { detail: data }))
-      notify(`${data.workstation} acknowledged the broadcast.`, 'success')
+      const name = data.displayName || getDisplayName(data.fullName || data.username) || data.workstation
+      notify(`${name} acknowledged the broadcast.`, 'success')
     })
 
     socket.on('connect_error', (err) => {
@@ -372,8 +374,8 @@ const BroadcastFAB: React.FC = () => {
                           ) : (
                             acksMap[item.id]?.map(ack => (
                               <div key={ack.id} className="bm-ack-item">
-                                <strong>{ack.workstation}</strong>
-                                <span>{ack.username} @ {new Date(ack.acknowledged_at).toLocaleTimeString()}</span>
+                                <strong>{ack.displayName || getDisplayName(ack.fullName || ack.username) || ack.workstation}</strong>
+                                <span>{ack.workstation} @ {new Date(ack.acknowledged_at).toLocaleTimeString()}</span>
                               </div>
                             ))
                           )}

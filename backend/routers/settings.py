@@ -3,20 +3,25 @@ Settings router — manages the equivalent of My.Settings from the legacy VB app
 Stores/retrieves DB connection info and local file paths.
 
 Access control:
-  GET  /api/settings/       — admin, it
-  POST /api/settings/       — admin, it
+  GET  /api/settings/        — admin, it
+  POST /api/settings/        — admin, it
   DELETE /api/settings/cache — admin, it
+  PUT  /api/settings/display-name — any authenticated user
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 import asyncio
 import json
 import os
 import shutil
 
 from models.user import User, UserRole
-from core.auth import require_role
+from core.auth import get_current_user, require_role
 from core.github_sync import sync_service
 from core.config import SETTINGS_FILE, PREVIEW_CACHE_DIR
+from db.database import get_db
 
 router = APIRouter()
 
@@ -86,3 +91,28 @@ async def update_app(
         return {"message": "Update downloaded successfully. The app will reload and apply changes shortly.", "output": result["output"]}
     else:
         return {"message": f"Update failed: {result['error']}"}, 500
+
+
+class DisplayNameUpdate(BaseModel):
+    displayName: str
+
+
+@router.put("/display-name")
+async def update_display_name(
+    payload: DisplayNameUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update the display name for the current user."""
+    # Only local kmti_users can persist display_name
+    source = getattr(current_user, "source", "local")
+    if source == "fms" or not hasattr(current_user, "display_name"):
+        # FMS users or virtual users — display_name persistence not supported
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Display name update is not available for FMS accounts."
+        )
+
+    current_user.display_name = payload.displayName.strip() or None
+    await db.commit()
+    return {"success": True, "displayName": current_user.display_name}

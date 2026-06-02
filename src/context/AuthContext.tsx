@@ -14,7 +14,7 @@ import {
   useCallback,
   ReactNode,
 } from 'react'
-import { API_BASE } from '../services/api'
+import { API_BASE, settingsApi } from '../services/api'
 
 export type UserRole = 'user' | 'admin' | 'it'
 
@@ -49,13 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!saved) return null
     try {
       const u = JSON.parse(saved)
-      if (u && u.username) {
-        const storedDisplayName = localStorage.getItem(`kmti_display_name_${u.username}`)
-        if (storedDisplayName) {
-          u.displayName = storedDisplayName
-        }
-      }
-      return u
+      return u && u.username ? u : null
     } catch {
       return null
     }
@@ -104,14 +98,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await res.json()
       
-      // Resolve displayName from localStorage
-      if (data.user && data.user.username) {
-        const storedDisplayName = localStorage.getItem(`kmti_display_name_${data.user.username}`)
-        if (storedDisplayName) {
-          data.user.displayName = storedDisplayName
-        }
-      }
-      
       // Save for persistence
       sessionStorage.setItem('kmti_token', data.access_token)
       sessionStorage.setItem('kmti_user', JSON.stringify(data.user))
@@ -139,13 +125,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updatedUser = { ...user }
     if (trimmed) {
       updatedUser.displayName = trimmed
-      localStorage.setItem(`kmti_display_name_${user.username}`, trimmed)
     } else {
       delete updatedUser.displayName
-      localStorage.removeItem(`kmti_display_name_${user.username}`)
     }
     setUser(updatedUser)
     sessionStorage.setItem('kmti_user', JSON.stringify(updatedUser))
+    // Persist to backend (non-blocking)
+    settingsApi.updateDisplayName(trimmed).catch(() => {})
   }, [user])
 
   const logout = useCallback(async () => {

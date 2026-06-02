@@ -100,10 +100,18 @@ export function inferTaskType(
 
 // ─── Task-Type Color Map ──────────────────────────────────────────────────────
 export const TASK_TYPE_COLORS: Record<TaskType, { bg: string; border: string; text: string }> = {
-  '3D': { bg: 'rgba(37,  99,  235, 0.10)', border: '#2563eb', text: '#2563eb' }, // blue
-  '2D': { bg: 'rgba(220, 38, 38, 0)', border: '#dc2626', text: '#dc2626' }, // red
-  'Checking': { bg: 'rgba(234, 90, 12, 0)', border: '#ea580c', text: '#ea580c' }, // orange
-  'Other': { bg: 'rgba(107, 114, 128, 0)', border: '#6b7280', text: '#6b7280' }, // gray
+  '3D': { bg: 'rgba(37, 99, 235, 0.12)',  border: '#2563eb', text: '#2563eb' }, // blue
+  '2D': { bg: 'rgba(220, 38, 38, 0.12)', border: '#dc2626', text: '#dc2626' }, // red
+  'Checking': { bg: 'rgba(234, 90, 12, 0.12)', border: '#ea580c', text: '#ea580c' }, // orange
+  'Other':    { bg: 'rgba(107, 114, 128, 0.08)', border: '#6b7280', text: '#6b7280' }, // gray
+}
+
+// Pill labels shown as prefix icon-replacement chips on calendar badges
+export const TASK_TYPE_PILL_LABELS: Record<TaskType, string> = {
+  '3D': '3D',
+  '2D': '2D',
+  'Checking': 'CHK',
+  'Other': '',
 }
 
 export const getTaskTypeColor = (type: TaskType) => TASK_TYPE_COLORS[type]

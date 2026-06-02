@@ -244,6 +244,7 @@ async def heartbeat(
     version: str = Form(None),
     computer_name: str = Form(None),
     status_message: str = Form(None),
+    display_name: str = Form(None),
     db: AsyncSession = Depends(get_db)
 ):
     """Update current workstation status and retrieve queued nudges/waves."""
@@ -258,6 +259,7 @@ async def heartbeat(
 
     status.active_module = module
     status.current_user = user_name
+    status.display_name = display_name
     status.version = version
     status.computer_name = computer_name
     status.status_message = status_message
@@ -354,6 +356,7 @@ async def get_all_status(db: AsyncSession = Depends(get_db)):
                 "ip_address": s.ip_address,
                 "computer_name": s.computer_name or s.ip_address,
                 "current_user": s.current_user,
+                "display_name": s.display_name,
                 "active_module": s.active_module,
                 "version": s.version,
                 "status_message": s.status_message,

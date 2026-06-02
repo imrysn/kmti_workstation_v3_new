@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { ICalendarEvent } from '../../services/teamCalendarService'
-import { IHoliday } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
+import { IHoliday, inferTaskType, TASK_TYPE_PILL_LABELS, TASK_TYPE_COLORS } from '../../utils/teamCalendarUtils'
+import { GlobeIcon, LockIcon, CheckIcon } from './Icons'
 import EventTooltip from './EventTooltip'
 
 interface CalendarTimelineProps {
@@ -331,11 +331,38 @@ export default function CalendarTimeline({
                                 }} />
                               </>
                             )}
-                            <span style={{ position: 'relative', display: 'flex', flexShrink: 0, zIndex: 1 }}>
-                              {isAbsence || isOffsetHoliday ? <LockIcon /> : isCompanyEvent ? <GlobeIcon /> : isCompleted ? <CheckIcon /> : <TargetIcon />}
+                            <span style={{ position: 'relative', display: 'flex', flexShrink: 0, zIndex: 1, alignItems: 'center' }}>
+                              {isAbsence || isOffsetHoliday
+                                ? <LockIcon />
+                                : isCompanyEvent
+                                  ? <GlobeIcon />
+                                  : isCompleted
+                                    ? <CheckIcon />
+                                    : (() => {
+                                        const tt = inferTaskType(event.todo_title, event.todo_description)
+                                        const pillLabel = TASK_TYPE_PILL_LABELS[tt]
+                                        if (!pillLabel) return null
+                                        return (
+                                          <span style={{
+                                            fontSize: '8px',
+                                            fontWeight: 800,
+                                            letterSpacing: '0.05em',
+                                            padding: '1px 4px',
+                                            borderRadius: '3px',
+                                            background: isEarlyBar ? 'rgba(255,255,255,0.28)' : TASK_TYPE_COLORS[tt].bg,
+                                            color: isEarlyBar ? '#fff' : TASK_TYPE_COLORS[tt].text,
+                                            border: isEarlyBar ? '1px solid rgba(255,255,255,0.45)' : `1px solid ${TASK_TYPE_COLORS[tt].border}`,
+                                            lineHeight: '1.5',
+                                            userSelect: 'none',
+                                            flexShrink: 0,
+                                          }}>
+                                            {pillLabel}
+                                          </span>
+                                        )
+                                      })()}
                             </span>
                             <span style={{ position: 'relative', overflow: 'hidden', textOverflow: 'ellipsis', zIndex: 1,
-                              color: isEarlyBar ? '#fff' : textColor,
+                              color: isEarlyBar ? '#fff' : 'var(--cal-text-primary)',
                               textShadow: isEarlyBar ? '0 1px 2px rgba(0,0,0,0.2)' : 'none',
                             }}>
                               {isOffsetHoliday ? 'Offset Holiday' : isAbsence ? 'On Leave' : isCompanyEvent ? event.leave_type : event.todo_title}

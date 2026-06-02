@@ -4,6 +4,23 @@ import sys
 # Windows Stability Fix: Force SelectorEventLoop for reliable MySQL networking
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    
+    # Silence annoying WinError 10054 tracebacks from proactor connection loss
+    try:
+        from asyncio.proactor_events import _ProactorBasePipeTransport
+        
+        # Save reference to avoid circular reference issues
+        original_call_connection_lost = _ProactorBasePipeTransport._call_connection_lost
+
+        def patched_call_connection_lost(self, exc):
+            try:
+                original_call_connection_lost(self, exc)
+            except (ConnectionResetError, ConnectionAbortedError, OSError):
+                pass
+
+        _ProactorBasePipeTransport._call_connection_lost = patched_call_connection_lost
+    except (ImportError, AttributeError):
+        pass
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI

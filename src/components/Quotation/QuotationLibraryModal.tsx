@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { quotationApi } from '../../services/api'
 import { IQuotation } from '../../types'
 import { useAuth } from '../../context/AuthContext'
+import { getDisplayName } from '../../utils/nameUtils'
 import { useModal } from '../ModalContext'
 import './QuotationLibraryModal.css'
 
@@ -89,11 +90,13 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
 
     // Resolve current user display name / full name
     const userWorkstationName = user ? (user.displayName || user.fullName) : ''
+    const userFullName = user ? user.fullName : ''
 
     // Ownership Enforcement: 
-    // Match either the hostname (computerName) or user's custom/FMS name (userWorkstationName)
+    // Match either the hostname (computerName), user's display/FMS name, or user's exact fullName
     const isOwner = (myWorkstation && q.workstation === myWorkstation) || 
                     (userWorkstationName && q.workstation === userWorkstationName) || 
+                    (userFullName && q.workstation === userFullName) ||
                     hasRole('admin', 'it')
 
     if (!isOwner) {
@@ -339,7 +342,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
                     </td>
                     <td className="owner-cell">
                       <div className="owner-info">
-                        <span className="workstation-badge">{q.workstation || 'Legacy'}</span>
+                        <span className="workstation-badge">{getDisplayName(q.workstation || '') || q.workstation || 'Legacy'}</span>
                       </div>
                     </td>
                     <td className="text-secondary">{formatDate(q.modifiedAt)}</td>

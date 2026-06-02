@@ -30,8 +30,9 @@ export default function Settings() {
     resetUpdateState
   } = useUpdate()
   
-  const { hasRole } = useAuth()
+  const { user, hasRole, setDisplayName } = useAuth()
   const { confirm, alert, notify } = useModal()
+  const [displayNameInput, setDisplayNameInput] = useState(user?.displayName || '')
 
   useEffect(() => {
     settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res.data }))
@@ -243,6 +244,36 @@ export default function Settings() {
           >
             {clearing ? 'Clearing...' : cleared ? '✓ Cache Cleared' : 'Clear Cache'}
           </button>
+        </div>
+      </div>
+
+      <div className="card sett-card">
+        <h2 className="sett-section-title">Display Name</h2>
+        <div className="sett-field">
+          <label className="form-label">How others see you</label>
+          <div className="sett-info-text">
+            Set a custom name that appears in broadcasts, online users, and other shared areas. Leave empty to use your full name.
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <input
+              className="input"
+              value={displayNameInput}
+              onChange={e => setDisplayNameInput(e.target.value)}
+              placeholder={user?.fullName || user?.username || ''}
+              maxLength={100}
+              style={{ flex: 1 }}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={() => {
+                setDisplayName(displayNameInput)
+                notify('Display name updated!', 'success')
+              }}
+              disabled={displayNameInput === (user?.displayName || '')}
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
 

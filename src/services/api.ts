@@ -157,6 +157,7 @@ export const settingsApi = {
   save: (settings: object) => api.post('/settings/', settings),
   clearCache: () => api.delete('/settings/cache'),
   updateApp: () => api.post('/settings/update-app'),
+  updateDisplayName: (displayName: string) => api.put('/settings/display-name', { displayName }),
 }
 
 // --- Feature Flags ---

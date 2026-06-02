@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { ICalendarEvent } from '../../services/teamCalendarService'
-import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor } from '../../utils/teamCalendarUtils'
-import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
+import { IHoliday, formatLocalDate, inferTaskType, getTaskTypeColor, getTeamColor, TASK_TYPE_PILL_LABELS, TASK_TYPE_COLORS } from '../../utils/teamCalendarUtils'
+import { GlobeIcon, LockIcon, CheckIcon } from './Icons'
 import EventTooltip from './EventTooltip'
 
 interface CalendarGridProps {
@@ -186,9 +186,8 @@ export default function CalendarGrid({
                                   : 'claim-badge'
                         }`}
                         style={(!isAbsence && !isCompanyEvent && !isOffsetHoliday && !isCompleted && !isOverdue) ? {
-                          background: taskColor.bg,
+                          background: 'var(--bg-surface-subtle)',
                           borderLeftColor: teamAccent !== 'transparent' ? teamAccent : taskColor.border,
-                          color: taskColor.text,
                           cursor: 'default'
                         } : undefined}
                         onClick={(e) => {
@@ -200,27 +199,46 @@ export default function CalendarGrid({
                         onMouseEnter={(e) => handleMouseEnter(e, event)}
                         onMouseLeave={handleMouseLeave}
                       >
-                        <span className="event-badge-icon">
+                        {/* Icon slot: pill for task claims, semantic icons for other types */}
+                        <span className="event-badge-icon" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                           {isOffsetHoliday
                             ? <LockIcon />
-                            : isCompanyEvent 
-                              ? <GlobeIcon /> 
-                              : isAbsence 
-                                ? <LockIcon /> 
+                            : isCompanyEvent
+                              ? <GlobeIcon />
+                              : isAbsence
+                                ? <LockIcon />
                                 : isCompleted
                                   ? <CheckIcon />
-                                  : <TargetIcon />}
+                                  : TASK_TYPE_PILL_LABELS[taskType]
+                                    ? (
+                                      <span style={{
+                                        fontSize: '8px',
+                                        fontWeight: 800,
+                                        letterSpacing: '0.05em',
+                                        padding: '1px 4px',
+                                        borderRadius: '3px',
+                                        background: TASK_TYPE_COLORS[taskType].bg,
+                                        color: TASK_TYPE_COLORS[taskType].text,
+                                        border: `1px solid ${TASK_TYPE_COLORS[taskType].border}`,
+                                        lineHeight: '1.5',
+                                        userSelect: 'none',
+                                      }}>
+                                        {TASK_TYPE_PILL_LABELS[taskType]}
+                                      </span>
+                                    )
+                                    : null}
                         </span>
-                        <span className="event-badge-text">
+                        {/* Text: always primary color */}
+                        <span className="event-badge-text" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--cal-text-primary)' }}>
                           {isOffsetHoliday
                             ? `Holiday: ${event.engineer_name}`
-                            : isCompanyEvent 
-                              ? `Event: ${event.engineer_name}` 
-                              : isAbsence 
-                              ? displayName 
-                              : (event.todo_title && event.todo_title.length > 25 
-                                ? `${event.todo_title.substring(0, 25)}...` 
-                                : event.todo_title)}
+                            : isCompanyEvent
+                              ? `Event: ${event.engineer_name}`
+                              : isAbsence
+                                ? displayName
+                                : event.todo_title && event.todo_title.length > 22
+                                  ? `${event.todo_title.substring(0, 22)}…`
+                                  : event.todo_title}
                         </span>
                       </div>
                     )

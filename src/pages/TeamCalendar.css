@@ -1191,11 +1191,19 @@
 }
 
 /* Styling for Pending Leave request event chips on grid */
-.pending-absence-badge {
-  background: transparent !important;
-  border: 1.5px dashed var(--cal-accent) !important;
-  opacity: 0.8;
-  color: var(--cal-accent) !important;
+/* Combined selector beats .leave-absence alone (same !important, higher specificity) */
+.pending-absence-badge,
+.pending-absence-badge.leave-absence {
+  background: rgba(220, 38, 38, 0.08) !important;
+  border: 1.5px dashed rgba(220, 38, 38, 0.6) !important;
+  color: #dc2626 !important;
+  opacity: 1;
+  animation: pendingPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes pendingPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.7; }
 }
 
 /* Status badges inside Details modal */
@@ -1571,8 +1579,13 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--cal-text-muted);
-  opacity: 0.3;
+  opacity: 0;
+  transition: opacity 0.2s ease;
   pointer-events: none;
+}
+
+.weekend-cell:hover::after {
+  opacity: 0.3;
 }
 
 .friday-cell {
