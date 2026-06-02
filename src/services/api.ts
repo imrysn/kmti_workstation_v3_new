@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import axios from 'axios'
-import type { IProject, IQuotation, IQuotationHistory } from '../types'
+import type { IProject, IQuotation, IQuotationHistory, ICustomPage, ICustomMapping } from '../types'
 
 export const SERVER_BASE = (() => {
   const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null
@@ -22,15 +22,24 @@ const api = axios.create({
  * This avoids needing React context inside the axios instance.
  */
 let _token: string | null = null
+let _socketId: string | null = null
 
 export function setApiToken(token: string | null) {
   _token = token
+}
+
+export function setApiSocketId(socketId: string | null) {
+  _socketId = socketId
 }
 
 api.interceptors.request.use((config) => {
   if (_token) {
     config.headers = config.headers ?? {}
     config.headers['Authorization'] = `Bearer ${_token}`
+  }
+  if (_socketId) {
+    config.headers = config.headers ?? {}
+    config.headers['X-Socket-ID'] = _socketId
   }
   return config
 })
@@ -243,8 +252,8 @@ export const quotationApi = {
     api.post<{ success: boolean; id: number }>('/quotations/', data),
   update: (id: number, data: any) => 
     api.patch(`/quotations/${id}`, data),
-  delete: (id: number, workstation?: string, permanent?: boolean) => 
-    api.delete(`/quotations/${id}`, { params: { workstation, permanent } }),
+  delete: (id: number, workstation?: string, permanent?: boolean, computer_name?: string) => 
+    api.delete(`/quotations/${id}`, { params: { workstation, permanent, computer_name } }),
   restore: (id: number) =>
     api.post<{ success: boolean }>(`/quotations/${id}/restore`),
   getHistory: (id: number) => 
@@ -259,6 +268,20 @@ export const quotationApi = {
 export const activityLogsApi = {
   list: (params: { limit?: number; offset?: number; username?: string; action?: string; search?: string }) =>
     api.get<{ logs: any[]; total: number }>('/activity-logs/', { params }),
+}
+
+// --- Custom Dictionaries ---
+export const customDictionariesApi = {
+  listPages: () => api.get<ICustomPage[]>('/custom-pages/'),
+  createPage: (title: string) => api.post<ICustomPage>('/custom-pages/', { title }),
+  deletePage: (id: number) => api.delete(`/custom-pages/${id}`),
+  listMappings: (pageId: number, q?: string, limit: number = 50, offset: number = 0) =>
+    api.get<ICustomMapping[]>(`/custom-pages/${pageId}/mappings/`, { params: { q, limit, offset } }),
+  createMapping: (pageId: number, data: { englishName: string; japaneseName: string }) =>
+    api.post<ICustomMapping>(`/custom-pages/${pageId}/mappings/`, data),
+  updateMapping: (mappingId: number, data: { englishName: string; japaneseName: string }) =>
+    api.patch<ICustomMapping>(`/custom-pages/mappings/${mappingId}`, data),
+  deleteMapping: (mappingId: number) => api.delete(`/custom-pages/mappings/${mappingId}`),
 }
 
 // --- Stopwatch Records ---

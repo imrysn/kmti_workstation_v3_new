@@ -13,6 +13,24 @@ const getPartialBillingPercentage = (detail?: string | null): number => {
   return 50
 }
 
+export const normalizeClientName = (name: string | null | undefined): string => {
+  if (!name) return 'Unknown Client'
+  const trimmed = name.trim()
+  if (!trimmed) return 'Unknown Client'
+  
+  const lower = trimmed.toLowerCase()
+  if (lower.includes('nextengineering') || lower.includes('next engineering')) {
+    return 'NEXTENGINEERING Co., Ltd.'
+  }
+  if (lower.includes('kusakabe')) {
+    return 'Kusakabe Electric and Machinery Co., Ltd.'
+  }
+  if (lower.includes('agc ceramics') || lower === 'agcc') {
+    return 'AGC Ceramics Co., Ltd.'
+  }
+  return trimmed
+}
+
 export interface IBillingChartPoint {
   name: string
   completed: number
@@ -168,11 +186,7 @@ export function useBillingMonitoring() {
       const matchesDesigner = !selectedDesigner || q.designerName === selectedDesigner
       const matchesQStatus = !selectedQStatus || q.quotationStatus === selectedQStatus
       const matchesPStatus = !selectedPStatus || q.projectStatus === selectedPStatus
-      const cleanStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
-      const cleanSelect = selectedBillTo ? cleanStr(selectedBillTo) : ''
-      const cleanBillTo = q.billTo ? cleanStr(q.billTo) : ''
-
-      const matchesBillTo = !selectedBillTo || cleanBillTo === cleanSelect
+      const matchesBillTo = !selectedBillTo || normalizeClientName(q.billTo) === selectedBillTo
       const matchesMonth = !selectedMonth || (q.date && new Date(q.date).getMonth().toString() === selectedMonth)
 
       return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth
@@ -328,7 +342,7 @@ export function useBillingMonitoring() {
       new Set(
         quotations
           .filter(q => positiveStatuses.includes(q.quotationStatus || ''))
-          .map(q => q.billTo?.trim() || 'Unknown Client')
+          .map(q => normalizeClientName(q.billTo))
       )
     )
     
@@ -391,7 +405,7 @@ export function useBillingMonitoring() {
         dayQuots.forEach(q => {
           const status = q.quotationStatus || 'For Approval'
           if (positiveStatuses.includes(status)) {
-            const client = q.billTo?.trim() || 'Unknown Client'
+            const client = normalizeClientName(q.billTo)
             dayClientSales[client] = (dayClientSales[client] || 0) + (q.grandTotal || 0)
           }
         })
@@ -461,7 +475,7 @@ export function useBillingMonitoring() {
         mQuots.forEach(q => {
           const status = q.quotationStatus || 'For Approval'
           if (positiveStatuses.includes(status)) {
-            const client = q.billTo?.trim() || 'Unknown Client'
+            const client = normalizeClientName(q.billTo)
             mClientSales[client] = (mClientSales[client] || 0) + (q.grandTotal || 0)
           }
         })
@@ -596,7 +610,7 @@ export function useBillingMonitoring() {
       if (!q.date) return
       const t = new Date(q.date).getTime()
       if (t < yearStart.getTime() || t > yearEnd.getTime()) return
-      const client = q.billTo?.trim() || 'Unknown Client'
+      const client = normalizeClientName(q.billTo)
       const status = q.quotationStatus || 'For Approval'
       if (positiveStatuses.includes(status)) {
         clientsMap[client] = (clientsMap[client] || 0) + (q.grandTotal || 0)
@@ -641,6 +655,7 @@ export function useBillingMonitoring() {
       [clientName]: color
     }))
   }, [])
+
 
   return {
     quotations,

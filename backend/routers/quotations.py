@@ -136,10 +136,14 @@ async def join_doc(sid: str, data: dict):
         # Entry is allowed IF:
         # 1. No password is set
         # 2. OR the provided password is correct
-        # 3. OR the user is the original owner (recognized by workstation name)
+        # 3. OR the user is the original owner (recognized by workstation name or computer name)
         # 4. OR the user is admin/IT (verified via JWT above)
         
-        is_owner = (user_name and quot.workstation == user_name)
+        computer_name = data.get("computer_name", "")
+        is_owner = (
+            (user_name and quot.workstation == user_name) or
+            (computer_name and quot.workstation == computer_name)
+        )
         
         if quot.password and quot.password != password and not is_owner and not is_admin_bypass:
             await sio.emit("join_error", {"message": "Invalid password."}, to=sid)
@@ -178,6 +182,9 @@ async def join_doc(sid: str, data: dict):
 def calculate_grand_total(data: dict) -> float:
     try:
         variant = data.get("layoutVariant", "special")
+        if variant == "kemco":
+            return 1700000.00
+            
         tasks = data.get("tasks", [])
         manual_overrides = data.get("manualOverrides", {}) or {}
         task_overrides = manual_overrides.get("tasks", {}) or {}
@@ -977,6 +984,7 @@ async def delete_quotation(
     q_id: int, 
     request: Request,
     workstation: Optional[str] = None,
+    computer_name: Optional[str] = None,
     permanent: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
@@ -998,8 +1006,11 @@ async def delete_quotation(
         
     # 2. Authorization Check
     is_admin = current_user.role in [UserRole.admin, UserRole.it]
-    # Match workstation hostname for ownership (Shared Account scenario)
-    is_owner = workstation and quot.workstation == workstation
+    # Match workstation hostname or fullName for ownership
+    is_owner = (
+        (workstation and quot.workstation == workstation) or
+        (computer_name and quot.workstation == computer_name)
+    )
 
     if not is_admin and not is_owner:
         owner_label = quot.workstation if quot.workstation else "Legacy/Unknown"

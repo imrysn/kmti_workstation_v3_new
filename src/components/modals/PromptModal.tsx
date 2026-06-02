@@ -50,6 +50,7 @@ export const PromptModal: React.FC = () => {
           <input
             ref={inputRef}
             type="text"
+            className="modal-input"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}

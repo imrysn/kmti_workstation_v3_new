@@ -706,3 +706,113 @@
   line-height: 1.5;
   font-weight: 500;
 }
+
+/* Shared Account Warning Modal */
+.login-warning-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: lcl-fade 0.25s ease-out;
+}
+
+.login-warning-modal {
+  width: 440px;
+  max-width: 90vw;
+  background: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.25), 0 0 1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  animation: lcl-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.login-warning-header {
+  background: #fff8eb;
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #fee2e2;
+}
+
+.login-warning-icon {
+  font-size: 22px;
+}
+
+.login-warning-header h2 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #b45309;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.login-warning-body {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-warning-body p {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.login-warning-body strong {
+  color: #0f172a;
+}
+
+.login-warning-footer {
+  padding: 16px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+}
+
+.login-warning-btn {
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.login-warning-btn.cancel {
+  background: transparent;
+  color: #64748b;
+  border: 1.5px solid #cbd5e1;
+}
+
+.login-warning-btn.cancel:hover {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.login-warning-btn.continue {
+  background: var(--tp-ruby);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(226, 0, 0, 0.25);
+}
+
+.login-warning-btn.continue:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(226, 0, 0, 0.35);
+}

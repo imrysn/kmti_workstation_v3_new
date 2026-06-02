@@ -443,9 +443,9 @@ export default function BillingSpreadsheetTable({
                             }}
                             onBlur={() => setActiveCell(null)}
                           >
-                            <option value="AGC Ceramics Co.,Ltd.">AGC Ceramics Co.,Ltd.</option>
-                            <option value="NEXTENGINEERING Co.,Ltd.">NEXTENGINEERING Co.,Ltd.</option>
-                            <option value="Kusakabe Electric and Machinery Co.,Ltd.">Kusakabe Electric and Machinery Co.,Ltd.</option>
+                            <option value="AGC Ceramics Co., Ltd.">AGC Ceramics Co., Ltd.</option>
+                            <option value="NEXTENGINEERING Co., Ltd.">NEXTENGINEERING Co., Ltd.</option>
+                            <option value="Kusakabe Electric and Machinery Co., Ltd.">Kusakabe Electric and Machinery Co., Ltd.</option>
                           </select>
                         ) : (
                           <div

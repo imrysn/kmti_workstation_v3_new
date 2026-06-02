@@ -59,8 +59,9 @@ export default function Login() {
     return () => clearInterval(intId)
   }, [])
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  const [showWarningModal, setShowWarningModal] = useState(false)
+
+  async function performLogin() {
     setError(null)
     setShake(false)
 
@@ -85,6 +86,15 @@ export default function Login() {
       setShake(true)
       setTimeout(() => setShake(false), 500)
     }
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (username.trim().toLowerCase() === 'user') {
+      setShowWarningModal(true)
+      return
+    }
+    await performLogin()
   }
 
   // Compute CSS classes for the card
@@ -296,6 +306,30 @@ export default function Login() {
                   </ul>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {showWarningModal && (
+        <div className="login-warning-overlay" onClick={() => setShowWarningModal(false)}>
+          <div className="login-warning-modal" onClick={e => e.stopPropagation()}>
+            <div className="login-warning-header">
+              <span className="login-warning-icon">⚠️</span>
+              <h2>Shared Account Deprecated</h2>
+            </div>
+            <div className="login-warning-body">
+              <p>
+                We are transitioning from the shared <strong>"user"</strong> account to individual 
+                <strong> FMS user accounts</strong>.
+              </p>
+              <p>
+                Please use your personal FMS credentials to log in so you can keep track of your progress, edit sessions, and achievements.
+              </p>
+            </div>
+            <div className="login-warning-footer">
+              <button className="login-warning-btn cancel" onClick={() => setShowWarningModal(false)}>
+                Back to Login
+              </button>
             </div>
           </div>
         </div>

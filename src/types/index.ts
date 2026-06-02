@@ -113,3 +113,14 @@ export interface IQuotationHistory {
   author: string
   timestamp: string
 }
+
+export interface ICustomPage {
+  id: number
+  title: string
+}
+
+export interface ICustomMapping {
+  id?: number
+  englishName: string
+  japaneseName: string
+}

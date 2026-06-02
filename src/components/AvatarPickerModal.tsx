@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { WorkstationStatus } from './Achievement'
 import { telemetryApi } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import {
   AVATAR_SKINS,
   getUnlockedSkins,
@@ -25,9 +26,13 @@ export default function AvatarPickerModal({
   onClose,
   onSaved,
 }: AvatarPickerModalProps) {
+  const { user, setDisplayName } = useAuth()
   const unlockedKeys = new Set(getUnlockedSkins(computerName, achievements as any).map(s => s.key))
   const [selected, setSelected] = useState<string>(() => loadEquippedSkin(computerName) ?? 'rookie')
   const [filter, setFilter] = useState<'all' | 'unlocked'>('unlocked')
+  const [displayNameInput, setDisplayNameInput] = useState(() => {
+    return user ? (user.displayName || user.fullName || user.username) : ''
+  })
 
   const displaySkins = AVATAR_SKINS.filter(s => {
     if (s.key === 'premium_tiger') {
@@ -64,6 +69,9 @@ export default function AvatarPickerModal({
       await telemetryApi.saveEquippedSkin(computerName, selected)
     } catch (err) {
       console.error('Failed to sync avatar skin to server:', err)
+    }
+    if (user) {
+      setDisplayName(displayNameInput)
     }
     onSaved()
     onClose()
@@ -114,6 +122,19 @@ export default function AvatarPickerModal({
             {!isSelectedUnlocked && (
               <div className="apm-lock-notice">
                 Earn achievement to unlock this secret skin
+              </div>
+            )}
+            {user && (
+              <div className="apm-display-name-section">
+                <label className="apm-field-label">Display Name</label>
+                <input
+                  type="text"
+                  className="apm-display-name-input"
+                  value={displayNameInput}
+                  onChange={e => setDisplayNameInput(e.target.value)}
+                  placeholder="Set custom name..."
+                  maxLength={35}
+                />
               </div>
             )}
           </div>

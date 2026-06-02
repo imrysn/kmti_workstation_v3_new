@@ -165,7 +165,7 @@ function WorkstationCard({
       <div className="user-info-section">
         <div className="user-header-row">
           <span className="user-name" title={ws.computer_name || ws.ip_address}>
-            {ws.computer_name || ws.ip_address}
+            {ws.current_user || ws.computer_name || ws.ip_address}
             {ws.streaks?.includes(myComputerName) && (
               <span className="streak-flame active" title={`You have an active wave streak with ${ws.computer_name || 'this workstation'}! 🔥`}>
                 🔥
@@ -185,8 +185,8 @@ function WorkstationCard({
             {isMinimized && <span className="minimized-label">💤 </span>}
             {cleanModule || 'Idle'}
           </span>
-          <span className="pc-name" title={userDisplayName}>
-            {userDisplayName}
+          <span className="pc-name" title={ws.computer_name || ws.ip_address}>
+            {ws.computer_name || ws.ip_address}
           </span>
         </div>
 

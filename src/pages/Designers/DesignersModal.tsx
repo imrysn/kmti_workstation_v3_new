@@ -9,6 +9,7 @@ interface DesignersModalProps {
   onSaved: () => void
   editingItem: IDesigner | null
   categories: string[]
+  onSave?: (data: Partial<IDesigner>) => Promise<void>
 }
 
 export default function DesignersModal({
@@ -16,7 +17,8 @@ export default function DesignersModal({
   onClose,
   onSaved,
   editingItem,
-  categories
+  categories,
+  onSave
 }: DesignersModalProps) {
   const { notify } = useModal()
   const [formData, setFormData] = useState({
@@ -63,12 +65,16 @@ export default function DesignersModal({
     e.preventDefault()
     setLoading(true)
     try {
-      if (editingItem?.id) {
-        await designersApi.update(editingItem.id, formData)
-        notify('Client updated successfully', 'success')
+      if (onSave) {
+        await onSave(formData)
       } else {
-        await designersApi.create(formData)
-        notify('Client added successfully', 'success')
+        if (editingItem?.id) {
+          await designersApi.update(editingItem.id, formData)
+          notify('Client updated successfully', 'success')
+        } else {
+          await designersApi.create(formData)
+          notify('Client added successfully', 'success')
+        }
       }
       onSaved()
     } catch (err: any) {

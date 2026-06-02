@@ -469,3 +469,52 @@ body.void-theme .apm-btn-save {
   background: #ff0040;
   box-shadow: 0 2px 8px rgba(255, 0, 64, 0.3);
 }
+
+/* Display Name Section in Avatar Picker */
+.apm-display-name-section {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.apm-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.apm-display-name-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary);
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+body.dark-theme .apm-display-name-input {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: #1e293b;
+}
+
+body.void-theme .apm-display-name-input {
+  border-color: rgba(255, 0, 64, 0.3);
+  background: #0a0a0c;
+}
+
+.apm-display-name-input:focus {
+  border-color: var(--accent, #0099ff);
+  box-shadow: 0 0 0 3px rgba(0, 153, 255, 0.15);
+}
+
+body.void-theme .apm-display-name-input:focus {
+  border-color: #ff0040;
+  box-shadow: 0 0 0 3px rgba(255, 0, 64, 0.2);
+}

@@ -83,6 +83,7 @@ export function useCollaboration({
   const [isConnected, setIsConnected] = useState(false)
   const [remoteUsers, setRemoteUsers] = useState<Record<string, RemoteUser>>({})
   const [myEffectiveName, setMyEffectiveName] = useState(userName || 'User')
+  const [computerName, setComputerName] = useState('')
   const [myColor, setMyColor] = useState('#4A90D9')
   const [mySessionId, setMySessionId] = useState('')
   const currentQuotIdRef = useRef<number | null>(null)
@@ -117,7 +118,10 @@ export function useCollaboration({
       try {
         const info = await (window as any).electronAPI?.getWorkstationInfo?.()
         if (info?.computerName) {
-          setMyEffectiveName(info.computerName)
+          setComputerName(info.computerName)
+          if (!userName || userName === 'User') {
+            setMyEffectiveName(info.computerName)
+          }
         } else {
           // Fallback for browser-based dev testing: use sessionStorage to persist name across refreshes
           let storedName = sessionStorage.getItem('kmti_dev_name')
@@ -125,7 +129,10 @@ export function useCollaboration({
             storedName = `Browser-User-${Math.floor(Math.random() * 1000)}`
             sessionStorage.setItem('kmti_dev_name', storedName)
           }
-          setMyEffectiveName(storedName)
+          setComputerName(storedName)
+          if (!userName || userName === 'User') {
+            setMyEffectiveName(storedName)
+          }
         }
       } catch (e) {
         console.warn('[COLLAB] Failed to fetch host info:', e)
@@ -134,11 +141,14 @@ export function useCollaboration({
           storedName = `Browser-User-${Math.floor(Math.random() * 1000)}`
           sessionStorage.setItem('kmti_dev_name', storedName)
         }
-        setMyEffectiveName(storedName)
+        setComputerName(storedName)
+        if (!userName || userName === 'User') {
+          setMyEffectiveName(storedName)
+        }
       }
     }
     fetchHost()
-  }, [])
+  }, [userName])
 
   useEffect(() => {
     if (!quotId) return
@@ -169,6 +179,7 @@ export function useCollaboration({
         quot_id: quotId,
         quot_no: quotNo,
         user_name: myEffectiveName,
+        computer_name: computerName,
         password: password,
         display_name: displayName || null,
         auth_token: authToken || null,

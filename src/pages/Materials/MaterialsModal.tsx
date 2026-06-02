@@ -9,6 +9,7 @@ interface MaterialsModalProps {
   onClose: () => void
   onSaved: () => void
   editingItem: IMaterial | null
+  onSave?: (eng: string, jp: string) => Promise<void>
 }
 
 export default function MaterialsModal({
@@ -16,6 +17,7 @@ export default function MaterialsModal({
   onClose,
   onSaved,
   editingItem,
+  onSave
 }: MaterialsModalProps) {
   const { notify, alert } = useModal()
   const [saving, setSaving] = useState(false)
@@ -53,18 +55,22 @@ export default function MaterialsModal({
 
     setSaving(true)
     try {
-      if (editingItem && editingItem.id) {
-        await materialsApi.update(editingItem.id as number, {
-          englishName: formEng,
-          japaneseName: formJp,
-        })
-        notify('Material updated successfully', 'success')
+      if (onSave) {
+        await onSave(formEng, formJp)
       } else {
-        await materialsApi.create({
-          englishName: formEng,
-          japaneseName: formJp,
-        })
-        notify('Material created successfully', 'success')
+        if (editingItem && editingItem.id) {
+          await materialsApi.update(editingItem.id as number, {
+            englishName: formEng,
+            japaneseName: formJp,
+          })
+          notify('Material updated successfully', 'success')
+        } else {
+          await materialsApi.create({
+            englishName: formEng,
+            japaneseName: formJp,
+          })
+          notify('Material created successfully', 'success')
+        }
       }
       onSaved()
     } catch (err: any) {

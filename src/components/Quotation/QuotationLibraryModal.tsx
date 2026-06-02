@@ -22,7 +22,7 @@ interface Props {
  * - Multi-field search (ID, Client, Designer).
  */
 export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
   const { notify, confirm } = useModal()
 
   // ── State ───────────────────────────────────────────────────────
@@ -87,9 +87,14 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
       return
     }
 
+    // Resolve current user display name / full name
+    const userWorkstationName = user ? (user.displayName || user.fullName) : ''
+
     // Ownership Enforcement: 
-    // Since accounts are shared, we identify the owner by the workstation Hostname.
-    const isOwner = (myWorkstation && q.workstation === myWorkstation) || hasRole('admin', 'it')
+    // Match either the hostname (computerName) or user's custom/FMS name (userWorkstationName)
+    const isOwner = (myWorkstation && q.workstation === myWorkstation) || 
+                    (userWorkstationName && q.workstation === userWorkstationName) || 
+                    hasRole('admin', 'it')
 
     if (!isOwner) {
       notify?.(`Access Denied: This record belongs to workstation "${q.workstation || 'Legacy'}".`, 'error')
@@ -100,7 +105,8 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
       `Are you sure you want to move quotation ${q.quotationNo} to the Trash Bin?`,
       async () => {
         try {
-          await quotationApi.delete(q.id, myWorkstation || undefined) // soft delete
+          // Pass userWorkstationName as workstation query param, and myWorkstation as computer_name query param
+          await quotationApi.delete(q.id, userWorkstationName || undefined, false, myWorkstation || undefined) // soft delete
           notify?.('Quotation moved to Trash.', 'success')
           fetchLibrary()
         } catch (err) {

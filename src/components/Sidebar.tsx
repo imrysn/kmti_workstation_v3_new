@@ -134,7 +134,7 @@ export default function Sidebar() {
         {user && (
           <div className="sidebar-user">
             <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{user.username}</span>
+              <span className="sidebar-user-name">{user.displayName || user.fullName || user.username}</span>
               <span className="sidebar-user-role">{user.role}</span>
             </div>
             <button className="sidebar-logout-btn" onClick={logout} title="Sign out">

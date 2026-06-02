@@ -37,10 +37,17 @@ const DEFAULT_COMPANY: CompanyInfo = {
 }
 
 const DEFAULT_CLIENT: ClientInfo = {
-  company: 'NEXTENGINEERING Co, Ltd.',
+  company: 'NEXTENGINEERING Co., Ltd.',
   contact: 'MR. Masahiko Hasegawa',
   address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
   phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013',
+}
+
+const DEFAULT_CLIENT_KEMCO: ClientInfo = {
+  company: 'Kusakabe Electric and Machinery Co.,Ltd.',
+  contact: 'Mr. Seiichi Fujiyama',
+  address: '11-2,2Chome Murotani Nishiku Kobe, Japan (651-2241)',
+  phone: 'TEL  078-992-9145 / FAX 078-992-9149',
 }
 
 const DEFAULT_BASE_RATES: BaseRates = {
@@ -171,8 +178,8 @@ function useStickyState<T>(
       try { setValueRaw(JSON.parse(stored)); return } catch { /* ignore */ }
     }
     setValueRaw(typeof defaultValue === 'function' ? (defaultValue as () => T)() : defaultValue)
-  // defaultValue is stable (module-level const), safe to omit
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // defaultValue is stable (module-level const), safe to omit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentNsKey])
 
   // Write-back
@@ -246,6 +253,7 @@ export function useInvoiceState() {
   const setLayoutVariant = useCallback((variant: 'special' | 'kemco') => {
     setLayoutVariantRaw(variant)
     if (variant === 'kemco') {
+      setClientInfo(DEFAULT_CLIENT_KEMCO)
       setTasks(prev => prev.map(task => {
         const { rank, price } = getKemcoRankAndPrice(
           task.time || 0,
@@ -259,6 +267,8 @@ export function useInvoiceState() {
           amount: price
         }
       }))
+    } else {
+      setClientInfo(DEFAULT_CLIENT)
     }
   }, [setLayoutVariantRaw, setTasks])
 
@@ -308,7 +318,7 @@ export function useInvoiceState() {
     setTasks(prev => {
       const parentIndex = prev.findIndex(task => task.id === parentId)
       if (parentIndex === -1) return prev
-      
+
       // Insert after the last existing child (or after parent if no children)
       let insertIndex = parentIndex + 1
       for (let i = parentIndex + 1; i < prev.length; i++) {
@@ -318,7 +328,7 @@ export function useInvoiceState() {
           if (curr.parentId === parentId) { isDescendant = true; break }
           curr = prev.find(t => t.id === curr.parentId) || { parentId: null } as any
         }
-        
+
         if (isDescendant) insertIndex = i + 1
         else break
       }
@@ -342,7 +352,7 @@ export function useInvoiceState() {
   const removeTask = useCallback((id: number) => {
     setTasks(prev => {
       const idsToRemove = new Set<number>([id])
-      
+
       // Multi-pass to find all descendants (safe for flat list)
       let foundNew = true
       while (foundNew) {
@@ -354,7 +364,7 @@ export function useInvoiceState() {
           }
         })
       }
-      
+
       return prev.filter(task => !idsToRemove.has(task.id))
     })
     setHasUnsavedChanges(true)
@@ -445,11 +455,13 @@ export function useInvoiceState() {
     const newBilling: BillingDetails = { ...DEFAULT_BILLING_DETAILS, invoiceNo: '', jobOrderNo: '' }
     const newTasks: Task[] = [makeBlankTask(0, null)]
 
+    const defaultClient = variant === 'kemco' ? DEFAULT_CLIENT_KEMCO : DEFAULT_CLIENT
+
     // Pre-seed the new namespace before switching so useStickyState resync
     // reads correct values (not empty defaults) when ns changes.
     seedNamespace(newQuotNo, {
       companyInfo: DEFAULT_COMPANY,
-      clientInfo: DEFAULT_CLIENT,
+      clientInfo: defaultClient,
       details: newDetails,
       billingDetails: newBilling,
       tasks: newTasks,
@@ -473,6 +485,7 @@ export function useInvoiceState() {
     setManualOverrides(EMPTY_MANUAL_OVERRIDES)
     setCollapsedTaskIds([])
     setChatLog([])
+    setClientInfo(defaultClient)
     setLayoutVariant(variant)
     setCurrentFilePath(null)
     setHasUnsavedChanges(false)
@@ -482,8 +495,8 @@ export function useInvoiceState() {
     const qd = data.quotationDetails || {}
     const targetQuotNo = qd.quotationNo || ''
 
-    const resolvedCompany  = data.companyInfo   || { name: '', address: '', city: '', location: '', phone: '' }
-    const resolvedClient   = data.clientInfo    || { company: '', contact: '', address: '', phone: '' }
+    const resolvedCompany = data.companyInfo || { name: '', address: '', city: '', location: '', phone: '' }
+    const resolvedClient = data.clientInfo || { company: '', contact: '', address: '', phone: '' }
     const resolvedDetails: QuotationDetails = {
       quotationNo: targetQuotNo,
       referenceNo: qd.referenceNo || '',
@@ -492,7 +505,7 @@ export function useInvoiceState() {
     const resolvedBilling: BillingDetails = {
       ...DEFAULT_BILLING_DETAILS,
       ...(data.billingDetails || {}),
-      invoiceNo:  data.billingDetails?.invoiceNo  ?? qd.invoiceNo  ?? '',
+      invoiceNo: data.billingDetails?.invoiceNo ?? qd.invoiceNo ?? '',
       jobOrderNo: data.billingDetails?.jobOrderNo ?? qd.jobOrderNo ?? '',
       quotationStatus: data.billingDetails?.quotationStatus ?? 'For Approval',
       projectStatus: data.billingDetails?.projectStatus ?? 'On Going',
@@ -519,11 +532,11 @@ export function useInvoiceState() {
         }
       })
     }
-    const resolvedRates    = data.baseRates || DEFAULT_BASE_RATES
-    const loadedSig        = data.signatures || {}
+    const resolvedRates = data.baseRates || DEFAULT_BASE_RATES
+    const loadedSig = data.signatures || {}
     const resolvedSigs: Signatures = {
       quotation: { ...DEFAULT_SIGNATURES.quotation, ...loadedSig.quotation },
-      billing:   { ...DEFAULT_SIGNATURES.billing,   ...loadedSig.billing   },
+      billing: { ...DEFAULT_SIGNATURES.billing, ...loadedSig.billing },
     }
     const resolvedOverrides = migrateLegacyOverrides(data.manualOverrides)
     const resolvedCollapsed = data.collapsedTaskIds || []
@@ -535,19 +548,19 @@ export function useInvoiceState() {
     // the correct data instead of falling back to defaults.
     if (targetQuotNo) {
       seedNamespace(targetQuotNo, {
-        companyInfo:     resolvedCompany,
-        clientInfo:      resolvedClient,
-        details:         resolvedDetails,
-        billingDetails:  resolvedBilling,
-        tasks:           resolvedTasks,
-        baseRates:       resolvedRates,
-        signatures:      resolvedSigs,
+        companyInfo: resolvedCompany,
+        clientInfo: resolvedClient,
+        details: resolvedDetails,
+        billingDetails: resolvedBilling,
+        tasks: resolvedTasks,
+        baseRates: resolvedRates,
+        signatures: resolvedSigs,
         manualOverrides: resolvedOverrides,
-        collapsed:       resolvedCollapsed,
-        chatLog:         resolvedChatLog,
-        layoutVariant:   resolvedVariant,
-        filePath:        fileName,
-        unsaved:         false,
+        collapsed: resolvedCollapsed,
+        chatLog: resolvedChatLog,
+        layoutVariant: resolvedVariant,
+        filePath: fileName,
+        unsaved: false,
       })
       setNs(targetQuotNo)
     }

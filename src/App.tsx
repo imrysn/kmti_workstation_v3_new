@@ -35,6 +35,7 @@ import { UpdateProvider, useUpdate } from './context/UpdateContext'
 import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { useHeartbeat } from './hooks/useHeartbeat'
+import { useSocketSync } from './hooks/useSocketSync'
 import MandatoryUpdateOverlay from './components/MandatoryUpdateOverlay'
 import UpdateToast from './components/UpdateToast'
 import { setApiToken, onUnauthorized } from './services/api'
@@ -84,6 +85,9 @@ function WorkstationShell() {
 
   // Activate real-time telemetry heartbeat
   useHeartbeat()
+
+  // Activate real-time multi-user socket synchronization
+  useSocketSync()
 
   const shellClass = `app-shell${isLoggingOut ? ' exiting' : ''}`
 

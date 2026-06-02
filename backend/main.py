@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs, custom_dictionaries
 from routers import team_calendar as team_calendar_router
 import time
 import logging
@@ -23,7 +23,7 @@ from core.config import IS_FROZEN, BASE_DIR, LOG_DIR
 
 from db.database import engine, Base, fms_engine, AsyncSessionLocal
 from sqlalchemy import text
-from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model, activity_log as activity_log_model # Ensure models are registered for metadata
+from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model, activity_log as activity_log_model, custom_dictionary as custom_dictionary_model # Ensure models are registered for metadata
 import team_calendar.infrastructure.models # Ensure team calendar models are registered for metadata
 try:
     from core.nas_indexer import indexer
@@ -176,6 +176,7 @@ app.include_router(team_calendar_router.router, prefix="/api/team-calendar", tag
 app.include_router(fms.router, prefix="/api/fms", tags=["FMS Integration"])
 app.include_router(materials.router, prefix="/api/materials", tags=["Materials"])
 app.include_router(activity_logs.router, prefix="/api/activity-logs", tags=["Activity Logs"])
+app.include_router(custom_dictionaries.router, prefix="/api/custom-pages", tags=["Custom Dictionary Pages"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
 # IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE

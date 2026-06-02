@@ -66,6 +66,40 @@ export default function Materials() {
     }
   }, [query, page])
 
+  const itemTimestampsRef = useRef<Record<number | string, number>>({})
+
+  // Downstream Event Consumer
+  useEffect(() => {
+    const handleMutation = (e: CustomEvent) => {
+      const { target, action, data, timestamp } = e.detail
+      if (target !== 'materials') return
+
+      const lastLocalTime = itemTimestampsRef.current[data.id] || 0
+      if (timestamp < lastLocalTime) {
+        console.log(`[SocketSync] Ignoring older remote mutation for material ${data.id}`)
+        return
+      }
+
+      setResults(prev => {
+        const index = prev.findIndex(item => item.id === data.id)
+        if (action === 'INSERT') {
+          if (index !== -1) return prev
+          return [data, ...prev]
+        } else if (action === 'UPDATE') {
+          if (index === -1) return prev
+          return prev.map(item => item.id === data.id ? { ...item, ...data } : item)
+        } else if (action === 'DELETE') {
+          if (index === -1) return prev
+          return prev.filter(item => item.id !== data.id)
+        }
+        return prev
+      })
+    }
+
+    window.addEventListener('kmti:db_mutation', handleMutation as EventListener)
+    return () => window.removeEventListener('kmti:db_mutation', handleMutation as EventListener)
+  }, [])
+
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
     setCopiedId(id)
@@ -83,16 +117,55 @@ export default function Materials() {
     setShowModal(true)
   }
 
+  const handleSaveMaterial = async (englishName: string, japaneseName: string) => {
+    const previousResults = [...results]
+    
+    if (editingItem && editingItem.id) {
+      const targetId = editingItem.id
+      itemTimestampsRef.current[targetId] = Date.now()
+      
+      setResults(prev => prev.map(item => item.id === targetId ? { ...item, englishName, japaneseName } : item))
+      try {
+        await materialsApi.update(targetId as number, { englishName, japaneseName })
+        notify('Material updated successfully', 'success')
+      } catch (err) {
+        setResults(previousResults)
+        throw err
+      }
+    } else {
+      const tempId = -Date.now()
+      itemTimestampsRef.current[tempId] = Date.now()
+      const tempItem: IMaterial = { id: tempId, englishName, japaneseName }
+      
+      setResults(prev => [tempItem, ...prev])
+      try {
+        const res = await materialsApi.create({ englishName, japaneseName })
+        const newItem = res.data
+        itemTimestampsRef.current[newItem.id] = Date.now()
+        setResults(prev => prev.map(item => item.id === tempId ? newItem : item))
+        notify('Material created successfully', 'success')
+      } catch (err) {
+        setResults(previousResults)
+        throw err
+      }
+    }
+  }
+
   const handleDelete = (item: IMaterial) => {
     if (!item.id) return
     confirm(
       `Delete the material mapping for "${item.englishName}"?`,
       async () => {
+        const targetId = item.id as number
+        const previousResults = [...results]
+        itemTimestampsRef.current[targetId] = Date.now()
+        
+        setResults(prev => prev.filter(x => x.id !== targetId))
         try {
-          await materialsApi.delete(item.id as number)
+          await materialsApi.delete(targetId)
           notify('Material deleted successfully', 'success')
-          loadData(false)
         } catch (err: any) {
+          setResults(previousResults)
           notify(err.response?.data?.detail || 'Failed to delete material', 'error')
         }
       },
@@ -104,7 +177,6 @@ export default function Materials() {
 
   const handleSaved = () => {
     setShowModal(false)
-    loadData(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -173,6 +245,7 @@ export default function Materials() {
         onClose={() => setShowModal(false)}
         onSaved={handleSaved}
         editingItem={editingItem}
+        onSave={handleSaveMaterial}
       />
     </div>
   )

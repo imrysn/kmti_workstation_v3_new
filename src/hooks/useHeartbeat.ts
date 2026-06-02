@@ -86,7 +86,7 @@ export function useHeartbeat() {
 
         const formData = new FormData();
         formData.append('module', module);
-        formData.append('user_name', user.username);
+        formData.append('user_name', user.displayName || user.fullName || user.username);
         formData.append('version', appVersion);
         if (computerNameRef.current) {
           formData.append('computer_name', computerNameRef.current);

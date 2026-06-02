@@ -193,7 +193,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     quotNo,
     password,
     displayName,
-    userName: user?.username || 'User',
+    userName: user ? (user.displayName || user.fullName || user.username) : 'User',
     authToken: token ?? undefined,
     onUserJoined: (u) => {
       // Don't toast for yourself unless it's a truly new connection

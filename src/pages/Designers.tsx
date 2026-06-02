@@ -86,6 +86,40 @@ export default function Designers() {
     }
   }, [selectedCategory, query, page])
 
+  const itemTimestampsRef = useRef<Record<number | string, number>>({})
+
+  // Downstream Event Consumer
+  useEffect(() => {
+    const handleMutation = (e: CustomEvent) => {
+      const { target, action, data, timestamp } = e.detail
+      if (target !== 'designers') return
+
+      const lastLocalTime = itemTimestampsRef.current[data.id] || 0
+      if (timestamp < lastLocalTime) {
+        console.log(`[SocketSync] Ignoring older remote mutation for client ${data.id}`)
+        return
+      }
+
+      setResults(prev => {
+        const index = prev.findIndex(item => item.id === data.id)
+        if (action === 'INSERT') {
+          if (index !== -1) return prev
+          return [data, ...prev]
+        } else if (action === 'UPDATE') {
+          if (index === -1) return prev
+          return prev.map(item => item.id === data.id ? { ...item, ...data } : item)
+        } else if (action === 'DELETE') {
+          if (index === -1) return prev
+          return prev.filter(item => item.id !== data.id)
+        }
+        return prev
+      })
+    }
+
+    window.addEventListener('kmti:db_mutation', handleMutation as EventListener)
+    return () => window.removeEventListener('kmti:db_mutation', handleMutation as EventListener)
+  }, [])
+
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text)
     notify(`Copied: ${text}`, 'success')
@@ -101,17 +135,62 @@ export default function Designers() {
     setShowModal(true)
   }
 
+  const handleSaveDesigner = async (formData: Partial<IDesigner>) => {
+    const previousResults = [...results]
+    
+    if (editingItem && editingItem.id) {
+      const targetId = editingItem.id
+      itemTimestampsRef.current[targetId] = Date.now()
+      
+      setResults(prev => prev.map(item => item.id === targetId ? { ...item, ...formData } : item))
+      try {
+        await designersApi.update(targetId, formData)
+        notify('Client updated successfully', 'success')
+      } catch (err) {
+        setResults(previousResults)
+        throw err
+      }
+    } else {
+      const tempId = -Date.now()
+      itemTimestampsRef.current[tempId] = Date.now()
+      const tempItem: IDesigner = {
+        id: tempId,
+        category: formData.category || '',
+        englishName: formData.englishName || '',
+        email: formData.email || '',
+        japaneseName: formData.japaneseName || ''
+      }
+      
+      setResults(prev => [tempItem, ...prev])
+      try {
+        const res = await designersApi.create(formData)
+        const newItem = res.data
+        itemTimestampsRef.current[newItem.id] = Date.now()
+        setResults(prev => prev.map(item => item.id === tempId ? newItem : item))
+        notify('Client added successfully', 'success')
+      } catch (err) {
+        setResults(previousResults)
+        throw err
+      }
+    }
+  }
+
   const handleDelete = (item: IDesigner) => {
     if (!item.id) return
     confirm(
       `Are you sure you want to delete client "${item.englishName}"?`,
       async () => {
+        const targetId = item.id as number
+        const previousResults = [...results]
+        itemTimestampsRef.current[targetId] = Date.now()
+        
+        setResults(prev => prev.filter(x => x.id !== targetId))
         try {
-          await designersApi.delete(item.id as number)
+          await designersApi.delete(targetId)
           notify("Client deleted successfully", "success")
-          loadData(false)
           fetchCategories()
         } catch (err: any) {
+          setResults(previousResults)
           notify(err.response?.data?.detail || "Failed to delete client", "error")
         }
       },
@@ -146,7 +225,6 @@ export default function Designers() {
 
   const onSaved = () => {
     setShowModal(false)
-    loadData(false)
     fetchCategories()
   }
 
@@ -188,6 +266,7 @@ export default function Designers() {
         onSaved={onSaved}
         editingItem={editingItem}
         categories={categories}
+        onSave={handleSaveDesigner}
       />
     </div>
   )

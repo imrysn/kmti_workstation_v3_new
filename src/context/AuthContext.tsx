@@ -21,6 +21,8 @@ export type UserRole = 'user' | 'admin' | 'it'
 export interface AuthUser {
   id: number
   username: string
+  fullName: string
+  displayName?: string
   role: UserRole
 }
 
@@ -36,6 +38,7 @@ interface AuthContextValue {
   dismissSessionExpired: () => void
   triggerSessionExpired: () => void
   hasRole: (...roles: UserRole[]) => boolean
+  setDisplayName: (name: string) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -43,7 +46,19 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     const saved = sessionStorage.getItem('kmti_user')
-    return saved ? JSON.parse(saved) : null
+    if (!saved) return null
+    try {
+      const u = JSON.parse(saved)
+      if (u && u.username) {
+        const storedDisplayName = localStorage.getItem(`kmti_display_name_${u.username}`)
+        if (storedDisplayName) {
+          u.displayName = storedDisplayName
+        }
+      }
+      return u
+    } catch {
+      return null
+    }
   })
   const [token, setToken] = useState<string | null>(() => {
     try {
@@ -89,6 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await res.json()
       
+      // Resolve displayName from localStorage
+      if (data.user && data.user.username) {
+        const storedDisplayName = localStorage.getItem(`kmti_display_name_${data.user.username}`)
+        if (storedDisplayName) {
+          data.user.displayName = storedDisplayName
+        }
+      }
+      
       // Save for persistence
       sessionStorage.setItem('kmti_token', data.access_token)
       sessionStorage.setItem('kmti_user', JSON.stringify(data.user))
@@ -109,6 +132,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
     }
   }, [])
+
+  const setDisplayName = useCallback((name: string) => {
+    if (!user) return
+    const trimmed = name.trim()
+    const updatedUser = { ...user }
+    if (trimmed) {
+      updatedUser.displayName = trimmed
+      localStorage.setItem(`kmti_display_name_${user.username}`, trimmed)
+    } else {
+      delete updatedUser.displayName
+      localStorage.removeItem(`kmti_display_name_${user.username}`)
+    }
+    setUser(updatedUser)
+    sessionStorage.setItem('kmti_user', JSON.stringify(updatedUser))
+  }, [user])
 
   const logout = useCallback(async () => {
     setIsLoggingOut(true)
@@ -167,7 +205,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login, logout,
       dismissSessionExpired,
       triggerSessionExpired: () => setSessionExpired(true),
-      hasRole
+      hasRole,
+      setDisplayName
     }}>
       {children}
     </AuthContext.Provider>

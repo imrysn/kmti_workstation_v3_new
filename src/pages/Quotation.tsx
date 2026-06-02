@@ -14,6 +14,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useModal } from '../components/ModalContext'
+import { useAuth } from '../context/AuthContext'
 import QuotationEntryModal from '../components/Quotation/QuotationEntryModal'
 import QuotationWorkspace from '../components/Quotation/QuotationWorkspace'
 import { quotationApi } from '../services/api'
@@ -21,6 +22,7 @@ import './Quotation.css'
 
 export default function Quotation() {
   const { notify } = useModal()
+  const { user } = useAuth()
   const navigate = useNavigate()
 
   const [activeSession, setActiveSession] = useState<{
@@ -64,13 +66,19 @@ export default function Quotation() {
   const handleCreateNew = useCallback(async (name: string, variant: 'special' | 'kemco', password?: string) => {
     try {
       // 1. Fetch workstation/hostname (The true Owner ID)
-      let workstation = ''
+      let computerName = ''
       try {
         const info = await (window as any).electronAPI?.getWorkstationInfo?.()
-        workstation = info?.computerName || ''
+        computerName = info?.computerName || ''
       } catch (e) {
         console.warn('[lobby] Failed to fetch workstation info')
       }
+
+      // If FMS user, prioritize displayName or fullName. Otherwise fallback to computerName.
+      const isFms = user && user.fullName !== user.username
+      const workstation = isFms 
+        ? (user.displayName || user.fullName || '') 
+        : computerName
 
       // Generate a formal quotation number
       const today = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2)
@@ -93,7 +101,7 @@ export default function Quotation() {
       const msg = e?.response?.data?.detail || 'Failed to create workspace.'
       notify?.(msg, 'error')
     }
-  }, [notify])
+  }, [notify, user])
 
   const handleStartTutorial = useCallback(async () => {
     try {
@@ -103,13 +111,19 @@ export default function Quotation() {
       const displayName = "Interactive Tutorial Session"
 
       // 1. Fetch workstation/hostname
-      let workstation = ''
+      let computerName = ''
       try {
         const info = await (window as any).electronAPI?.getWorkstationInfo?.()
-        workstation = info?.computerName || ''
+        computerName = info?.computerName || ''
       } catch (e) {
         console.warn('[lobby] Failed to fetch workstation info for tutorial')
       }
+
+      // If FMS user, prioritize displayName or fullName. Otherwise fallback to computerName.
+      const isFms = user && user.fullName !== user.username
+      const workstation = isFms 
+        ? (user.displayName || user.fullName || '') 
+        : computerName
 
       // 2. Create a DB record
       const res = await quotationApi.create({ 
@@ -130,7 +144,7 @@ export default function Quotation() {
     } catch (e) {
       notify?.('Failed to initialize tutorial.', 'error')
     }
-  }, [notify])
+  }, [notify, user])
 
   const handleLobbyClose = useCallback(() => {
     navigate('/parts')

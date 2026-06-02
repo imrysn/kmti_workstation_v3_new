@@ -938,5 +938,148 @@ body.void-theme .avatar-edit-btn {
   display: block;
 }
 
+/* Display Name Editor in Online Drawer */
+.display-name-editor {
+  margin: 4px 0;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 6px;
+  border: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+body.dark-theme .display-name-editor {
+  background: rgba(255, 255, 255, 0.01);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.void-theme .display-name-editor {
+  background: rgba(255, 0, 64, 0.02);
+  border-color: rgba(255, 0, 64, 0.15);
+}
+
+.display-name-view-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.display-name-val {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.display-name-badge {
+  font-size: 8px;
+  font-weight: 700;
+  color: #ffffff;
+  background: var(--accent, #0099ff);
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+body.void-theme .display-name-badge {
+  background: #ff0040;
+}
+
+.display-name-pencil-btn,
+.display-name-reset-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.display-name-pencil-btn:hover,
+.display-name-reset-btn:hover {
+  color: var(--text-primary);
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark-theme .display-name-pencil-btn:hover,
+body.dark-theme .display-name-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+body.void-theme .display-name-pencil-btn:hover,
+body.void-theme .display-name-reset-btn:hover {
+  color: #ff0040;
+  background: rgba(255, 0, 64, 0.1);
+}
+
+.display-name-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.display-name-edit-input {
+  flex: 1;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+}
+
+body.dark-theme .display-name-edit-input {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.void-theme .display-name-edit-input {
+  border-color: rgba(255, 0, 64, 0.3);
+}
+
+.display-name-edit-input:focus {
+  border-color: var(--accent, #0099ff);
+}
+
+body.void-theme .display-name-edit-input:focus {
+  border-color: #ff0040;
+}
+
+.display-name-btn {
+  background: transparent;
+  border: none;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.display-name-btn.save {
+  color: #10b981;
+}
+
+.display-name-btn.save:hover {
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.display-name-btn.cancel {
+  color: #ef4444;
+}
+
+.display-name-btn.cancel:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+
 
 

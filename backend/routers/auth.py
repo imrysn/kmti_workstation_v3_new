@@ -1,14 +1,22 @@
 """
 Auth router — login and current user endpoints.
+
+Hybrid login: accepts both kmti_users (local/shared/IT accounts) and
+kmtifms.users (individual FMS accounts). kmti_users is always checked first
+so that existing admin/IT shared accounts continue to work unchanged.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from db.database import get_db
+from db.database import get_db, get_fms_db
 from models.user import User, UserRole
-from core.auth import verify_password, create_access_token, get_current_user, require_role, hash_password
+from models.fms import FmsUser
+from core.auth import (
+    verify_password, create_access_token, create_access_token_fms,
+    get_current_user, require_role, hash_password
+)
 from pydantic import BaseModel
 from core.cache import cache_get, cache_set, cache_delete
 from core.activity_logger import log_activity
@@ -21,70 +29,113 @@ router = APIRouter()
 VALID_WORKSTATION_ROLES = [r.value for r in UserRole]  # ['user', 'admin', 'it']
 
 
+# FMS role → workstation role mapping
+# ADMIN → admin, everything else (USER, TEAM LEADER, etc.) → user
+def _map_fms_role(fms_role: str) -> str:
+    role_upper = (fms_role or "").strip().upper()
+    if role_upper == "ADMIN":
+        return "admin"
+    return "user"
+
+
 @router.post("/login")
 async def login(
     request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
+    fms_db: AsyncSession = Depends(get_fms_db),
 ):
     """
     Authenticate user and return JWT access token.
-    Uses OAuth2PasswordRequestForm so it's compatible with Bearer token flow.
+
+    Hybrid login strategy:
+    1. Try kmti_users (existing shared/IT accounts — unchanged behavior)
+    2. If not found or wrong password, try kmtifms.users (individual FMS accounts)
     """
-    result = await db.execute(
+    # ── Step 1: Try local kmti_users account ──────────────────────────────
+    local_result = await db.execute(
         select(User).where(User.username == form_data.username)
     )
-    user = result.scalar_one_or_none()
+    local_user = local_result.scalar_one_or_none()
 
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if local_user and verify_password(form_data.password, local_user.hashed_password):
+        if not local_user.is_active:
+            await log_activity(
+                username=form_data.username, action="LOGIN_FAILED",
+                details="Account deactivated.", ip_address=request.client.host
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This account has been deactivated. Contact your administrator.",
+            )
+        token = create_access_token(local_user)
         await log_activity(
-            username=form_data.username,
-            action="LOGIN_FAILED",
-            details="Incorrect username or password.",
+            username=local_user.username, action="LOGIN",
+            details="Successful login (local account)", ip_address=request.client.host
+        )
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": local_user.id,
+                "username": local_user.username,
+                "fullName": local_user.username,   # shared accounts use username as display
+                "role": local_user.role.value,
+            },
+        }
+
+    # ── Step 2: Try kmtifms.users account ────────────────────────────────
+    try:
+        fms_result = await fms_db.execute(
+            select(FmsUser).where(FmsUser.username == form_data.username)
+        )
+        fms_user = fms_result.scalar_one_or_none()
+    except Exception:
+        fms_user = None  # FMS DB unreachable — fall through to auth failure
+
+    if fms_user and verify_password(form_data.password, fms_user.password):
+        mapped_role = _map_fms_role(fms_user.role)
+        token = create_access_token_fms(
+            fms_user_id=fms_user.id,
+            username=fms_user.username,
+            full_name=fms_user.fullName,
+            role=mapped_role,
+        )
+        await log_activity(
+            username=fms_user.username, action="LOGIN",
+            details=f"Successful login (FMS account, fullName='{fms_user.fullName}')",
             ip_address=request.client.host
         )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": {
+                "id": fms_user.id,
+                "username": fms_user.username,
+                "fullName": fms_user.fullName,
+                "role": mapped_role,
+            },
+        }
 
-    if not user.is_active:
-        await log_activity(
-            username=form_data.username,
-            action="LOGIN_FAILED",
-            details="Account deactivated.",
-            ip_address=request.client.host
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This account has been deactivated. Contact your administrator.",
-        )
-
-    token = create_access_token(user)
+    # ── Both failed ────────────────────────────────────────────────────────
     await log_activity(
-        username=user.username,
-        action="LOGIN",
-        details="Successful login",
-        ip_address=request.client.host
+        username=form_data.username, action="LOGIN_FAILED",
+        details="Incorrect username or password.", ip_address=request.client.host
     )
-    return {
-        "access_token": token,
-        "token_type": "bearer",
-        "user": {
-            "id": user.id,
-            "username": user.username,
-            "role": user.role.value,
-        },
-    }
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Incorrect username or password.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 @router.get("/me")
-async def get_me(current_user: User = Depends(get_current_user)):
+async def get_me(current_user=Depends(get_current_user)):
     """Returns the currently authenticated user. Useful for token validation on app load."""
     return {
         "id": current_user.id,
         "username": current_user.username,
+        "fullName": getattr(current_user, "fullName", current_user.username),
         "role": current_user.role.value,
         "is_active": current_user.is_active,
     }

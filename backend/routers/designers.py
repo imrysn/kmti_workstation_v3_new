@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text, select, or_, case
 from db.database import get_db
@@ -6,6 +6,7 @@ from models import Designer
 from core.auth import require_role
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
+from socket_manager import broadcast_mutation
 
 router = APIRouter()
 
@@ -74,7 +75,11 @@ async def get_designers(
     ]
 
 @router.post("/", dependencies=[Depends(require_role(["admin", "it"]))])
-async def create_designer(data: DesignerCreate, db: AsyncSession = Depends(get_db)):
+async def create_designer(
+    data: DesignerCreate, 
+    db: AsyncSession = Depends(get_db),
+    x_socket_id: str | None = Header(None, alias="X-Socket-ID")
+):
     """Add a new designer (Admin/IT only)."""
     new_designer = Designer(
         category=data.category,
@@ -85,16 +90,24 @@ async def create_designer(data: DesignerCreate, db: AsyncSession = Depends(get_d
     db.add(new_designer)
     await db.commit()
     await db.refresh(new_designer)
-    return {
+    
+    res_data = {
         "id": new_designer.id,
         "category": new_designer.category,
         "englishName": new_designer.english_name,
         "email": new_designer.email,
         "japaneseName": new_designer.japanese_name
     }
+    await broadcast_mutation("designers", "INSERT", res_data, exclude_sid=x_socket_id)
+    return res_data
 
 @router.patch("/{id}", dependencies=[Depends(require_role(["admin", "it"]))])
-async def update_designer(id: int, data: DesignerUpdate, db: AsyncSession = Depends(get_db)):
+async def update_designer(
+    id: int, 
+    data: DesignerUpdate, 
+    db: AsyncSession = Depends(get_db),
+    x_socket_id: str | None = Header(None, alias="X-Socket-ID")
+):
     """Update a designer (Admin/IT only)."""
     result = await db.execute(select(Designer).where(Designer.id == id))
     designer = result.scalar_one_or_none()
@@ -112,16 +125,23 @@ async def update_designer(id: int, data: DesignerUpdate, db: AsyncSession = Depe
         designer.japanese_name = data.japaneseName
         
     await db.commit()
-    return {
+    
+    res_data = {
         "id": designer.id,
         "category": designer.category,
         "englishName": designer.english_name,
         "email": designer.email,
         "japaneseName": designer.japanese_name
     }
+    await broadcast_mutation("designers", "UPDATE", res_data, exclude_sid=x_socket_id)
+    return res_data
 
 @router.delete("/{id}", dependencies=[Depends(require_role(["admin", "it"]))])
-async def delete_designer(id: int, db: AsyncSession = Depends(get_db)):
+async def delete_designer(
+    id: int, 
+    db: AsyncSession = Depends(get_db),
+    x_socket_id: str | None = Header(None, alias="X-Socket-ID")
+):
     """Delete a designer (Admin/IT only)."""
     result = await db.execute(select(Designer).where(Designer.id == id))
     designer = result.scalar_one_or_none()
@@ -131,4 +151,6 @@ async def delete_designer(id: int, db: AsyncSession = Depends(get_db)):
         
     await db.delete(designer)
     await db.commit()
+    
+    await broadcast_mutation("designers", "DELETE", {"id": id}, exclude_sid=x_socket_id)
     return {"message": "Deleted successfully"}
