@@ -49,6 +49,7 @@
   display: flex;
   align-items: center;
   flex: 1;
+  min-width: 0;
   justify-content: center;
   height: 100%;
   gap: 8px;
@@ -89,6 +90,19 @@
   z-index: 1;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
+}
+
+/* Utility buttons group — hidden at min width, collapses into burger */
+.titlebar-controls-group {
+  display: flex;
+  align-items: center;
+}
+
+/* Burger wrapper — hidden by default, shown at 1024px via media query below */
+.titlebar-burger-wrapper {
+  display: none;
+  position: relative;
+  align-items: center;
 }
 
 .titlebar-user-info {
@@ -242,28 +256,51 @@
     display: none;
   }
   .titlebar-link {
-    padding: 0 12px;
+    padding: 0 10px;
   }
   .titlebar-app-info {
     min-width: unset;
     padding-left: 12px;
   }
   .titlebar-nav {
-    gap: 4px;
+    gap: 2px;
     margin-left: 0;
   }
 }
 
-@media (max-width: 900px) {
-  .titlebar-title {
+/* Hide utility controls, show burger — triggers at Electron's min window width (1024px) */
+@media (max-width: 1024px) {
+  .titlebar-app-info {
+    min-width: 160px; /* keep logo + title visible at min width */
+    padding-left: 10px;
+  }
+  /* Hide the group of utility icon buttons — they move into the burger */
+  .titlebar-controls-group {
     display: none;
   }
-  .titlebar-app-info {
-    min-width: 40px;
+  /* Show the burger button */
+  .titlebar-burger-wrapper {
+    display: flex;
   }
+  /* More breathing room for nav icons now that controls-group is gone */
   .titlebar-nav {
-    justify-content: flex-start;
-    padding-left: 10px;
+    gap: 16px;
+  }
+  .titlebar-link {
+    padding: 0 18px;
+  }
+  /* Role badge takes precious space at min width — hide it */
+  .titlebar-user-info {
+    display: none;
+  }
+  /* Update badge text is too wide at min width */
+  .update-badge {
+    font-size: 0;
+    padding: 0 8px;
+    gap: 4px;
+  }
+  .update-badge .pulse {
+    display: block;
   }
 }
 
@@ -290,4 +327,115 @@
 
 .titlebar-btn.active .titlebar-online-dot {
   border-color: rgba(0, 153, 255, 0.05);
+}
+
+/* ── Burger / Nav Dropdown ────────────────────────────────── */
+
+.titlebar-burger-btn {
+  position: relative;
+}
+
+/* Red dot on burger when approvals are pending */
+.burger-badge-dot {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  width: 7px;
+  height: 7px;
+  background: var(--danger, #ef4444);
+  border-radius: 50%;
+  border: 1.5px solid var(--bg-secondary);
+  pointer-events: none;
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70%  { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.titlebar-nav-dropdown {
+  position: absolute;
+  top: calc(100% + 2px);
+  right: 0;
+  left: auto;
+  min-width: 210px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.28);
+  animation: dropdown-in 0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 200;
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.nav-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-dropdown-item:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.nav-dropdown-item.active {
+  color: var(--accent);
+  background: rgba(0, 153, 255, 0.08);
+}
+
+.nav-dropdown-badge {
+  margin-left: auto;
+  background: var(--danger, #ef4444);
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 2px 6px;
+  line-height: 1;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+  opacity: 0.5;
+}
+
+.nav-dropdown-item.logout-row {
+  color: var(--danger, #ef4444);
+}
+
+.nav-dropdown-item.logout-row:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--danger, #ef4444);
+}
+
+.nav-dropdown-item.update-row {
+  color: #00ff7f;
+  gap: 8px;
 }

@@ -1345,7 +1345,8 @@
   width: 100%;
   max-height: 200px;
   overflow-y: auto;
-  background: rgba(15, 23, 42, 0.95) !important; /* Premium dark slate */
+  background: rgba(15, 23, 42, 0.95) !important;
+  /* Premium dark slate */
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
@@ -1359,17 +1360,395 @@
 .editable-select-item {
   padding: 8px 12px;
   cursor: pointer;
-  color: #cbd5e1; /* slate-300 */
+  color: #cbd5e1;
+  /* slate-300 */
   font-size: 12px;
   text-align: left;
   transition: all 0.15s ease;
 }
 
 .editable-select-item:hover {
-  background: #3b82f6 !important; /* Active accent blue */
+  background: #3b82f6 !important;
+  /* Active accent blue */
   color: #ffffff !important;
 }
 
 .editable-select-item:not(:last-child) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* =============================================
+   BILLING GOAL TRACKER PANEL STYLES
+   ============================================= */
+.goal-tracker-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-sizing: border-box;
+  margin-top: 24px;
+  width: 100%;
+}
+
+.goal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
+}
+
+.goal-title-group {
+  text-align: left;
+}
+
+.goal-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.goal-icon-sparkle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  filter: drop-shadow(0 0 6px var(--accent-subtle));
+}
+
+.goal-title-group h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.goal-status-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.goal-status-tag.achieved {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.1);
+}
+
+.goal-status-tag.excellent {
+  background: rgba(168, 85, 247, 0.1);
+  color: #a855f7;
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.1);
+}
+
+.goal-status-tag.on-track {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.1);
+}
+
+.goal-status-tag.behind {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.1);
+}
+
+.goal-setting-container {
+  display: flex;
+  align-items: center;
+}
+
+.goal-display-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.goal-display-lbl {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.goal-display-val {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.goal-edit-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.goal-edit-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.goal-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px;
+  gap: 4px;
+}
+
+.currency-symbol {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.goal-input-field {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  width: 90px;
+  padding: 2px 0;
+}
+
+.goal-input-field:focus {
+  outline: none;
+}
+
+.goal-btn.save {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+/* PROGRESS BAR */
+.goal-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 16px;
+  background: rgba(239, 68, 68, 0.116);
+  /* Red with .3 opacity for light theme */
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: visible;
+  /* Let tooltip float above */
+  position: relative;
+  box-sizing: border-box;
+  transition: all var(--transition);
+}
+
+body.dark-theme .progress-bar-container {
+  background: rgba(239, 68, 68, 0.096);
+  /* Red with .3 opacity for dark theme */
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+body.void-theme .progress-bar-container {
+  background: rgba(255, 0, 64, 0.027);
+  /* Red with .3 opacity for void theme */
+  border: 1px solid rgba(255, 0, 64, 0.45);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 0, 64, 0.15);
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+  position: relative;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
+  overflow: hidden;
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+.progress-bar-shimmer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 150%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.05) 20%,
+      rgba(255, 255, 255, 0.25) 50%,
+      rgba(255, 255, 255, 0.05) 80%,
+      rgba(255, 255, 255, 0) 100%);
+  transform: translateX(-100%);
+  animation: premium-shimmer 3s infinite ease-in-out;
+}
+
+.progress-tooltip-bubble {
+  position: absolute;
+  bottom: 22px;
+  transform: translate(-50%, 0);
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  padding: 3px 6px;
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 10;
+  animation: tooltip-float 4s infinite ease-in-out;
+}
+
+.progress-tooltip-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.5), 0 0 8px rgba(59, 130, 246, 0.3);
+  }
+}
+
+@keyframes premium-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  45%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes tooltip-float {
+
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+
+  50% {
+    transform: translate(-50%, -3px);
+  }
+}
+
+.progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.progress-percentage-label {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.progress-deficit-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.goal-achieved-announcement {
+  display: inline-flex;
+  align-items: center;
+  color: #10b981;
+  font-weight: 700;
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.2));
+}
+
+/* STATS GRID */
+.goal-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .goal-stats-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.goal-stat-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+.stat-card-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-card-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+
+.stat-card-val.sum-highlight {
+  color: #10b981;
+}
+
+.stat-card-val.deficit-highlight {
+  color: #ef4444;
 }

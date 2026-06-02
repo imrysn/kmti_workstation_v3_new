@@ -4,6 +4,7 @@ import BillingChart from '../components/BillingMonitoring/BillingChart'
 import BillingFilters from '../components/BillingMonitoring/BillingFilters'
 import BillingKpiCards from '../components/BillingMonitoring/BillingKpiCards'
 import BillingSpreadsheetTable from '../components/BillingMonitoring/BillingSpreadsheetTable'
+import BillingGoalTracker from '../components/BillingMonitoring/BillingGoalTracker'
 import { exportBillingToExcel } from '../utils/exportBillingExcel'
 import './BillingMonitoring.css'
 
@@ -218,6 +219,14 @@ export default function BillingMonitoring() {
               setEndMonth={setEndMonth}
             />
           </div>
+
+          {/* Billing target progress gauge and average stats */}
+          <BillingGoalTracker
+            revenueSum={revenueSum}
+            quotations={quotations}
+            formatCurrency={formatCurrency}
+            timeframe={timeframe}
+          />
         </div>
       )}
 

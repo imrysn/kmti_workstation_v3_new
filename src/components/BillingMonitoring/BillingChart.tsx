@@ -98,6 +98,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+
 export default function BillingChart({
   chartData,
   timeframe,

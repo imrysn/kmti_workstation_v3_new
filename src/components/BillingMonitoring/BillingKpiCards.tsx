@@ -9,9 +9,6 @@ interface BillingKpiCardsProps {
 
 export default function BillingKpiCards({
   statusStats,
-  totalItems,
-  revenueSum,
-  trendPercent,
   formatCurrency,
   vertical = false
 }: BillingKpiCardsProps) {
@@ -25,8 +22,7 @@ export default function BillingKpiCards({
   const pendingCount = statusStats['For Approval']?.count || 0
 
   const cancelledCount = statusStats['CANCELLED']?.count || 0
-
-  const trendUp = trendPercent >= 0
+  const cancelledTotal = statusStats['CANCELLED']?.total || 0
 
   return (
     <div className={vertical ? "billing-kpi-column" : "billing-kpi-row"}>
@@ -65,8 +61,12 @@ export default function BillingKpiCards({
 
       {/* Cancelled */}
       <div className="kpi-card kpi-red">
-        <div className="kpi-card-top" style={{ justifyContent: 'flex-end' }} />
-        <div className="kpi-value kpi-value-sm">{cancelledCount}</div>
+        <div className="kpi-card-top" style={{ justifyContent: 'flex-end' }}>
+          <span className="kpi-count-badge" style={{ color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)' }}>
+            {cancelledCount}
+          </span>
+        </div>
+        <div className="kpi-value">{formatCurrency(cancelledTotal)}</div>
         <div className="kpi-label">Cancelled</div>
         <div className="kpi-sub">Voided quotations</div>
       </div>
