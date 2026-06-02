@@ -14,6 +14,7 @@ import { memo } from 'react'
 import type { Task } from '../../../types/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
+import { focusNextInput } from '../utils/focusUtils'
 
 export interface KemcoRowProps {
   task: Task
@@ -37,6 +38,7 @@ export const KemcoRow = memo(({
               type="text"
               value={task.machineCode || ''}
               onChange={e => onUpdate('machineCode', e.target.value)}
+              onKeyDown={focusNextInput}
               className="table-input"
             />
           </CollaborativeField>
@@ -51,20 +53,23 @@ export const KemcoRow = memo(({
               type="text"
               value={task.unitCode || ''}
               onChange={e => onUpdate('unitCode', e.target.value)}
+              onKeyDown={focusNextInput}
               className="table-input"
             />
           </CollaborativeField>
         )}
       </td>
 
-      {/* DWG No. — Parts only (level 2) */}
+      {/* DWG No. — Unit (level 1) and Parts (level 2) */}
       <td>
-        {task.level === 2 && (
+        {(task.level === 1 || task.level === 2) && (
           <CollaborativeField fieldKey={`task.${task.id}.dwgNo`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
             <input
               type="text"
               value={task.dwgNo || ''}
               onChange={e => onUpdate('dwgNo', e.target.value)}
+              onKeyDown={focusNextInput}
+              onMouseDown={e => e.stopPropagation()}
               className="table-input"
             />
           </CollaborativeField>
@@ -82,6 +87,7 @@ export const KemcoRow = memo(({
               type="text"
               value={task.description}
               onChange={e => onUpdate('description', e.target.value)}
+              onKeyDown={focusNextInput}
               className="table-input description-input"
               placeholder={task.level === 0 ? 'Assembly Name' : task.level === 1 ? 'Sub-assembly name' : "Part's name"}
             />
@@ -96,6 +102,7 @@ export const KemcoRow = memo(({
             type="date"
             value={task.startDate || ''}
             onChange={e => onUpdate('startDate', e.target.value)}
+            onKeyDown={focusNextInput}
             className="table-input date-input"
           />
         </CollaborativeField>
@@ -108,6 +115,7 @@ export const KemcoRow = memo(({
             type="date"
             value={task.endDate || ''}
             onChange={e => onUpdate('endDate', e.target.value)}
+            onKeyDown={focusNextInput}
             className="table-input date-input"
           />
         </CollaborativeField>
@@ -120,6 +128,7 @@ export const KemcoRow = memo(({
             type="text"
             value={task.time || ''}
             onChange={e => onUpdate('time', parseFloat(e.target.value) || 0)}
+            onKeyDown={focusNextInput}
             className="table-input number-input"
           />
         </CollaborativeField>
@@ -131,11 +140,12 @@ export const KemcoRow = memo(({
           <select
             value={task.type || '3D'}
             onChange={e => onUpdate('type', e.target.value)}
+            onKeyDown={focusNextInput}
             className="table-input type-select"
           >
             <option value="2D">2D</option>
             <option value="3D">3D</option>
-            <option value="Others">Others...</option>
+            <option value="3D/2D">3D/2D</option>
           </select>
         </CollaborativeField>
       </td>

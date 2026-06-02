@@ -352,17 +352,24 @@ const TasksTable = memo(({
 
   // ── Drag handlers ──────────────────────────────────────────────
   const handleDragStart = useCallback((e: React.DragEvent, taskId: number) => {
-    if (!tasks.find(t => t.id === taskId)?.isMainTask) return
     setDraggedTaskId(taskId)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/html', String(taskId))
-  }, [tasks])
+  }, [])
 
   const handleDragOver = useCallback((e: React.DragEvent, taskId: number) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
-    const task = tasks.find(t => t.id === taskId)
-    if (!task?.isMainTask || taskId === draggedTaskId) return
+    if (taskId === draggedTaskId) return
+
+    const draggedTask = tasks.find(t => Number(t.id) === Number(draggedTaskId))
+    const targetTask = tasks.find(t => Number(t.id) === Number(taskId))
+    if (!draggedTask || !targetTask) return
+
+    const draggedParentId = draggedTask.parentId ? Number(draggedTask.parentId) : null
+    const targetParentId = targetTask.parentId ? Number(targetTask.parentId) : null
+    if (draggedParentId !== targetParentId || draggedTask.level !== targetTask.level) return
+
     setDragOverTaskId(taskId)
   }, [tasks, draggedTaskId])
 
@@ -601,7 +608,7 @@ const TasksTable = memo(({
               })}
               {tasks.length === 0 && (
                 <tr className="empty-table-row">
-                  <td colSpan={12}>
+                  <td colSpan={layoutVariant === 'kemco' ? 11 : 12}>
                     <span className="empty-table-hint">No tasks yet — click Add Assembly to start</span>
                   </td>
                 </tr>

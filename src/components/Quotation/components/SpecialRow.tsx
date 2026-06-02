@@ -11,6 +11,7 @@ import { memo } from 'react'
 import type { Task, TaskSubtotals } from '../../../types/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
+import { focusNextInput } from '../utils/focusUtils'
 
 export interface SpecialRowProps {
   task: Task
@@ -34,9 +35,12 @@ export const SpecialRow = memo(({
 }: SpecialRowProps) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') onEditToggle()
-    if (e.key === 'Escape') onCancelEdit?.()
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (e.key === 'Escape') { onCancelEdit?.(); return }
+    if (e.key === 'Enter') {
+      onEditToggle()
+      focusNextInput(e)
+    }
   }
 
   return (
@@ -52,6 +56,7 @@ export const SpecialRow = memo(({
               type="text"
               value={task.description}
               onChange={e => onUpdate('description', e.target.value)}
+              onKeyDown={focusNextInput}
               className="table-input description-input"
               placeholder={task.isMainTask ? 'Assembly Name' : "Part's name"}
             />
@@ -61,17 +66,13 @@ export const SpecialRow = memo(({
 
       {/* HOURS */}
       <td>
-        <CollaborativeField
-          fieldKey={`task.${task.id}.hours`}
-          remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
-          onFocus={() => emitFocus(`task.${task.id}.hours`)}
-          onBlur={() => emitBlur(`task.${task.id}.hours`)}
-        >
+        <CollaborativeField fieldKey={`task.${task.id}.hours`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="text"
-            inputMode="decimal"
+            inputMode="numeric"
             value={task.hours || ''}
-            onChange={e => onUpdate('hours', Math.min(999, Math.max(0, parseFloat(e.target.value) || 0)))}
+            onChange={e => onUpdate('hours', parseFloat(e.target.value) || 0)}
+            onKeyDown={focusNextInput}
             className="table-input number-input"
           />
         </CollaborativeField>
@@ -79,53 +80,45 @@ export const SpecialRow = memo(({
 
       {/* MINUTES */}
       <td>
-        <CollaborativeField
-          fieldKey={`task.${task.id}.minutes`}
-          remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
-          onFocus={() => emitFocus(`task.${task.id}.minutes`)}
-          onBlur={() => emitBlur(`task.${task.id}.minutes`)}
-        >
+        <CollaborativeField fieldKey={`task.${task.id}.minutes`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="text"
-            inputMode="decimal"
+            inputMode="numeric"
             value={task.minutes || ''}
-            onChange={e => onUpdate('minutes', Math.min(59.99, Math.max(0, parseFloat(e.target.value) || 0)))}
+            onChange={e => onUpdate('minutes', parseFloat(e.target.value) || 0)}
+            onKeyDown={focusNextInput}
             className="table-input number-input"
           />
         </CollaborativeField>
       </td>
 
-      {/* TIME CHARGE (calculated - read only) */}
-      <td className="calculated-cell time-charge-bg">
+      {/* TIME CHARGE */}
+      <td className="time-charge-cell">
         {formatCurrency(subtotals.basicLabor)}
       </td>
 
-      {/* OT HOURS */}
+      {/* OVERTIME HOURS */}
       <td>
-        <CollaborativeField
-          fieldKey={`task.${task.id}.overtimeHours`}
-          remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
-          onFocus={() => emitFocus(`task.${task.id}.overtimeHours`)}
-          onBlur={() => emitBlur(`task.${task.id}.overtimeHours`)}
-        >
+        <CollaborativeField fieldKey={`task.${task.id}.overtimeHours`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
           <input
             type="text"
-            inputMode="decimal"
+            inputMode="numeric"
             value={task.overtimeHours || ''}
             onChange={e => onUpdate('overtimeHours', parseFloat(e.target.value) || 0)}
+            onKeyDown={focusNextInput}
             className="table-input number-input"
           />
         </CollaborativeField>
       </td>
 
-      {/* OVERTIME (calculated - read only) */}
-      <td className="calculated-cell overtime-bg">
+      {/* OVERTIME AMOUNT */}
+      <td className="overtime-cell">
         {formatCurrency(subtotals.overtime)}
       </td>
 
-      {/* SOFTWARE (units input + calculated total) */}
-      <td className="software-cell">
-        <div className="software-input-container">
+      {/* SOFTWARE */}
+      <td>
+        <div className="software-cell-container">
           <CollaborativeField
             fieldKey={`task.${task.id}.softwareUnits`}
             remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}
@@ -137,6 +130,7 @@ export const SpecialRow = memo(({
               inputMode="numeric"
               value={task.softwareUnits || ''}
               onChange={e => onUpdate('softwareUnits', parseFloat(e.target.value) || 0)}
+              onKeyDown={focusNextInput}
               className="table-input number-input software-units-input"
             />
           </CollaborativeField>
@@ -150,11 +144,12 @@ export const SpecialRow = memo(({
           <select
             value={task.type || '3D'}
             onChange={e => onUpdate('type', e.target.value)}
+            onKeyDown={focusNextInput}
             className="table-input type-select"
           >
             <option value="2D">2D</option>
             <option value="3D">3D</option>
-            <option value="Others">Others...</option>
+            <option value="3D/2D">3D/2D</option>
           </select>
         </CollaborativeField>
       </td>

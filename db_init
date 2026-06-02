@@ -55,7 +55,7 @@
       "drawingRank": "",
       "unitPrice": 0,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
+      "lastEditorColor": "#8E44AD",
       "machineCode": "DF"
     },
     {
@@ -74,10 +74,11 @@
       "percentage": 0,
       "level": 1,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#27AE60",
       "unitCode": "TR",
       "drawingRank": "",
-      "unitPrice": 0
+      "unitPrice": 0,
+      "dwgNo": "メイン"
     },
     {
       "id": 1780378793048,
@@ -95,7 +96,7 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "drawingRank": "",
       "unitPrice": 0,
       "dwgNo": "gesfd"
@@ -116,10 +117,30 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "drawingRank": "",
       "unitPrice": 0,
       "dwgNo": "sfddsfsd"
+    },
+    {
+      "id": 1780383810234,
+      "description": "",
+      "referenceNumber": "",
+      "hours": 0,
+      "minutes": 0,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D",
+      "unitType": "JD",
+      "isMainTask": false,
+      "parentId": 1780378700184,
+      "amount": 0,
+      "percentage": 0,
+      "level": 2,
+      "lastEditorName": "kmti.dev",
+      "lastEditorColor": "#E67E22",
+      "drawingRank": "",
+      "unitPrice": 0
     },
     {
       "id": 1780378703400,
@@ -137,7 +158,7 @@
       "percentage": 0,
       "level": 1,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
+      "lastEditorColor": "#E67E22",
       "unitCode": "OF6",
       "drawingRank": "",
       "unitPrice": 0
@@ -158,7 +179,7 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "drawingRank": "",
       "unitPrice": 0
     },
@@ -178,7 +199,7 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "drawingRank": "",
       "unitPrice": 0
     },
@@ -198,7 +219,7 @@
       "percentage": 0,
       "level": 1,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "unitCode": "OF1",
       "drawingRank": "",
       "unitPrice": 0
@@ -219,7 +240,7 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "dwgNo": "123",
       "drawingRank": "",
       "unitPrice": 0
@@ -240,7 +261,7 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "dwgNo": "21321",
       "drawingRank": "",
       "unitPrice": 0
@@ -261,7 +282,7 @@
       "percentage": 0,
       "level": 1,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "unitCode": "OF2",
       "drawingRank": "",
       "unitPrice": 0
@@ -282,7 +303,7 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "dwgNo": "213",
       "drawingRank": "",
       "unitPrice": 0
@@ -303,7 +324,7 @@
       "percentage": 0,
       "level": 2,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#E05C6B",
+      "lastEditorColor": "#E67E22",
       "dwgNo": "123",
       "drawingRank": "",
       "unitPrice": 0
@@ -324,7 +345,7 @@
       "percentage": 0,
       "level": 1,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
+      "lastEditorColor": "#E67E22",
       "unitCode": "MU",
       "drawingRank": "",
       "unitPrice": 0
@@ -345,7 +366,7 @@
       "percentage": 0,
       "level": 1,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
+      "lastEditorColor": "#E67E22",
       "unitCode": "CL",
       "drawingRank": "",
       "unitPrice": 0
@@ -366,89 +387,10 @@
       "percentage": 0,
       "level": 1,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
+      "lastEditorColor": "#E67E22",
       "unitCode": "SL",
       "drawingRank": "",
       "unitPrice": 0
-    },
-    {
-      "id": 1780380873666,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": false,
-      "parentId": 1780378692713,
-      "amount": 0,
-      "percentage": 0,
-      "level": 1,
-      "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
-      "unitCode": "EG",
-      "drawingRank": "",
-      "unitPrice": 0
-    },
-    {
-      "id": 1780379697877,
-      "description": "バイトホルダー脱着空圧配管図",
-      "referenceNumber": "2814",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
-      "drawingRank": "",
-      "unitPrice": 0
-    },
-    {
-      "id": 1780378902856,
-      "description": "チャックピースエアーブロー空圧配管図",
-      "referenceNumber": "2814",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12",
-      "drawingRank": "",
-      "unitPrice": 0
-    },
-    {
-      "id": 1780379801051,
-      "description": "",
-      "referenceNumber": "",
-      "hours": 0,
-      "minutes": 0,
-      "overtimeHours": 0,
-      "softwareUnits": 0,
-      "type": "3D",
-      "unitType": "JD",
-      "isMainTask": true,
-      "parentId": null,
-      "amount": 0,
-      "percentage": 0,
-      "level": 0,
-      "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#F39C12"
     }
   ],
   "baseRates": {
@@ -504,5 +446,5 @@
   "collapsedTaskIds": [],
   "chatLog": [],
   "layoutVariant": "kemco",
-  "savedAt": "2026-06-02T06:19:54.933Z"
+  "savedAt": "2026-06-02T07:29:16.556Z"
 }

@@ -106,7 +106,7 @@ export const TaskRow = memo(({
         `level-${task.level || 0}`
       ].filter(Boolean).join(' ')}
       onClick={handleMainTaskClick}
-      draggable={!isRowLocked && (task.isMainTask || layoutVariant === 'kemco')}
+      draggable={!isRowLocked}
       onDragStart={e => onDragStart?.(e, task.id)}
       onDragOver={e => onDragOver?.(e, task.id)}
       onDragLeave={onDragLeave}

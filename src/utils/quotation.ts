@@ -53,7 +53,7 @@ export function calculateTaskTotal(
   // Original Special Logic
   const getRate = (type: string) => {
     if (type === '2D') return baseRates.timeChargeRate2D
-    if (type === '3D' || !type) return baseRates.timeChargeRate3D
+    if (type === '3D' || type === '3D/2D' || !type) return baseRates.timeChargeRate3D
     return baseRates.timeChargeRateOthers || 0
   }
 
@@ -126,7 +126,7 @@ export function getUnitPageCount(
  */
 export function getKemcoRankAndPrice(time: number, level: number, type: string): { rank: string, price: number } {
   const isPart = level === 2
-  const is3D = type === '3D' || !type // fallback to 3D if not specified
+  const is3D = type === '3D' || type === '3D/2D' || !type // fallback to 3D if not specified
 
   if (is3D) {
     if (isPart) {

@@ -22,6 +22,7 @@ import {
   makeBlankTask
 } from '../../hooks/quotation'
 import { useCollaboration } from '../../hooks/quotation/useCollaboration'
+import type { Task } from '../../types/quotation'
 import {
   companyInfoPath, clientInfoPath, quotationDetailsPath, billingDetailsPath,
   taskPath, baseRatesPath, footerPath,
@@ -103,6 +104,17 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     markSaved, setHasUnsavedChanges,
     addChildTask,
   } = useInvoiceState()
+
+  // Calculate effective data for rendering (preview vs live)
+  const isPreview = !!previewData
+  const effComp = previewData?.companyInfo || companyInfo
+  const effClient = previewData?.clientInfo || clientInfo
+  const effQuotDetails = previewData?.quotationDetails || quotationDetails
+  const effBilling = previewData?.billingDetails || billingDetails
+  const effTasks = (previewData?.tasks || tasks) as Task[]
+  const effBaseRates = previewData?.baseRates || baseRates
+  const effSignatures = previewData?.signatures || signatures
+  const effOverrides = previewData?.manualOverrides || manualOverrides
 
   const getQuotationNo = useCallback(() => quotationDetails.quotationNo, [quotationDetails.quotationNo])
 
@@ -387,42 +399,88 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       patches.push({ path: taskPath(id, fieldOrUpdates), value })
     }
 
-    // Clear manual override for the updated fields in manualOverrides so the main workspace has absolute priority!
-    updateManualOverrides((prev: any) => {
-      if (!prev || !prev.tasks || !prev.tasks[id]) return prev
-      const tasks = { ...prev.tasks }
-      const sub = { ...tasks[id] }
-      
-      let changed = false
-      if (typeof fieldOrUpdates === 'object' && fieldOrUpdates !== null) {
-        Object.keys(fieldOrUpdates).forEach(k => {
-          if (sub[k] !== undefined) {
-            delete sub[k]
-            changed = true
+    let newType: string | undefined = undefined
+    if (typeof fieldOrUpdates === 'object' && fieldOrUpdates !== null) {
+      if (fieldOrUpdates.type !== undefined) newType = fieldOrUpdates.type
+    } else if (fieldOrUpdates === 'type') {
+      newType = value
+    }
+
+    const targetTask = effTasks.find(t => Number(t.id) === Number(id))
+    const isTypeChange = targetTask && newType !== undefined
+
+    const descendantIds = new Set<number>()
+    if (isTypeChange) {
+      let currentParentIds = [Number(id)]
+      while (currentParentIds.length > 0) {
+        const nextParentIds: number[] = []
+        effTasks.forEach(t => {
+          if (t.parentId && currentParentIds.includes(Number(t.parentId))) {
+            descendantIds.add(Number(t.id))
+            nextParentIds.push(Number(t.id))
           }
         })
-      } else {
-        if (sub[fieldOrUpdates] !== undefined) {
-          delete sub[fieldOrUpdates]
-          changed = true
+        currentParentIds = nextParentIds
+      }
+
+      descendantIds.forEach(descId => {
+        patches.push({ path: taskPath(descId, 'type'), value: newType })
+        patches.push({ path: taskPath(descId, 'lastEditorName'), value: myEffectiveName })
+        patches.push({ path: taskPath(descId, 'lastEditorColor'), value: myColor })
+      })
+    }
+
+    // Clear manual override for the updated fields in manualOverrides so the main workspace has absolute priority!
+    updateManualOverrides((prev: any) => {
+      if (!prev || !prev.tasks) return prev
+      const tasks = { ...prev.tasks }
+      let changed = false
+
+      if (tasks[id]) {
+        const sub = { ...tasks[id] }
+        if (typeof fieldOrUpdates === 'object' && fieldOrUpdates !== null) {
+          Object.keys(fieldOrUpdates).forEach(k => {
+            if (sub[k] !== undefined) {
+              delete sub[k]
+              changed = true
+            }
+          })
+        } else {
+          if (sub[fieldOrUpdates] !== undefined) {
+            delete sub[fieldOrUpdates]
+            changed = true
+          }
+        }
+        if (Object.keys(sub).length === 0) {
+          delete tasks[id]
+        } else {
+          tasks[id] = sub
         }
       }
-      
+
+      descendantIds.forEach(descId => {
+        if (tasks[descId]) {
+          const sub = { ...tasks[descId] }
+          if (sub.type !== undefined) {
+            delete sub.type
+            changed = true
+          }
+          if (Object.keys(sub).length === 0) {
+            delete tasks[descId]
+          } else {
+            tasks[descId] = sub
+          }
+        }
+      })
+
       if (!changed) return prev
-      
-      if (Object.keys(sub).length === 0) {
-        delete tasks[id]
-      } else {
-        tasks[id] = sub
-      }
-      
       return { ...prev, tasks }
     })
 
     updateTask(id, updates)
     emitBatchPatch(patches)
     debouncedSyncDb()
-  }, [updateTask, emitBatchPatch, myEffectiveName, myColor, debouncedSyncDb, updateManualOverrides])
+  }, [updateTask, emitBatchPatch, myEffectiveName, myColor, debouncedSyncDb, updateManualOverrides, effTasks])
 
   const syncAddTask = useCallback(() => {
     const newTask = { ...makeBlankTask(), lastEditorName: myEffectiveName, lastEditorColor: myColor }
@@ -436,26 +494,34 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       notify?.('Please select a main task first to add a sub-task.', 'warning')
       return
     }
+    const parentTask = effTasks.find(t => t.id === mainTaskId)
+    const parentType = parentTask ? parentTask.type : '3D'
+
     const newSubTask = {
       ...makeBlankTask(1, mainTaskId),
+      type: parentType,
       lastEditorName: myEffectiveName,
       lastEditorColor: myColor
     }
     addSubTask(mainTaskId, notify, newSubTask)
     emitPatch({ path: TASK_PATHS.ADD_SUB, value: newSubTask })
     debouncedSyncDb()
-  }, [addSubTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb, notify])
+  }, [addSubTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb, notify, effTasks])
 
   const syncAddChildTask = useCallback((parentId: number, level: number) => {
+    const parentTask = effTasks.find(t => t.id === parentId)
+    const parentType = parentTask ? parentTask.type : '3D'
+
     const newTask = {
       ...makeBlankTask(level, parentId),
+      type: parentType,
       lastEditorName: myEffectiveName,
       lastEditorColor: myColor
     }
     addChildTask(parentId, level, newTask)
     emitPatch({ path: TASK_PATHS.ADD_CHILD, value: newTask })
     debouncedSyncDb()
-  }, [addChildTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb])
+  }, [addChildTask, emitPatch, myEffectiveName, myColor, debouncedSyncDb, effTasks])
 
   const syncRemoveTask = useCallback((id: number) => {
     removeTask(id)
@@ -632,16 +698,6 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     }
   }, [autoStartTutorial, quotId, workstation, onLeave, notify])
 
-  // Calculate effective data for rendering (preview vs live)
-  const isPreview = !!previewData
-  const effComp = previewData?.companyInfo || companyInfo
-  const effClient = previewData?.clientInfo || clientInfo
-  const effQuotDetails = previewData?.quotationDetails || quotationDetails
-  const effBilling = previewData?.billingDetails || billingDetails
-  const effTasks = previewData?.tasks || tasks
-  const effBaseRates = previewData?.baseRates || baseRates
-  const effSignatures = previewData?.signatures || signatures
-  const effOverrides = previewData?.manualOverrides || manualOverrides
 
   const collValue = useMemo(() => ({
     isConnected,

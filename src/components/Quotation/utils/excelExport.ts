@@ -313,7 +313,7 @@ function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
       row.getCell(2).value = task.level === 0 ? (task.referenceNumber || '') : ''
       row.getCell(3).value = task.level === 0 ? (task.machineCode || '') : ''
       row.getCell(4).value = task.level === 1 ? (task.unitCode || '') : ''
-      row.getCell(5).value = task.level === 2 ? (task.dwgNo || '') : ''
+      row.getCell(5).value = (task.level === 1 || task.level === 2) ? (task.dwgNo || '') : ''
       row.getCell(6).value = indent + (task.description || '')
       row.getCell(7).value = (task.startDate || '').replace(/-/g, '/')
       row.getCell(8).value = (task.endDate || '').replace(/-/g, '/')

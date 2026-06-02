@@ -313,11 +313,29 @@ export function useInvoiceState() {
   }, [])
 
   const addChildTask = useCallback((parentId: number, level: number, manualTask?: Task) => {
-    const newTask: Task = manualTask || makeBlankTask(level, parentId)
-
     setTasks(prev => {
       const parentIndex = prev.findIndex(task => task.id === parentId)
       if (parentIndex === -1) return prev
+
+      const parentTask = prev[parentIndex]
+      const parentType = parentTask ? parentTask.type : '3D'
+
+      const newTask: Task = manualTask || {
+        ...makeBlankTask(level, parentId),
+        type: parentType,
+      }
+
+      // If layout is kemco, compute KEMCO pricing details
+      if (layoutVariant === 'kemco') {
+        const { rank, price } = getKemcoRankAndPrice(
+          newTask.time || 0,
+          newTask.level || 0,
+          newTask.type || '3D'
+        )
+        newTask.drawingRank = rank
+        newTask.unitPrice = price
+        newTask.amount = price
+      }
 
       // Insert after the last existing child (or after parent if no children)
       let insertIndex = parentIndex + 1
@@ -337,7 +355,7 @@ export function useInvoiceState() {
       return newTasks
     })
     setHasUnsavedChanges(true)
-  }, [])
+  }, [layoutVariant])
 
   const addSubTask = useCallback((mainTaskId: number | null, notify?: (msg: string, type?: NotificationType) => void, manualTask?: Task) => {
     if (!mainTaskId && !manualTask) {
@@ -371,44 +389,150 @@ export function useInvoiceState() {
   }, [])
 
   const updateTask = useCallback((id: number, fieldOrUpdates: keyof Task | Partial<Task>, value?: any) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id !== id) return task
-      let updatedTask = typeof fieldOrUpdates === 'object'
-        ? { ...task, ...fieldOrUpdates }
-        : { ...task, [fieldOrUpdates]: value }
-
-      if (layoutVariant === 'kemco') {
-        const { rank, price } = getKemcoRankAndPrice(
-          updatedTask.time || 0,
-          updatedTask.level || 0,
-          updatedTask.type || '3D'
-        )
-        updatedTask.drawingRank = rank
-        updatedTask.unitPrice = price
-        updatedTask.amount = price
+    setTasks(prev => {
+      let newType: string | undefined = undefined
+      if (typeof fieldOrUpdates === 'object') {
+        if (fieldOrUpdates.type !== undefined) newType = fieldOrUpdates.type
+      } else if (fieldOrUpdates === 'type') {
+        newType = value
       }
-      return updatedTask
-    }))
+
+      const targetTask = prev.find(t => Number(t.id) === Number(id))
+      const isTypeChange = targetTask && newType !== undefined
+
+      if (isTypeChange) {
+        const descendantIds = new Set<number>()
+        let currentParentIds = [Number(id)]
+        while (currentParentIds.length > 0) {
+          const nextParentIds: number[] = []
+          prev.forEach(t => {
+            if (t.parentId && currentParentIds.includes(Number(t.parentId))) {
+              descendantIds.add(Number(t.id))
+              nextParentIds.push(Number(t.id))
+            }
+          })
+          currentParentIds = nextParentIds
+        }
+
+        return prev.map(task => {
+          if (Number(task.id) === Number(id)) {
+            let updatedTask = typeof fieldOrUpdates === 'object'
+              ? { ...task, ...fieldOrUpdates }
+              : { ...task, [fieldOrUpdates]: value }
+            if (layoutVariant === 'kemco') {
+              const { rank, price } = getKemcoRankAndPrice(
+                updatedTask.time || 0,
+                updatedTask.level || 0,
+                updatedTask.type || '3D'
+              )
+              updatedTask.drawingRank = rank
+              updatedTask.unitPrice = price
+              updatedTask.amount = price
+            }
+            return updatedTask
+          }
+
+          if (descendantIds.has(Number(task.id))) {
+            let updatedTask = { ...task, type: newType! }
+            if (layoutVariant === 'kemco') {
+              const { rank, price } = getKemcoRankAndPrice(
+                updatedTask.time || 0,
+                updatedTask.level || 0,
+                updatedTask.type || '3D'
+              )
+              updatedTask.drawingRank = rank
+              updatedTask.unitPrice = price
+              updatedTask.amount = price
+            }
+            return updatedTask
+          }
+
+          return task
+        })
+      }
+
+      return prev.map(task => {
+        if (task.id !== id) return task
+        let updatedTask = typeof fieldOrUpdates === 'object'
+          ? { ...task, ...fieldOrUpdates }
+          : { ...task, [fieldOrUpdates]: value }
+
+        if (layoutVariant === 'kemco') {
+          const { rank, price } = getKemcoRankAndPrice(
+            updatedTask.time || 0,
+            updatedTask.level || 0,
+            updatedTask.type || '3D'
+          )
+          updatedTask.drawingRank = rank
+          updatedTask.unitPrice = price
+          updatedTask.amount = price
+        }
+        return updatedTask
+      })
+    })
     setHasUnsavedChanges(true)
   }, [setHasUnsavedChanges, layoutVariant])
 
   const reorderTasks = useCallback((draggedTaskId: number, targetTaskId: number) => {
     setTasks(prev => {
-      const newTasks = [...prev]
-      const draggedIndex = newTasks.findIndex(t => t.id === draggedTaskId)
-      const targetIndex = newTasks.findIndex(t => t.id === targetTaskId)
+      const draggedIndex = prev.findIndex(t => Number(t.id) === Number(draggedTaskId))
+      const targetIndex = prev.findIndex(t => Number(t.id) === Number(targetTaskId))
       if (draggedIndex === -1 || targetIndex === -1) return prev
-      const draggedTask = newTasks[draggedIndex]
-      const targetTask = newTasks[targetIndex]
-      if (!draggedTask.isMainTask || !targetTask.isMainTask) return prev
-      const draggedTaskAndSubs = newTasks.filter(t => t.id === draggedTaskId || t.parentId === draggedTaskId)
-      const tasksWithoutDragged = newTasks.filter(t => t.id !== draggedTaskId && t.parentId !== draggedTaskId)
-      const newTargetIndex = tasksWithoutDragged.findIndex(t => t.id === targetTaskId)
-      return [
-        ...tasksWithoutDragged.slice(0, newTargetIndex),
-        ...draggedTaskAndSubs,
-        ...tasksWithoutDragged.slice(newTargetIndex),
-      ]
+
+      const draggedTask = prev[draggedIndex]
+      const targetTask = prev[targetIndex]
+
+      // Restrict: dragged and target must have the same parent and same level
+      const draggedParentId = draggedTask.parentId ? Number(draggedTask.parentId) : null
+      const targetParentId = targetTask.parentId ? Number(targetTask.parentId) : null
+      if (draggedParentId !== targetParentId || draggedTask.level !== targetTask.level) return prev
+
+      // Helper to collect all descendants recursively
+      const getDescendantIds = (pId: number, list: Task[]): Set<number> => {
+        const ids = new Set<number>()
+        let currentParentIds = [Number(pId)]
+        while (currentParentIds.length > 0) {
+          const nextParentIds: number[] = []
+          list.forEach(t => {
+            if (t.parentId && currentParentIds.includes(Number(t.parentId))) {
+              ids.add(Number(t.id))
+              nextParentIds.push(Number(t.id))
+            }
+          })
+          currentParentIds = nextParentIds
+        }
+        return ids
+      }
+
+      const draggedDescendants = getDescendantIds(draggedTaskId, prev)
+      const draggedBlock = prev.filter(t => Number(t.id) === Number(draggedTaskId) || draggedDescendants.has(Number(t.id)))
+
+      const targetDescendants = getDescendantIds(targetTaskId, prev)
+      const targetBlock = prev.filter(t => Number(t.id) === Number(targetTaskId) || targetDescendants.has(Number(t.id)))
+
+      // Filter out the dragged block from the array
+      const remaining = prev.filter(t => Number(t.id) !== Number(draggedTaskId) && !draggedDescendants.has(Number(t.id)))
+
+      // Find the target's index in the remaining array
+      const targetIndexInRemaining = remaining.findIndex(t => Number(t.id) === Number(targetTaskId))
+      if (targetIndexInRemaining === -1) return prev
+
+      if (draggedIndex < targetIndex) {
+        // Dragging downwards: insert after the target task and all of its descendants
+        const insertIndex = targetIndexInRemaining + targetBlock.length
+        return [
+          ...remaining.slice(0, insertIndex),
+          ...draggedBlock,
+          ...remaining.slice(insertIndex)
+        ]
+      } else {
+        // Dragging upwards: insert before the target task itself
+        return [
+          ...remaining.slice(0, targetIndexInRemaining),
+          ...draggedBlock,
+          ...remaining.slice(targetIndexInRemaining)
+        ]
+      }
     })
     setHasUnsavedChanges(true)
   }, [])
