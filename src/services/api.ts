@@ -233,7 +233,7 @@ export const broadcastApi = {
 
 // --- Quotations (Database-First) ---
 export const quotationApi = {
-  list: (params: { q?: string; designer?: string; limit?: number; offset?: number }) =>
+  list: (params: { q?: string; designer?: string; limit?: number; offset?: number; trash_only?: boolean }) =>
     api.get<{ quotations: IQuotation[] }>('/quotations/', { params }),
   getSessions: () => 
     api.get<{ sessions: any[] }>('/quotations/sessions'),
@@ -243,14 +243,22 @@ export const quotationApi = {
     api.post<{ success: boolean; id: number }>('/quotations/', data),
   update: (id: number, data: any) => 
     api.patch(`/quotations/${id}`, data),
-  delete: (id: number, workstation?: string) => 
-    api.delete(`/quotations/${id}`, { params: { workstation } }),
+  delete: (id: number, workstation?: string, permanent?: boolean) => 
+    api.delete(`/quotations/${id}`, { params: { workstation, permanent } }),
+  restore: (id: number) =>
+    api.post<{ success: boolean }>(`/quotations/${id}/restore`),
   getHistory: (id: number) => 
     api.get<{ history: IQuotationHistory[] }>(`/quotations/${id}/history`),
   restoreHistory: (qId: number, hId: number) => 
     api.get<any>(`/quotations/${qId}/history/${hId}`),
   updateBilling: (id: number, data: Partial<IQuotation>) =>
     api.patch<{ success: boolean }>(`/quotations/${id}/billing`, data),
+}
+
+// --- Activity Logs ---
+export const activityLogsApi = {
+  list: (params: { limit?: number; offset?: number; username?: string; action?: string; search?: string }) =>
+    api.get<{ logs: any[]; total: number }>('/activity-logs/', { params }),
 }
 
 // --- Stopwatch Records ---

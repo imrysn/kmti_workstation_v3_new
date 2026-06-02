@@ -1,0 +1,307 @@
+/* =====================================================
+   Activity Logs Console — Retro Terminal Auditing Styling
+   ===================================================== */
+
+.alc-console {
+  font-family: var(--itc-font-mono);
+  background: var(--itc-panel);
+  border: 1px solid var(--itc-border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  backdrop-filter: var(--itc-glass-blur);
+  animation: itc-fade-in-up 0.4s ease-out backwards;
+}
+
+.alc-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--itc-border);
+  border-radius: 6px;
+}
+
+.alc-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--itc-border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  transition: border-color 0.2s ease;
+}
+
+.alc-input-group:focus-within {
+  border-color: var(--itc-accent);
+}
+
+.alc-prompt-symbol {
+  color: var(--itc-success);
+  font-weight: bold;
+  user-select: none;
+}
+
+.alc-search-input {
+  background: transparent;
+  border: none;
+  color: var(--itc-text-main);
+  font-family: var(--itc-font-mono);
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+
+.alc-search-input::placeholder {
+  color: var(--itc-text-dim);
+  opacity: 0.4;
+}
+
+.alc-clear-btn {
+  background: transparent;
+  border: none;
+  color: var(--itc-text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.alc-clear-btn:hover {
+  color: var(--itc-danger);
+}
+
+.alc-select-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.alc-filter-label {
+  color: var(--itc-text-dim);
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+.alc-select {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--itc-border);
+  color: var(--itc-accent);
+  font-family: var(--itc-font-mono);
+  font-size: 12px;
+  padding: 6px 24px 6px 12px;
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  position: relative;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6' viewBox='0 0 8 6' fill='none'%3E%3Cpath d='M4 6L0 2.00002L1.4 0.600024L4 3.20002L6.6 0.600024L8 2.00002L4 6Z' fill='%2358a6ff'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 0.2s ease;
+}
+
+.alc-select:focus {
+  border-color: var(--itc-accent);
+}
+
+.alc-select option {
+  background: #0d1117;
+  color: var(--itc-text-main);
+}
+
+.alc-table-container {
+  border: 1px solid var(--itc-border);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  max-height: 520px;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+/* Custom Scrollbar for Retro Table Container */
+.alc-table-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.alc-table-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+.alc-table-container::-webkit-scrollbar-thumb {
+  background: var(--itc-border);
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
+.alc-table-container::-webkit-scrollbar-thumb:hover {
+  background: var(--itc-text-dim);
+}
+
+.alc-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+  table-layout: fixed;
+}
+
+.alc-table th {
+  background: rgba(13, 17, 23, 0.95);
+  color: var(--itc-text-dim);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--itc-border);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 1px 0 var(--itc-border);
+}
+
+.alc-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.25);
+  color: var(--itc-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alc-row {
+  transition: background 0.15s ease;
+}
+
+.alc-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.alc-time {
+  color: var(--itc-text-dim);
+  opacity: 0.8;
+}
+
+.alc-username {
+  color: #c9d1d9;
+  font-weight: 700;
+}
+
+.alc-ip {
+  color: var(--itc-text-dim);
+  opacity: 0.8;
+}
+
+.alc-action {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alc-action--success {
+  background: rgba(63, 185, 80, 0.1);
+  color: var(--itc-success);
+  border: 1px solid rgba(63, 185, 80, 0.25);
+  box-shadow: 0 0 8px rgba(63, 185, 80, 0.05);
+}
+
+.alc-action--danger {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--itc-danger);
+  border: 1px solid rgba(248, 81, 73, 0.25);
+  box-shadow: 0 0 8px rgba(248, 81, 73, 0.05);
+}
+
+.alc-action--warning {
+  background: rgba(227, 179, 65, 0.1);
+  color: var(--itc-warn);
+  border: 1px solid rgba(227, 179, 65, 0.25);
+  box-shadow: 0 0 8px rgba(227, 179, 65, 0.05);
+}
+
+.alc-action--info {
+  background: rgba(88, 166, 255, 0.1);
+  color: var(--itc-accent);
+  border: 1px solid rgba(88, 166, 255, 0.25);
+  box-shadow: 0 0 8px rgba(88, 166, 255, 0.05);
+}
+
+.alc-details {
+  color: #fff;
+  opacity: 0.85;
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.3;
+}
+
+.alc-empty {
+  text-align: center;
+  padding: 48px;
+  color: var(--itc-text-dim);
+  font-style: italic;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+}
+
+.alc-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--itc-border);
+  border-radius: 6px;
+}
+
+.alc-page-info {
+  color: var(--itc-text-dim);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.alc-page-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alc-page-range {
+  font-size: 12px;
+  color: var(--itc-accent);
+  font-weight: 700;
+}
+
+.alc-page-btn {
+  background: transparent;
+  border: 1px solid var(--itc-border);
+  color: var(--itc-text-dim);
+  font-family: var(--itc-font-mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.alc-page-btn:hover:not(:disabled) {
+  border-color: var(--itc-accent);
+  color: var(--itc-accent);
+  background: rgba(88, 166, 255, 0.08);
+}
+
+.alc-page-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}

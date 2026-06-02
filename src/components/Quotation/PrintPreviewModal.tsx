@@ -586,9 +586,9 @@ const PrintPreviewModal = memo(({
                     id="ppm-sidebar-customer"
                     className="ppm-sidebar-input"
                     placeholder="NIKKO"
-                    value={clientInfo?.company || ''}
+                    value={billingDetails?.clientName || ''}
                     disabled={billingDetails?.quotationStatus === 'CANCELLED'}
-                    onChange={e => onClientInfoChange?.({ company: e.target.value })}
+                    onChange={e => onBillingDetailsChange?.({ clientName: e.target.value })}
                   />
                 </div>
 

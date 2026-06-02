@@ -68,6 +68,7 @@ const DEFAULT_BILLING_DETAILS: BillingDetails = {
   updateDetail: '',
   projectInCharge: '',
   billTo: '',
+  clientName: '',
 }
 
 const DEFAULT_SIGNATURES: Signatures = {
@@ -499,6 +500,7 @@ export function useInvoiceState() {
       updateDetail: data.billingDetails?.updateDetail ?? '',
       projectInCharge: data.billingDetails?.projectInCharge ?? '',
       billTo: data.billingDetails?.billTo ?? '',
+      clientName: data.billingDetails?.clientName ?? data.clientName ?? '',
     }
     const resolvedVariant = data.layoutVariant || 'special'
     let resolvedTasks = data.tasks || [makeBlankTask()]

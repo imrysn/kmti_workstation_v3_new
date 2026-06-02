@@ -114,7 +114,7 @@ export default function DayEventsPopover({
 
           {dayEvents.length === 0 ? (
             <div className="empty-state" style={{ padding: '30px 20px', fontSize: '12.5px' }}>
-              No tasks or absences scheduled for this day.
+              No tasks or on-leave scheduled for this day.
             </div>
           ) : (
             dayEvents.map(event => {
@@ -131,10 +131,10 @@ export default function DayEventsPopover({
               todayMidnight.setHours(0, 0, 0, 0)
               const isOverdue = event.event_type === 'Task_Claim' && event.todo_status === 'Claimed' && hasDueDate && new Date(event.due_date!) < todayMidnight
 
-              const accentColor = isCompleted 
-                ? '#059669' 
-                : isOverdue 
-                  ? '#dc2626' 
+              const accentColor = isCompleted
+                ? '#059669'
+                : isOverdue
+                  ? '#dc2626'
                   : (!isAbsence && !isCompanyEvent && !isOffsetHoliday)
                     ? (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
                     : isCompanyEvent ? '#6366f1' : 'var(--cal-text-muted)'

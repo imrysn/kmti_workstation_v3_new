@@ -402,3 +402,61 @@
     transform: rotate(360deg);
   }
 }
+
+.quot-library-tabs {
+  display: flex;
+  padding: 0 32px;
+  background: linear-gradient(to right, var(--bg-surface), var(--bg-secondary));
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 24px;
+}
+
+.library-tab {
+  padding: 14px 4px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.library-tab:hover {
+  color: var(--text-primary);
+}
+
+.library-tab.active {
+  color: var(--accent);
+}
+
+.library-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+
+.quot-library-table .btn-restore-minimal {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  opacity: 0.7;
+}
+
+.quot-library-table .btn-restore-minimal:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 4px var(--accent-subtle));
+}

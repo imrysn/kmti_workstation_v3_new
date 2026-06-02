@@ -18,7 +18,7 @@ import asyncio
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Request
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, desc, or_
@@ -31,6 +31,7 @@ from models.user import User, UserRole
 from core.auth import get_current_user
 from core.config import BASE_DIR
 from core.cache import cache_get, cache_set, cache_delete
+from core.activity_logger import log_activity
 
 from socket_manager import sio
 
@@ -283,6 +284,7 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Opti
 
     p_incharge = billing_details.get("projectInCharge") or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
     b_to = data.get("clientInfo", {}).get("company", "")
+    c_name = billing_details.get("clientName") or quot.client_name or ""
 
     if q_status == "CANCELLED":
         p_status = "CANCELLED"
@@ -293,6 +295,7 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Opti
 
     billing_details["projectInCharge"] = p_incharge
     billing_details["billTo"] = b_to
+    billing_details["clientName"] = c_name
     
     if username:
         billing_details["updatedBy"] = username
@@ -315,7 +318,7 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Opti
         "display_name": new_display,
         "date": doc_date,
         "updated_at": datetime.now(timezone.utc),
-        "client_name": data.get("clientInfo", {}).get("company", ""),
+        "client_name": c_name,
         "designer_name": p_incharge,
         "grand_total": g_total,
         "customer_incharge": client_contact,
@@ -554,18 +557,26 @@ async def list_quotations(
     designer: Optional[str] = None,
     limit: int = 100, 
     offset: int = 0,
+    trash_only: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """List quotations from DB with filtering."""
     is_admin = current_user.role in [UserRole.admin, UserRole.it]
-    cache_key = f"{q or ''}:{designer or ''}:{limit}:{offset}:{is_admin}"
+    cache_key = f"{q or ''}:{designer or ''}:{limit}:{offset}:{is_admin}:{trash_only}"
     cached_val = await cache_get("quot_list", cache_key)
     if cached_val is not None:
         return cached_val
 
     stmt = select(Quotation).order_by(desc(Quotation.updated_at))
     
+    if trash_only:
+        if not is_admin:
+            raise HTTPException(status_code=403, detail="Access Denied: Only administrators can access the trash bin.")
+        stmt = stmt.where(Quotation.is_deleted == True)
+    else:
+        stmt = stmt.where(Quotation.is_deleted == False)
+        
     if q:
         stmt = stmt.where(or_(
             Quotation.quotation_no.ilike(f"%{q}%"),
@@ -599,7 +610,11 @@ async def list_quotations(
                 "quotationStatus": i.quotation_status or "For Approval",
                 "projectStatus": i.project_status or "On Going",
                 "submittedToAdminAt": i.submitted_to_admin_at.strftime("%Y-%m-%d") if i.submitted_to_admin_at else None,
-                "billTo": i.bill_to or "",
+                "billTo": (
+                    (json.loads(i.data).get("clientInfo", {}).get("company", "") if i.data else "") or 
+                    i.bill_to or 
+                    ""
+                ),
                 "datePaid": i.date_paid.strftime("%Y-%m-%d") if i.date_paid else None,
                 "updatedBy": i.updated_by or "",
                 "lastUpdatedAt": i.last_updated_at.strftime("%Y-%m-%d %H:%M") if i.last_updated_at else None,
@@ -609,7 +624,7 @@ async def list_quotations(
     }
     await cache_set("quot_list", cache_key, res_dict)
     return res_dict
-
+ 
 @router.get("/sessions")
 async def list_active_sessions(db: AsyncSession = Depends(get_db)):
     """Returns list of quotations that are currently active.
@@ -621,9 +636,9 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
     cached_val = await cache_get("quot_sessions", "all")
     if cached_val is not None:
         return cached_val
-
+ 
     # 1. Start with all quotations marked active in DB
-    stmt = select(Quotation).where(Quotation.is_active == True).order_by(desc(Quotation.updated_at))
+    stmt = select(Quotation).where(Quotation.is_active == True, Quotation.is_deleted == False).order_by(desc(Quotation.updated_at))
     result = await db.execute(stmt)
     items = result.scalars().all()
 
@@ -646,7 +661,7 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
     return res_sessions
 
 @router.post("/")
-async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
+async def create_quotation(data: dict, request: Request, db: AsyncSession = Depends(get_db)):
     """Create a new quotation record in the database.
     
     Supports two modes:
@@ -654,6 +669,20 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
       Full:         { quotationDetails, clientInfo, ... }  — save from within editor
     """
     workstation = data.get("workstation")
+    
+    # Try to extract authenticated username if available in Bearer token header
+    user_label = None
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            from core.auth import decode_token
+            payload = decode_token(token)
+            user_label = payload.get("sub")
+        except Exception:
+            pass
+    if not user_label:
+        user_label = workstation or "unknown_workstation"
     
     # ── Lightweight workspace-first creation ──────────────────────
     if "quot_no" in data:
@@ -681,6 +710,13 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
         await db.refresh(new_q)
         await cache_delete("quot_list")
         await cache_delete("quot_sessions")
+        
+        await log_activity(
+            username=user_label,
+            action="CREATE_QUOTATION",
+            details=f"Created lightweight quotation '{q_no}' (DisplayName: '{display}')",
+            ip_address=request.client.host
+        )
         return {"success": True, "id": new_q.id, "quotNo": q_no, "displayName": display}
 
     # ── Full document save (from within editor) ───────────────────
@@ -725,6 +761,13 @@ async def create_quotation(data: dict, db: AsyncSession = Depends(get_db)):
     await db.refresh(new_q)
     await cache_delete("quot_list")
     await cache_delete("quot_sessions")
+    
+    await log_activity(
+        username=user_label,
+        action="CREATE_QUOTATION",
+        details=f"Created and saved full quotation '{q_no}' (Grand Total: {g_total})",
+        ip_address=request.client.host
+    )
     return {"success": True, "id": new_q.id}
 
 
@@ -748,7 +791,7 @@ async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
     )
     data["billingDetails"]["updateDetail"] = quot.update_detail or ""
     data["billingDetails"]["projectInCharge"] = quot.designer_name or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
-    data["billingDetails"]["billTo"] = data.get("clientInfo", {}).get("company", "") or quot.bill_to or ""
+    data["billingDetails"]["billTo"] = data.get("clientInfo", {}).get("company", "") or ""
     
     return data
 
@@ -756,17 +799,31 @@ async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
 async def update_quotation(
     q_id: int, 
     data: dict, 
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Full update of quotation data."""
+    stmt = select(Quotation).where(Quotation.id == q_id)
+    res = await db.execute(stmt)
+    quot = res.scalar_one_or_none()
+    q_no = quot.quotation_no if quot else f"ID {q_id}"
+    
     await _sync_metadata(q_id, data, db, current_user.username)
+    
+    await log_activity(
+        username=current_user.username,
+        action="UPDATE_QUOTATION",
+        details=f"Updated quotation '{q_no}' (ID: {q_id})",
+        ip_address=request.client.host
+    )
     return {"success": True}
 
 @router.patch("/{q_id}/billing")
 async def update_billing_monitoring(
     q_id: int,
     payload: dict,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -796,7 +853,8 @@ async def update_billing_monitoring(
             quot.submitted_to_admin_at = None
     if "billTo" in payload:
         quot.bill_to = payload["billTo"]
-        quot.client_name = payload["billTo"]
+    if "clientName" in payload:
+        quot.client_name = payload["clientName"]
     if "projectInCharge" in payload:
         quot.designer_name = payload["projectInCharge"]
     if "datePaid" in payload:
@@ -831,6 +889,7 @@ async def update_billing_monitoring(
     else:
         quot.updated_by = current_user.username
     quot.last_updated_at = datetime.now(timezone.utc)
+    quot.updated_at = datetime.now(timezone.utc)
     
     # Sync with inner JSON
     try:
@@ -845,6 +904,7 @@ async def update_billing_monitoring(
         data["billingDetails"]["updateDetail"] = quot.update_detail
         data["billingDetails"]["projectInCharge"] = quot.designer_name or data.get("signatures", {}).get("quotation", {}).get("preparedBy", {}).get("name", "")
         data["billingDetails"]["billTo"] = quot.bill_to or ""
+        data["billingDetails"]["clientName"] = quot.client_name or ""
         data["billingDetails"]["updatedBy"] = quot.updated_by
         data["billingDetails"]["lastUpdatedAt"] = quot.last_updated_at.strftime("%Y-%m-%d %H:%M")
         if "clientInfo" not in data:
@@ -871,12 +931,19 @@ async def update_billing_monitoring(
         {"path": "billingDetails.updateDetail", "value": quot.update_detail},
         {"path": "billingDetails.projectInCharge", "value": quot.designer_name},
         {"path": "billingDetails.billTo", "value": quot.bill_to},
+        {"path": "billingDetails.clientName", "value": quot.client_name},
         {"path": "clientInfo.company", "value": quot.bill_to},
         {"path": "quotationDetails.date", "value": quot.date.isoformat()[:10] if quot.date else None}
     ]
     for patch in patches:
         await sio.emit("remote_patch", {"sid": "system", "patch": patch}, room=room_name)
 
+    await log_activity(
+        username=current_user.username,
+        action="UPDATE_BILLING",
+        details=f"Updated billing details for quotation '{quot.quotation_no}' (ID: {q_id})",
+        ip_address=request.client.host
+    )
     return {"success": True}
 
 @router.get("/{q_id}/history")
@@ -908,15 +975,18 @@ async def restore_history(q_id: int, h_id: int, db: AsyncSession = Depends(get_d
 @router.delete("/{q_id}")
 async def delete_quotation(
     q_id: int, 
+    request: Request,
     workstation: Optional[str] = None,
+    permanent: bool = False,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Permanently delete a quotation and its history.
+    """Delete a quotation (soft delete by default, permanent delete if requested or already soft-deleted).
     
     Authorization:
     - Admin/IT roles can delete any record.
     - Regular users can only delete records owned by their current workstation.
+    - Permanent deletion is restricted to Admin/IT roles only.
     """
     # 1. Fetch quotation to check ownership
     stmt = select(Quotation).where(Quotation.id == q_id)
@@ -938,11 +1008,66 @@ async def delete_quotation(
             detail=f"Deletion Denied: This record belongs to workstation '{owner_label}'. Only the owner or an administrator can delete it."
         )
 
-    # 3. Perform Deletion (with history cleanup)
-    await db.execute(delete(QuotationHistory).where(QuotationHistory.quotation_id == q_id))
-    await db.execute(delete(Quotation).where(Quotation.id == q_id))
+    # 3. Perform Deletion
+    q_no = quot.quotation_no
+    is_soft = not (quot.is_deleted or permanent)
+    if quot.is_deleted or permanent:
+        # Permanent delete is restricted to admins only
+        if not is_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access Denied: Only administrators can permanently delete records from the trash bin."
+            )
+        await db.execute(delete(QuotationHistory).where(QuotationHistory.quotation_id == q_id))
+        await db.execute(delete(Quotation).where(Quotation.id == q_id))
+    else:
+        # Soft delete
+        quot.is_deleted = True
+        quot.is_active = False
+
     await db.commit()
     await cache_delete("quot_list")
     await cache_delete("quot_sessions")
     
+    await log_activity(
+        username=current_user.username,
+        action="PERMANENT_DELETE_QUOTATION" if not is_soft else "DELETE_QUOTATION",
+        details=f"Permanently deleted quotation '{q_no}' (ID: {q_id}) from Trash" if not is_soft else f"Moved quotation '{q_no}' (ID: {q_id}) to Trash",
+        ip_address=request.client.host
+    )
+    return {"success": True}
+
+@router.post("/{q_id}/restore")
+async def restore_quotation(
+    q_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Restore a soft-deleted quotation from the trash bin."""
+    is_admin = current_user.role in [UserRole.admin, UserRole.it]
+    if not is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access Denied: Only administrators can restore records from the trash bin."
+        )
+
+    stmt = select(Quotation).where(Quotation.id == q_id)
+    res = await db.execute(stmt)
+    quot = res.scalar_one_or_none()
+    
+    if not quot:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Quotation not found")
+
+    quot.is_deleted = False
+    await db.commit()
+    await cache_delete("quot_list")
+    await cache_delete("quot_sessions")
+    
+    await log_activity(
+        username=current_user.username,
+        action="RESTORE_QUOTATION",
+        details=f"Restored quotation '{quot.quotation_no}' (ID: {q_id}) from Trash",
+        ip_address=request.client.host
+    )
     return {"success": True}

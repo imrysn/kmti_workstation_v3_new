@@ -1,7 +1,7 @@
 """
 Auth router — login and current user endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -11,6 +11,7 @@ from models.user import User, UserRole
 from core.auth import verify_password, create_access_token, get_current_user, require_role, hash_password
 from pydantic import BaseModel
 from core.cache import cache_get, cache_set, cache_delete
+from core.activity_logger import log_activity
 
 
 router = APIRouter()
@@ -22,6 +23,7 @@ VALID_WORKSTATION_ROLES = [r.value for r in UserRole]  # ['user', 'admin', 'it']
 
 @router.post("/login")
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
@@ -35,6 +37,12 @@ async def login(
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(form_data.password, user.hashed_password):
+        await log_activity(
+            username=form_data.username,
+            action="LOGIN_FAILED",
+            details="Incorrect username or password.",
+            ip_address=request.client.host
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password.",
@@ -42,12 +50,24 @@ async def login(
         )
 
     if not user.is_active:
+        await log_activity(
+            username=form_data.username,
+            action="LOGIN_FAILED",
+            details="Account deactivated.",
+            ip_address=request.client.host
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="This account has been deactivated. Contact your administrator.",
         )
 
     token = create_access_token(user)
+    await log_activity(
+        username=user.username,
+        action="LOGIN",
+        details="Successful login",
+        ip_address=request.client.host
+    )
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -129,6 +149,7 @@ class UserUpdate(BaseModel):
 @router.post("/users", status_code=status.HTTP_201_CREATED)
 async def create_user(
     payload: UserCreate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
@@ -148,6 +169,12 @@ async def create_user(
     await db.commit()
     await db.refresh(new_user)
     await cache_delete("users")
+    await log_activity(
+        username=current_user.username,
+        action="CREATE_USER",
+        details=f"Created user '{payload.username}' with role '{payload.role.value if hasattr(payload.role, 'value') else payload.role}'",
+        ip_address=request.client.host
+    )
     return {"id": new_user.id, "username": new_user.username, "role": new_user.role.value}
 
 
@@ -155,6 +182,7 @@ async def create_user(
 async def update_user(
     user_id: int,
     payload: UserUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
@@ -182,6 +210,12 @@ async def update_user(
 
     await db.commit()
     await cache_delete("users")
+    await log_activity(
+        username=current_user.username,
+        action="UPDATE_USER",
+        details=f"Updated user '{user.username}' (role={user.role.value if hasattr(user.role, 'value') else user.role}, active={user.is_active})",
+        ip_address=request.client.host
+    )
     return {
         "id": user.id,
         "username": user.username,
@@ -193,6 +227,7 @@ async def update_user(
 @router.delete("/users/{user_id}")
 async def delete_user(
     user_id: int,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
@@ -216,4 +251,10 @@ async def delete_user(
     await db.delete(user)
     await db.commit()
     await cache_delete("users")
+    await log_activity(
+        username=current_user.username,
+        action="DELETE_USER",
+        details=f"Deleted user '{user.username}'",
+        ip_address=request.client.host
+    )
     return {"status": "ok", "message": f"User {user.username} deleted."}

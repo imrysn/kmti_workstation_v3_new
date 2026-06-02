@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useEffect, useState } from 'react'
 import './ITControls.css'
 import HelpCenterLogs from '../components/HelpCenterLogs'
+import ActivityLogsConsole from '../components/ActivityLogsConsole'
 
 const CRITICAL_FLAGS = [
   {
@@ -151,7 +152,7 @@ export default function ITControls() {
   const { flags, setFlag } = useFlags()
   const { user } = useAuth()
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [activeTab, setActiveTab] = useState<'GUARDS' | 'HELP'>('GUARDS')
+  const [activeTab, setActiveTab] = useState<'GUARDS' | 'HELP' | 'ACTIVITIES'>('GUARDS')
   const [openLogsCount, setOpenLogsCount] = useState(0)
 
   useEffect(() => {
@@ -179,7 +180,7 @@ export default function ITControls() {
           <div className="itc-prompt">
             <span className="itc-prompt-user">{user?.username ?? 'admin'}@kmti</span>
             <span className="itc-prompt-sep">:</span>
-            <span className="itc-prompt-dir">~/sys/{activeTab === 'GUARDS' ? 'guards' : 'help-center'}</span>
+            <span className="itc-prompt-dir">~/sys/{activeTab === 'GUARDS' ? 'guards' : activeTab === 'HELP' ? 'help-center' : 'activity-logs'}</span>
             <span className="itc-prompt-sym">$</span>
             <span className="itc-prompt-cmd">view --mode={activeTab.toLowerCase()}</span>
             <span className="itc-cursor" />
@@ -218,6 +219,18 @@ export default function ITControls() {
           HELP CENTER {openLogsCount > 0 && (
             <span className="itc-nav-badge">{openLogsCount}</span>
           )}
+        </button>
+        <button 
+          className={`itc-nav-btn ${activeTab === 'ACTIVITIES' ? 'itc-nav-btn--active' : ''}`}
+          onClick={() => setActiveTab('ACTIVITIES')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+            <line x1="9" y1="9" x2="15" y2="9" />
+            <line x1="9" y1="13" x2="15" y2="13" />
+            <line x1="9" y1="17" x2="13" y2="17" />
+          </svg>
+          ACTIVITY LOGS
         </button>
       </nav>
 
@@ -267,6 +280,10 @@ export default function ITControls() {
 
       {activeTab === 'HELP' && (
         <HelpCenterLogs onOpenLogsCountChange={setOpenLogsCount} />
+      )}
+
+      {activeTab === 'ACTIVITIES' && (
+        <ActivityLogsConsole />
       )}
 
       <footer className="itc-footer">

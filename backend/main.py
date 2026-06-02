@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs
 from routers import team_calendar as team_calendar_router
 import time
 import logging
@@ -21,9 +21,9 @@ from fastapi.staticfiles import StaticFiles
 START_TIME = time.time()
 from core.config import IS_FROZEN, BASE_DIR, LOG_DIR
 
-from db.database import engine, Base, fms_engine
+from db.database import engine, Base, fms_engine, AsyncSessionLocal
 from sqlalchemy import text
-from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model # Ensure models are registered for metadata
+from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model, activity_log as activity_log_model # Ensure models are registered for metadata
 import team_calendar.infrastructure.models # Ensure team calendar models are registered for metadata
 try:
     from core.nas_indexer import indexer
@@ -65,6 +65,16 @@ async def lifespan(app: FastAPI):
                     logger.info("  [SUCCESS] 'status_message' column added successfully.")
             except Exception as migrate_err:
                 logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate status_message column: {migrate_err}")
+
+            try:
+                res = await conn.execute(text("SHOW COLUMNS FROM quotations LIKE 'is_deleted'"))
+                if not res.fetchone():
+                    logger.info("  [MIGRATION] Adding 'is_deleted' column to 'quotations'...")
+                    await conn.execute(text("ALTER TABLE quotations ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0"))
+                    await conn.commit()
+                    logger.info("  [SUCCESS] 'is_deleted' column added successfully.")
+            except Exception as migrate_err:
+                logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate is_deleted column: {migrate_err}")
 
             try:
                 # Use advisory locks to prevent concurrent worker processes deadlocking on DDL metadata locks
@@ -165,6 +175,7 @@ app.include_router(tts.router, prefix="/api/tts", tags=["TTS"])
 app.include_router(team_calendar_router.router, prefix="/api/team-calendar", tags=["Team Calendar"])
 app.include_router(fms.router, prefix="/api/fms", tags=["FMS Integration"])
 app.include_router(materials.router, prefix="/api/materials", tags=["Materials"])
+app.include_router(activity_logs.router, prefix="/api/activity-logs", tags=["Activity Logs"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
 # IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE

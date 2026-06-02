@@ -88,7 +88,7 @@ export default function BillingSpreadsheetTable({
                   <th style={{ width: '130px', cursor: 'pointer' }} onClick={() => handleSort('customerIncharge')}>
                     Customer<br />Incharge {sortColumn === 'customerIncharge' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th style={{ width: '150px', cursor: 'pointer' }} onClick={() => handleSort('clientName')}>
+                  <th style={{ width: activeCell?.field === 'clientName' ? '180px' : '150px', transition: 'width 0.2s ease', cursor: 'pointer' }} onClick={() => handleSort('clientName')}>
                     Customer {sortColumn === 'clientName' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th style={{ width: '140px', cursor: 'pointer' }} onClick={() => handleSort('quotationNo')}>
@@ -151,8 +151,75 @@ export default function BillingSpreadsheetTable({
                       </td>
 
                       {/* Customer (Client Name) */}
-                      <td title={q.clientName || ''}>
-                        {q.clientName || <span className="cell-empty">—</span>}
+                      <td className={activeCell?.id === q.id && activeCell?.field === 'clientName' ? 'editing-cell' : ''} title={q.clientName || ''}>
+                        {activeCell?.id === q.id && activeCell?.field === 'clientName' ? (
+                          editForm.clientName === '__CUSTOM__' ? (
+                            <input
+                              autoFocus
+                              className="cell-input"
+                              value={editForm.customClientName || ''}
+                              onChange={e => setEditForm({ ...editForm, customClientName: e.target.value })}
+                              onBlur={async (e) => {
+                                const typed = e.target.value.trim()
+                                if (typed) {
+                                  await handleSingleFieldSave(q.id, { clientName: typed })
+                                }
+                                setActiveCell(null)
+                              }}
+                              onKeyDown={async e => {
+                                if (e.key === 'Enter') {
+                                  const typed = (editForm.customClientName || '').trim()
+                                  if (typed) {
+                                    await handleSingleFieldSave(q.id, { clientName: typed })
+                                  }
+                                  setActiveCell(null)
+                                } else if (e.key === 'Escape') {
+                                  setActiveCell(null)
+                                }
+                              }}
+                              placeholder="Type custom..."
+                            />
+                          ) : (
+                            <select
+                              autoFocus
+                              className="cell-input cell-select"
+                              value={['JFE', 'NIKKO', 'AMANO', 'TEX WAKAYAMA', 'TEX HANSHIN', 'OKINAKA'].includes(q.clientName || '') ? (editForm.clientName || q.clientName || '') : (editForm.clientName || q.clientName || '')}
+                              onChange={async e => {
+                                const val = e.target.value
+                                if (val === '__CUSTOM__') {
+                                  setEditForm({ ...editForm, clientName: '__CUSTOM__', customClientName: '' })
+                                } else {
+                                  setEditForm({ ...editForm, clientName: val })
+                                  await handleSingleFieldSave(q.id, { clientName: val })
+                                  setActiveCell(null)
+                                }
+                              }}
+                              onBlur={() => setActiveCell(null)}
+                            >
+                              {/* Ensure current custom value is listed if not in presets */}
+                              {q.clientName && !['JFE', 'NIKKO', 'AMANO', 'TEX WAKAYAMA', 'TEX HANSHIN', 'OKINAKA'].includes(q.clientName) && (
+                                <option value={q.clientName}>{q.clientName}</option>
+                              )}
+                              <option value="JFE">JFE</option>
+                              <option value="NIKKO">NIKKO</option>
+                              <option value="AMANO">AMANO</option>
+                              <option value="TEX WAKAYAMA">TEX WAKAYAMA</option>
+                              <option value="TEX HANSHIN">TEX HANSHIN</option>
+                              <option value="OKINAKA">OKINAKA</option>
+                              <option value="__CUSTOM__">[Type Custom Value...]</option>
+                            </select>
+                          )
+                        ) : (
+                          <div
+                            className="clickable-cell-trigger editable-text-cell"
+                            onClick={() => {
+                              setActiveCell({ id: q.id, field: 'clientName' })
+                              setEditForm({ clientName: q.clientName || '' })
+                            }}
+                          >
+                            {q.clientName || <span className="cell-empty">—</span>}
+                          </div>
+                        )}
                       </td>
 
                       {/* Quotation Number */}
@@ -186,7 +253,7 @@ export default function BillingSpreadsheetTable({
                                   if (typeof el.showPicker === 'function') {
                                     el.showPicker();
                                   }
-                                } catch (e) {}
+                                } catch (e) { }
                               }
                             }}
                             className="cell-input"
@@ -322,7 +389,7 @@ export default function BillingSpreadsheetTable({
                                   if (typeof el.showPicker === 'function') {
                                     el.showPicker();
                                   }
-                                } catch (e) {}
+                                } catch (e) { }
                               }
                             }}
                             className="cell-input"
@@ -364,41 +431,22 @@ export default function BillingSpreadsheetTable({
                       {/* Bill To */}
                       <td className={activeCell?.id === q.id && activeCell?.field === 'billTo' ? 'editing-cell' : ''} title={q.billTo || '-'}>
                         {activeCell?.id === q.id && activeCell?.field === 'billTo' ? (
-                          <>
-                            <input
-                              list="bill-to-options"
-                              autoFocus
-                              className="cell-input"
-                              value={editForm.billTo || ''}
-                              onChange={e => setEditForm({ ...editForm, billTo: e.target.value })}
-                              onBlur={async () => {
-                                const val = (q.billTo || '').trim()
-                                const typed = (editForm.billTo || '').trim()
-                                if (typed !== val) {
-                                  await handleSingleFieldSave(q.id, { billTo: typed })
-                                }
-                                setActiveCell(null)
-                              }}
-                              onKeyDown={async e => {
-                                if (e.key === 'Enter') {
-                                  const val = (q.billTo || '').trim()
-                                  const typed = (editForm.billTo || '').trim()
-                                  if (typed !== val) {
-                                    await handleSingleFieldSave(q.id, { billTo: typed })
-                                  }
-                                  setActiveCell(null)
-                                } else if (e.key === 'Escape') {
-                                  setActiveCell(null)
-                                }
-                              }}
-                              placeholder="Select or type..."
-                            />
-                            <datalist id="bill-to-options">
-                              <option value="NEXT ENG." />
-                              <option value="KEMCO" />
-                              <option value="AGCC" />
-                            </datalist>
-                          </>
+                          <select
+                            autoFocus
+                            className="cell-input cell-select"
+                            value={editForm.billTo || q.billTo || ''}
+                            onChange={async e => {
+                              const val = e.target.value
+                              setEditForm({ ...editForm, billTo: val })
+                              await handleSingleFieldSave(q.id, { billTo: val })
+                              setActiveCell(null)
+                            }}
+                            onBlur={() => setActiveCell(null)}
+                          >
+                            <option value="AGC Ceramics Co.,Ltd.">AGC Ceramics Co.,Ltd.</option>
+                            <option value="NEXTENGINEERING Co.,Ltd.">NEXTENGINEERING Co.,Ltd.</option>
+                            <option value="Kusakabe Electric and Machinery Co.,Ltd.">Kusakabe Electric and Machinery Co.,Ltd.</option>
+                          </select>
                         ) : (
                           <div
                             className="clickable-cell-trigger editable-text-cell"
@@ -424,7 +472,7 @@ export default function BillingSpreadsheetTable({
                                   if (typeof el.showPicker === 'function') {
                                     el.showPicker();
                                   }
-                                } catch (e) {}
+                                } catch (e) { }
                               }
                             }}
                             className="cell-input"

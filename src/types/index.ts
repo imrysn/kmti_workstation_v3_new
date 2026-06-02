@@ -86,7 +86,7 @@ export interface IQuotation {
   clientName: string
   designerName: string
   workstation?: string // Hostname ID
-  date: string
+  date?: string | null
   modifiedAt: string
   isActive: boolean
   hasPassword?: boolean,
@@ -103,6 +103,7 @@ export interface IQuotation {
   updatedBy?: string | null
   lastUpdatedAt?: string | null
   updateDetail?: string | null
+  customClientName?: string
 }
 
 export interface IQuotationHistory {

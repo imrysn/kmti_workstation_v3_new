@@ -30,9 +30,10 @@ class Quotation(Base):
     updated_by = Column(String(255), nullable=True)
     last_updated_at = Column(DateTime, nullable=True)
     update_detail = Column(Text, nullable=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     history = relationship("QuotationHistory", back_populates="quotation", cascade="all, delete-orphan")

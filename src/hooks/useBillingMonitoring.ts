@@ -168,7 +168,11 @@ export function useBillingMonitoring() {
       const matchesDesigner = !selectedDesigner || q.designerName === selectedDesigner
       const matchesQStatus = !selectedQStatus || q.quotationStatus === selectedQStatus
       const matchesPStatus = !selectedPStatus || q.projectStatus === selectedPStatus
-      const matchesBillTo = !selectedBillTo || q.billTo === selectedBillTo
+      const cleanStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+      const cleanSelect = selectedBillTo ? cleanStr(selectedBillTo) : ''
+      const cleanBillTo = q.billTo ? cleanStr(q.billTo) : ''
+
+      const matchesBillTo = !selectedBillTo || cleanBillTo === cleanSelect
       const matchesMonth = !selectedMonth || (q.date && new Date(q.date).getMonth().toString() === selectedMonth)
 
       return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth
@@ -179,8 +183,13 @@ export function useBillingMonitoring() {
         let valA: any = a[sortColumn as keyof IQuotation]
         let valB: any = b[sortColumn as keyof IQuotation]
 
-        if (valA === null || valA === undefined) valA = ''
-        if (valB === null || valB === undefined) valB = ''
+        if (sortColumn === 'billTo') {
+          valA = a.billTo || ''
+          valB = b.billTo || ''
+        } else {
+          if (valA === null || valA === undefined) valA = ''
+          if (valB === null || valB === undefined) valB = ''
+        }
 
         if (sortColumn === 'grandTotal') {
           valA = Number(valA) || 0
@@ -537,11 +546,6 @@ export function useBillingMonitoring() {
     setSelectedMonth('')
   }
 
-  const uniqueBillToValues = useMemo(() => {
-    return Array.from(
-      new Set(quotations.map(q => q.billTo).filter(Boolean))
-    ).sort() as string[]
-  }, [quotations])
 
   const uniqueInchargeValues = useMemo(() => {
     return Array.from(
@@ -692,7 +696,6 @@ export function useBillingMonitoring() {
     totalItems,
     totalPages,
     paginatedQuotations,
-    uniqueBillToValues,
     uniqueInchargeValues,
     statusStats,
     chartData,

@@ -26,10 +26,22 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const { notify, confirm } = useModal()
 
   // ── State ───────────────────────────────────────────────────────
+  const [view, setView] = useState<'active' | 'trash'>('active')
   const [quotations, setQuotations] = useState<IQuotation[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [myWorkstation, setMyWorkstation] = useState<string | null>(null)
+  const [sortField, setSortField] = useState<'quotationNo' | 'workstation' | 'modifiedAt'>('modifiedAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  const handleSort = (field: 'quotationNo' | 'workstation' | 'modifiedAt') => {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('asc')
+    }
+  }
 
   // ESC to close
   useEffect(() => {
@@ -44,7 +56,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const fetchLibrary = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await quotationApi.list({ limit: 100 })
+      const res = await quotationApi.list({ limit: 100, trash_only: view === 'trash' })
       const data = res.data as unknown as { quotations: IQuotation[] }
       setQuotations(data.quotations || [])
     } catch (e) {
@@ -53,7 +65,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [notify])
+  }, [notify, view])
 
   useEffect(() => {
     fetchLibrary()
@@ -70,6 +82,11 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const handleDelete = async (e: React.MouseEvent, q: IQuotation) => {
     e.stopPropagation()
 
+    if (hasRole('user')) {
+      notify?.('Access Denied: Standard users are not permitted to delete records.', 'error')
+      return
+    }
+
     // Ownership Enforcement: 
     // Since accounts are shared, we identify the owner by the workstation Hostname.
     const isOwner = (myWorkstation && q.workstation === myWorkstation) || hasRole('admin', 'it')
@@ -80,11 +97,11 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
     }
 
     confirm(
-      `Are you sure you want to PERMANENTLY delete quotation ${q.quotationNo}?`,
+      `Are you sure you want to move quotation ${q.quotationNo} to the Trash Bin?`,
       async () => {
         try {
-          await quotationApi.delete(q.id, myWorkstation || undefined)
-          notify?.('Quotation record purged.', 'success')
+          await quotationApi.delete(q.id, myWorkstation || undefined) // soft delete
+          notify?.('Quotation moved to Trash.', 'success')
           fetchLibrary()
         } catch (err) {
           notify?.('Server error: Deletion failed.', 'error')
@@ -92,8 +109,60 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
       },
       undefined,
       'danger',
-      'Confirm Deletion',
-      'Delete Record'
+      'Move to Trash Bin',
+      'Move to Trash'
+    )
+  }
+
+  const handleRestore = async (e: React.MouseEvent, q: IQuotation) => {
+    e.stopPropagation()
+
+    if (!hasRole('admin', 'it')) {
+      notify?.('Access Denied: Only administrators can restore records.', 'error')
+      return
+    }
+
+    confirm(
+      `Are you sure you want to restore quotation ${q.quotationNo}?`,
+      async () => {
+        try {
+          await quotationApi.restore(q.id)
+          notify?.('Quotation record restored.', 'success')
+          fetchLibrary()
+        } catch (err) {
+          notify?.('Server error: Restore failed.', 'error')
+        }
+      },
+      undefined,
+      'primary',
+      'Confirm Restore',
+      'Restore Record'
+    )
+  }
+
+  const handlePermanentDelete = async (e: React.MouseEvent, q: IQuotation) => {
+    e.stopPropagation()
+
+    if (!hasRole('admin', 'it')) {
+      notify?.('Access Denied: Only administrators can permanently delete records.', 'error')
+      return
+    }
+
+    confirm(
+      `Are you sure you want to PERMANENTLY purge quotation ${q.quotationNo}? This cannot be undone.`,
+      async () => {
+        try {
+          await quotationApi.delete(q.id, undefined, true) // permanent = true
+          notify?.('Quotation permanently purged.', 'success')
+          fetchLibrary()
+        } catch (err) {
+          notify?.('Server error: Deletion failed.', 'error')
+        }
+      },
+      undefined,
+      'danger',
+      'Confirm Permanent Deletion',
+      'Purge Record'
     )
   }
 
@@ -117,13 +186,35 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   // ── Helpers ─────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const s = search.toLowerCase()
-    return quotations.filter(q =>
+    const list = quotations.filter(q =>
       q.quotationNo.toLowerCase().includes(s) ||
       (q.clientName || '').toLowerCase().includes(s) ||
       (q.designerName || '').toLowerCase().includes(s) ||
       (q.displayName || '').toLowerCase().includes(s)
     )
-  }, [quotations, search])
+
+    list.sort((a, b) => {
+      let valA: any = ''
+      let valB: any = ''
+
+      if (sortField === 'quotationNo') {
+        valA = a.quotationNo.toLowerCase()
+        valB = b.quotationNo.toLowerCase()
+      } else if (sortField === 'workstation') {
+        valA = (a.workstation || '').toLowerCase()
+        valB = (b.workstation || '').toLowerCase()
+      } else if (sortField === 'modifiedAt') {
+        valA = a.modifiedAt ? new Date(a.modifiedAt).getTime() : 0
+        valB = b.modifiedAt ? new Date(b.modifiedAt).getTime() : 0
+      }
+
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return list
+  }, [quotations, search, sortField, sortOrder])
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
@@ -156,6 +247,23 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
           </button>
         </header>
 
+        {hasRole('admin', 'it') && (
+          <div className="quot-library-tabs">
+            <button
+              className={`library-tab ${view === 'active' ? 'active' : ''}`}
+              onClick={() => setView('active')}
+            >
+              Active Workspaces
+            </button>
+            <button
+              className={`library-tab ${view === 'trash' ? 'active' : ''}`}
+              onClick={() => setView('trash')}
+            >
+              Trash Bin
+            </button>
+          </div>
+        )}
+
         <div className="quot-library-toolbar">
           <div className="quot-library-search">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -163,7 +271,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
             </svg>
             <input
               type="text"
-              placeholder="Search by ID, Client, or Designer..."
+              placeholder="Search..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               autoFocus
@@ -194,9 +302,15 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
             <table className="quot-library-table">
               <thead>
                 <tr>
-                  <th>Quotation No & Client</th>
-                  <th>Owner</th>
-                  <th>Last Modified</th>
+                  <th onClick={() => handleSort('quotationNo')} className="sortable-header">
+                    Quotation No & Client {sortField === 'quotationNo' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+                  </th>
+                  <th onClick={() => handleSort('workstation')} className="sortable-header">
+                    Owner {sortField === 'workstation' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+                  </th>
+                  <th onClick={() => handleSort('modifiedAt')} className="sortable-header">
+                    Last Modified {sortField === 'modifiedAt' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+                  </th>
                   <th className="text-right">Action</th>
                 </tr>
               </thead>
@@ -224,37 +338,62 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
                     </td>
                     <td className="text-secondary">{formatDate(q.modifiedAt)}</td>
                     <td className="text-right action-cell">
-                      <button
-                        className={`btn btn-sm ${q.isActive ? 'btn-join' : 'btn-primary'}`}
-                        onClick={() => onSelect(q)}
-                        title={q.isActive ? 'Join live session' : 'Open workstation record'}
-                      >
-                        {q.isActive ? 'Join' : 'Open'}
-                      </button>
+                      {view === 'trash' ? (
+                        <>
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={(e) => handleRestore(e, q)}
+                            title="Restore quotation to library"
+                          >
+                            Restore
+                          </button>
+                          <button
+                            className="btn-delete-minimal"
+                            onClick={(e) => handlePermanentDelete(e, q)}
+                            title="Permanently Delete Record"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            className={`btn btn-sm ${q.isActive ? 'btn-join' : 'btn-primary'}`}
+                            onClick={() => onSelect(q)}
+                            title={q.isActive ? 'Join live session' : 'Open workstation record'}
+                          >
+                            {q.isActive ? 'Join' : 'Open'}
+                          </button>
 
-                      {hasRole('admin', 'it') && q.hasPassword && (
-                        <button
-                          className="btn-reveal-pwd"
-                          onClick={() => handleReveal(q)}
-                          title="Show password"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                            <circle cx="12" cy="16" r="1" />
-                          </svg>
-                        </button>
+                          {hasRole('admin', 'it') && q.hasPassword && (
+                            <button
+                              className="btn-reveal-pwd"
+                              onClick={() => handleReveal(q)}
+                              title="Show password"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                <circle cx="12" cy="16" r="1" />
+                              </svg>
+                            </button>
+                          )}
+
+                          {!hasRole('user') && (
+                            <button
+                              className="btn-delete-minimal"
+                              onClick={(e) => handleDelete(e, q)}
+                              title="Delete Record"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              </svg>
+                            </button>
+                          )}
+                        </>
                       )}
-
-                      <button
-                        className="btn-delete-minimal"
-                        onClick={(e) => handleDelete(e, q)}
-                        title="Delete Record"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        </svg>
-                      </button>
                     </td>
                   </tr>
                 ))}

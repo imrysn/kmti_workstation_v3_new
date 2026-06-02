@@ -49,7 +49,6 @@ export default function BillingMonitoring() {
     totalPages,
     filteredQuotations,
     paginatedQuotations,
-    uniqueBillToValues,
     uniqueInchargeValues,
     statusStats,
     chartData,
@@ -164,7 +163,6 @@ export default function BillingMonitoring() {
           selectedMonth={selectedMonth}
           setSelectedMonth={setSelectedMonth}
           uniqueInchargeValues={uniqueInchargeValues}
-          uniqueBillToValues={uniqueBillToValues}
           resetFilters={resetFilters}
         />
       )}

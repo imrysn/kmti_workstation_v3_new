@@ -2,7 +2,7 @@
 Feature flags router — IT-only toggles for maintenance/closed page states.
 All flags are stored in the shared MySQL DB so every workstation sees changes instantly.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from pydantic import BaseModel
@@ -13,6 +13,7 @@ from db.database import get_db
 from models.user import User, UserRole, FeatureFlag
 from core.auth import get_current_user, require_role
 from core.github_sync import sync_service
+from core.activity_logger import log_activity
 
 router = APIRouter()
 
@@ -115,6 +116,7 @@ class FlagUpdate(BaseModel):
 async def update_flag(
     key: str,
     payload: FlagUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role([UserRole.it])),
 ):
@@ -132,5 +134,12 @@ async def update_flag(
     flag.value = payload.value
     flag.updated_by = current_user.username
     await db.commit()
+
+    await log_activity(
+        username=current_user.username,
+        action="UPDATE_FLAG",
+        details=f"Toggled flag '{key}' to {payload.value}",
+        ip_address=request.client.host
+    )
 
     return {"key": flag.key, "value": flag.value, "updated_by": flag.updated_by}

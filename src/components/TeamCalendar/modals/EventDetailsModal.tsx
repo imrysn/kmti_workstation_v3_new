@@ -33,10 +33,10 @@ export default function EventDetailsModal({
         <div className="modal-header">
           <h3>
             {selectedEvent.event_type === 'Day_Off'
-              ? "Protected Absence"
+              ? "Leave"
               : selectedEvent.event_type === 'Company_Event'
                 ? "Company Event"
-                : "Task Claim Details"}
+                : "Task Details"}
           </h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
@@ -102,7 +102,7 @@ export default function EventDetailsModal({
                 className="btn btn-accent btn-block"
                 onClick={() => handleApproveEvent(selectedEvent.id)}
               >
-                ✓ Approve Leave / Absence
+                ✓ Approve Leave
               </button>
             )}
 

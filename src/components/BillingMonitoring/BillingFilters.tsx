@@ -12,7 +12,6 @@ interface BillingFiltersProps {
   selectedMonth: string
   setSelectedMonth: (val: string) => void
   uniqueInchargeValues: string[]
-  uniqueBillToValues: string[]
   resetFilters: () => void
 }
 
@@ -30,7 +29,6 @@ export default function BillingFilters({
   selectedMonth,
   setSelectedMonth,
   uniqueInchargeValues,
-  uniqueBillToValues,
   resetFilters
 }: BillingFiltersProps) {
   const activeFilterCount = [selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, search]
@@ -114,9 +112,9 @@ export default function BillingFilters({
           onChange={e => setSelectedBillTo(e.target.value)}
         >
           <option value="">All Clients</option>
-          {uniqueBillToValues.map(bt => (
-            <option key={bt} value={bt}>{bt}</option>
-          ))}
+          <option value="AGC Ceramics Co.,Ltd.">AGC Ceramics Co.,Ltd.</option>
+          <option value="NEXTENGINEERING Co.,Ltd.">NEXTENGINEERING Co.,Ltd.</option>
+          <option value="Kusakabe Electric and Machinery Co.,Ltd.">Kusakabe Electric and Machinery Co.,Ltd.</option>
         </select>
       </div>
 

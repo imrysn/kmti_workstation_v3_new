@@ -253,7 +253,7 @@ export default function LandingAgendaModal({
                       </span>
                       <div className="landing-agenda-item-content">
                         <span className="landing-agenda-item-title">
-                          {isOffsetHoliday ? `Holiday: ${event.engineer_name}` : isCompanyEvent ? `Event: ${event.engineer_name}` : isAbsence ? `${displayName} (Absence)` : event.todo_title}
+                          {isOffsetHoliday ? `Holiday: ${event.engineer_name}` : isCompanyEvent ? `Event: ${event.engineer_name}` : isAbsence ? `${displayName} (On Leave)` : event.todo_title}
                         </span>
                         <div className="landing-agenda-item-meta">
                           {(!isAbsence && !isCompanyEvent && !isOffsetHoliday) && (

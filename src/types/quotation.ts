@@ -100,6 +100,7 @@ export interface BillingDetails {
   updateDetail?: string | null
   projectInCharge?: string
   billTo?: string
+  clientName?: string
 }
 
 // ── Signatures ──────────────────────────────────────────────────────────────
