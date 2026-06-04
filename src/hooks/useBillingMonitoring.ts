@@ -420,9 +420,16 @@ export function useBillingMonitoring() {
         })
         dayQuots.forEach(q => {
           const status = q.quotationStatus || 'For Approval'
-          if (positiveStatuses.includes(status) || q.billingStatus === 'BILLED') {
-            const client = normalizeClientName(q.billTo)
-            dayClientSales[client] = (dayClientSales[client] || 0) + (q.grandTotal || 0)
+          const billingStatus = q.billingStatus || ''
+          const amt = q.grandTotal || 0
+          const client = normalizeClientName(q.billTo)
+          
+          if (status === 'Billing Completion' || billingStatus === 'BILLED') {
+            dayClientSales[client] = (dayClientSales[client] || 0) + amt
+          } else if (status === 'Partial Billing') {
+            const pct = getPartialBillingPercentage(q.updateDetail)
+            const completedAmt = amt * (pct / 100)
+            dayClientSales[client] = (dayClientSales[client] || 0) + completedAmt
           }
         })
 
@@ -490,9 +497,16 @@ export function useBillingMonitoring() {
         })
         mQuots.forEach(q => {
           const status = q.quotationStatus || 'For Approval'
-          if (positiveStatuses.includes(status)) {
-            const client = normalizeClientName(q.billTo)
-            mClientSales[client] = (mClientSales[client] || 0) + (q.grandTotal || 0)
+          const billingStatus = q.billingStatus || ''
+          const amt = q.grandTotal || 0
+          const client = normalizeClientName(q.billTo)
+          
+          if (status === 'Billing Completion' || billingStatus === 'BILLED') {
+            mClientSales[client] = (mClientSales[client] || 0) + amt
+          } else if (status === 'Partial Billing') {
+            const pct = getPartialBillingPercentage(q.updateDetail)
+            const completedAmt = amt * (pct / 100)
+            mClientSales[client] = (mClientSales[client] || 0) + completedAmt
           }
         })
 
@@ -668,8 +682,15 @@ export function useBillingMonitoring() {
       if (t < yearStart.getTime() || t > yearEnd.getTime()) return
       const client = normalizeClientName(q.billTo)
       const status = q.quotationStatus || 'For Approval'
-      if (positiveStatuses.includes(status)) {
-        clientsMap[client] = (clientsMap[client] || 0) + (q.grandTotal || 0)
+      const billingStatus = q.billingStatus || ''
+      const amt = q.grandTotal || 0
+      
+      if (status === 'Billing Completion' || billingStatus === 'BILLED') {
+        clientsMap[client] = (clientsMap[client] || 0) + amt
+      } else if (status === 'Partial Billing') {
+        const pct = getPartialBillingPercentage(q.updateDetail)
+        const completedAmt = amt * (pct / 100)
+        clientsMap[client] = (clientsMap[client] || 0) + completedAmt
       }
     })
     

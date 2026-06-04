@@ -303,6 +303,7 @@ export default function BillingMonitoring() {
             sortColumn={sortColumn}
             sortDirection={sortDirection}
             handleSort={handleSort}
+            filteredQuotations={filteredQuotations}
           />
         </div>
       )}
