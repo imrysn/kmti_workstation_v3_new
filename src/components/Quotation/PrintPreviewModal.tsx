@@ -6,6 +6,7 @@ import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead, getUnit
 import { LAYOUT } from './constants'
 import PrintPage from './components/PrintPage'
 import { exportToExcel } from './utils/excelExport'
+import { projectInchargesApi, clientsApi } from '../../services/api'
 
 import { PrintTutorial } from './PrintTutorial'
 
@@ -108,13 +109,71 @@ const PrintPreviewModal = memo(({
   isOpen, onClose,
   companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
   manualOverrides, onManualOverrideChange,
-  onQuotationDetailsChange, onBillingDetailsChange, onClientInfoChange,
+  onQuotationDetailsChange, onBillingDetailsChange,
   autoStartTutorial, onCompleteTutorial,
   layoutVariant = 'special',
   canViewBilling = false,
 }: Props) => {
   const [isProcessing, setIsProcessing] = useState(false)
   const [printMode, setPrintMode] = useState<'quotation' | 'billing'>('quotation')
+  const [isCustomIncharge, setIsCustomIncharge] = useState(false)
+  const [isCustomCustomer, setIsCustomCustomer] = useState(false)
+
+  const [inchargesList, setInchargesList] = useState<string[]>([])
+  const [clientsList, setClientsList] = useState<string[]>([])
+
+  // Load project incharges and clients from API on mount/open
+  useEffect(() => {
+    if (isOpen) {
+      projectInchargesApi.list().then(res => {
+        if (Array.isArray(res.data)) {
+          const names = res.data.map((i: any) => i.englishName).filter(Boolean)
+          setInchargesList(names)
+        }
+      }).catch(err => console.error("Error fetching project incharges:", err))
+
+      clientsApi.list().then(res => {
+        if (Array.isArray(res.data)) {
+          const names = res.data.map((c: any) => c.englishName).filter(Boolean)
+          setClientsList(names)
+        }
+      }).catch(err => console.error("Error fetching clients:", err))
+    }
+  }, [isOpen])
+
+  const handleAddIncharge = useCallback((val: string) => {
+    if (!val) return
+    onBillingDetailsChange?.({ projectInCharge: val })
+    if (inchargesList.includes(val)) return
+
+    projectInchargesApi.create({
+      category: 'INCHARGE',
+      englishName: val,
+      email: '',
+      japaneseName: ''
+    }).then(() => {
+      setInchargesList(prev => prev.includes(val) ? prev : [...prev, val])
+    }).catch(err => {
+      console.error("Error creating project incharge preset:", err)
+    })
+  }, [inchargesList, onBillingDetailsChange])
+
+  const handleAddClient = useCallback((val: string) => {
+    if (!val) return
+    onBillingDetailsChange?.({ clientName: val })
+    if (clientsList.includes(val)) return
+
+    clientsApi.create({
+      category: 'CLIENT',
+      englishName: val,
+      email: '',
+      japaneseName: ''
+    }).then(() => {
+      setClientsList(prev => prev.includes(val) ? prev : [...prev, val])
+    }).catch(err => {
+      console.error("Error creating client preset:", err)
+    })
+  }, [clientsList, onBillingDetailsChange])
 
   // Guard: reset to quotation if billing tab is not permitted
   useEffect(() => {
@@ -160,7 +219,9 @@ const PrintPreviewModal = memo(({
 
   // ── Pagination ─────────────────────────────────────────────────
   const { pages, grandTotal, overheadTotal, lastAssemblyId } = useMemo(() => {
-    const mainTasks = layoutVariant === 'kemco' ? tasks.filter(t => t.level === 1) : tasks.filter(t => t.isMainTask)
+    const mainTasks = layoutVariant === 'kemco' 
+      ? tasks.filter(t => t.level === 1 || (t.level === 0 && !tasks.some(sub => sub.parentId === t.id && sub.level === 1))) 
+      : tasks.filter(t => t.isMainTask)
     const slices = computePages(mainTasks, calculateTaskTotal, printMode)
 
     const subtotal = slices.flatMap(p => p.totals).reduce((s, t) => s + t, 0)
@@ -568,71 +629,205 @@ const PrintPreviewModal = memo(({
               <div className="ppm-sidebar-body">
                 <div className="ppm-sidebar-group">
                   <label htmlFor="ppm-sidebar-pincharge">Project Incharge</label>
-                  <input
-                    type="text"
-                    id="ppm-sidebar-pincharge"
-                    className="ppm-sidebar-input"
-                    placeholder="Name"
-                    value={billingDetails?.projectInCharge || ''}
-                    disabled={billingDetails?.quotationStatus === 'CANCELLED'}
-                    onChange={e => onBillingDetailsChange?.({ projectInCharge: e.target.value })}
-                  />
+                  {isCustomIncharge ? (
+                    <input
+                      type="text"
+                      className="ppm-sidebar-input"
+                      placeholder="Enter name..."
+                      defaultValue={billingDetails?.projectInCharge || ''}
+                      autoFocus
+                      onBlur={e => {
+                        const val = e.target.value.trim()
+                        if (val) {
+                          handleAddIncharge(val)
+                        }
+                        setIsCustomIncharge(false)
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          const val = e.currentTarget.value.trim()
+                          if (val) {
+                            handleAddIncharge(val)
+                          }
+                          setIsCustomIncharge(false)
+                        } else if (e.key === 'Escape') {
+                          setIsCustomIncharge(false)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <select
+                      id="ppm-sidebar-pincharge"
+                      className="ppm-sidebar-select"
+                      value={billingDetails?.projectInCharge || ''}
+                      disabled={billingDetails?.quotationStatus === 'CANCELLED'}
+                      onChange={e => {
+                        const val = e.target.value
+                        if (val === '__CUSTOM__') {
+                           setIsCustomIncharge(true)
+                        } else {
+                          onBillingDetailsChange?.({ projectInCharge: val })
+                        }
+                      }}
+                    >
+                      <option value="">Select Incharge...</option>
+                      {billingDetails?.projectInCharge && !inchargesList.includes(billingDetails.projectInCharge) && (
+                        <option value={billingDetails.projectInCharge}>{billingDetails.projectInCharge}</option>
+                      )}
+                      {inchargesList.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                      <option value="__CUSTOM__">[ Add new ... ]</option>
+                    </select>
+                  )}
                 </div>
 
                 <div className="ppm-sidebar-group">
                   <label htmlFor="ppm-sidebar-customer">Customer</label>
-                  <input
-                    type="text"
-                    id="ppm-sidebar-customer"
-                    className="ppm-sidebar-input"
-                    placeholder="NIKKO"
-                    value={billingDetails?.clientName || ''}
-                    disabled={billingDetails?.quotationStatus === 'CANCELLED'}
-                    onChange={e => onBillingDetailsChange?.({ clientName: e.target.value })}
-                  />
+                  {isCustomCustomer ? (
+                    <input
+                      type="text"
+                      className="ppm-sidebar-input"
+                      placeholder="Enter customer name"
+                      defaultValue={billingDetails?.clientName || ''}
+                      autoFocus
+                      onBlur={e => {
+                        const val = e.target.value.trim()
+                        if (val) {
+                          handleAddClient(val)
+                        }
+                        setIsCustomCustomer(false)
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          const val = e.currentTarget.value.trim()
+                          if (val) {
+                            handleAddClient(val)
+                          }
+                          setIsCustomCustomer(false)
+                        } else if (e.key === 'Escape') {
+                          setIsCustomCustomer(false)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <select
+                      id="ppm-sidebar-customer"
+                      className="ppm-sidebar-select"
+                      value={billingDetails?.clientName || ''}
+                      disabled={billingDetails?.quotationStatus === 'CANCELLED'}
+                      onChange={e => {
+                        const val = e.target.value
+                        if (val === '__CUSTOM__') {
+                          setIsCustomCustomer(true)
+                        } else {
+                          onBillingDetailsChange?.({ clientName: val })
+                        }
+                      }}
+                    >
+                      <option value="">Select Customer...</option>
+                      {billingDetails?.clientName && !clientsList.includes(billingDetails.clientName) && (
+                        <option value={billingDetails.clientName}>{billingDetails.clientName}</option>
+                      )}
+                      {clientsList.map(name => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                      <option value="__CUSTOM__">[ Add new ... ]</option>
+                    </select>
+                  )}
                 </div>
 
-                <div className="ppm-sidebar-group">
-                  <label htmlFor="ppm-sidebar-qstatus">Quotation Status</label>
-                  <select
-                    id="ppm-sidebar-qstatus"
-                    className="ppm-sidebar-select"
-                    value={billingDetails?.quotationStatus || 'For Approval'}
-                    onChange={e => handleQuotationStatusChange(e.target.value)}
-                  >
-                    <option value="For Approval">For Approval</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Partial Billing">Partial Billing</option>
-                    <option value="Billing Completion">Billing Completion</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                  </select>
-                </div>
+                {(canViewBilling || (billingDetails?.submittedToAdminAt && billingDetails?.quotationStatus !== 'DRAFT')) && (
+                  <>
+                    <div className="ppm-sidebar-group">
+                      <label htmlFor="ppm-sidebar-qstatus">Quotation Status</label>
+                      <select
+                        id="ppm-sidebar-qstatus"
+                        className="ppm-sidebar-select"
+                        value={billingDetails?.quotationStatus || 'DRAFT'}
+                        disabled={!canViewBilling}
+                        onChange={e => handleQuotationStatusChange(e.target.value)}
+                      >
+                        <option value="DRAFT">DRAFT</option>
+                        <option value="For Approval">For Approval</option>
+                        <option value="Approved">Approved</option>
+                        <option value="Partial Billing">Partial Billing</option>
+                        <option value="Billing Completion">Billing Completion</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </select>
+                    </div>
 
-                <div className="ppm-sidebar-group">
-                  <label htmlFor="ppm-sidebar-pstatus">Project Status</label>
-                  <select
-                    id="ppm-sidebar-pstatus"
-                    className="ppm-sidebar-select"
-                    value={billingDetails?.projectStatus || 'On Going'}
-                    disabled={billingDetails?.quotationStatus === 'CANCELLED'}
-                    onChange={e => onBillingDetailsChange?.({ projectStatus: e.target.value })}
-                  >
-                    <option value="On Going">On Going</option>
-                    <option value="Finished">Finished</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                  </select>
-                </div>
+                    <div className="ppm-sidebar-group">
+                      <label htmlFor="ppm-sidebar-pstatus">Project Status</label>
+                      <select
+                        id="ppm-sidebar-pstatus"
+                        className="ppm-sidebar-select"
+                        value={billingDetails?.projectStatus || 'On Going'}
+                        disabled={!canViewBilling || billingDetails?.quotationStatus === 'CANCELLED'}
+                        onChange={e => onBillingDetailsChange?.({ projectStatus: e.target.value })}
+                      >
+                        <option value="On Going">On Going</option>
+                        <option value="Finished">Finished</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </select>
+                    </div>
 
-                <div className="ppm-sidebar-group">
-                  <label htmlFor="ppm-sidebar-submitted">Submitted to Admin</label>
-                  <input
-                    type="date"
-                    id="ppm-sidebar-submitted"
-                    className="ppm-sidebar-input"
-                    value={billingDetails?.submittedToAdminAt || ''}
-                    onChange={e => onBillingDetailsChange?.({ submittedToAdminAt: e.target.value || null })}
-                  />
-                </div>
+                    <div className="ppm-sidebar-group">
+                      <label htmlFor="ppm-sidebar-submitted">Submitted to Admin</label>
+                      <input
+                        type="date"
+                        id="ppm-sidebar-submitted"
+                        className="ppm-sidebar-input"
+                        value={billingDetails?.submittedToAdminAt || ''}
+                        disabled={!canViewBilling}
+                        onChange={e => onBillingDetailsChange?.({ submittedToAdminAt: e.target.value || null })}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {!canViewBilling && (!billingDetails?.submittedToAdminAt || billingDetails?.quotationStatus === 'DRAFT') && (() => {
+                  const isMissingIncharge = !billingDetails?.projectInCharge;
+                  const isMissingCustomer = !billingDetails?.clientName;
+                  const isSubmitDisabled = isMissingIncharge || isMissingCustomer;
+
+                  return (
+                    <button
+                      className="ppm-action-btn submit-to-admin-btn"
+                      disabled={isSubmitDisabled}
+                      style={{
+                        width: '100%',
+                        marginTop: '20px',
+                        backgroundColor: isSubmitDisabled ? '#a3a3a3' : '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        padding: '10px',
+                        borderRadius: '4px',
+                        cursor: isSubmitDisabled ? 'not-allowed' : 'pointer',
+                        fontWeight: 'bold',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        opacity: isSubmitDisabled ? 0.75 : 1
+                      }}
+                      onClick={() => {
+                        const todayStr = new Date().toISOString().split('T')[0]
+                        onBillingDetailsChange?.({
+                          quotationStatus: 'For Approval',
+                          submittedToAdminAt: todayStr
+                        })
+                        // Close preview or update UI
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="22 2 11 13 22 2"></polyline>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                      Submit to Admin
+                    </button>
+                  );
+                })()}
               </div>
             </div>
           </div>

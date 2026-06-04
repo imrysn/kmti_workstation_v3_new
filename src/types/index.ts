@@ -104,6 +104,7 @@ export interface IQuotation {
   lastUpdatedAt?: string | null
   updateDetail?: string | null
   customClientName?: string
+  billingStatus?: string | null
 }
 
 export interface IQuotationHistory {

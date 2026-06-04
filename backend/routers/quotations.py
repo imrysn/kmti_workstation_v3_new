@@ -614,7 +614,7 @@ async def list_quotations(
                 # New fields for Billing Monitoring
                 "grandTotal": float(i.grand_total or 0.0),
                 "customerIncharge": i.customer_incharge or "",
-                "quotationStatus": i.quotation_status or "For Approval",
+                "quotationStatus": i.quotation_status or "DRAFT",
                 "projectStatus": i.project_status or "On Going",
                 "submittedToAdminAt": i.submitted_to_admin_at.strftime("%Y-%m-%d") if i.submitted_to_admin_at else None,
                 "billTo": (
@@ -625,7 +625,8 @@ async def list_quotations(
                 "datePaid": i.date_paid.strftime("%Y-%m-%d") if i.date_paid else None,
                 "updatedBy": i.updated_by or "",
                 "lastUpdatedAt": i.last_updated_at.strftime("%Y-%m-%d %H:%M") if i.last_updated_at else None,
-                "updateDetail": i.update_detail or ""
+                "updateDetail": i.update_detail or "",
+                "billingStatus": i.billing_status or None
             } for i in items
         ]
     }
@@ -885,6 +886,8 @@ async def update_billing_monitoring(
             quot.date = None
     if "updateDetail" in payload:
         quot.update_detail = payload["updateDetail"]
+    if "billingStatus" in payload:
+        quot.billing_status = payload["billingStatus"] or None
         
     # Enforce cascade logic
     if quot.quotation_status == "CANCELLED":

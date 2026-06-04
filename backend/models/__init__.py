@@ -1,4 +1,4 @@
-from .part import Project, CadFileIndex, CharSearch, HeatTreatment, Designer, Material
+from .part import Project, CadFileIndex, CharSearch, HeatTreatment, Designer, Material, Client, ProjectIncharge
 from .user import User, FeatureFlag, UserRole
 from .telemetry import WorkstationStatus
 from .broadcast import WorkstationBroadcast

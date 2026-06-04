@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import TitleBar from './components/TitleBar'
 import SessionExpiredModal from './components/SessionExpiredModal'
@@ -80,8 +80,10 @@ function WorkstationShell() {
   const { hasRole, isLoggingOut } = useAuth()
   const { flags } = useFlags()
   const location = useLocation()
+  const navigate = useNavigate()
 
   const isQuotationPage = location.pathname.startsWith('/quotation')
+  const isHomePage = location.pathname === '/' || location.pathname === '/team-calendar'
 
   // Activate real-time telemetry heartbeat
   useHeartbeat()
@@ -122,7 +124,28 @@ function WorkstationShell() {
   return (
     <div className={shellClass}>
       <TitleBar />
-      <div className="app-body">
+      <div className={`app-body${!isHomePage ? ' has-back-button' : ''}`}>
+        {!isHomePage && (
+          <div className="content-back-btn-container no-print">
+            <button
+              className="content-back-btn"
+              onClick={() => {
+                if (typeof (window as any).onWorkstationBack === 'function') {
+                  (window as any).onWorkstationBack();
+                } else {
+                  navigate(-1);
+                }
+              }}
+              title="Go back"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              <span>Back</span>
+            </button>
+          </div>
+        )}
         <main className="app-content">
           <Routes>
             <Route path="/" element={<Navigate to="/team-calendar" replace />} />

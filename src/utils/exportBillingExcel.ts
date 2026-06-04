@@ -56,6 +56,7 @@ export const exportBillingToExcel = async (quotations: IQuotation[]) => {
         { header: 'Project\nStatus', key: 'projectStatus', width: 20 },
         { header: 'Submitted To\nAdmin', key: 'submittedToAdminAt', width: 20 },
         { header: 'Bill To', key: 'billTo', width: 25 },
+        { header: 'Billing\nStatus', key: 'billingStatus', width: 20 },
         { header: 'Date Paid', key: 'datePaid', width: 18 },
         { header: 'Update By', key: 'updatedBy', width: 15 },
         { header: 'Update Date', key: 'lastUpdatedAt', width: 15 },
@@ -65,7 +66,7 @@ export const exportBillingToExcel = async (quotations: IQuotation[]) => {
       // Style Header Row
       const headerRow = sheet.getRow(1)
       headerRow.height = 35 // Increase height for multiline headers
-      for (let i = 1; i <= 15; i++) {
+      for (let i = 1; i <= 16; i++) {
         const cell = headerRow.getCell(i)
         cell.font = { bold: true, color: { argb: 'FF000000' } } // Black text
         cell.fill = {
@@ -86,10 +87,11 @@ export const exportBillingToExcel = async (quotations: IQuotation[]) => {
           quotationNo: q.quotationNo || '-',
           date: parseDate(q.date),
           amount: q.grandTotal ? q.grandTotal : 0,
-          quotationStatus: q.quotationStatus || 'For Approval',
+          quotationStatus: q.quotationStatus || 'DRAFT',
           projectStatus: q.projectStatus || 'On Going',
           submittedToAdminAt: parseDate(q.submittedToAdminAt),
           billTo: q.billTo || '-',
+          billingStatus: q.billingStatus || '-',
           datePaid: parseDate(q.datePaid),
           updatedBy: q.updatedBy || '-',
           lastUpdatedAt: parseDate(q.lastUpdatedAt),
@@ -154,15 +156,16 @@ export const exportBillingToExcel = async (quotations: IQuotation[]) => {
         qStatusCell.dataValidation = {
           type: 'list',
           allowBlank: true,
-          formulae: ['"For Approval,Approved,Partial Billing,Billing Completion,CANCELLED"']
+          formulae: ['"DRAFT,For Approval,Approved,Partial Billing,Billing Completion,CANCELLED"']
         }
 
-        const qStatus = q.quotationStatus || 'For Approval'
+        const qStatus = q.quotationStatus || 'DRAFT'
 
         let qBg = 'FFFFFFFF'
         let qColor = 'FF000000'
 
-        if (qStatus === 'For Approval') { qBg = 'FFFDF0D5'; qColor = 'FFD97706' }
+        if (qStatus === 'DRAFT') { qBg = 'FFF1F5F9'; qColor = 'FF94A3B8' }
+        else if (qStatus === 'For Approval') { qBg = 'FFFDF0D5'; qColor = 'FFD97706' }
         else if (qStatus === 'Approved') { qBg = 'FF86EFAC'; qColor = 'FF16A34A' }
         else if (qStatus === 'Partial Billing') { qBg = 'FFDBEAFE'; qColor = 'FF2563EB' }
         else if (qStatus === 'Billing Completion') { qBg = 'FFF3E8FF'; qColor = 'FF9333EA' }
@@ -198,7 +201,7 @@ export const exportBillingToExcel = async (quotations: IQuotation[]) => {
       // Add borders to all cells
       sheet.eachRow((row) => {
         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          if (colNumber <= 15) {
+          if (colNumber <= 16) {
             cell.border = {
               top: { style: 'thin', color: { argb: 'FF000000' } },
               left: { style: 'thin', color: { argb: 'FF000000' } },

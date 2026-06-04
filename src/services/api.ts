@@ -144,11 +144,33 @@ export const designersApi = {
   getCategories: () => api.get('/designers/categories'),
   list: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
     api.get('/designers', { params: { category, q, limit, offset } }),
-  create: (data: { category: string; englishName: string; email: string; japaneseName: string }) =>
+  create: (data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
     api.post('/designers', data),
   update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
     api.patch(`/designers/${id}`, data),
   delete: (id: number) => api.delete(`/designers/${id}`),
+}
+
+// --- Clients ---
+export const clientsApi = {
+  list: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
+    api.get('/clients', { params: { category, q, limit, offset } }),
+  create: (data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
+    api.post('/clients', data),
+  update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
+    api.patch(`/clients/${id}`, data),
+  delete: (id: number) => api.delete(`/clients/${id}`),
+}
+
+// --- Project Incharges ---
+export const projectInchargesApi = {
+  list: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
+    api.get('/project-incharges', { params: { category, q, limit, offset } }),
+  create: (data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
+    api.post('/project-incharges', data),
+  update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
+    api.patch(`/project-incharges/${id}`, data),
+  delete: (id: number) => api.delete(`/project-incharges/${id}`),
 }
 
 // --- Settings ---

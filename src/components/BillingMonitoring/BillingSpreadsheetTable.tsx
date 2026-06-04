@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import type { IQuotation } from '../../types'
 import type { IActiveCell } from '../../hooks/useBillingMonitoring'
 import { useNavigate } from 'react-router-dom'
+import { clientsApi } from '../../services/api'
 
 interface BillingSpreadsheetTableProps {
   loading: boolean
@@ -48,6 +49,32 @@ export default function BillingSpreadsheetTable({
 }: BillingSpreadsheetTableProps) {
   const navigate = useNavigate()
   const [selectedIds, setSelectedIds] = useState<number[]>([])
+  const [clientsList, setClientsList] = useState<string[]>([])
+
+  useEffect(() => {
+    clientsApi.list().then(res => {
+      if (Array.isArray(res.data)) {
+        const names = res.data.map((c: any) => c.englishName).filter(Boolean)
+        setClientsList(names)
+      }
+    }).catch(err => console.error("Error loading clients:", err))
+  }, [])
+
+  const handleSaveCustomClient = async (quotationId: number, name: string) => {
+    await handleSingleFieldSave(quotationId, { clientName: name })
+    if (clientsList.includes(name)) return
+
+    clientsApi.create({
+      category: 'CLIENT',
+      englishName: name,
+      email: '',
+      japaneseName: ''
+    }).then(() => {
+      setClientsList(prev => prev.includes(name) ? prev : [...prev, name])
+    }).catch(err => {
+      console.error("Error creating client preset:", err)
+    })
+  }
 
   useEffect(() => {
     setSelectedIds([])
@@ -59,7 +86,8 @@ export default function BillingSpreadsheetTable({
       quotNo: q.quotationNo || `KMTE-${q.id}`,
       displayName: q.displayName || q.quotationNo || `KMTE-${q.id}`,
       mode: 'join' as const,
-      workstation: q.workstation || ''
+      workstation: q.workstation || '',
+      referrer: '/billing-monitoring'
     }
     sessionStorage.setItem('kmti_quot_current_session', JSON.stringify(session))
     navigate('/quotation')
@@ -170,6 +198,9 @@ export default function BillingSpreadsheetTable({
                   <th style={{ width: activeCell?.field === 'billTo' ? '180px' : '150px', transition: 'width 0.2s ease', cursor: 'pointer' }} onClick={() => handleSort('billTo')}>
                     Bill To {sortColumn === 'billTo' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
+                  <th style={{ width: activeCell?.field === 'billingStatus' ? '150px' : '130px', transition: 'width 0.2s ease', cursor: 'pointer', textAlign: 'center' }} onClick={() => handleSort('billingStatus')}>
+                    Billing<br />Status {sortColumn === 'billingStatus' && (sortDirection === 'asc' ? '↑' : '↓')}
+                  </th>
                   <th style={{ width: activeCell?.field === 'datePaid' ? '140px' : '120px', transition: 'width 0.2s ease', cursor: 'pointer' }} onClick={() => handleSort('datePaid')}>
                     Date Paid {sortColumn === 'datePaid' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
@@ -236,7 +267,7 @@ export default function BillingSpreadsheetTable({
                               onBlur={async (e) => {
                                 const typed = e.target.value.trim()
                                 if (typed) {
-                                  await handleSingleFieldSave(q.id, { clientName: typed })
+                                  await handleSaveCustomClient(q.id, typed)
                                 }
                                 setActiveCell(null)
                               }}
@@ -244,7 +275,7 @@ export default function BillingSpreadsheetTable({
                                 if (e.key === 'Enter') {
                                   const typed = (editForm.customClientName || '').trim()
                                   if (typed) {
-                                    await handleSingleFieldSave(q.id, { clientName: typed })
+                                    await handleSaveCustomClient(q.id, typed)
                                   }
                                   setActiveCell(null)
                                 } else if (e.key === 'Escape') {
@@ -257,7 +288,7 @@ export default function BillingSpreadsheetTable({
                             <select
                               autoFocus
                               className="cell-input cell-select"
-                              value={['JFE', 'NIKKO', 'AMANO', 'TEX WAKAYAMA', 'TEX HANSHIN', 'OKINAKA'].includes(q.clientName || '') ? (editForm.clientName || q.clientName || '') : (editForm.clientName || q.clientName || '')}
+                              value={editForm.clientName || q.clientName || ''}
                               onChange={async e => {
                                 const val = e.target.value
                                 if (val === '__CUSTOM__') {
@@ -270,16 +301,9 @@ export default function BillingSpreadsheetTable({
                               }}
                               onBlur={() => setActiveCell(null)}
                             >
-                              {/* Ensure current custom value is listed if not in presets */}
-                              {q.clientName && !['JFE', 'NIKKO', 'AMANO', 'TEX WAKAYAMA', 'TEX HANSHIN', 'OKINAKA'].includes(q.clientName) && (
-                                <option value={q.clientName}>{q.clientName}</option>
-                              )}
-                              <option value="JFE">JFE</option>
-                              <option value="NIKKO">NIKKO</option>
-                              <option value="AMANO">AMANO</option>
-                              <option value="TEX WAKAYAMA">TEX WAKAYAMA</option>
-                              <option value="TEX HANSHIN">TEX HANSHIN</option>
-                              <option value="OKINAKA">OKINAKA</option>
+                              {clientsList.map(name => (
+                                <option key={name} value={name}>{name}</option>
+                              ))}
                               <option value="__CUSTOM__">[Type Custom Value...]</option>
                             </select>
                           )
@@ -370,12 +394,12 @@ export default function BillingSpreadsheetTable({
                       <td className="cell-amount" title={formatCurrency(q.grandTotal)}>{formatCurrency(q.grandTotal)}</td>
 
                       {/* Quotation Status */}
-                      <td style={{ textAlign: 'center' }} className={activeCell?.id === q.id && activeCell?.field === 'quotationStatus' ? 'editing-cell' : ''} title={q.quotationStatus || 'For Approval'}>
+                      <td style={{ textAlign: 'center' }} className={activeCell?.id === q.id && activeCell?.field === 'quotationStatus' ? 'editing-cell' : ''} title={q.quotationStatus || 'DRAFT'}>
                         {activeCell?.id === q.id && activeCell?.field === 'quotationStatus' ? (
                           <select
                             autoFocus
                             className="cell-input cell-select"
-                            value={editForm.quotationStatus || q.quotationStatus || 'For Approval'}
+                            value={editForm.quotationStatus || q.quotationStatus || 'DRAFT'}
                             onChange={async e => {
                               const val = e.target.value
                               setEditForm({ ...editForm, quotationStatus: val })
@@ -384,6 +408,7 @@ export default function BillingSpreadsheetTable({
                             }}
                             onBlur={() => setActiveCell(null)}
                           >
+                            <option value="DRAFT">DRAFT</option>
                             <option value="For Approval">For Approval</option>
                             <option value="Approved">Approved</option>
                             <option value="Partial Billing">Partial Billing</option>
@@ -396,16 +421,17 @@ export default function BillingSpreadsheetTable({
                             style={{ justifyContent: 'center' }}
                             onClick={() => {
                               setActiveCell({ id: q.id, field: 'quotationStatus' })
-                              setEditForm({ quotationStatus: q.quotationStatus || 'For Approval' })
+                              setEditForm({ quotationStatus: q.quotationStatus || 'DRAFT' })
                             }}
                           >
                             <span className={`status-badge ${q.quotationStatus === 'Approved' ? 'status-q-approved' :
                               q.quotationStatus === 'Partial Billing' ? 'status-q-partial' :
                                 q.quotationStatus === 'Billing Completion' ? 'status-q-completion' :
                                   q.quotationStatus === 'CANCELLED' ? 'status-q-cancelled' :
-                                    'status-q-for-approval'
+                                    q.quotationStatus === 'For Approval' ? 'status-q-for-approval' :
+                                      'status-q-draft'
                               }`}>
-                              {q.quotationStatus || 'For Approval'}
+                              {q.quotationStatus || 'DRAFT'}
                             </span>
                           </div>
                         )}
@@ -518,8 +544,9 @@ export default function BillingSpreadsheetTable({
                             onBlur={() => setActiveCell(null)}
                           >
                             <option value="AGC Ceramics Co., Ltd.">AGC Ceramics Co., Ltd.</option>
-                            <option value="NEXTENGINEERING Co., Ltd.">NEXTENGINEERING Co., Ltd.</option>
+                            <option value="NEXT ENGINEERING Co., Ltd.">NEXT ENGINEERING Co., Ltd.</option>
                             <option value="Kusakabe Electric and Machinery Co., Ltd.">Kusakabe Electric and Machinery Co., Ltd.</option>
+                            <option value="MAENO GIKEN INC.">MAENO GIKEN INC.</option>
                           </select>
                         ) : (
                           <div
@@ -530,6 +557,51 @@ export default function BillingSpreadsheetTable({
                             }}
                           >
                             {q.billTo || '-'}
+                          </div>
+                        )}
+                      </td>
+
+                       {/* Billing Status */}
+                      <td style={{ textAlign: 'center' }} className={activeCell?.id === q.id && activeCell?.field === 'billingStatus' ? 'editing-cell' : ''} title={q.billingStatus || 'Not Set'}>
+                        {activeCell?.id === q.id && activeCell?.field === 'billingStatus' ? (
+                          <select
+                            autoFocus
+                            className="cell-input cell-select"
+                            value={editForm.billingStatus || q.billingStatus || ''}
+                            onChange={async e => {
+                              const val = e.target.value
+                              setEditForm({ ...editForm, billingStatus: val })
+                              await handleSingleFieldSave(q.id, { billingStatus: val || null })
+                              setActiveCell(null)
+                            }}
+                            onBlur={() => setActiveCell(null)}
+                          >
+                            <option value="">— Not Set —</option>
+                            <option value="FOR BILLING">FOR BILLING</option>
+                            <option value="BILLED">BILLED</option>
+                            <option value="PAID">PAID</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                            <option value="REVISED">REVISED</option>
+                          </select>
+                        ) : (
+                          <div
+                            className="clickable-cell-trigger"
+                            style={{ justifyContent: 'center' }}
+                            onClick={() => {
+                              setActiveCell({ id: q.id, field: 'billingStatus' })
+                              setEditForm({ billingStatus: q.billingStatus || '' })
+                            }}
+                          >
+                            <span className={`status-badge ${
+                              q.billingStatus === 'FOR BILLING' ? 'status-b-for-billing' :
+                              q.billingStatus === 'BILLED' ? 'status-b-billed' :
+                              q.billingStatus === 'PAID' ? 'status-b-paid' :
+                              q.billingStatus === 'CANCELLED' ? 'status-b-cancelled' :
+                              q.billingStatus === 'REVISED' ? 'status-b-revised' :
+                              'status-b-none'
+                            }`}>
+                              {q.billingStatus || '—'}
+                            </span>
                           </div>
                         )}
                       </td>
@@ -766,7 +838,7 @@ export default function BillingSpreadsheetTable({
                 Selected <strong>{selectedIds.length}</strong> items
               </div>
               <div className="bulk-actions-divider" />
-              
+
               <div className="bulk-actions-group">
                 <button className="bulk-action-btn" onClick={() => handleBulkStatus('Approved')}>
                   Approve
@@ -777,9 +849,9 @@ export default function BillingSpreadsheetTable({
                 <button className="bulk-action-btn" onClick={() => handleBulkStatus('CANCELLED')}>
                   Cancel
                 </button>
-                
+
                 <div className="bulk-actions-divider" />
-                
+
                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>Set Paid Date:</span>
                 <input
                   type="date"
@@ -808,14 +880,15 @@ export default function BillingSpreadsheetTable({
                 >
                   <option value="" disabled>Select Client...</option>
                   <option value="AGC Ceramics Co., Ltd.">AGC Ceramics</option>
-                  <option value="NEXTENGINEERING Co., Ltd.">NextEngineering</option>
+                  <option value="NEXT ENGINEERING Co., Ltd.">NEXT ENGINEERING Co., Ltd.</option>
                   <option value="Kusakabe Electric and Machinery Co., Ltd.">Kusakabe</option>
+                  <option value="MAENO GIKEN INC.">MAENO GIKEN INC.</option>
                 </select>
 
                 <div className="bulk-actions-divider" />
 
-                <button 
-                  className="bulk-action-btn" 
+                <button
+                  className="bulk-action-btn"
                   onClick={() => setSelectedIds([])}
                   style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
                 >

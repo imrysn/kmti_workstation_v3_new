@@ -11,6 +11,8 @@ interface BillingFiltersProps {
   setSelectedBillTo: (val: string) => void
   selectedMonth: string
   setSelectedMonth: (val: string) => void
+  selectedBillingStatus: string
+  setSelectedBillingStatus: (val: string) => void
   uniqueInchargeValues: string[]
   resetFilters: () => void
 }
@@ -28,10 +30,12 @@ export default function BillingFilters({
   setSelectedBillTo,
   selectedMonth,
   setSelectedMonth,
+  selectedBillingStatus,
+  setSelectedBillingStatus,
   uniqueInchargeValues,
   resetFilters
 }: BillingFiltersProps) {
-  const activeFilterCount = [selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, search]
+  const activeFilterCount = [selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, search]
     .filter(Boolean).length
 
   return (
@@ -82,6 +86,7 @@ export default function BillingFilters({
           onChange={e => setSelectedQStatus(e.target.value)}
         >
           <option value="">All Statuses</option>
+          <option value="DRAFT">DRAFT</option>
           <option value="For Approval">For Approval</option>
           <option value="Approved">Approved</option>
           <option value="Partial Billing">Partial Billing</option>
@@ -105,6 +110,22 @@ export default function BillingFilters({
       </div>
 
       <div className="filter-group">
+        <label className="filter-label">Billing Status</label>
+        <select
+          className={`filter-input ${selectedBillingStatus ? 'filter-active' : ''}`}
+          value={selectedBillingStatus}
+          onChange={e => setSelectedBillingStatus(e.target.value)}
+        >
+          <option value="">All</option>
+          <option value="FOR BILLING">FOR BILLING</option>
+          <option value="BILLED">BILLED</option>
+          <option value="PAID">PAID</option>
+          <option value="CANCELLED">CANCELLED</option>
+          <option value="REVISED">REVISED</option>
+        </select>
+      </div>
+
+      <div className="filter-group">
         <label className="filter-label">Bill To</label>
         <select
           className={`filter-input ${selectedBillTo ? 'filter-active' : ''}`}
@@ -113,8 +134,9 @@ export default function BillingFilters({
         >
           <option value="">All Clients</option>
           <option value="AGC Ceramics Co., Ltd.">AGC Ceramics Co., Ltd.</option>
-          <option value="NEXTENGINEERING Co., Ltd.">NEXTENGINEERING Co., Ltd.</option>
+          <option value="NEXT ENGINEERING Co., Ltd.">NEXT ENGINEERING Co., Ltd.</option>
           <option value="Kusakabe Electric and Machinery Co., Ltd.">Kusakabe Electric and Machinery Co., Ltd.</option>
+          <option value="MAENO GIKEN INC.">MAENO GIKEN INC.</option>
         </select>
       </div>
 

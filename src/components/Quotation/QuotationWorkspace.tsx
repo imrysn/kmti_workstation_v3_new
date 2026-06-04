@@ -615,6 +615,50 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     }
   }
 
+  const handleSubmitToAdmin = async () => {
+    // If there are unsaved changes, prompt the user to save first
+    if (hasUnsavedChanges) {
+      notify?.('Please save your changes before submitting to admin.', 'warning')
+      return
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+    
+    // Update local states & emit patches
+    syncBillingDetails({
+      quotationStatus: 'For Approval',
+      submittedToAdminAt: todayStr
+    })
+
+    // Perform the save action to persist these updates to the database
+    try {
+      const data = {
+        ...getSaveData(),
+        billingDetails: {
+          ...billingDetails,
+          quotationStatus: 'For Approval',
+          submittedToAdminAt: todayStr
+        }
+      }
+      if (quotId) {
+        await quotationApi.update(quotId, data)
+        notify?.('Quotation successfully submitted to admin for approval!', 'success')
+      } else {
+        const res = await quotationApi.create(data)
+        if (res.data.success) {
+          setQuotId(res.data.id)
+          notify?.('Quotation successfully submitted to admin for approval!', 'success')
+        }
+      }
+      setHasUnsavedChanges(false)
+      await saveInvoice(true)
+      emitSnapshot(data, 'Submit to Admin')
+    } catch (e) {
+      console.error('Submit to admin failed:', e)
+      notify?.('Failed to submit to admin', 'error')
+    }
+  }
+
   // ── Auto-save (Every 5 minutes) ───────────────────────────────
   useEffect(() => {
     // Only auto-save if we are the primary "connected" workstation

@@ -20,7 +20,10 @@ export const normalizeClientName = (name: string | null | undefined): string => 
   
   const lower = trimmed.toLowerCase()
   if (lower.includes('nextengineering') || lower.includes('next engineering')) {
-    return 'NEXTENGINEERING Co., Ltd.'
+    return 'NEXT ENGINEERING Co., Ltd.'
+  }
+  if (lower.includes('maeno giken')) {
+    return 'MAENO GIKEN INC.'
   }
   if (lower.includes('kusakabe')) {
     return 'Kusakabe Electric and Machinery Co., Ltd.'
@@ -70,6 +73,7 @@ export function useBillingMonitoring() {
   const [selectedPStatus, setSelectedPStatus] = useState<string>('')
   const [selectedBillTo, setSelectedBillTo] = useState<string>('')
   const [selectedMonth, setSelectedMonth] = useState<string>('')
+  const [selectedBillingStatus, setSelectedBillingStatus] = useState<string>('')
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1)
@@ -180,7 +184,7 @@ export function useBillingMonitoring() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth])
+  }, [search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus])
 
   // Filter Logic
   const filteredQuotations = useMemo(() => {
@@ -196,8 +200,9 @@ export function useBillingMonitoring() {
       const matchesPStatus = !selectedPStatus || q.projectStatus === selectedPStatus
       const matchesBillTo = !selectedBillTo || normalizeClientName(q.billTo) === selectedBillTo
       const matchesMonth = !selectedMonth || (q.date && new Date(q.date).getMonth().toString() === selectedMonth)
+      const matchesBillingStatus = !selectedBillingStatus || (q.billingStatus || '') === selectedBillingStatus
 
-      return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth
+      return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth && matchesBillingStatus
     })
 
     if (sortColumn) {
@@ -231,7 +236,7 @@ export function useBillingMonitoring() {
     }
 
     return result
-  }, [quotations, search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, sortColumn, sortDirection])
+  }, [quotations, search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, sortColumn, sortDirection])
 
   // Pagination Computations
   const totalItems = filteredQuotations.length
@@ -389,7 +394,7 @@ export function useBillingMonitoring() {
         })
 
         const dayPending = dayQuots
-          .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
+          .filter(q => q.quotationStatus === 'For Approval' || q.quotationStatus === 'DRAFT' || !q.quotationStatus)
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
         const dayCancelled = dayQuots
@@ -459,7 +464,7 @@ export function useBillingMonitoring() {
         })
 
         const mPending = mQuots
-          .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
+          .filter(q => q.quotationStatus === 'For Approval' || q.quotationStatus === 'DRAFT' || !q.quotationStatus)
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
         const mCancelled = mQuots
@@ -566,6 +571,7 @@ export function useBillingMonitoring() {
     setSelectedPStatus('')
     setSelectedBillTo('')
     setSelectedMonth('')
+    setSelectedBillingStatus('')
   }
 
   const saveGlobalSettings = async (updates: Record<string, any>) => {
@@ -594,6 +600,7 @@ export function useBillingMonitoring() {
       'Partial Billing': { count: 0, total: 0 },
       'Approved': { count: 0, total: 0 },
       'For Approval': { count: 0, total: 0 },
+      'DRAFT': { count: 0, total: 0 },
       'CANCELLED': { count: 0, total: 0 }
     }
 
@@ -694,6 +701,8 @@ export function useBillingMonitoring() {
     setSelectedBillTo,
     selectedMonth,
     setSelectedMonth,
+    selectedBillingStatus,
+    setSelectedBillingStatus,
     currentPage,
     setCurrentPage,
     itemsPerPage,

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useBillingMonitoring } from '../hooks/useBillingMonitoring'
 import BillingChart from '../components/BillingMonitoring/BillingChart'
 import BillingFilters from '../components/BillingMonitoring/BillingFilters'
@@ -13,7 +14,23 @@ import './BillingMonitoring.css'
 type BillingView = 'dashboard' | 'table' | 'statement'
 
 export default function BillingMonitoring() {
-  const [activeView, setActiveView] = useState<BillingView>('dashboard')
+  const location = useLocation()
+  const [activeView, setActiveView] = useState<BillingView>(() => {
+    return (location.state as any)?.activeView || 'dashboard'
+  })
+
+  useEffect(() => {
+    if (activeView !== 'dashboard') {
+      (window as any).onWorkstationBack = () => {
+        setActiveView('dashboard')
+      }
+    } else {
+      (window as any).onWorkstationBack = undefined
+    }
+    return () => {
+      (window as any).onWorkstationBack = undefined
+    }
+  }, [activeView])
 
   const {
     quotations,
@@ -30,6 +47,8 @@ export default function BillingMonitoring() {
     setSelectedBillTo,
     selectedMonth,
     setSelectedMonth,
+    selectedBillingStatus,
+    setSelectedBillingStatus,
     currentPage,
     setCurrentPage,
     itemsPerPage,
@@ -182,6 +201,8 @@ export default function BillingMonitoring() {
           setSelectedBillTo={setSelectedBillTo}
           selectedMonth={selectedMonth}
           setSelectedMonth={setSelectedMonth}
+          selectedBillingStatus={selectedBillingStatus}
+          setSelectedBillingStatus={setSelectedBillingStatus}
           uniqueInchargeValues={uniqueInchargeValues}
           resetFilters={resetFilters}
         />

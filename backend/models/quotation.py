@@ -22,7 +22,7 @@ class Quotation(Base):
     # Billing & Monitoring fields
     grand_total = Column(Numeric(10, 2), default=0.0)
     customer_incharge = Column(String(255), nullable=True)
-    quotation_status = Column(String(50), default="For Approval")
+    quotation_status = Column(String(50), default="DRAFT")
     project_status = Column(String(50), default="On Going")
     submitted_to_admin_at = Column(DateTime, nullable=True)
     bill_to = Column(String(255), nullable=True)
@@ -30,6 +30,7 @@ class Quotation(Base):
     updated_by = Column(String(255), nullable=True)
     last_updated_at = Column(DateTime, nullable=True)
     update_detail = Column(Text, nullable=True)
+    billing_status = Column(String(50), nullable=True)
     is_deleted = Column(Boolean, default=False, nullable=False)
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

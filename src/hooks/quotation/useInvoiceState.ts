@@ -37,7 +37,7 @@ const DEFAULT_COMPANY: CompanyInfo = {
 }
 
 const DEFAULT_CLIENT: ClientInfo = {
-  company: 'NEXTENGINEERING Co., Ltd.',
+  company: 'NEXT ENGINEERING Co., Ltd.',
   contact: 'MR. Masahiko Hasegawa',
   address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
   phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013',
@@ -69,7 +69,7 @@ const DEFAULT_BILLING_DETAILS: BillingDetails = {
   bankAddress: "RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE",
   swiftCode: 'RCBCPHMM',
   branchCode: '358',
-  quotationStatus: 'For Approval',
+  quotationStatus: 'DRAFT',
   projectStatus: 'On Going',
   submittedToAdminAt: '',
   updateDetail: '',
@@ -631,7 +631,7 @@ export function useInvoiceState() {
       ...(data.billingDetails || {}),
       invoiceNo: data.billingDetails?.invoiceNo ?? qd.invoiceNo ?? '',
       jobOrderNo: data.billingDetails?.jobOrderNo ?? qd.jobOrderNo ?? '',
-      quotationStatus: data.billingDetails?.quotationStatus ?? 'For Approval',
+      quotationStatus: data.billingDetails?.quotationStatus ?? 'DRAFT',
       projectStatus: data.billingDetails?.projectStatus ?? 'On Going',
       submittedToAdminAt: data.billingDetails?.submittedToAdminAt ?? '',
       updateDetail: data.billingDetails?.updateDetail ?? '',

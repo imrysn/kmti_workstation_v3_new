@@ -28,8 +28,15 @@
 }
 
 @keyframes workstationFadeIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Logout exit — scales down and fades out before window shrinks */
@@ -38,8 +45,15 @@
 }
 
 @keyframes workstationFadeOut {
-  from { opacity: 1; transform: scale(1); }
-  to   { opacity: 0; transform: scale(0.96); }
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(0.96);
+  }
 }
 
 .app-body {
@@ -240,4 +254,78 @@
 .badge-green {
   background: rgba(63, 185, 80, 0.12);
   color: var(--success);
+}
+
+/* --- Go Back Button --- */
+.content-back-btn-container {
+  position: fixed;
+  top: calc(var(--titlebar-height) + 8px);
+  left: 8px;
+  z-index: 10000;
+  /* Float above all content */
+  pointer-events: auto;
+  animation: workstationFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.content-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 99px;
+  /* Pill shape */
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+}
+
+.content-back-btn:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: var(--shadow-md);
+}
+
+.content-back-btn:active {
+  transform: scale(0.97);
+}
+
+/* --- Spacing Adjustments when Back Button is present --- */
+.has-back-button .formula-panel-body {
+  padding-top: 54px !important;
+}
+
+.has-back-button .quot-toolbar-identity {
+  padding-left: 104px !important;
+}
+
+.has-back-button .billing-header-title {
+  padding-left: 84px !important;
+}
+
+.has-back-button .ah-sidebar-header {
+  padding-left: 84px !important;
+}
+
+.has-back-button .itc-header {
+  padding-left: 84px !important;
+}
+
+.has-back-button .admin-help-header {
+  padding-left: 84px !important;
+}
+
+/* --- Hide Back Button when Modals/Overlays are active --- */
+.app-shell:has(.quot-entry-overlay) .content-back-btn-container,
+.app-shell:has(.quot-library-overlay) .content-back-btn-container,
+.app-shell:has(.quot-tutorial-overlay) .content-back-btn-container,
+.app-shell:has(.ah-viewer-overlay) .content-back-btn-container,
+.app-shell:has([class*="modal-overlay"]) .content-back-btn-container,
+.app-shell:has([class*="modal-backdrop"]) .content-back-btn-container {
+  display: none !important;
 }

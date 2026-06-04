@@ -27,7 +27,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs, custom_dictionaries
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs, custom_dictionaries, clients, project_incharges
 from routers import team_calendar as team_calendar_router
 import time
 import logging
@@ -128,6 +128,54 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"  [WARNING] Secondary FMS database connection failed: {e}. FMS integrations may be offline.")
         
+    # Seed default clients and project incharges if tables are empty
+    try:
+        from models import Client, Designer, ProjectIncharge
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as session:
+            client_stmt = select(Client)
+            client_res = await session.execute(client_stmt)
+            if not client_res.scalars().first():
+                logger.info("  [SEED] Seeding default clients...")
+                default_clients = [
+                    "JFE", "NIKKO", "AMANO", "TEX WAKAYAMA", "TEX HANSHIN", 
+                    "OKINAKA", "MGK", "AGCC", "KEMCO"
+                ]
+                for name in default_clients:
+                    session.add(Client(english_name=name, category="CLIENT"))
+                await session.commit()
+                logger.info("  [SUCCESS] Default clients seeded.")
+            
+            incharge_stmt = select(ProjectIncharge)
+            incharge_res = await session.execute(incharge_stmt)
+            if not incharge_res.scalars().first():
+                logger.info("  [SEED] Seeding default project incharges...")
+                default_incharges = [
+                    "Erik", "JC", "Jenie", "Jethro", "Jonathan", "Joyce", 
+                    "Kerby", "Lorie", "Matthew", "Mennjo", "Michael", "Nyl", 
+                    "Shela", "Teody", "Zoren"
+                ]
+                for name in default_incharges:
+                    session.add(ProjectIncharge(english_name=name, category="INCHARGE"))
+                await session.commit()
+                logger.info("  [SUCCESS] Default project incharges seeded.")
+
+            designer_stmt = select(Designer)
+            designer_res = await session.execute(designer_stmt)
+            if not designer_res.scalars().first():
+                logger.info("  [SEED] Seeding default designers...")
+                default_designers = [
+                    "Erik", "JC", "Jenie", "Jethro", "Jonathan", "Joyce", 
+                    "Kerby", "Lorie", "Matthew", "Mennjo", "Michael", "Nyl", 
+                    "Shela", "Teody", "Zoren"
+                ]
+                for name in default_designers:
+                    session.add(Designer(english_name=name, category="DESIGNER"))
+                await session.commit()
+                logger.info("  [SUCCESS] Default designers seeded.")
+    except Exception as seed_err:
+        logger.warning(f"  [WARNING] Failed to seed default data: {seed_err}")
+
     if indexer:
         indexer.start()
     
@@ -194,6 +242,8 @@ app.include_router(fms.router, prefix="/api/fms", tags=["FMS Integration"])
 app.include_router(materials.router, prefix="/api/materials", tags=["Materials"])
 app.include_router(activity_logs.router, prefix="/api/activity-logs", tags=["Activity Logs"])
 app.include_router(custom_dictionaries.router, prefix="/api/custom-pages", tags=["Custom Dictionary Pages"])
+app.include_router(clients.router, prefix="/api/clients", tags=["Clients"])
+app.include_router(project_incharges.router, prefix="/api/project-incharges", tags=["Project Incharges"])
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
 # IMPORTANT: socketio.ASGIApp intercepts WebSocket /socket.io/* requests BEFORE

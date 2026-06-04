@@ -34,6 +34,7 @@ export default function Quotation() {
     variant?: 'special' | 'kemco'
     autoStartTutorial?: boolean
     workstation?: string
+    referrer?: string
   } | null>(() => {
     const saved = sessionStorage.getItem('kmti_quot_current_session')
     return saved ? JSON.parse(saved) : null
@@ -47,6 +48,25 @@ export default function Quotation() {
       sessionStorage.removeItem('kmti_quot_current_session')
     }
   }, [activeSession])
+
+  // ── Back Button Override Effect ──────────────────────────────
+  useEffect(() => {
+    if (activeSession) {
+      (window as any).onWorkstationBack = () => {
+        sessionStorage.removeItem('kmti_quot_current_session')
+        if (activeSession.referrer) {
+          navigate(activeSession.referrer, { state: { activeView: 'table' } })
+        } else {
+          setActiveSession(null)
+        }
+      }
+    } else {
+      (window as any).onWorkstationBack = undefined
+    }
+    return () => {
+      (window as any).onWorkstationBack = undefined
+    }
+  }, [activeSession, navigate])
 
   // ── Lobby action handlers ──────────────────────────────────────
 
