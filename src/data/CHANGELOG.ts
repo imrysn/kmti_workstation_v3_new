@@ -22,6 +22,14 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.0',
+    date: 'June 4, 2026',
+    entries: [
+      { type: 'improvement', text: 'Quotation Status & Invoice Status — Modified flow of quotation submission flow.' },
+      { type: 'improvement', text: 'Billing Monitoring — Improved table list of quotations + new features. Admin only.' }
+    ],
+  },
+  {
     version: '3.7.9',
     date: 'June 4, 2026',
     entries: [
