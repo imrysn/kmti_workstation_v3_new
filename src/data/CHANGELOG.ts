@@ -22,6 +22,16 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.7.9',
+    date: 'June 4, 2026',
+    entries: [
+      { type: 'new', text: 'Billing Monitoring — New feature updates for admin. Thank you!' },
+      { type: 'new', text: 'FMS-User Accounts & Security — Integrated fms-user based accounts. Please use your FMS accounts with this update.' },
+      { type: 'improvement', text: 'Improved Calendar UI for better user experience.' },
+      { type: 'fix', text: 'Bugs fixed and optimizations' },
+    ],
+  },
+  {
     version: '3.7.8',
     date: 'May 28, 2026',
     entries: [
