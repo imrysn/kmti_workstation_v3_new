@@ -60,9 +60,9 @@ export const KemcoRow = memo(({
         )}
       </td>
 
-      {/* DWG No. — Unit (level 1) and Parts (level 2) */}
+      {/* DWG No. — Parts only (level 2) */}
       <td>
-        {(task.level === 1 || task.level === 2) && (
+        {task.level === 2 && (
           <CollaborativeField fieldKey={`task.${task.id}.dwgNo`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
             <input
               type="text"

@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import { ICalendarEvent } from '../../services/teamCalendarService'
-import { GlobeIcon, LockIcon, CheckIcon, TargetIcon } from './Icons'
-import { formatDisplayDate, formatDisplayDateTime } from '../../utils/teamCalendarUtils'
+import { GlobeIcon, LockIcon, CheckIcon } from './Icons'
+import { formatDisplayDate, formatDisplayDateTime, inferTaskType, TASK_TYPE_PILL_LABELS, TASK_TYPE_COLORS } from '../../utils/teamCalendarUtils'
 import { useState, useRef, useLayoutEffect } from 'react'
 
 interface EventTooltipProps {
@@ -68,8 +68,37 @@ export default function EventTooltip({ event, position, anchorRect, isVisible }:
       }}
     >
       <div className="calendar-tooltip-header">
-        <span className="calendar-tooltip-icon">
-          {isOffsetHoliday ? <LockIcon /> : isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : isCompleted ? <CheckIcon /> : <TargetIcon />}
+        <span className="calendar-tooltip-icon" style={{ display: 'flex', alignItems: 'center' }}>
+          {isOffsetHoliday
+            ? <LockIcon />
+            : isCompanyEvent
+              ? <GlobeIcon />
+              : isAbsence
+                ? <LockIcon />
+                : isCompleted
+                  ? <CheckIcon />
+                  : (() => {
+                      const tt = inferTaskType(event.todo_title, event.todo_description)
+                      const label = TASK_TYPE_PILL_LABELS[tt]
+                      if (!label) return null
+                      return (
+                        <span style={{
+                          fontSize: '8.5px',
+                          fontWeight: 800,
+                          letterSpacing: '0.05em',
+                          padding: '2px 5px',
+                          borderRadius: '3px',
+                          background: TASK_TYPE_COLORS[tt].bg,
+                          color: TASK_TYPE_COLORS[tt].text,
+                          border: `1px solid ${TASK_TYPE_COLORS[tt].border}`,
+                          lineHeight: '1.4',
+                          userSelect: 'none',
+                          flexShrink: 0,
+                        }}>
+                          {label}
+                        </span>
+                      )
+                    })()}
         </span>
         <span className="calendar-tooltip-title">
           {isOffsetHoliday

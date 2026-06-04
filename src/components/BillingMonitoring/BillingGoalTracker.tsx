@@ -6,38 +6,65 @@ interface BillingGoalTrackerProps {
   quotations: IQuotation[]
   formatCurrency: (val?: number) => string
   timeframe: 'week' | 'month' | 'year'
+  globalSettings: any
+  saveGlobalSettings: (updates: Record<string, any>) => Promise<void>
 }
 
-export default function BillingGoalTracker({ revenueSum, quotations, formatCurrency, timeframe }: BillingGoalTrackerProps) {
+export default function BillingGoalTracker({
+  revenueSum,
+  quotations,
+  formatCurrency,
+  timeframe,
+  globalSettings,
+  saveGlobalSettings
+}: BillingGoalTrackerProps) {
   const [goal, setGoal] = useState<number>(8000000) // Default monthly placeholder, initialized properly in useEffect
   const [isEditingGoal, setIsEditingGoal] = useState<boolean>(false)
   const [goalInput, setGoalInput] = useState<string>('8,000,000')
 
-  // Dynamically load goal when timeframe changes
+  // Dynamically load goal when timeframe or globalSettings changes
   useEffect(() => {
-    const key = `kmti_billing_revenue_target_${timeframe}`
-    const saved = localStorage.getItem(key)
     let initialGoal = 8000000
+    let savedTarget = null
 
-    if (saved) {
-      const parsed = parseInt(saved)
+    if (globalSettings) {
+      if (timeframe === 'week') {
+        savedTarget = globalSettings.billingTargetWeekly
+      } else if (timeframe === 'month') {
+        savedTarget = globalSettings.billingTargetMonthly
+      } else {
+        savedTarget = globalSettings.billingTargetYearly
+      }
+    }
+
+    if (savedTarget !== undefined && savedTarget !== null) {
+      const parsed = typeof savedTarget === 'number' ? savedTarget : parseInt(String(savedTarget))
       if (!isNaN(parsed) && parsed > 0) {
         initialGoal = parsed
       }
     } else {
-      // Timeframe-specific default targets
-      if (timeframe === 'week') {
-        initialGoal = 2000000  // ¥2,000,000 weekly default
-      } else if (timeframe === 'month') {
-        initialGoal = 8000000  // ¥8,000,000 monthly default
+      // LocalStorage fallback for migration/continuity, or defaults
+      const key = `kmti_billing_revenue_target_${timeframe}`
+      const localSaved = localStorage.getItem(key)
+      if (localSaved) {
+        const parsed = parseInt(localSaved)
+        if (!isNaN(parsed) && parsed > 0) {
+          initialGoal = parsed
+        }
       } else {
-        initialGoal = 80000000 // ¥80,000,000 yearly default
+        if (timeframe === 'week') {
+          initialGoal = 2000000
+        } else if (timeframe === 'month') {
+          initialGoal = 8000000
+        } else {
+          initialGoal = 80000000
+        }
       }
     }
 
     setGoal(initialGoal)
     setGoalInput(initialGoal.toLocaleString())
-  }, [timeframe])
+  }, [timeframe, globalSettings])
 
   // Calculate stats based on revenueSum
   const percent = useMemo(() => {
@@ -77,12 +104,20 @@ export default function BillingGoalTracker({ revenueSum, quotations, formatCurre
     }
   }, [actualPercentRaw])
 
-  const handleSaveGoal = () => {
+  const handleSaveGoal = async () => {
     const cleanNum = parseInt(goalInput.replace(/,/g, ''))
     if (!isNaN(cleanNum) && cleanNum > 0) {
       setGoal(cleanNum)
       setGoalInput(cleanNum.toLocaleString())
       localStorage.setItem(`kmti_billing_revenue_target_${timeframe}`, cleanNum.toString())
+      
+      const settingKey = timeframe === 'week' 
+        ? 'billingTargetWeekly' 
+        : timeframe === 'month' 
+          ? 'billingTargetMonthly' 
+          : 'billingTargetYearly'
+          
+      await saveGlobalSettings({ [settingKey]: cleanNum })
       setIsEditingGoal(false)
     } else {
       setGoalInput(goal.toLocaleString())
@@ -164,14 +199,14 @@ export default function BillingGoalTracker({ revenueSum, quotations, formatCurre
       <div className="goal-progress-section">
         {/* Progress Bar Container */}
         <div className="progress-bar-container">
-          <div 
-            className="progress-bar-fill" 
+          <div
+            className="progress-bar-fill"
             style={{ width: `${percent}%` }}
           >
             <div className="progress-bar-shimmer"></div>
           </div>
           {percent > 0 && (
-            <span 
+            <span
               className="progress-tooltip-bubble"
               style={{ left: `${percent}%` }}
             >

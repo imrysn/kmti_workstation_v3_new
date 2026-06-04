@@ -408,10 +408,37 @@ body.dark-theme .apm-skin-rarity.rarity-exclusive { color: #f87171; }
 body.dark-theme .apm-footer { border-top-color: rgba(255, 255, 255, 0.06); }
 body.void-theme .apm-footer { border-top-color: rgba(255, 0, 64, 0.15); }
 
+.apm-footer-left {
+  flex: 1;
+  min-width: 0;
+}
+
 .apm-footer-hint {
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* Error state shown when API save fails */
+.apm-save-error {
+  font-size: 11px;
+  color: #dc2626;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: apmShakeIn 0.3s ease;
+}
+
+body.dark-theme .apm-save-error { color: #f87171; }
+
+@keyframes apmShakeIn {
+  0%   { transform: translateX(0); opacity: 0; }
+  20%  { transform: translateX(-4px); opacity: 1; }
+  40%  { transform: translateX(4px); }
+  60%  { transform: translateX(-3px); }
+  80%  { transform: translateX(2px); }
+  100% { transform: translateX(0); }
 }
 
 .apm-footer-right {
@@ -463,6 +490,18 @@ body.dark-theme .apm-btn-cancel:hover { background: rgba(255,255,255,0.04); }
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* Saving state — pulse animation to signal in-progress */
+.apm-btn-save.saving {
+  opacity: 0.75;
+  cursor: wait;
+  animation: apmSavePulse 1.2s ease-in-out infinite;
+}
+
+@keyframes apmSavePulse {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 0.45; }
 }
 
 body.void-theme .apm-btn-save {

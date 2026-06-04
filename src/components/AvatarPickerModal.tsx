@@ -14,6 +14,9 @@ import './AvatarPickerModal.css'
 interface AvatarPickerModalProps {
   computerName: string
   achievements: WorkstationStatus['achievements'] | null | undefined
+  /** Skin key returned by the server from the last heartbeat — used to hydrate
+   *  the initial selection when localStorage is empty (fresh machine / new login). */
+  equippedSkinFromServer?: string
   onClose: () => void
   onSaved: () => void
 }
@@ -23,16 +26,22 @@ const RARITY_ORDER = { exclusive: 0, legendary: 1, rare: 2, common: 3 }
 export default function AvatarPickerModal({
   computerName,
   achievements,
+  equippedSkinFromServer,
   onClose,
   onSaved,
 }: AvatarPickerModalProps) {
   const { user, setDisplayName } = useAuth()
   const unlockedKeys = new Set(getUnlockedSkins(computerName, achievements as any).map(s => s.key))
-  const [selected, setSelected] = useState<string>(() => loadEquippedSkin(computerName) ?? 'rookie')
+  // Priority: server value → localStorage → rookie default
+  const [selected, setSelected] = useState<string>(
+    () => loadEquippedSkin(computerName) ?? equippedSkinFromServer ?? 'rookie'
+  )
   const [filter, setFilter] = useState<'all' | 'unlocked'>('unlocked')
   const [displayNameInput, setDisplayNameInput] = useState(() => {
     return user ? (user.displayName || user.fullName || user.username) : ''
   })
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const displaySkins = AVATAR_SKINS.filter(s => {
     if (s.key === 'premium_tiger') {
@@ -63,18 +72,24 @@ export default function AvatarPickerModal({
   )
 
   const handleSave = async () => {
-    if (!isSelectedUnlocked) return
+    if (!isSelectedUnlocked || isSaving) return
+    setSaveError(null)
+    setIsSaving(true)
+    // Write to localStorage immediately for snappy local feedback
     saveEquippedSkin(computerName, selected)
     try {
       await telemetryApi.saveEquippedSkin(computerName, selected)
+      if (user) {
+        setDisplayName(displayNameInput)
+      }
+      onSaved()
+      onClose()
     } catch (err) {
       console.error('Failed to sync avatar skin to server:', err)
+      setSaveError('Could not reach the server. Check your connection and try again.')
+    } finally {
+      setIsSaving(false)
     }
-    if (user) {
-      setDisplayName(displayNameInput)
-    }
-    onSaved()
-    onClose()
   }
 
   useEffect(() => {
@@ -194,20 +209,28 @@ export default function AvatarPickerModal({
 
         {/* ── Footer ── */}
         <div className="apm-footer">
-          <span className="apm-footer-hint">
-            {unlockedCount === 1
-              ? 'Earn achievements to unlock more skins'
-              : `${totalCount - unlockedCount} skins still locked — keep earning`}
-          </span>
+          <div className="apm-footer-left">
+            {saveError ? (
+              <span className="apm-save-error">
+                ⚠️ {saveError}
+              </span>
+            ) : (
+              <span className="apm-footer-hint">
+                {unlockedCount === 1
+                  ? 'Earn achievements to unlock more skins'
+                  : `${totalCount - unlockedCount} skins still locked — keep earning`}
+              </span>
+            )}
+          </div>
           <div className="apm-footer-right">
-            <button className="apm-btn-cancel" onClick={onClose}>Cancel</button>
+            <button className="apm-btn-cancel" onClick={onClose} disabled={isSaving}>Cancel</button>
             <button
-              className="apm-btn-save"
+              className={`apm-btn-save ${isSaving ? 'saving' : ''}`}
               onClick={handleSave}
-              disabled={!isSelectedUnlocked}
-              title={!isSelectedUnlocked ? 'Unlock this skin first' : 'Equip this avatar'}
+              disabled={!isSelectedUnlocked || isSaving}
+              title={!isSelectedUnlocked ? 'Unlock this skin first' : isSaving ? 'Saving…' : 'Equip this avatar'}
             >
-              Equip Avatar
+              {isSaving ? 'Saving…' : saveError ? 'Retry' : 'Equip Avatar'}
             </button>
           </div>
         </div>

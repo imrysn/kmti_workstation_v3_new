@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import type { IQuotation } from '../../types'
 import type { IActiveCell } from '../../hooks/useBillingMonitoring'
 import { useNavigate } from 'react-router-dom'
@@ -46,6 +47,11 @@ export default function BillingSpreadsheetTable({
   handleSort
 }: BillingSpreadsheetTableProps) {
   const navigate = useNavigate()
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
+
+  useEffect(() => {
+    setSelectedIds([])
+  }, [paginatedQuotations, currentPage])
 
   const handleGoToQuotation = (q: IQuotation) => {
     const session = {
@@ -57,6 +63,44 @@ export default function BillingSpreadsheetTable({
     }
     sessionStorage.setItem('kmti_quot_current_session', JSON.stringify(session))
     navigate('/quotation')
+  }
+
+  const handleBulkStatus = async (status: string) => {
+    const updates: Partial<IQuotation> = { quotationStatus: status }
+    if (status === 'CANCELLED') {
+      updates.projectStatus = 'CANCELLED'
+      updates.updateDetail = 'CANCELLED'
+    }
+    try {
+      for (const id of selectedIds) {
+        await handleSingleFieldSave(id, updates)
+      }
+      setSelectedIds([])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleBulkDatePaid = async (dateVal: string) => {
+    try {
+      for (const id of selectedIds) {
+        await handleSingleFieldSave(id, { datePaid: dateVal })
+      }
+      setSelectedIds([])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleBulkBillTo = async (billVal: string) => {
+    try {
+      for (const id of selectedIds) {
+        await handleSingleFieldSave(id, { billTo: billVal })
+      }
+      setSelectedIds([])
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   return (
@@ -82,6 +126,20 @@ export default function BillingSpreadsheetTable({
               <thead>
                 <tr>
                   <th style={{ width: '40px' }}>#</th>
+                  <th style={{ width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      className="header-checkbox"
+                      checked={paginatedQuotations.length > 0 && paginatedQuotations.every(q => selectedIds.includes(q.id))}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedIds(paginatedQuotations.map(q => q.id))
+                        } else {
+                          setSelectedIds([])
+                        }
+                      }}
+                    />
+                  </th>
                   <th style={{ width: '130px', cursor: 'pointer' }} onClick={() => handleSort('designerName')}>
                     Project<br />Incharge {sortColumn === 'designerName' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
@@ -139,6 +197,22 @@ export default function BillingSpreadsheetTable({
                     ].filter(Boolean).join(' ')}>
                       {/* Index */}
                       <td className="cell-index sticky-col-index" title={`Row ${rowNumber}`}>{rowNumber}</td>
+
+                      {/* Checkbox */}
+                      <td className="cell-checkbox" style={{ textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          className="row-checkbox"
+                          checked={selectedIds.includes(q.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(prev => [...prev, q.id])
+                            } else {
+                              setSelectedIds(prev => prev.filter(id => id !== q.id))
+                            }
+                          }}
+                        />
+                      </td>
 
                       {/* Project Incharge (Designer Name) */}
                       <td className="sticky-col-name" title={q.designerName || ''}>
@@ -685,6 +759,71 @@ export default function BillingSpreadsheetTable({
               </div>
             </div>
           </div>
+
+          {selectedIds.length > 0 && (
+            <div className="bulk-actions-toolbar">
+              <div className="bulk-actions-info">
+                Selected <strong>{selectedIds.length}</strong> items
+              </div>
+              <div className="bulk-actions-divider" />
+              
+              <div className="bulk-actions-group">
+                <button className="bulk-action-btn" onClick={() => handleBulkStatus('Approved')}>
+                  Approve
+                </button>
+                <button className="bulk-action-btn" onClick={() => handleBulkStatus('Billing Completion')}>
+                  Complete Billing
+                </button>
+                <button className="bulk-action-btn" onClick={() => handleBulkStatus('CANCELLED')}>
+                  Cancel
+                </button>
+                
+                <div className="bulk-actions-divider" />
+                
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>Set Paid Date:</span>
+                <input
+                  type="date"
+                  className="bulk-action-date-input"
+                  onChange={async (e) => {
+                    const dateVal = e.target.value
+                    if (dateVal) {
+                      await handleBulkDatePaid(dateVal)
+                    }
+                  }}
+                />
+
+                <div className="bulk-actions-divider" />
+
+                <span style={{ fontSize: '12px', color: '#94a3b8' }}>Set Bill To:</span>
+                <select
+                  className="bulk-action-select"
+                  defaultValue=""
+                  onChange={async (e) => {
+                    const billVal = e.target.value
+                    if (billVal) {
+                      await handleBulkBillTo(billVal)
+                      e.target.value = "" // Reset
+                    }
+                  }}
+                >
+                  <option value="" disabled>Select Client...</option>
+                  <option value="AGC Ceramics Co., Ltd.">AGC Ceramics</option>
+                  <option value="NEXTENGINEERING Co., Ltd.">NextEngineering</option>
+                  <option value="Kusakabe Electric and Machinery Co., Ltd.">Kusakabe</option>
+                </select>
+
+                <div className="bulk-actions-divider" />
+
+                <button 
+                  className="bulk-action-btn" 
+                  onClick={() => setSelectedIds([])}
+                  style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                >
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

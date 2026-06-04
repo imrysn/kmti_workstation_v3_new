@@ -171,7 +171,7 @@ export default function DayEventsPopover({
                             ? 'rgba(5, 150, 105, 0.08)'
                             : isOverdue
                               ? 'rgba(220, 38, 38, 0.08)'
-                              : (!isAbsence ? taskColor.bg : 'var(--bg-surface-subtle)'),
+                              : (!isAbsence ? 'var(--bg-surface-subtle)' : 'var(--bg-surface-subtle)'),
                     borderLeft: isPendingAbsence
                       ? '5px dashed rgba(220, 38, 38, 0.6)'
                       : `5px solid ${accentColor}`,

@@ -185,9 +185,20 @@ function WorkstationCard({
             {isMinimized && <span className="minimized-label">💤 </span>}
             {cleanModule || 'Idle'}
           </span>
-          <span className="pc-name" title={ws.computer_name || ws.ip_address}>
-            {ws.computer_name || ws.ip_address}
-          </span>
+          {/* Only show the pc-name if it differs from the displayed name — avoids showing
+              e.g. "Raysan" twice when the computer name matches the display name. */}
+          {(() => {
+            const displayedName = (ws.display_name || getDisplayName(ws.current_user || '') || ws.current_user || '').toLowerCase()
+            const pcName = (ws.computer_name || ws.ip_address || '').toLowerCase()
+            if (pcName && pcName !== displayedName) {
+              return (
+                <span className="pc-name" title={ws.computer_name || ws.ip_address}>
+                  {ws.computer_name || ws.ip_address}
+                </span>
+              )
+            }
+            return null
+          })()}
         </div>
 
         <div className="user-version-row">
@@ -645,8 +656,13 @@ export default function OnlineDrawer() {
       <AvatarPickerModal
         computerName={myComputerName}
         achievements={workstations.find(ws => ws.computer_name === myComputerName && myComputerName !== '')?.achievements}
+        equippedSkinFromServer={workstations.find(ws => ws.computer_name === myComputerName && myComputerName !== '')?.equipped_skin}
         onClose={() => setShowAvatarSelector(false)}
-        onSaved={() => setEquippedSkinTrigger(prev => prev + 1)}
+        onSaved={() => {
+          setEquippedSkinTrigger(prev => prev + 1)
+          // Immediately refresh so peers see the new skin without waiting for next poll
+          fetchWorkstations()
+        }}
       />
     )}
     </>

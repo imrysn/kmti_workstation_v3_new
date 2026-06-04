@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { quotationApi, designersApi } from '../services/api'
+import { quotationApi, designersApi, settingsApi } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import type { IQuotation } from '../types'
 
@@ -61,6 +61,7 @@ export function useBillingMonitoring() {
   const [quotations, setQuotations] = useState<IQuotation[]>([])
   const [designers, setDesigners] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
+  const [globalSettings, setGlobalSettings] = useState<any>(null)
 
   // Filters State
   const [search, setSearch] = useState('')
@@ -157,6 +158,13 @@ export function useBillingMonitoring() {
       }
 
       setDesigners(Array.from(uniqueDesigners).sort())
+
+      try {
+        const sRes = await settingsApi.get()
+        setGlobalSettings(sRes.data || {})
+      } catch (err) {
+        console.warn('Could not fetch global settings', err)
+      }
     } catch (err) {
       console.error(err)
       notify('Failed to load quotations and billing monitoring records', 'error')
@@ -560,6 +568,19 @@ export function useBillingMonitoring() {
     setSelectedMonth('')
   }
 
+  const saveGlobalSettings = async (updates: Record<string, any>) => {
+    try {
+      const currentRes = await settingsApi.get()
+      const merged = { ...currentRes.data, ...updates }
+      await settingsApi.save(merged)
+      setGlobalSettings(merged)
+      notify('Settings saved globally', 'success')
+    } catch (err) {
+      console.error(err)
+      notify('Failed to save settings globally', 'error')
+    }
+  }
+
 
   const uniqueInchargeValues = useMemo(() => {
     return Array.from(
@@ -724,6 +745,8 @@ export function useBillingMonitoring() {
     formatCurrency,
     loadData,
     handleSingleFieldSave,
-    resetFilters
+    resetFilters,
+    globalSettings,
+    saveGlobalSettings
   }
 }

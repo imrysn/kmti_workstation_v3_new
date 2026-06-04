@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ICalendarEvent } from '../../../services/teamCalendarService'
-import { inferTaskType, getTaskTypeColor, getTeamColor, formatLocalDate } from '../../../utils/teamCalendarUtils'
-import { LockIcon, GlobeIcon, CalendarIcon, CheckIcon, TargetIcon } from '../Icons'
+import { inferTaskType, getTaskTypeColor, getTeamColor, formatLocalDate, TASK_TYPE_PILL_LABELS, TASK_TYPE_COLORS } from '../../../utils/teamCalendarUtils'
+import { LockIcon, GlobeIcon, CalendarIcon, CheckIcon } from '../Icons'
 
 // ── Premium SVG Icons (Replacing Emojis) ────────────────────────
 const SunIcon = () => (
@@ -48,6 +48,30 @@ const SparkIcon = () => (
     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill="rgba(99, 102, 241, 0.1)" />
   </svg>
 )
+
+// Shared task type pill used in icon slot
+function TaskTypePill({ taskType, size = 'sm' }: { taskType: string; size?: 'sm' | 'md' }) {
+  const label = TASK_TYPE_PILL_LABELS[taskType as keyof typeof TASK_TYPE_PILL_LABELS]
+  const colors = TASK_TYPE_COLORS[taskType as keyof typeof TASK_TYPE_COLORS]
+  if (!label) return null
+  return (
+    <span style={{
+      fontSize: size === 'md' ? '9px' : '8px',
+      fontWeight: 800,
+      letterSpacing: '0.05em',
+      padding: size === 'md' ? '2px 5px' : '1px 4px',
+      borderRadius: '3px',
+      background: colors.bg,
+      color: colors.text,
+      border: `1px solid ${colors.border}`,
+      lineHeight: '1.5',
+      userSelect: 'none',
+      flexShrink: 0,
+    }}>
+      {label}
+    </span>
+  )
+}
 
 interface LandingAgendaModalProps {
   events: ICalendarEvent[]
@@ -215,6 +239,7 @@ export default function LandingAgendaModal({
             <div className="landing-agenda-list custom-scrollbar">
               {todayEvents.map(event => {
                 const isAbsence = event.event_type === 'Day_Off'
+                const isPendingAbsence = isAbsence && event.status === 'Pending'
                 const isOffsetHoliday = event.event_type === 'Company_Event' && event.leave_type === 'Holiday'
                 const isCompanyEvent = event.event_type === 'Company_Event' && event.leave_type !== 'Holiday'
                 const displayName = event.engineer_name || event.username
@@ -223,59 +248,130 @@ export default function LandingAgendaModal({
                 const teamAccent = getTeamColor(event.team)
 
                 const isCompleted = event.todo_status === 'Completed'
-                const accentColor = isCompleted ? '#059669' : (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
+                const hasDueDate = event.due_date != null
+                const isOverdue = event.event_type === 'Task_Claim'
+                  && event.todo_status === 'Claimed'
+                  && hasDueDate
+                  && new Date(event.due_date!) < todayDate
+
+                const accentColor = isPendingAbsence
+                  ? '#dc2626'
+                  : isCompleted
+                    ? '#059669'
+                    : isOverdue
+                      ? '#dc2626'
+                      : isCompanyEvent
+                        ? '#6366f1'
+                        : isOffsetHoliday
+                          ? '#d97706'
+                          : isAbsence
+                            ? 'var(--cal-text-muted)'
+                            : (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
 
                 return (
                   <div
                     key={event.id}
                     className="landing-agenda-item"
-                    style={(!isAbsence && !isCompanyEvent && !isOffsetHoliday) ? {
-                      borderLeft: `4px solid ${accentColor}`,
-                      background: isCompleted ? 'rgba(5, 150, 105, 0.08)' : taskColor.bg
-                    } : isCompanyEvent ? {
-                      borderLeft: `4px solid #6366f1`,
-                      background: 'rgba(99, 102, 241, 0.04)'
-                    } : isOffsetHoliday ? {
-                      borderLeft: `4px solid #d97706`,
-                      background: 'rgba(245, 158, 11, 0.04)'
-                    } : {
-                      borderLeft: `4px solid var(--cal-text-muted)`,
-                      background: 'rgba(148, 163, 184, 0.04)'
-                    }}
+                    style={
+                      isPendingAbsence ? {
+                        borderLeft: '4px dashed rgba(220, 38, 38, 0.6)',
+                        background: 'rgba(220, 38, 38, 0.07)',
+                        animation: 'pendingPulse 2.5s ease-in-out infinite',
+                      } : isOverdue ? {
+                        borderLeft: `4px solid #dc2626`,
+                        background: 'rgba(220, 38, 38, 0.07)',
+                      } : isCompanyEvent ? {
+                        borderLeft: `4px solid #6366f1`,
+                        background: 'rgba(99, 102, 241, 0.04)'
+                      } : isOffsetHoliday ? {
+                        borderLeft: `4px solid #d97706`,
+                        background: 'rgba(245, 158, 11, 0.04)'
+                      } : isAbsence ? {
+                        borderLeft: `4px solid var(--cal-text-muted)`,
+                        background: 'rgba(148, 163, 184, 0.04)'
+                      } : {
+                        borderLeft: `4px solid ${accentColor}`,
+                        background: isCompleted ? 'rgba(5, 150, 105, 0.08)' : 'var(--bg-surface-subtle)'
+                      }
+                    }
                   >
                     <div className="landing-agenda-item-left">
+                      {/* Icon slot: pill for task claims, semantic icons for others */}
                       <span className="landing-agenda-item-icon" style={{
-                        color: (!isAbsence && !isCompanyEvent && !isOffsetHoliday)
-                          ? accentColor
-                          : isCompanyEvent ? '#6366f1' : isOffsetHoliday ? '#d97706' : 'var(--cal-text-muted)'
+                        color: accentColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        flexShrink: 0,
                       }}>
-                        {isOffsetHoliday ? <LockIcon /> : isCompanyEvent ? <GlobeIcon /> : isAbsence ? <LockIcon /> : isCompleted ? <CheckIcon /> : <TargetIcon />}
+                        {isOffsetHoliday || isAbsence
+                          ? <LockIcon />
+                          : isCompanyEvent
+                            ? <GlobeIcon />
+                            : isCompleted
+                              ? <CheckIcon />
+                              : <TaskTypePill taskType={taskType} size="md" />
+                        }
                       </span>
                       <div className="landing-agenda-item-content">
-                        <span className="landing-agenda-item-title">
-                          {isOffsetHoliday ? `Holiday: ${event.engineer_name}` : isCompanyEvent ? `Event: ${event.engineer_name}` : isAbsence ? `${displayName} (On Leave)` : event.todo_title}
+                        <span className="landing-agenda-item-title" style={{
+                          color: (isPendingAbsence || isOverdue) ? '#dc2626' : undefined,
+                        }}>
+                          {isOffsetHoliday
+                            ? `Holiday: ${event.engineer_name}`
+                            : isCompanyEvent
+                              ? `Event: ${event.engineer_name}`
+                              : isAbsence
+                                ? `${displayName} (On Leave)`
+                                : event.todo_title}
                         </span>
                         <div className="landing-agenda-item-meta">
+                          {/* Task: team name */}
                           {(!isAbsence && !isCompanyEvent && !isOffsetHoliday) && (
                             <span className="landing-agenda-meta-team">{event.team || 'No Team'}</span>
                           )}
+                          {/* Company event type */}
                           {isCompanyEvent && (
                             <>
                               <span className="landing-agenda-meta-separator">•</span>
                               <span>{event.leave_type || 'Event'}</span>
                             </>
                           )}
-                          {isAbsence && (
-                            <span className="landing-agenda-meta-team">{event.leave_type || 'Leave'}</span>
-                          )}
+                          {/* Offset holiday label */}
                           {isOffsetHoliday && (
                             <>
                               <span className="landing-agenda-meta-separator">•</span>
                               <span style={{ color: '#d97706', fontWeight: 650 }}>Offset Holiday</span>
                             </>
                           )}
+                          {/* Separator + person name for non-offset events */}
                           {!isOffsetHoliday && <span className="landing-agenda-meta-separator">•</span>}
                           {!isOffsetHoliday && <span>{isCompanyEvent ? "All Teams" : displayName}</span>}
+                          {/* Status chips */}
+                          {isPendingAbsence && (
+                            <span style={{
+                              fontSize: '9px', fontWeight: 800, letterSpacing: '0.04em',
+                              padding: '1px 6px', borderRadius: '4px',
+                              background: 'rgba(220, 38, 38, 0.12)',
+                              color: '#dc2626',
+                              border: '1px dashed rgba(220, 38, 38, 0.5)',
+                              marginLeft: '4px',
+                            }}>
+                              Pending
+                            </span>
+                          )}
+                          {isOverdue && (
+                            <span style={{
+                              fontSize: '9px', fontWeight: 800, letterSpacing: '0.04em',
+                              padding: '1px 6px', borderRadius: '4px',
+                              background: 'rgba(220, 38, 38, 0.12)',
+                              color: '#dc2626',
+                              border: '1px solid rgba(220, 38, 38, 0.4)',
+                              marginLeft: '4px',
+                              animation: 'critPulse 1.5s infinite',
+                            }}>
+                              Overdue
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -292,7 +388,9 @@ export default function LandingAgendaModal({
                 const teamAccent = getTeamColor(event.team)
 
                 const isCompleted = event.todo_status === 'Completed'
-                const accentColor = isCompleted ? '#059669' : (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
+                const accentColor = isCompleted
+                  ? '#059669'
+                  : (teamAccent !== 'transparent' ? teamAccent : taskColor.border)
 
                 return (
                   <div
@@ -300,14 +398,15 @@ export default function LandingAgendaModal({
                     className="landing-agenda-item"
                     style={{
                       borderLeft: `4px solid ${accentColor}`,
-                      background: isCompleted ? 'rgba(5, 150, 105, 0.08)' : taskColor.bg
+                      background: isCompleted ? 'rgba(5, 150, 105, 0.08)' : 'var(--bg-surface-subtle)'
                     }}
                   >
                     <div className="landing-agenda-item-left">
-                      <span className="landing-agenda-item-icon" style={{
-                        color: accentColor
-                      }}>
-                        {isCompleted ? <CheckIcon /> : <TargetIcon />}
+                      <span className="landing-agenda-item-icon" style={{ color: accentColor, display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        {isCompleted
+                          ? <CheckIcon />
+                          : <TaskTypePill taskType={taskType} size="md" />
+                        }
                       </span>
                       <div className="landing-agenda-item-content">
                         <span className="landing-agenda-item-title">{event.todo_title}</span>
