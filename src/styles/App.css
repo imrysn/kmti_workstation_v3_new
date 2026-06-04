@@ -329,3 +329,9 @@
 .app-shell:has([class*="modal-backdrop"]) .content-back-btn-container {
   display: none !important;
 }
+
+/* Prevent outer viewport/content container from scrolling and cutting off TitleBar in full-bleed views */
+.app-content:has(.calc-page-container),
+.app-content:has(.admin-help-wrapper) {
+  overflow: hidden;
+}

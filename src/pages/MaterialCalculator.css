@@ -2,7 +2,7 @@
   /* Bypass global padding */
   margin: calc(-1 * var(--page-padding-y)) calc(-1 * var(--page-padding-x));
   width: calc(100% + 2 * var(--page-padding-x));
-  height: calc(100% + 2 * var(--page-padding-y));
+  height: 100%;
   padding: 0;
   
   display: flex;

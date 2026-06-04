@@ -283,9 +283,9 @@ export default function BillingDashboardEnhancements({
                   <tr>
                     <th>Engineer Name</th>
                     <th>Invoices Count</th>
-                    <th>Completed Revenue</th>
+                    <th>Completed Sales</th>
                     <th>Forecast / Approved</th>
-                    <th>Total Managed Revenue</th>
+                    <th>Total Managed Sales</th>
                     <th>Avg Invoice Value</th>
                   </tr>
                 </thead>

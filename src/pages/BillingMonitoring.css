@@ -1,3 +1,4 @@
+/* Page Wrapper and Layout */
 .billing-monitoring-page {
   margin: calc(-1 * var(--page-padding-y)) calc(-1 * var(--page-padding-x));
   padding: 24px 32px;
@@ -5,7 +6,7 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  min-height: calc(100% + var(--page-padding-y) * 2);
+  min-height: 100%;
   box-sizing: border-box;
 }
 

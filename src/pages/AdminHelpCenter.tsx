@@ -36,6 +36,10 @@ export default function AdminHelpCenter() {
   const [activeTab, setActiveTab] = useState<'analytics' | 'terminals'>('analytics')
 
   const [activeId, setActiveId] = useState<number | null>(null)
+  const activeIdRef = useRef<number | null>(null)
+  useEffect(() => {
+    activeIdRef.current = activeId
+  }, [activeId])
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
 
@@ -192,7 +196,7 @@ export default function AdminHelpCenter() {
     return () => {
       clearInterval(timer)
     }
-  }, [activeId])
+  }, [])
 
   // Optimized Analytics Calculations
   const stats = useMemo(() => {
@@ -271,8 +275,9 @@ export default function AdminHelpCenter() {
 
       // If we have an active ticket, and we just refreshed, we should ideally fetch its details to see if someone else replied, 
       // but to optimize we could just rely on manual refresh. We'll do a quick silent fetch if active.
-      if (activeId) {
-        const tReq = await helpApi.getTicketDetails(activeId)
+      const currentActiveId = activeIdRef.current
+      if (currentActiveId) {
+        const tReq = await helpApi.getTicketDetails(currentActiveId)
         setActiveTicket(tReq.data)
       }
     } catch (err) {
@@ -284,6 +289,9 @@ export default function AdminHelpCenter() {
 
   const handleSelectTicket = async (id: number) => {
     setActiveId(id)
+    setReplyMessage('')
+    setScreenshots([])
+    setIsInternal(false)
     try {
       const res = await helpApi.getTicketDetails(id)
       setActiveTicket(res.data)
