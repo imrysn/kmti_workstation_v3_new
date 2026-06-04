@@ -168,13 +168,13 @@ export default function BillingSpreadsheetTable({
                       }}
                     />
                   </th>
-                  <th style={{ width: '130px', cursor: 'pointer' }} onClick={() => handleSort('designerName')}>
+                  <th style={{ width: '100px', cursor: 'pointer' }} onClick={() => handleSort('designerName')}>
                     Project<br />Incharge {sortColumn === 'designerName' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th style={{ width: '130px', cursor: 'pointer' }} onClick={() => handleSort('customerIncharge')}>
                     Customer<br />Incharge {sortColumn === 'customerIncharge' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th style={{ width: activeCell?.field === 'clientName' ? '180px' : '150px', transition: 'width 0.2s ease', cursor: 'pointer' }} onClick={() => handleSort('clientName')}>
+                  <th style={{ width: activeCell?.field === 'clientName' ? '150px' : '120px', transition: 'width 0.2s ease', cursor: 'pointer' }} onClick={() => handleSort('clientName')}>
                     Customer {sortColumn === 'clientName' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </th>
                   <th style={{ width: '140px', cursor: 'pointer' }} onClick={() => handleSort('quotationNo')}>

@@ -291,10 +291,15 @@ export default function BillingChart({
             <span className="crypto-metric-label">INVOICES</span>
           </div>
           <div className="crypto-metric">
-            <span className="crypto-metric-value">{formatCurrency(revenueSum)}</span>
+            <span className="crypto-metric-value" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ color: 'var(--text-primary)' }}>{formatCurrency(completedTotal)}</span>
+              <span style={{ fontSize: '15px', color: '#10b981', fontWeight: 'bold' }}>
+                (+ {formatCurrency(approvedActiveTotal)})
+              </span>
+            </span>
             <span className="crypto-metric-label">
-              SALES
-              <span className={`crypto-trend-badge ${trendPercent >= 0 ? 'up' : 'down'}`}>
+              Total Sales <span style={{ color: '#10b981', fontWeight: 'bold' }}>(+ Approved)</span>
+              <span className={`crypto-trend-badge ${trendPercent >= 0 ? 'up' : 'down'}`} style={{ marginLeft: '6px' }}>
                 {trendPercent >= 0 ? '↑' : '↓'} {Math.abs(trendPercent).toFixed(0)}% {timeframeLabel}
               </span>
             </span>
@@ -318,7 +323,7 @@ export default function BillingChart({
         </div>
 
         <div className="crypto-chart-controls" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {(timeframe === 'year' || chartView === 'client-sales') && (
+          {((timeframe === 'year' || timeframe === 'month') || chartView === 'client-sales') && (
             <div className="crypto-year-selector" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>YEAR:</span>
               <select
@@ -341,50 +346,79 @@ export default function BillingChart({
                 ))}
               </select>
 
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 8 }}>MONTHS:</span>
-              <select
-                value={startMonth}
-                onChange={(e) => {
-                  const val = Number(e.target.value)
-                  setStartMonth(val)
-                  if (val > endMonth) setEndMonth(val)
-                }}
-                style={{
-                  fontSize: 11,
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  outline: 'none'
-                }}
-              >
-                {months.map((m, i) => <option key={`s-${i}`} value={i}>{m}</option>)}
-              </select>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>-</span>
-              <select
-                value={endMonth}
-                onChange={(e) => {
-                  const val = Number(e.target.value)
-                  setEndMonth(val)
-                  if (val < startMonth) setStartMonth(val)
-                }}
-                style={{
-                  fontSize: 11,
-                  padding: '4px 8px',
-                  borderRadius: 6,
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  outline: 'none'
-                }}
-              >
-                {months.map((m, i) => <option key={`e-${i}`} value={i}>{m}</option>)}
-              </select>
+              {timeframe === 'month' ? (
+                <>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 8 }}>MONTH:</span>
+                  <select
+                    value={startMonth}
+                    onChange={(e) => {
+                      const val = Number(e.target.value)
+                      setStartMonth(val)
+                      setEndMonth(val) // ensure calendar month is single
+                    }}
+                    style={{
+                      fontSize: 11,
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      outline: 'none'
+                    }}
+                  >
+                    {months.map((m, i) => <option key={`m-${i}`} value={i}>{m}</option>)}
+                  </select>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginLeft: 8 }}>MONTHS:</span>
+                  <select
+                    value={startMonth}
+                    onChange={(e) => {
+                      const val = Number(e.target.value)
+                      setStartMonth(val)
+                      if (val > endMonth) setEndMonth(val)
+                    }}
+                    style={{
+                      fontSize: 11,
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      outline: 'none'
+                    }}
+                  >
+                    {months.map((m, i) => <option key={`s-${i}`} value={i}>{m}</option>)}
+                  </select>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>-</span>
+                  <select
+                    value={endMonth}
+                    onChange={(e) => {
+                      const val = Number(e.target.value)
+                      setEndMonth(val)
+                      if (val < startMonth) setStartMonth(val)
+                    }}
+                    style={{
+                      fontSize: 11,
+                      padding: '4px 8px',
+                      borderRadius: 6,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      outline: 'none'
+                    }}
+                  >
+                    {months.map((m, i) => <option key={`e-${i}`} value={i}>{m}</option>)}
+                  </select>
+                </>
+              )}
             </div>
           )}
 

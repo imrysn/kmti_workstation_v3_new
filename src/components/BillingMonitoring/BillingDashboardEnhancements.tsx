@@ -9,6 +9,16 @@ interface BillingDashboardEnhancementsProps {
   activeYear: number
 }
 
+const getPartialBillingPercentage = (detail?: string | null): number => {
+  if (!detail) return 50
+  const match = detail.match(/(\d+)\s*%/)
+  if (match) {
+    const percent = parseInt(match[1])
+    if (percent > 0 && percent < 100) return percent
+  }
+  return 50
+}
+
 export default function BillingDashboardEnhancements({
   quotations,
   formatCurrency,
@@ -121,20 +131,33 @@ export default function BillingDashboardEnhancements({
     const currentYearData = Array(12).fill(0)
     const prevYearData = Array(12).fill(0)
     const positiveStatuses = ['Approved', 'Partial Billing', 'Billing Completion']
+    const isCompleted = (q: IQuotation) => q.quotationStatus === 'Billing Completion' || q.billingStatus === 'BILLED'
+    const isApproved = (q: IQuotation) => q.quotationStatus === 'Approved' && q.billingStatus !== 'BILLED'
 
     quotations.forEach(q => {
       if (!q.date) return
       const status = q.quotationStatus || 'For Approval'
-      if (!positiveStatuses.includes(status)) return
+      if (!positiveStatuses.includes(status) && q.billingStatus !== 'BILLED') return
 
       const qDate = new Date(q.date)
       const year = qDate.getFullYear()
       const month = qDate.getMonth()
 
+      let amt = q.grandTotal || 0
+      if (isCompleted(q)) {
+        // Full amount is completed
+      } else if (status === 'Partial Billing') {
+        const pct = getPartialBillingPercentage(q.updateDetail)
+        amt = amt * (pct / 100)
+      } else {
+        // Approved/active forecasting is excluded from Completed Sales comparison
+        return
+      }
+
       if (year === activeYear) {
-        currentYearData[month] += q.grandTotal || 0
+        currentYearData[month] += amt
       } else if (year === activeYear - 1) {
-        prevYearData[month] += q.grandTotal || 0
+        prevYearData[month] += amt
       }
     })
 

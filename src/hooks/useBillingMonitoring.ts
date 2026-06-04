@@ -297,16 +297,16 @@ export function useBillingMonitoring() {
       pointsCount = 7
       timeframeLabel = 'WOW'
     } else if (timeframe === 'month') {
-      startDate.setDate(refDate.getDate() - 29)
-      startDate.setHours(0, 0, 0, 0)
+      // Use the activeYear and startMonth to define a specific calendar month
+      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
+      endDate = new Date(activeYear, startMonth + 1, 0, 23, 59, 59, 999)
       
-      prevEndDate.setDate(startDate.getDate() - 1)
-      prevEndDate.setHours(23, 59, 59, 999)
-      prevStartDate.setDate(prevEndDate.getDate() - 29)
-      prevStartDate.setHours(0, 0, 0, 0)
+      prevStartDate = new Date(activeYear - 1, startMonth, 1, 0, 0, 0, 0)
+      prevEndDate = new Date(activeYear - 1, startMonth + 1, 0, 23, 59, 59, 999)
       
       formatTick = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      pointsCount = 30
+      // Number of days in that specific month
+      pointsCount = endDate.getDate()
       timeframeLabel = 'MOM'
     } else {
       startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
@@ -334,11 +334,14 @@ export function useBillingMonitoring() {
     })
 
     const positiveStatuses = ['Billing Completion', 'Approved', 'Partial Billing']
+    const isCompleted = (q: IQuotation) => q.quotationStatus === 'Billing Completion' || q.billingStatus === 'BILLED'
+    const isApproved = (q: IQuotation) => q.quotationStatus === 'Approved' && q.billingStatus !== 'BILLED'
+
     const currentRevenue = currentQuotations
-      .filter(q => positiveStatuses.includes(q.quotationStatus || ''))
+      .filter(q => positiveStatuses.includes(q.quotationStatus || '') || q.billingStatus === 'BILLED')
       .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
     const prevRevenue = prevQuotations
-      .filter(q => positiveStatuses.includes(q.quotationStatus || ''))
+      .filter(q => positiveStatuses.includes(q.quotationStatus || '') || q.billingStatus === 'BILLED')
       .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
     let trend = 0
@@ -354,7 +357,7 @@ export function useBillingMonitoring() {
     const uniqueClients = Array.from(
       new Set(
         quotations
-          .filter(q => positiveStatuses.includes(q.quotationStatus || ''))
+          .filter(q => positiveStatuses.includes(q.quotationStatus || '') || q.billingStatus === 'BILLED')
           .map(q => normalizeClientName(q.billTo))
       )
     )
@@ -380,9 +383,9 @@ export function useBillingMonitoring() {
         dayQuots.forEach(q => {
           const status = q.quotationStatus || 'For Approval'
           const amt = q.grandTotal || 0
-          if (status === 'Billing Completion') {
+          if (isCompleted(q)) {
             dayCompleted += amt
-          } else if (status === 'Approved') {
+          } else if (isApproved(q)) {
             dayApprovedActive += amt
           } else if (status === 'Partial Billing') {
             const pct = getPartialBillingPercentage(q.updateDetail)
@@ -394,7 +397,7 @@ export function useBillingMonitoring() {
         })
 
         const dayPending = dayQuots
-          .filter(q => q.quotationStatus === 'For Approval' || q.quotationStatus === 'DRAFT' || !q.quotationStatus)
+          .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
         const dayCancelled = dayQuots
@@ -417,7 +420,7 @@ export function useBillingMonitoring() {
         })
         dayQuots.forEach(q => {
           const status = q.quotationStatus || 'For Approval'
-          if (positiveStatuses.includes(status)) {
+          if (positiveStatuses.includes(status) || q.billingStatus === 'BILLED') {
             const client = normalizeClientName(q.billTo)
             dayClientSales[client] = (dayClientSales[client] || 0) + (q.grandTotal || 0)
           }
@@ -450,9 +453,9 @@ export function useBillingMonitoring() {
         mQuots.forEach(q => {
           const status = q.quotationStatus || 'For Approval'
           const amt = q.grandTotal || 0
-          if (status === 'Billing Completion') {
+          if (isCompleted(q)) {
             mCompleted += amt
-          } else if (status === 'Approved') {
+          } else if (isApproved(q)) {
             mApprovedActive += amt
           } else if (status === 'Partial Billing') {
             const pct = getPartialBillingPercentage(q.updateDetail)
@@ -464,7 +467,7 @@ export function useBillingMonitoring() {
         })
 
         const mPending = mQuots
-          .filter(q => q.quotationStatus === 'For Approval' || q.quotationStatus === 'DRAFT' || !q.quotationStatus)
+          .filter(q => q.quotationStatus === 'For Approval' || !q.quotationStatus)
           .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
 
         const mCancelled = mQuots
@@ -604,11 +607,36 @@ export function useBillingMonitoring() {
       'CANCELLED': { count: 0, total: 0 }
     }
 
+    // Determine timeframe boundaries to calculate stats dynamically
+    let endDate = new Date(refDate)
+    endDate.setHours(23, 59, 59, 999)
+    let startDate = new Date(refDate)
+
+    if (timeframe === 'week') {
+      startDate.setDate(refDate.getDate() - 6)
+      startDate.setHours(0, 0, 0, 0)
+    } else if (timeframe === 'month') {
+      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
+      endDate = new Date(activeYear, startMonth + 1, 0, 23, 59, 59, 999)
+    } else {
+      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
+      endDate = new Date(activeYear, endMonth + 1, 0, 23, 59, 59, 999)
+    }
+
     quotations.forEach(q => {
+      if (!q.date) return
+      const t = new Date(q.date).getTime()
+      if (t < startDate.getTime() || t > endDate.getTime()) return
+
       const status = q.quotationStatus || 'For Approval'
+      const billingStatus = q.billingStatus || ''
       const amt = q.grandTotal || 0
       
-      if (status === 'Partial Billing') {
+      // Completed Sales represents Billing Completion OR billing status BILLED
+      if (status === 'Billing Completion' || billingStatus === 'BILLED') {
+        stats['Billing Completion'].count++
+        stats['Billing Completion'].total += amt
+      } else if (status === 'Partial Billing') {
         stats['Partial Billing'].count++
         const pct = getPartialBillingPercentage(q.updateDetail)
         const completedAmt = amt * (pct / 100)
@@ -625,7 +653,7 @@ export function useBillingMonitoring() {
     })
 
     return stats
-  }, [quotations])
+  }, [quotations, timeframe, refDate, activeYear, startMonth, endMonth])
 
   const clientSalesData = useMemo<IClientSalesPoint[]>(() => {
     const clientsMap: Record<string, number> = {}
