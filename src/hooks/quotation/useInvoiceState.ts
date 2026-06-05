@@ -727,6 +727,40 @@ export function useInvoiceState() {
     setHasUnsavedChanges(false)
   }, [setCurrentFilePath, setHasUnsavedChanges])
 
+  const appendTasks = useCallback((importedTasks: Task[]) => {
+    setTasks(prev => {
+      const finalTasks: Task[] = []
+      const idMap = new Map<number, number>()
+
+      importedTasks.forEach((imported, idx) => {
+        const existing = prev[idx]
+        const finalId = existing ? existing.id : imported.id
+        idMap.set(imported.id, finalId)
+
+        const finalParentId = imported.parentId !== null 
+          ? (idMap.get(imported.parentId) ?? imported.parentId) 
+          : null
+
+        if (existing) {
+          finalTasks.push({
+            ...existing,
+            ...imported,
+            id: finalId,
+            parentId: finalParentId
+          })
+        } else {
+          finalTasks.push({
+            ...imported,
+            id: finalId,
+            parentId: finalParentId
+          })
+        }
+      })
+      return finalTasks
+    })
+    setHasUnsavedChanges(true)
+  }, [setTasks, setHasUnsavedChanges])
+
   return {
     companyInfo, clientInfo, quotationDetails, billingDetails, tasks, baseRates, signatures,
     manualOverrides, collapsedTaskIds,
@@ -738,5 +772,6 @@ export function useInvoiceState() {
     layoutVariant, setLayoutVariant,
     resetToNew, loadData, getSaveData, markSaved, setHasUnsavedChanges,
     addChildTask,
+    appendTasks,
   }
 }

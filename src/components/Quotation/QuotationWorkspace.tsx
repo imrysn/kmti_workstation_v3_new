@@ -46,6 +46,7 @@ import { HistorySidebar } from './HistorySidebar'
 import { ActivitySidebar } from './ActivitySidebar'
 import { QuotationTutorial } from './QuotationTutorial'
 import QuotationLibraryModal from './QuotationLibraryModal'
+import { importFromExcel } from './utils/excelImport'
 import '../../pages/quotation/QuotationApp.css'
 import '../../pages/Quotation.css'
 import './styles/QuotationTable.css'
@@ -91,6 +92,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
 
   // ── Document State ─────────────────────────────────────────────
   const isSyncedFromRemote = useRef(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const {
     companyInfo, clientInfo, quotationDetails, billingDetails,
@@ -104,6 +106,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     resetToNew, loadData, getSaveData,
     markSaved, setHasUnsavedChanges,
     addChildTask,
+    appendTasks,
   } = useInvoiceState()
 
   // Calculate effective data for rendering (preview vs live)
@@ -119,7 +122,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
 
   const getQuotationNo = useCallback(() => quotationDetails.quotationNo, [quotationDetails.quotationNo])
 
-  const { newInvoice, saveInvoice } = useFileOperations({
+  const { newInvoice: _, saveInvoice } = useFileOperations({
     hasUnsavedChanges,
     getSaveData,
     getQuotationNo,
@@ -616,7 +619,52 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     }
   }
 
-  const handleSubmitToAdmin = async () => {
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    showConfirm(
+      `Are you sure you want to import and append tasks from "${file.name}"?`,
+      async () => {
+        try {
+          notify?.('Parsing Excel file...', 'info')
+          const importedTasks = await importFromExcel(file, layoutVariant)
+          if (importedTasks.length === 0) {
+            notify?.('No valid tasks found in the Details sheet.', 'warning')
+            return
+          }
+
+          // Append to local state
+          appendTasks(importedTasks)
+
+          // Construct and emit updated snapshot immediately to sync connected peers
+          const currentData = getSaveData()
+          const updatedData = {
+            ...currentData,
+            tasks: [...currentData.tasks, ...importedTasks]
+          }
+          emitSnapshot(updatedData, 'Import Excel')
+
+          notify?.(`Successfully imported ${importedTasks.length} tasks!`, 'success')
+          debouncedSyncDb()
+        } catch (err: any) {
+          console.error(err)
+          notify?.(err.message || 'Failed to import Excel file.', 'error')
+        } finally {
+          if (importInputRef.current) importInputRef.current.value = ''
+        }
+      },
+      () => {
+        if (importInputRef.current) importInputRef.current.value = ''
+      },
+      'primary',
+      'Import Excel Tasks?',
+      'Import & Append'
+    )
+  }
+
+  /*
+  const _handleSubmitToAdmin = async () => {
     // If there are unsaved changes, prompt the user to save first
     if (hasUnsavedChanges) {
       notify?.('Please save your changes before submitting to admin.', 'warning')
@@ -659,6 +707,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
       notify?.('Failed to submit to admin', 'error')
     }
   }
+  */
 
   // ── Auto-save (Every 5 minutes) ───────────────────────────────
   useEffect(() => {
@@ -863,13 +912,28 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
 
             <div className="toolbar-divider" />
 
-            {/* 3. Load ; Save */}
+            {/* 3. Load ; Import ; Save */}
             <button className="btn" onClick={() => setIsLibraryOpen(true)} title="Load from library">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               </svg>
               Load
             </button>
+            <button className="btn" onClick={() => importInputRef.current?.click()} title="Import tasks from Excel breakdown sheet">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Import
+            </button>
+            <input
+              type="file"
+              ref={importInputRef}
+              accept=".xlsx"
+              onChange={handleImportExcel}
+              style={{ display: 'none' }}
+            />
             <button className="btn btn-primary btn-save-themed" onClick={handleSave} title="Save changes to database">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
