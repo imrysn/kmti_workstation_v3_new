@@ -25,16 +25,7 @@ interface BillingSpreadsheetTableProps {
   sortDirection: 'asc' | 'desc'
   handleSort: (column: string) => void
   filteredQuotations: IQuotation[]
-}
-
-const getPartialBillingPercentage = (detail?: string | null): number => {
-  if (!detail) return 50
-  const match = detail.match(/(\d+)\s*%/)
-  if (match) {
-    const percent = parseInt(match[1])
-    if (percent > 0 && percent < 100) return percent
-  }
-  return 50
+  getCompletedAmount: (q: IQuotation) => number
 }
 
 export default function BillingSpreadsheetTable({
@@ -57,7 +48,8 @@ export default function BillingSpreadsheetTable({
   sortColumn,
   sortDirection,
   handleSort,
-  filteredQuotations
+  filteredQuotations,
+  getCompletedAmount
 }: BillingSpreadsheetTableProps) {
   const navigate = useNavigate()
   const [selectedIds, setSelectedIds] = useState<number[]>([])
@@ -144,17 +136,7 @@ export default function BillingSpreadsheetTable({
   }
 
   const totalFilteredAmount = filteredQuotations.reduce((sum, q) => {
-    const status = q.quotationStatus || 'For Approval'
-    const billingStatus = q.billingStatus || ''
-    const amt = q.grandTotal || 0
-
-    if (status === 'Billing Completion' || billingStatus === 'BILLED') {
-      return sum + amt
-    } else if (status === 'Partial Billing') {
-      const pct = getPartialBillingPercentage(q.updateDetail)
-      return sum + (amt * (pct / 100))
-    }
-    return sum
+    return sum + getCompletedAmount(q)
   }, 0)
 
   return (
@@ -781,7 +763,7 @@ export default function BillingSpreadsheetTable({
               </tbody>
               <tfoot>
                 <tr className="table-total-row" style={{ fontWeight: 'bold', background: 'var(--bg-surface)' }}>
-                  <td colSpan={7} style={{ textAlign: 'right', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Total Billed Amount:</td>
+                  <td colSpan={7} style={{ textAlign: 'right', paddingRight: '12px', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Total Paid Sales:</td>
                   <td className="cell-amount" style={{ textAlign: 'right', fontFamily: 'monospace', fontSize: '12px', fontWeight: '700', color: 'var(--accent)' }}>
                     {formatCurrency(totalFilteredAmount)}
                   </td>

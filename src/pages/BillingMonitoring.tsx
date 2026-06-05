@@ -8,6 +8,7 @@ import BillingSpreadsheetTable from '../components/BillingMonitoring/BillingSpre
 import BillingGoalTracker from '../components/BillingMonitoring/BillingGoalTracker'
 import BillingDashboardEnhancements from '../components/BillingMonitoring/BillingDashboardEnhancements'
 import ClientStatementView from '../components/BillingMonitoring/ClientStatementView'
+import EngineerLeaderboard from '../components/BillingMonitoring/EngineerLeaderboard'
 import { exportBillingToExcel } from '../utils/exportBillingExcel'
 import './BillingMonitoring.css'
 
@@ -102,7 +103,9 @@ export default function BillingMonitoring() {
     handleSingleFieldSave,
     resetFilters,
     globalSettings,
-    saveGlobalSettings
+    saveGlobalSettings,
+    getCompletedAmount,
+    getForecastAmount
   } = useBillingMonitoring()
 
   return (
@@ -274,9 +277,31 @@ export default function BillingMonitoring() {
           <BillingDashboardEnhancements
             quotations={quotations}
             formatCurrency={formatCurrency}
-            formatDateToSlash={formatDateToSlash}
             activeYear={activeYear}
+            getCompletedAmount={getCompletedAmount}
           />
+
+          {/* Engineer Leaderboard Solo Card */}
+          <div className="dashboard-enhancements-panel" style={{ marginTop: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                <path d="M4 22h16" />
+                <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
+                <path d="M12 2a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4 4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z" />
+              </svg>
+              <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Engineer Leaderboard</h2>
+            </div>
+            <div style={{ padding: '0' }}>
+              <EngineerLeaderboard
+                quotations={quotations}
+                formatCurrency={formatCurrency}
+                getCompletedAmount={getCompletedAmount}
+                getForecastAmount={getForecastAmount}
+              />
+            </div>
+          </div>
         </div>
       )}
  
@@ -304,6 +329,7 @@ export default function BillingMonitoring() {
             sortDirection={sortDirection}
             handleSort={handleSort}
             filteredQuotations={filteredQuotations}
+            getCompletedAmount={getCompletedAmount}
           />
         </div>
       )}

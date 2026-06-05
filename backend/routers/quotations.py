@@ -626,7 +626,8 @@ async def list_quotations(
                 "updatedBy": i.updated_by or "",
                 "lastUpdatedAt": i.last_updated_at.strftime("%Y-%m-%d %H:%M") if i.last_updated_at else None,
                 "updateDetail": i.update_detail or "",
-                "billingStatus": i.billing_status or None
+                "billingStatus": i.billing_status or None,
+                "data": json.loads(i.data) if i.data else {}
             } for i in items
         ]
     }

@@ -60,20 +60,18 @@ export const KemcoRow = memo(({
         )}
       </td>
 
-      {/* DWG No. — Parts only (level 2) */}
+      {/* DWG No. — All levels */}
       <td>
-        {task.level === 2 && (
-          <CollaborativeField fieldKey={`task.${task.id}.dwgNo`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
-            <input
-              type="text"
-              value={task.dwgNo || ''}
-              onChange={e => onUpdate('dwgNo', e.target.value)}
-              onKeyDown={focusNextInput}
-              onMouseDown={e => e.stopPropagation()}
-              className="table-input"
-            />
-          </CollaborativeField>
-        )}
+        <CollaborativeField fieldKey={`task.${task.id}.dwgNo`} remoteUsers={remoteUsers} hardLocked={isRowLocked} lockOwnerName={task.engineer}>
+          <input
+            type="text"
+            value={task.dwgNo || ''}
+            onChange={e => onUpdate('dwgNo', e.target.value)}
+            onKeyDown={focusNextInput}
+            onMouseDown={e => e.stopPropagation()}
+            className="table-input"
+          />
+        </CollaborativeField>
       </td>
 
       {/* DESCRIPTION */}

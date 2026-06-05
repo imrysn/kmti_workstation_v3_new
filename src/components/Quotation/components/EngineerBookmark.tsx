@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { useAuth } from '../../../context/AuthContext'
+import { getDisplayName } from '../../../utils/nameUtils'
 
 interface EngineerBookmarkProps {
   taskId: number
@@ -82,7 +83,9 @@ export const EngineerBookmark = ({
 
     // Quick Claim: If empty, clicking automatically assigns ME
     if (!hasEngineer) {
-      const myDisplayName = user?.username || myName
+      const myDisplayName = user
+        ? (user.displayName || getDisplayName(user.fullName) || user.fullName || user.username)
+        : (getDisplayName(myName) || myName)
       onChange(taskId, myDisplayName)
       setExpanded(false)
       return
@@ -91,7 +94,7 @@ export const EngineerBookmark = ({
     setDraft(engineer || '')
     setEditing(true)
     setExpanded(true) // Ensure it's expanded if clicked (e.g. touch)
-  }, [editing, engineer, isLocked, hasEngineer, taskId, myName, user?.username, onChange])
+  }, [editing, engineer, isLocked, hasEngineer, taskId, myName, user, onChange])
 
   const handleSave = useCallback(() => {
     onChange(taskId, draft.trim())

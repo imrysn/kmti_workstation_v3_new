@@ -34,6 +34,17 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const [myWorkstation, setMyWorkstation] = useState<string | null>(null)
   const [sortField, setSortField] = useState<'quotationNo' | 'workstation' | 'modifiedAt'>('modifiedAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+  const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null)
+
+  const uniqueCustomers = useMemo(() => {
+    const customers = new Set<string>()
+    quotations.forEach(q => {
+      if (q.clientName && q.clientName.trim()) {
+        customers.add(q.clientName.trim().toUpperCase())
+      }
+    })
+    return Array.from(customers).sort()
+  }, [quotations])
 
   const handleSort = (field: 'quotationNo' | 'workstation' | 'modifiedAt') => {
     if (sortField === field) {
@@ -94,10 +105,10 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
 
     // Ownership Enforcement: 
     // Match either the hostname (computerName), user's display/FMS name, or user's exact fullName
-    const isOwner = (myWorkstation && q.workstation === myWorkstation) || 
-                    (userWorkstationName && q.workstation === userWorkstationName) || 
-                    (userFullName && q.workstation === userFullName) ||
-                    hasRole('admin', 'it')
+    const isOwner = (myWorkstation && q.workstation === myWorkstation) ||
+      (userWorkstationName && q.workstation === userWorkstationName) ||
+      (userFullName && q.workstation === userFullName) ||
+      hasRole('admin', 'it')
 
     if (!isOwner) {
       notify?.(`Access Denied: This record belongs to workstation "${q.workstation || 'Legacy'}".`, 'error')
@@ -195,12 +206,16 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   // ── Helpers ─────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     const s = search.toLowerCase()
-    const list = quotations.filter(q =>
+    let list = quotations.filter(q =>
       q.quotationNo.toLowerCase().includes(s) ||
       (q.clientName || '').toLowerCase().includes(s) ||
       (q.designerName || '').toLowerCase().includes(s) ||
       (q.displayName || '').toLowerCase().includes(s)
     )
+
+    if (selectedCustomer) {
+      list = list.filter(q => (q.clientName || '').trim().toUpperCase() === selectedCustomer)
+    }
 
     list.sort((a, b) => {
       let valA: any = ''
@@ -223,7 +238,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
     })
 
     return list
-  }, [quotations, search, sortField, sortOrder])
+  }, [quotations, search, sortField, sortOrder, selectedCustomer])
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '-'
@@ -293,6 +308,29 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
           </button>
         </div>
 
+        {uniqueCustomers.length > 0 && (
+          <div className="customer-filter-bar" style={{ display: 'flex', gap: '8px', padding: '10px 32px', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', marginRight: '8px', letterSpacing: '0.05em' }}>Filter Customer:</span>
+            <button
+              className={`btn btn-sm ${selectedCustomer === null ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={() => setSelectedCustomer(null)}
+              style={{ fontSize: '0.8rem', padding: '4px 10px', minHeight: 'auto', height: '28px' }}
+            >
+              ALL
+            </button>
+            {uniqueCustomers.map(cust => (
+              <button
+                key={cust}
+                className={`btn btn-sm ${selectedCustomer === cust ? 'btn-primary' : 'btn-ghost'}`}
+                onClick={() => setSelectedCustomer(cust)}
+                style={{ fontSize: '0.8rem', padding: '4px 10px', minHeight: 'auto', height: '28px' }}
+              >
+                {cust}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="quot-library-content">
           {loading ? (
             <div className="quot-library-loading">
@@ -312,7 +350,10 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
               <thead>
                 <tr>
                   <th onClick={() => handleSort('quotationNo')} className="sortable-header">
-                    Quotation No & Client {sortField === 'quotationNo' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+                    Workspace Name {sortField === 'quotationNo' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
+                  </th>
+                  <th style={{ whiteSpace: 'nowrap' }}>
+                    QUOTATION NO
                   </th>
                   <th onClick={() => handleSort('workstation')} className="sortable-header">
                     Owner {sortField === 'workstation' && (sortOrder === 'asc' ? ' ▲' : ' ▼')}
@@ -329,7 +370,7 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
                     <td className="quotation-no-cell">
                       <div className="quot-main-info">
                         <div className="quot-no-row">
-                          <span className="quot-no-text">{q.quotationNo}</span>
+                          <span className="quot-no-text" style={{ fontWeight: 'bold' }}>{q.displayName || q.quotationNo}</span>
                           {q.isActive && <span className="active-badge">Live</span>}
                           {q.hasPassword && (
                             <svg className="lock-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -337,8 +378,11 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
                             </svg>
                           )}
                         </div>
-                        <span className="client-subtext">{q.clientName || 'No Client Assigned'}</span>
+                        <span className="client-subtext" style={{ textTransform: 'uppercase' }}>{q.clientName || 'No Client Assigned'}</span>
                       </div>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span className="quot-no-val" style={{ fontFamily: 'monospace', fontSize: '0.95rem', fontWeight: 'bold' }}>{q.quotationNo}</span>
                     </td>
                     <td className="owner-cell">
                       <div className="owner-info">

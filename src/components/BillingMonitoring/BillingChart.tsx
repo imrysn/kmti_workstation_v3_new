@@ -65,10 +65,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           {payload.map((entry: any, index: number) => {
             const labels: Record<string, string> = {
-              completed: 'Billing Completed',
-              approvedActive: 'Approved',
-              pending: 'Pending Approval',
-              cancelled: 'Cancelled'
+              completed: 'PAID (Sales)',
+              approvedActive: 'Forecast',
+              pending: 'For Billing',
+              cancelled: 'Cancelled / Revised'
             };
             const displayName = labels[entry.name] || entry.name;
             return (
@@ -103,7 +103,6 @@ export default function BillingChart({
   chartData,
   timeframe,
   setTimeframe,
-  revenueSum,
   invoicesCount,
   trendPercent,
   timeframeLabel,
@@ -298,7 +297,7 @@ export default function BillingChart({
               </span>
             </span>
             <span className="crypto-metric-label">
-              Total Sales <span style={{ color: '#10b981', fontWeight: 'bold' }}>(+ Approved)</span>
+              Total Sales <span style={{ color: '#10b981', fontWeight: 'bold' }}>(+ Forecast)</span>
               <span className={`crypto-trend-badge ${trendPercent >= 0 ? 'up' : 'down'}`} style={{ marginLeft: '6px' }}>
                 {trendPercent >= 0 ? '↑' : '↓'} {Math.abs(trendPercent).toFixed(0)}% {timeframeLabel}
               </span>
@@ -592,7 +591,7 @@ export default function BillingChart({
           >
             <span className="legend-dot completed-line"></span>
             <span className="legend-text">
-              ↑ Billing Completed — {formatCurrency(completedTotal)}
+              ↑ PAID (Sales) — {formatCurrency(completedTotal)}
             </span>
           </button>
           <button
@@ -601,7 +600,7 @@ export default function BillingChart({
           >
             <span className="legend-dot approved-active-line"></span>
             <span className="legend-text">
-              → Approved — {formatCurrency(approvedActiveTotal)}
+              → Forecast — {formatCurrency(approvedActiveTotal)}
             </span>
           </button>
           <button
@@ -610,7 +609,7 @@ export default function BillingChart({
           >
             <span className="legend-dot pending-line"></span>
             <span className="legend-text">
-              • Pending Approval — {formatCurrency(pendingTotal)}
+              • For Billing — {formatCurrency(pendingTotal)}
             </span>
           </button>
           <button
@@ -619,7 +618,7 @@ export default function BillingChart({
           >
             <span className="legend-dot cancelled-line"></span>
             <span className="legend-text">
-              ↓ Cancelled — {formatCurrency(cancelledTotal)}
+              ↓ Cancelled / Revised — {formatCurrency(cancelledTotal)}
             </span>
           </button>
         </div>

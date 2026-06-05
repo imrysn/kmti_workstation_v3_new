@@ -2427,4 +2427,23 @@ body.void-theme .progress-bar-container {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-}
+}
+
+/* Engineer Leaderboard Styles (Theme Responsive) */
+.leaderboard-leader-row {
+  background-color: var(--bg-surface, #ffffff) !important;
+  transition: background-color 0.2s ease;
+}
+
+.leaderboard-leader-row:hover {
+  background-color: var(--bg-surface-hover, rgba(0, 0, 0, 0.02)) !important;
+}
+
+.leaderboard-member-row {
+  background-color: var(--bg-primary, #f8fafc) !important;
+}
+
+.leaderboard-member-row:hover {
+  background-color: var(--bg-surface-hover, rgba(0, 0, 0, 0.01)) !important;
+}
+

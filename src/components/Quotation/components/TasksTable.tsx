@@ -84,8 +84,11 @@ const TasksTable = memo(({
       }
 
       if (task.parentId != null) {
-        const parent = byId.get(task.parentId)
-        if (parent) return isTaskLocked(parent, visited)
+        const isKemcoUnitOrPart = layoutVariant === 'kemco' && (task.level === 1 || task.level === 2)
+        if (!isKemcoUnitOrPart) {
+          const parent = byId.get(task.parentId)
+          if (parent) return isTaskLocked(parent, visited)
+        }
       }
       return false
     }
@@ -93,7 +96,7 @@ const TasksTable = memo(({
     const locked = new Set<number>()
     tasks.forEach(t => { if (isTaskLocked(t)) locked.add(t.id) })
     return locked
-  }, [tasks, myName, hasRole])
+  }, [tasks, myName, hasRole, layoutVariant])
 
   // ── Local UI state ─────────────────────────────────────────────
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null)
