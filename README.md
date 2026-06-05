@@ -158,7 +158,7 @@ Bundle the React application using Vite, clean old builds, and run Electron Buil
 ```bash
 npm run dist
 ```
-The output installer (e.g., `KMTI_Workstation_Setup_v3.8.0.exe`) will be generated inside the `/release` directory.
+The output installer (e.g., `KMTI_Workstation_Setup_v3.8.1.exe`) will be generated inside the `/release` directory.
 
 > [!IMPORTANT]
 > For deploying the centralized NAS server configuration and registering Windows Shell extensions (thumbnail loaders for SolidWorks, Fujitsu iCAD, and DWG files), please refer to the detailed [KMTI Workstation Server Deployment Guide](file:///d:/RAYSAN/KMTI%20Data%20Management/Systems/kmti_workstation_v3_new/docs/deployment_guide.md).

@@ -22,6 +22,17 @@ export interface VersionChangelog {
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.1',
+    date: 'June 5, 2026',
+    entries: [
+      { type: 'new', text: 'Admin Features' },
+      { type: 'improvement', text: 'Quotation Library — Add toggle button for better user experience. Also added Workspace name column.' },
+      { type: 'improvement', text: 'KEMCO Quotation Workspace — Improve UI/UX for better collaboration.' },
+      { type: 'fix', text: 'Row-Lock — fixed bug where new rows was automatically assigned/locked to user.' },
+      { type: 'fix', text: 'KEMCO Print Preview — Cleaned up subgroup task pairing and corrected page layout calculations to eliminate trailing blank rows.' }
+    ],
+  },
+  {
     version: '3.8.0',
     date: 'June 4, 2026',
     entries: [
