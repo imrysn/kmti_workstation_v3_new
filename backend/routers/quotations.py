@@ -266,6 +266,15 @@ async def _sync_metadata(q_id: int, data: dict, db: AsyncSession, username: Opti
     qd = data.get("quotationDetails", {})
     new_q_no = qd.get("quotationNo", quot.quotation_no)
     
+    if new_q_no and new_q_no != quot.quotation_no:
+        dup_stmt = select(Quotation).where(Quotation.quotation_no == new_q_no, Quotation.id != q_id)
+        dup_res = await db.execute(dup_stmt)
+        if dup_res.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Quotation number '{new_q_no}' already exists in another workspace."
+            )
+            
     doc_date_str = qd.get("date")
     doc_date = quot.date
     if doc_date_str:

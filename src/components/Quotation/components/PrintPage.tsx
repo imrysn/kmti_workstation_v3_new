@@ -53,6 +53,57 @@ export const PrintPage = memo(({
 
   const resolveUnitPage = (task: Task) => getUnitPageCount(task.id, allTasks, manualOverrides)
 
+  // ── Parse KEMCO rows ───────────────────────────────────────────
+  interface KemcoRenderRow {
+    assemblyTask: Task
+    subgroupTasks: Task[]
+  }
+  const kemcoRows: KemcoRenderRow[] = []
+
+  if (layoutVariant === 'kemco' && allTasks.length > 0) {
+    let currentAssembly: Task | null = null
+    let currentSubgroup: Task[] = []
+    let hasPushedForCurrentAssembly = false
+
+    const pushCurrentGroup = () => {
+      if (currentAssembly) {
+        if (hasPushedForCurrentAssembly && currentSubgroup.length === 0) {
+          return
+        }
+        kemcoRows.push({
+          assemblyTask: currentAssembly,
+          subgroupTasks: currentSubgroup
+        })
+        currentSubgroup = []
+        hasPushedForCurrentAssembly = true
+      }
+    }
+
+    for (let idx = 0; idx < pageTasks.length; idx++) {
+      const t = pageTasks[idx]
+      if (t.level === 0) {
+        pushCurrentGroup()
+        currentAssembly = t
+        hasPushedForCurrentAssembly = false
+      } else {
+        const parent = allTasks.find(at => at.id === t.parentId && at.level === 0) || t
+        if (!currentAssembly || currentAssembly.id !== parent.id) {
+          pushCurrentGroup()
+          currentAssembly = parent
+          hasPushedForCurrentAssembly = false
+        }
+        
+        currentSubgroup.push(t)
+        if (currentSubgroup.length === 2) {
+          pushCurrentGroup()
+        }
+      }
+    }
+    pushCurrentGroup()
+  }
+
+  const taskCountForCompression = layoutVariant === 'kemco' ? kemcoRows.length : pageTasks.length
+
   const renderSignatures = () => {
     if (!isLastPage) return null
     return printMode === 'billing' ? (
@@ -130,11 +181,6 @@ export const PrintPage = memo(({
 
   const renderTable = () => {
     const assemblyPercentages: Record<number, number> = {}
-    interface KemcoRenderRow {
-      assemblyTask: Task
-      subgroupTasks: Task[]
-    }
-    const kemcoRows: KemcoRenderRow[] = []
 
     if (layoutVariant === 'kemco' && allTasks.length > 0) {
       const childrenMap: Record<number, number[]> = {}
@@ -157,57 +203,22 @@ export const PrintPage = memo(({
       const topLevelCounts: { id: number, count: number }[] = allTasks
         .filter(t => t.level === 0)
         .map(t => ({ id: t.id, count: countSubtree(t.id) }))
-      
+
       const totalWeight = topLevelCounts.reduce((acc, t) => acc + t.count, 0)
-      
+
       topLevelCounts.forEach(t => {
         assemblyPercentages[t.id] = totalWeight > 0 ? (t.count / totalWeight) * 100 : 0
       })
-
-      // Parse KEMCO rows
-      let currentAssembly: Task | null = null
-      let currentSubgroup: Task[] = []
-
-      for (let idx = 0; idx < pageTasks.length; idx++) {
-        const t = pageTasks[idx]
-        if (t.level === 0) {
-          if (currentSubgroup.length > 0 && currentAssembly) {
-            kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-            currentSubgroup = []
-          }
-          currentAssembly = t
-        } else {
-          if (!currentAssembly || currentAssembly.id !== t.parentId) {
-            if (currentSubgroup.length > 0 && currentAssembly) {
-              kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-              currentSubgroup = []
-            }
-            currentAssembly = allTasks.find(at => at.id === t.parentId && at.level === 0) || t
-          }
-          
-          currentSubgroup.push(t)
-          if (currentSubgroup.length === 2) {
-            kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-            currentSubgroup = []
-          }
-        }
-      }
-
-      if (currentSubgroup.length > 0 && currentAssembly) {
-        kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: currentSubgroup })
-      } else if (currentAssembly && kemcoRows.filter(r => r.assemblyTask.id === currentAssembly!.id).length === 0) {
-        kemcoRows.push({ assemblyTask: currentAssembly, subgroupTasks: [] })
-      }
     }
 
     const getAssemblyRowSpan = (rowIndex: number) => {
       const row = kemcoRows[rowIndex]
       if (!row) return 0
-      
+
       if (rowIndex > 0 && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
         return 0
       }
-      
+
       let span = 1
       for (let j = rowIndex + 1; j < kemcoRows.length; j++) {
         if (kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
@@ -254,7 +265,7 @@ export const PrintPage = memo(({
                 const resMachine = resolveField(row.assemblyTask, 'machineCode', row.assemblyTask.machineCode || '')
                 const resDesc = resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
                 const resPercent = resolveField(row.assemblyTask, 'percentage', assemblyPercentages[targetId] || 0)
-                
+
                 const resUnit = row.subgroupTasks.map(t => resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
                 const resType = row.subgroupTasks.length > 0 ? resolveField(row.subgroupTasks[0], 'type', row.subgroupTasks[0].type || '3D') : '3D'
 
@@ -279,17 +290,17 @@ export const PrintPage = memo(({
                       </>
                     )}
                     <td className="col-unit-cell">
-                      <input 
-                        type="text" 
-                        className="ppm-unit-input" 
-                        style={{ textAlign: 'center', width: '100%' }} 
-                        value={resUnit} 
+                      <input
+                        type="text"
+                        className="ppm-unit-input"
+                        style={{ textAlign: 'center', width: '100%' }}
+                        value={resUnit}
                         onChange={e => {
                           const parts = e.target.value.split(',').map(s => s.trim())
                           row.subgroupTasks.forEach((t, tIdx) => {
                             onTaskOverride?.(t.id, { unitCode: parts[tIdx] || '' })
                           })
-                        }} 
+                        }}
                       />
                     </td>
                     {span > 0 && (
@@ -298,9 +309,9 @@ export const PrintPage = memo(({
                           contentEditable
                           suppressContentEditableWarning
                           className="ppm-unit-input"
-                          style={{ 
-                            textAlign: 'left', 
-                            width: '100%', 
+                          style={{
+                            textAlign: 'left',
+                            width: '100%',
                             fontWeight: 'bold',
                             border: 'none',
                             outline: 'none',
@@ -336,16 +347,16 @@ export const PrintPage = memo(({
                     )}
                     {span > 0 && (
                       <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                        <input 
-                          type="text" 
-                          className="ppm-unit-input" 
-                          style={{ textAlign: 'center', width: '100%' }} 
-                          value={resType} 
+                        <input
+                          type="text"
+                          className="ppm-unit-input"
+                          style={{ textAlign: 'center', width: '100%' }}
+                          value={resType}
                           onChange={e => {
                             if (row.subgroupTasks.length > 0) {
                               onTaskOverride?.(row.subgroupTasks[0].id, { type: e.target.value })
                             }
-                          }} 
+                          }}
                         />
                       </td>
                     )}
@@ -383,69 +394,69 @@ export const PrintPage = memo(({
               })
             )}
 
-          {isLastPage && (
-            <>
-              {showAdmin && layoutVariant !== 'kemco' && (
-                <tr className="admin-overhead-row">
-                  <td />
-                  <td>Administrative Overhead</td>
-                  <td />
-                  <td />
-                  <td />
-                  <td className="price-cell">{fmt(overheadTotal)}</td>
-                </tr>
-              )}
-              {layoutVariant === 'kemco' && (
-                <tr className="leasing-fee-row">
-                  <td /><td /><td /><td />
-                  <td className="description-cell text-red">Leasing fee</td>
-                  <td /><td />
-                  <td className="price-cell text-red">- ¥{(148400).toLocaleString()}</td>
-                </tr>
-              )}
-              {layoutVariant !== 'kemco' && (
-                <tr className="nothing-follow-row">
-                  <td />
-                  <td />
-                  <td className="nothing-follow">
-                    ----- NOTHING FOLLOW -----
-                  </td>
-                  <td />
-                  <td />
-                  <td />
-                </tr>
-              )}
-              {(() => {
-                const actualFillerCount = layoutVariant === 'kemco'
-                  ? Math.max(0, 10 - kemcoRows.length - 1)
-                  : fillerRowCount
-                return Array.from({ length: actualFillerCount }, (_, i) => (
-                  <tr key={`empty-${i}`}>
-                    {Array.from({ length: layoutVariant === 'kemco' ? 8 : 6 }).map((_, j) => <td key={j}>&nbsp;</td>)}
+            {isLastPage && (
+              <>
+                {showAdmin && layoutVariant !== 'kemco' && (
+                  <tr className="admin-overhead-row">
+                    <td />
+                    <td>Administrative Overhead</td>
+                    <td />
+                    <td />
+                    <td />
+                    <td className="price-cell">{fmt(overheadTotal)}</td>
                   </tr>
-                ))
-              })()}
-              <tr className="total-amount-row">
-                <td colSpan={layoutVariant === 'kemco' ? 7 : 5} className="total-label-cell">Total Amount</td>
-                <td className="price-cell">
-                  {layoutVariant === 'kemco' ? `¥${(1700000).toLocaleString()}` : fmt(grandTotal)}
-                </td>
-              </tr>
-            </>
-          )}
+                )}
+                {layoutVariant === 'kemco' && (
+                  <tr className="leasing-fee-row">
+                    <td /><td /><td /><td />
+                    <td className="description-cell text-red">Leasing fee</td>
+                    <td /><td />
+                    <td className="price-cell text-red">- ¥{(148400).toLocaleString()}</td>
+                  </tr>
+                )}
+                {layoutVariant !== 'kemco' && (
+                  <tr className="nothing-follow-row">
+                    <td />
+                    <td />
+                    <td className="nothing-follow">
+                      ----- NOTHING FOLLOW -----
+                    </td>
+                    <td />
+                    <td />
+                    <td />
+                  </tr>
+                )}
+                {(() => {
+                  const actualFillerCount = layoutVariant === 'kemco'
+                    ? Math.max(0, 10 - kemcoRows.length - 1)
+                    : fillerRowCount
+                  return Array.from({ length: actualFillerCount }, (_, i) => (
+                    <tr key={`empty-${i}`}>
+                      {Array.from({ length: layoutVariant === 'kemco' ? 8 : 6 }).map((_, j) => <td key={j}>&nbsp;</td>)}
+                    </tr>
+                  ))
+                })()}
+                <tr className="total-amount-row">
+                  <td colSpan={layoutVariant === 'kemco' ? 7 : 5} className="total-label-cell">Total Amount</td>
+                  <td className="price-cell">
+                    {layoutVariant === 'kemco' ? `¥${(1700000).toLocaleString()}` : fmt(grandTotal)}
+                  </td>
+                </tr>
+              </>
+            )}
 
-          {!isLastPage && (
-            <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>
-          )}
-        </tbody>
-      </table>
+            {!isLastPage && (
+              <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>
+            )}
+          </tbody>
+        </table>
 
-      {!isLastPage && (
-        <div className="continuation-note">
-          ---- CONTINUED ON NEXT PAGE ----
-        </div>
-      )}
-    </>
+        {!isLastPage && (
+          <div className="continuation-note">
+            ---- CONTINUED ON NEXT PAGE ----
+          </div>
+        )}
+      </>
     )
   }
 
@@ -455,7 +466,7 @@ export const PrintPage = memo(({
         'quotation-visual-exact',
         `mode-${printMode}`,
         `variant-${layoutVariant}`,
-        `task-count-${pageTasks.length}`,
+        `task-count-${taskCountForCompression}`,
         isContinuation ? 'page-break' : '',
         isCompressed ? 'compressed' : '',
       ].filter(Boolean).join(' ')}

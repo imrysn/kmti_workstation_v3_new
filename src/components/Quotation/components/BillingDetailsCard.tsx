@@ -21,9 +21,10 @@ const BANK_FIELDS: Array<{ key: keyof BillingDetails; label: string; placeholder
 const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   return (
-    <div className="section-card billing-card-full">
+    <div className={`section-card billing-card-full${isCollapsed ? ' collapsed' : ''}`}>
       <div className="card-header">
         <div className="section-icon billing-details">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -44,30 +45,43 @@ const BillingDetailsCard = memo(({ billingDetails, onUpdateBilling }: Props) => 
           </div>
         )}
 
-        {onUpdateBilling && (
+        <div className="card-header-actions">
+          {onUpdateBilling && (
+            <button
+              className="info-card-edit-btn"
+              onClick={() => setIsEditing(e => !e)}
+              title={isEditing ? 'Done editing' : 'Edit billing details'}
+            >
+              {isEditing ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Done
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Edit
+                </>
+              )}
+            </button>
+          )}
+
           <button
-            className="info-card-edit-btn"
-            onClick={() => setIsEditing(e => !e)}
-            title={isEditing ? 'Done editing' : 'Edit billing details'}
+            className={`card-collapse-btn${isCollapsed ? ' collapsed' : ''}`}
+            onClick={() => setIsCollapsed(c => !c)}
+            title={isCollapsed ? 'Expand card' : 'Collapse card'}
+            type="button"
           >
-            {isEditing ? (
-              <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                Done
-              </>
-            ) : (
-              <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                Edit
-              </>
-            )}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="18 15 12 9 6 15"/>
+            </svg>
           </button>
-        )}
+        </div>
       </div>
 
       <div className="card-content">

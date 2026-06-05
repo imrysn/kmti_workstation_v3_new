@@ -315,6 +315,18 @@
 }
 
 /* ── Edit button on info cards (Phase 2) ─────────────────── */
+.quot-app-root .card-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.quot-app-root .card-header-actions .info-card-edit-btn {
+  margin-left: 0;
+}
+
 .quot-app-root .info-card-edit-btn {
   margin-left: auto;
   display: inline-flex;
@@ -339,6 +351,70 @@
   border-color: var(--text-muted);
   color: var(--quot-text-main);
 }
+
+.quot-app-root .card-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--quot-border);
+  border-radius: 6px;
+  background: var(--quot-bg-card);
+  color: var(--quot-text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.quot-app-root .card-collapse-btn:hover {
+  background: var(--bg-surface);
+  border-color: var(--text-muted);
+  color: var(--quot-text-main);
+}
+
+.quot-app-root .card-collapse-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.quot-app-root .card-collapse-btn.collapsed svg {
+  transform: rotate(180deg);
+}
+
+/* For collapsibility */
+.quot-app-root .section-card.collapsed .card-content {
+  display: none !important;
+}
+
+.quot-app-root .section-card.collapsed .info-card-edit-btn {
+  display: none !important;
+}
+
+.quot-app-root .section-card.collapsed {
+  border-bottom-width: 1px;
+}
+
+.quot-app-root .workspace-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--quot-border);
+  padding-bottom: 6px;
+}
+
+.quot-app-root .workspace-section-title {
+  font-family: 'Arimo', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--quot-text-muted);
+}
+
+
 
 /* ── Read-only display (Phase 2) ─────────────────────────── */
 .quot-app-root .info-card-display {

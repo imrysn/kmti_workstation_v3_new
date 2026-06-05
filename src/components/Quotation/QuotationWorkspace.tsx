@@ -87,6 +87,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
   const [recentEdits, setRecentEdits] = useState<Record<string, { color: string; timestamp: number }>>({})
   const [previewData, setPreviewData] = useState<any | null>(null)
   const [activePreviewTs, setActivePreviewTs] = useState<string | null>(null)
+  const [isInfoCollapsed, setIsInfoCollapsed] = useState(true)
 
   // ── Document State ─────────────────────────────────────────────
   const isSyncedFromRemote = useRef(false)
@@ -623,7 +624,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     }
 
     const todayStr = new Date().toISOString().split('T')[0] // YYYY-MM-DD
-    
+
     // Update local states & emit patches
     syncBillingDetails({
       quotationStatus: 'For Approval',
@@ -786,7 +787,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             </div>
             <div className="quot-doc-meta">
               <div className="quot-doc-primary">
-                <span className="quot-doc-number">{quotNo}</span>
+                <span className="quot-doc-number">{quotationDetails.quotationNo || quotNo}</span>
                 {hasUnsavedChanges && <span className="quot-unsaved-dot" />}
               </div>
               <div className="quot-doc-secondary">
@@ -862,13 +863,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
 
             <div className="toolbar-divider" />
 
-            {/* 3. New ; Load ; Save */}
-            <button className="btn" onClick={newInvoice} title="Create new quotation">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
-              </svg>
-              New
-            </button>
+            {/* 3. Load ; Save */}
             <button className="btn" onClick={() => setIsLibraryOpen(true)} title="Load from library">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -940,18 +935,34 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                 )}
 
                 {/* Top info row: Company | Client | Document Details */}
+                <div className="workspace-section-header">
+                  <span className="workspace-section-title">Document Info</span>
+                  <button
+                    className={`card-collapse-btn${isInfoCollapsed ? ' collapsed' : ''}`}
+                    onClick={() => setIsInfoCollapsed(c => !c)}
+                    title={isInfoCollapsed ? 'Expand information cards' : 'Collapse information cards'}
+                    type="button"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="18 15 12 9 6 15" />
+                    </svg>
+                  </button>
+                </div>
                 <div className="quot-info-row">
                   <CompanyInfo
                     companyInfo={effComp}
                     onUpdate={isPreview ? undefined : syncCompanyInfo}
+                    isCollapsed={isInfoCollapsed}
                   />
                   <ClientInfo
                     clientInfo={effClient}
                     onUpdate={isPreview ? undefined : syncClientInfo}
+                    isCollapsed={isInfoCollapsed}
                   />
                   <QuotationDetailsCard
                     quotationDetails={effQuotDetails}
                     onUpdate={isPreview ? undefined : syncQuotationDetails}
+                    isCollapsed={isInfoCollapsed}
                   />
                 </div>
 
@@ -982,11 +993,13 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
                   layoutVariant={layoutVariant}
                 />
 
-                <BillingDetailsCard
-                  billingDetails={effBilling}
-                  onUpdateBilling={isPreview ? undefined : syncBillingDetails}
-                  layoutVariant={layoutVariant}
-                />
+                {user?.role !== 'user' && (
+                  <BillingDetailsCard
+                    billingDetails={effBilling}
+                    onUpdateBilling={isPreview ? undefined : syncBillingDetails}
+                    layoutVariant={layoutVariant}
+                  />
+                )}
 
                 <div className="quot-bottom-spacer" style={{ height: '40px' }} />
               </div>

@@ -6,9 +6,10 @@ import { CollaborativeField } from './CollaborativeField'
 interface Props {
   clientInfo: ClientInfo
   onUpdate?: (updates: ClientInfo) => void
+  isCollapsed?: boolean
 }
 
-const ClientInfoForm = memo(({ clientInfo, onUpdate }: Props) => {
+const ClientInfoForm = memo(({ clientInfo, onUpdate, isCollapsed = false }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
 
@@ -19,7 +20,7 @@ const ClientInfoForm = memo(({ clientInfo, onUpdate }: Props) => {
   const hasContent = clientInfo.company || clientInfo.contact || clientInfo.address
 
   return (
-    <div className="section-card">
+    <div className={`section-card${isCollapsed ? ' collapsed' : ''}`}>
       <div className="card-header">
         <div className="section-icon client">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,28 +31,30 @@ const ClientInfoForm = memo(({ clientInfo, onUpdate }: Props) => {
         <h2 className="section-title">Client Information</h2>
 
         {onUpdate && (
-          <button
-            className="info-card-edit-btn"
-            onClick={() => setIsEditing(e => !e)}
-            title={isEditing ? 'Done editing' : 'Edit client info'}
-          >
-            {isEditing ? (
-              <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                Done
-              </>
-            ) : (
-              <>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                Edit
-              </>
-            )}
-          </button>
+          <div className="card-header-actions">
+            <button
+              className="info-card-edit-btn"
+              onClick={() => setIsEditing(e => !e)}
+              title={isEditing ? 'Done editing' : 'Edit client info'}
+            >
+              {isEditing ? (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Done
+                </>
+              ) : (
+                <>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Edit
+                </>
+              )}
+            </button>
+          </div>
         )}
       </div>
 

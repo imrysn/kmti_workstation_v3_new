@@ -38,10 +38,9 @@ interface Props {
 }
 
 /** A single page slice produced by computePages(). */
-interface PageSlice {
-  tasks: Task[]
+interface PageSlice<T> {
+  tasks: T[]
   totals: number[]
-  /** 0-based index of the first task on this page within mainTasks[] */
   startIndex: number
 }
 
@@ -50,39 +49,36 @@ const { A4_W_PX, A4_H_PX, TASKS_PER_PAGE_BILLING_STANDARD, TASKS_PER_PAGE_BILLIN
 // ── Pagination engine ──────────────────────────────────────────────────────
 
 /**
- * Splits `mainTasks` into page slices of at most TASKS_PER_PAGE each.
+ * Splits `items` into page slices of at most items per page.
  * Returns an array of PageSlice objects — one per rendered PrintPage.
- *
- * This replaces the old hardcoded firstPageTasks / secondPageTasks split
- * and supports any number of pages without code changes.
  */
-function computePages(
-  mainTasks: Task[],
-  calculateTotal: (task: Task) => number,
+function computePages<T>(
+  items: T[],
+  calculateTotal: (item: T) => number,
   mode: 'quotation' | 'billing',
-): PageSlice[] {
+): PageSlice<T>[] {
   const finalLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_FINAL : TASKS_PER_PAGE_QUOTATION_FINAL
   const standardLimit = mode === 'billing' ? TASKS_PER_PAGE_BILLING_STANDARD : TASKS_PER_PAGE_QUOTATION_STANDARD
 
   // Case 1: Simple one-page fit
-  if (mainTasks.length <= finalLimit) {
+  if (items.length <= finalLimit) {
     return [{
-      tasks: mainTasks,
-      totals: mainTasks.map(calculateTotal),
+      tasks: items,
+      totals: items.map(calculateTotal),
       startIndex: 0,
     }]
   }
 
   // Case 2: Multi-page logic
-  const pages: PageSlice[] = []
+  const pages: PageSlice<T>[] = []
   let i = 0
 
-  while (i < mainTasks.length) {
-    const remainingCount = mainTasks.length - i
+  while (i < items.length) {
+    const remainingCount = items.length - i
     const isLastPage = remainingCount <= finalLimit
     const limit = isLastPage ? finalLimit : standardLimit
 
-    const slice = mainTasks.slice(i, i + limit)
+    const slice = items.slice(i, i + limit)
     pages.push({
       tasks: slice,
       totals: slice.map(calculateTotal),
@@ -90,10 +86,8 @@ function computePages(
     })
     i += limit
 
-    // If we finished the tasks but the last page we rendered wasn't a "final" page
-    // (e.g. we took exactly standardLimit tasks and 0 remain, but standardLimit > finalLimit),
-    // we need one more empty page to carry the footer/signatures.
-    if (i === mainTasks.length && !isLastPage) {
+    // If we finished the items but the last page we rendered wasn't a "final" page
+    if (i === items.length && !isLastPage) {
       pages.push({ tasks: [], totals: [], startIndex: i })
     }
   }
@@ -219,23 +213,77 @@ const PrintPreviewModal = memo(({
 
   // ── Pagination ─────────────────────────────────────────────────
   const { pages, grandTotal, overheadTotal, lastAssemblyId } = useMemo(() => {
-    const mainTasks = layoutVariant === 'kemco' 
-      ? tasks.filter(t => t.level === 1 || (t.level === 0 && !tasks.some(sub => sub.parentId === t.id && sub.level === 1))) 
-      : tasks.filter(t => t.isMainTask)
-    const slices = computePages(mainTasks, calculateTaskTotal, printMode)
+    if (layoutVariant === 'kemco') {
+      // 1. Group tasks into KEMCO rows first
+      interface KemcoRow {
+        assemblyTask: Task
+        subgroupTasks: Task[]
+      }
+      const kemcoRows: KemcoRow[] = []
+      const level0Tasks = tasks.filter(t => t.level === 0)
+      level0Tasks.forEach(assembly => {
+        const subTasks = tasks.filter(t => t.parentId === assembly.id && t.level === 1)
+        if (subTasks.length === 0) {
+          kemcoRows.push({ assemblyTask: assembly, subgroupTasks: [] })
+        } else {
+          for (let k = 0; k < subTasks.length; k += 2) {
+            kemcoRows.push({
+              assemblyTask: assembly,
+              subgroupTasks: subTasks.slice(k, k + 2)
+            })
+          }
+        }
+      })
 
-    const subtotal = slices.flatMap(p => p.totals).reduce((s, t) => s + t, 0)
-    const footer = manualOverrides?.footer || {}
-    const overhead = footer.overhead !== undefined
-      ? footer.overhead
-      : calculateOverhead(subtotal, baseRates.overheadPercentage)
-    const grand = subtotal + overhead + (footer.adjustment || 0)
+      // 2. Paginate KEMCO rows (calculateTotal = 0 since price is merged at table level)
+      const slices = computePages(kemcoRows, () => 0, printMode)
 
-    const lastAssembly = tasks.slice().reverse().find(t => t.level === 0)
-    const lastAssemblyId = lastAssembly?.id
+      // 3. Map back to what PrintPage expects (pageTasks: Task[])
+      const mappedPages = slices.map(slice => {
+        const pageTasks: Task[] = []
+        const seenAssemblyIds = new Set<number>()
 
-    return { pages: slices, grandTotal: grand, overheadTotal: overhead, lastAssemblyId }
-  }, [tasks, baseRates, calculateTaskTotal, manualOverrides, printMode])
+        slice.tasks.forEach(row => {
+          if (!seenAssemblyIds.has(row.assemblyTask.id)) {
+            pageTasks.push(row.assemblyTask)
+            seenAssemblyIds.add(row.assemblyTask.id)
+          }
+          pageTasks.push(...row.subgroupTasks)
+        })
+
+        return {
+          tasks: pageTasks,
+          totals: slice.totals,
+          startIndex: slice.startIndex
+        }
+      })
+
+      const allMainTasks = tasks.filter(t => t.isMainTask)
+      const subtotal = allMainTasks.reduce((s, t) => s + calculateTaskTotal(t), 0)
+      const footer = manualOverrides?.footer || {}
+      const overhead = footer.overhead !== undefined
+        ? footer.overhead
+        : calculateOverhead(subtotal, baseRates.overheadPercentage)
+      const grand = subtotal + overhead + (footer.adjustment || 0)
+
+      const lastAssembly = tasks.slice().reverse().find(t => t.level === 0)
+      const lastAssemblyId = lastAssembly?.id
+
+      return { pages: mappedPages, grandTotal: grand, overheadTotal: overhead, lastAssemblyId }
+    } else {
+      const mainTasks = tasks.filter(t => t.isMainTask)
+      const slices = computePages(mainTasks, calculateTaskTotal, printMode)
+
+      const subtotal = slices.flatMap(p => p.totals).reduce((s, t) => s + t, 0)
+      const footer = manualOverrides?.footer || {}
+      const overhead = footer.overhead !== undefined
+        ? footer.overhead
+        : calculateOverhead(subtotal, baseRates.overheadPercentage)
+      const grand = subtotal + overhead + (footer.adjustment || 0)
+
+      return { pages: slices, grandTotal: grand, overheadTotal: overhead, lastAssemblyId: undefined }
+    }
+  }, [tasks, baseRates, calculateTaskTotal, manualOverrides, printMode, layoutVariant])
 
   const totalPages = pages.length
 
@@ -664,7 +712,7 @@ const PrintPreviewModal = memo(({
                       onChange={e => {
                         const val = e.target.value
                         if (val === '__CUSTOM__') {
-                           setIsCustomIncharge(true)
+                          setIsCustomIncharge(true)
                         } else {
                           onBillingDetailsChange?.({ projectInCharge: val })
                         }

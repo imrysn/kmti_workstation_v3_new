@@ -67,17 +67,19 @@ const QuotationSignaturesCard = memo(({
   signatures,
   onUpdate,
   layoutVariant: _layoutVariant,
+  isCollapsed = false,
 }: {
   signatures: Signatures
   onUpdate?: (type: keyof Signatures, field: string, value: any) => void
   layoutVariant?: 'special' | 'kemco'
+  isCollapsed?: boolean
 }) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
   const sig = signatures.quotation
 
   return (
-    <div className="section-card">
+    <div className={`section-card${isCollapsed ? ' collapsed' : ''}`}>
       <div className="card-header">
         <div className="section-icon quotation-signatures">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -87,7 +89,12 @@ const QuotationSignaturesCard = memo(({
           </svg>
         </div>
         <h2 className="section-title">Quotation Signatures</h2>
-        {onUpdate && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
+        
+        {onUpdate && (
+          <div className="card-header-actions">
+            <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />
+          </div>
+        )}
       </div>
 
       <div className="card-content">
@@ -202,17 +209,19 @@ const BillingSignaturesCard = memo(({
   signatures,
   onUpdate,
   layoutVariant,
+  isCollapsed = false,
 }: {
   signatures: Signatures
   onUpdate?: (type: keyof Signatures, field: string, value: any) => void
   layoutVariant?: 'special' | 'kemco'
+  isCollapsed?: boolean
 }) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()
   const [isEditing, setIsEditing] = useState(false)
   const sig = signatures.billing
 
   return (
-    <div className="section-card">
+    <div className={`section-card${isCollapsed ? ' collapsed' : ''}`}>
       <div className="card-header">
         <div className="section-icon billing-signatures">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -222,7 +231,12 @@ const BillingSignaturesCard = memo(({
           </svg>
         </div>
         <h2 className="section-title">Billing Statement Signatures</h2>
-        {onUpdate && <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />}
+        
+        {onUpdate && (
+          <div className="card-header-actions">
+            <EditToggleBtn isEditing={isEditing} onClick={() => setIsEditing(e => !e)} />
+          </div>
+        )}
       </div>
 
       <div className="card-content">
@@ -380,6 +394,8 @@ function safeSignatures(signatures: Signatures): Signatures {
 const SignatureForm = memo(({ signatures, onUpdate, layoutVariant }: Props) => {
   const safe = safeSignatures(signatures)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [isCollapsed, setIsCollapsed] = useState(false)
+
   // Force Electron window refocus once when an input is focused to ensure interactivity
   useEffect(() => {
     const isElectron = !!(window as any).electronAPI
@@ -414,9 +430,24 @@ const SignatureForm = memo(({ signatures, onUpdate, layoutVariant }: Props) => {
   }, [])
 
   return (
-    <div className="sig-cards-layout signature-form-root" ref={containerRef}>
-      <QuotationSignaturesCard signatures={safe} onUpdate={onUpdate} layoutVariant={layoutVariant} />
-      <BillingSignaturesCard signatures={safe} onUpdate={onUpdate} layoutVariant={layoutVariant} />
+    <div className="signature-form-root" ref={containerRef}>
+      <div className="workspace-section-header">
+        <span className="workspace-section-title">Signatures & Approvals</span>
+        <button
+          className={`card-collapse-btn${isCollapsed ? ' collapsed' : ''}`}
+          onClick={() => setIsCollapsed(c => !c)}
+          title={isCollapsed ? 'Expand signatures' : 'Collapse signatures'}
+          type="button"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </button>
+      </div>
+      <div className="sig-cards-layout">
+        <QuotationSignaturesCard signatures={safe} onUpdate={onUpdate} layoutVariant={layoutVariant} isCollapsed={isCollapsed} />
+        <BillingSignaturesCard signatures={safe} onUpdate={onUpdate} layoutVariant={layoutVariant} isCollapsed={isCollapsed} />
+      </div>
     </div>
   )
 })
