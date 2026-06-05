@@ -101,6 +101,8 @@ export default function BillingMonitoring() {
     formatCurrency,
     loadData,
     handleSingleFieldSave,
+    handleAddNewRow,
+    handleDeleteRows,
     resetFilters,
     globalSettings,
     saveGlobalSettings,
@@ -178,6 +180,21 @@ export default function BillingMonitoring() {
             Excel
           </button>
 
+
+          {activeView === 'table' && (
+            <button
+              className="btn btn-ghost no-print"
+              onClick={() => handleAddNewRow({})}
+              title="Add a new quotation row"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--accent)', color: '#fff', border: 'none' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              Add Row
+            </button>
+          )}
 
           <button className="btn btn-ghost no-print" onClick={loadData} title="Reload records">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}>
@@ -330,6 +347,7 @@ export default function BillingMonitoring() {
             handleSort={handleSort}
             filteredQuotations={filteredQuotations}
             getCompletedAmount={getCompletedAmount}
+            handleDeleteRows={handleDeleteRows}
           />
         </div>
       )}

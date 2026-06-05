@@ -574,6 +574,67 @@ export function useBillingMonitoring() {
     }
   }
 
+  const handleAddNewRow = async (initialData: Partial<IQuotation>) => {
+    try {
+      setLoading(true)
+      // Call create API with pre-filled/pre-generated properties
+      const today = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2)
+      const seq = Math.floor(Math.random() * 900 + 100).toString()
+      const quotNo = initialData.quotationNo || `KMTE-${today}-${seq}`
+      
+      const payload = {
+        quot_no: quotNo,
+        display_name: initialData.displayName || quotNo,
+        client_name: initialData.clientName || '',
+        designer_name: initialData.designerName || '',
+        grand_total: initialData.grandTotal || 0,
+        customer_incharge: initialData.customerIncharge || '',
+        quotation_status: initialData.quotationStatus || 'DRAFT',
+        project_status: initialData.projectStatus || 'On Going',
+        billing_status: initialData.billingStatus || null,
+        bill_to: initialData.billTo || '',
+        update_detail: initialData.updateDetail || '',
+        date: initialData.date || new Date().toISOString().split('T')[0]
+      }
+      
+      const res = await quotationApi.create(payload)
+      if (res.data?.success) {
+        notify('New row created successfully', 'success')
+        await loadData()
+      } else {
+        notify('Failed to create new row', 'error')
+      }
+    } catch (err: any) {
+      console.error(err)
+      notify(err.response?.data?.detail || 'Error creating new row', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteRows = async (ids: number[]) => {
+    if (ids.length === 0) return
+    try {
+      setLoading(true)
+      let computerName = ''
+      try {
+        const info = await (window as any).electronAPI?.getWorkstationInfo?.()
+        computerName = info?.computerName || ''
+      } catch (e) {}
+      
+      for (const id of ids) {
+        await quotationApi.delete(id, undefined, false, computerName || undefined) // soft delete
+      }
+      notify(`Successfully deleted ${ids.length} item(s)`, 'success')
+      await loadData()
+    } catch (err: any) {
+      console.error(err)
+      notify(err.response?.data?.detail || 'Error deleting rows', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const resetFilters = () => {
     setSearch('')
     setSelectedDesigner('')
@@ -794,6 +855,8 @@ export function useBillingMonitoring() {
     formatCurrency,
     loadData,
     handleSingleFieldSave,
+    handleAddNewRow,
+    handleDeleteRows,
     resetFilters,
     globalSettings,
     saveGlobalSettings,

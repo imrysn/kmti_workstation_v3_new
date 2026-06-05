@@ -714,15 +714,31 @@ async def create_quotation(data: dict, request: Request, db: AsyncSession = Depe
         if res.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="Quotation number already exists")
         
-        # Create a blank record — document data will be populated on first save
+        is_direct = any(k in data for k in ["client_name", "designer_name", "grand_total", "customer_incharge", "quotation_status", "project_status", "billing_status", "bill_to"])
+        
+        # Create a blank/prefilled record
         new_q = Quotation(
             quotation_no=q_no,
             display_name=display,
             password=password,
             workstation=workstation,
-            is_active=True,  # Set to true immediately so it shows in lobby
+            is_active=False if is_direct else True,  # Set to true immediately only if not direct billing insert
+            client_name=data.get("client_name") or "",
+            designer_name=data.get("designer_name") or "",
+            grand_total=data.get("grand_total") or 0.0,
+            customer_incharge=data.get("customer_incharge") or "",
+            quotation_status=data.get("quotation_status") or "DRAFT",
+            project_status=data.get("project_status") or "On Going",
+            billing_status=data.get("billing_status") or None,
+            bill_to=data.get("bill_to") or "",
+            update_detail=data.get("update_detail") or "",
             data=json.dumps({}, ensure_ascii=False),  # empty, will be filled on first save
         )
+        if "date" in data and data["date"]:
+            try:
+                new_q.date = datetime.strptime(data["date"][:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            except Exception:
+                pass
         db.add(new_q)
         await db.commit()
         await db.refresh(new_q)
@@ -856,6 +872,24 @@ async def update_billing_monitoring(
         raise HTTPException(status_code=404, detail="Quotation not found")
         
     # Editable billing tracking fields
+    if "quotationNo" in payload:
+        new_no = payload["quotationNo"]
+        if new_no != quot.quotation_no:
+            # Check duplicate
+            dup_stmt = select(Quotation).where(Quotation.quotation_no == new_no, Quotation.id != q_id)
+            dup_res = await db.execute(dup_stmt)
+            if dup_res.scalar_one_or_none():
+                raise HTTPException(status_code=400, detail=f"Quotation number '{new_no}' already exists.")
+            quot.quotation_no = new_no
+            if not quot.display_name or quot.display_name == quot.quotation_no:
+                quot.display_name = new_no
+    if "grandTotal" in payload:
+        try:
+            quot.grand_total = float(payload["grandTotal"])
+        except (ValueError, TypeError):
+            pass
+    if "customerIncharge" in payload:
+        quot.customer_incharge = payload["customerIncharge"]
     if "quotationStatus" in payload:
         quot.quotation_status = payload["quotationStatus"]
     if "projectStatus" in payload:
@@ -875,6 +909,8 @@ async def update_billing_monitoring(
         quot.client_name = payload["clientName"]
     if "projectInCharge" in payload:
         quot.designer_name = payload["projectInCharge"]
+    if "designerName" in payload:
+        quot.designer_name = payload["designerName"]
     if "datePaid" in payload:
         val = payload["datePaid"]
         if val:
@@ -927,13 +963,18 @@ async def update_billing_monitoring(
         data["billingDetails"]["clientName"] = quot.client_name or ""
         data["billingDetails"]["updatedBy"] = quot.updated_by
         data["billingDetails"]["lastUpdatedAt"] = quot.last_updated_at.strftime("%Y-%m-%d %H:%M")
+        
         if "clientInfo" not in data:
             data["clientInfo"] = {}
         data["clientInfo"]["company"] = quot.bill_to or ""
+        data["clientInfo"]["contact"] = quot.customer_incharge or ""
+        
         if "quotationDetails" not in data:
             data["quotationDetails"] = {}
-        if "date" in payload:
+        data["quotationDetails"]["quotationNo"] = quot.quotation_no
+        if "date" in payload or quot.date:
             data["quotationDetails"]["date"] = quot.date.isoformat()[:10] if quot.date else None
+            
         quot.data = json.dumps(data, ensure_ascii=False)
     except Exception as e:
         print(f"Error syncing JSON in update_billing_monitoring: {e}")
@@ -945,6 +986,8 @@ async def update_billing_monitoring(
     # Emit Socket.IO patches for active editors to update live
     room_name = f"quot_{q_id}"
     patches = [
+        {"path": "quotationDetails.quotationNo", "value": quot.quotation_no},
+        {"path": "clientInfo.contact", "value": quot.customer_incharge},
         {"path": "billingDetails.quotationStatus", "value": quot.quotation_status},
         {"path": "billingDetails.projectStatus", "value": quot.project_status},
         {"path": "billingDetails.submittedToAdminAt", "value": (quot.submitted_to_admin_at.isoformat()[:10] if quot.submitted_to_admin_at else None)},

@@ -325,7 +325,7 @@
 }
 
 .spreadsheet-table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(59, 130, 246, 0.08) !important;
 }
 
 .spreadsheet-table tr.editing-row-highlight {
@@ -1804,7 +1804,8 @@ body.void-theme .progress-bar-container {
   text-align: center;
 }
 
-.header-checkbox, .row-checkbox {
+.header-checkbox,
+.row-checkbox {
   cursor: pointer;
   width: 14px;
   height: 14px;
@@ -1816,7 +1817,7 @@ body.void-theme .progress-bar-container {
   position: fixed;
   bottom: 24px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, 0);
   background: var(--bg-surface);
   border: 1px solid var(--accent);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15), 0 0 15px var(--accent-subtle);
@@ -1827,15 +1828,16 @@ body.void-theme .progress-bar-container {
   gap: 20px;
   z-index: 9999;
   backdrop-filter: blur(8px);
-  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: bulkActionsSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   color: var(--text-primary);
 }
 
-@keyframes slideUp {
+@keyframes bulkActionsSlideUp {
   from {
     transform: translate(-50%, 40px);
     opacity: 0;
   }
+
   to {
     transform: translate(-50%, 0);
     opacity: 1;
@@ -2362,6 +2364,7 @@ body.void-theme .progress-bar-container {
 
 /* Print Overrides */
 @media print {
+
   /* Set page dimension to A4 portrait with 15mm margins */
   @page {
     size: A4 portrait;
@@ -2391,7 +2394,13 @@ body.void-theme .progress-bar-container {
   }
 
   /* Reset layout structure for printing */
-  html, body, #root, .app-shell, .app-body, .app-content, .billing-monitoring-page {
+  html,
+  body,
+  #root,
+  .app-shell,
+  .app-body,
+  .app-content,
+  .billing-monitoring-page {
     position: static !important;
     overflow: visible !important;
     height: auto !important;
@@ -2446,4 +2455,3 @@ body.void-theme .progress-bar-container {
 .leaderboard-member-row:hover {
   background-color: var(--bg-surface-hover, rgba(0, 0, 0, 0.01)) !important;
 }
-
