@@ -129,7 +129,14 @@ export const exportBillingToExcel = async (quotations: IQuotation[]) => {
         let rowTextColor = 'FF000000' // Default black
         let rowBgColor: string | null = null
 
-        if (q.quotationStatus === 'CANCELLED') {
+        const isCancelledOrRevised =
+          q.quotationStatus === 'CANCELLED' ||
+          q.quotationStatus === 'REVISED' ||
+          q.billingStatus === 'CANCELLED' ||
+          q.billingStatus === 'REVISED' ||
+          q.projectStatus === 'CANCELLED'
+
+        if (isCancelledOrRevised) {
           rowTextColor = 'FFDC2626' // Red text
         } else if (q.quotationStatus === 'Approved') {
           rowBgColor = 'FF86EFAC' // Darker green background

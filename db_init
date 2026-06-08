@@ -13,9 +13,9 @@
     "phone": "TEL: +81-95-801-9012 / FAX: +81-95-801-9013"
   },
   "quotationDetails": {
-    "quotationNo": "KMJFE-260513-016",
+    "quotationNo": "KMTE-260123-020-R1",
     "referenceNo": "",
-    "date": "2026-05-13"
+    "date": "2026-06-08"
   },
   "billingDetails": {
     "invoiceNo": "",
@@ -26,23 +26,77 @@
     "bankAddress": "RCBC DASMARINAS BRANCH RCBC BLDG. FCIE COMPOUND, GOVERNOR'S DRIVE LANGKAAN, DASMARINAS CAVITE",
     "swiftCode": "RCBCPHMM",
     "branchCode": "358",
-    "quotationStatus": "Approved",
-    "projectStatus": "Finished",
-    "submittedToAdminAt": "2026-05-22",
-    "updateDetail": "BILLED 05/28/2026",
-    "projectInCharge": "Shela",
+    "quotationStatus": "For Approval",
+    "projectStatus": "On Going",
+    "submittedToAdminAt": "2026-01-26",
+    "updateDetail": "",
+    "projectInCharge": "Erik",
     "billTo": "NEXT ENGINEERING Co., Ltd.",
-    "clientName": "JFE",
+    "clientName": "TEX HANSHIN",
     "updatedBy": "admin2",
-    "lastUpdatedAt": "2026-06-08 00:27"
+    "lastUpdatedAt": "2026-06-08 03:18"
   },
   "tasks": [
     {
-      "id": 1780877927688,
-      "description": "吊下灯取付台",
-      "referenceNumber": "P21028055-ML0095\t\t \t\t",
-      "hours": 4,
-      "minutes": 8.8888,
+      "id": 1780888507822,
+      "description": "バルブスタンド受け入れテーブル(改造)",
+      "referenceNumber": "",
+      "hours": 15,
+      "minutes": 33.3333,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D/2D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "kmti.dev",
+      "lastEditorColor": "#E67E22"
+    },
+    {
+      "id": 1780888522731,
+      "description": "バルブスタンド手入台(改造)",
+      "referenceNumber": "",
+      "hours": 15,
+      "minutes": 33.3333,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D/2D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "kmti.dev",
+      "lastEditorColor": "#E67E22"
+    },
+    {
+      "id": 1780888527139,
+      "description": "バルブスタンド棟間搬送(改造)",
+      "referenceNumber": "",
+      "hours": 15,
+      "minutes": 33.3333,
+      "overtimeHours": 0,
+      "softwareUnits": 0,
+      "type": "3D/2D",
+      "unitType": "JD",
+      "isMainTask": true,
+      "parentId": null,
+      "amount": 0,
+      "percentage": 0,
+      "level": 0,
+      "lastEditorName": "kmti.dev",
+      "lastEditorColor": "#E67E22"
+    },
+    {
+      "id": 1780888530719,
+      "description": "水配管系統図 (改造)",
+      "referenceNumber": "",
+      "hours": 51,
+      "minutes": 51.1111,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "3D",
@@ -53,14 +107,14 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#16A085"
+      "lastEditorColor": "#E67E22"
     },
     {
-      "id": 1780878197439,
-      "description": "吊下灯取付台",
-      "referenceNumber": "P21028055-ML0095\t\t \t\t",
-      "hours": 6,
-      "minutes": 44.4444,
+      "id": 1780888534770,
+      "description": "水配管系統図 (平面図・据付図(エリア I~VII)",
+      "referenceNumber": "",
+      "hours": 82,
+      "minutes": 57.7777,
       "overtimeHours": 0,
       "softwareUnits": 0,
       "type": "2D",
@@ -71,7 +125,7 @@
       "percentage": 0,
       "level": 0,
       "lastEditorName": "kmti.dev",
-      "lastEditorColor": "#16A085"
+      "lastEditorColor": "#E67E22"
     }
   ],
   "baseRates": {
@@ -86,8 +140,8 @@
   "signatures": {
     "quotation": {
       "preparedBy": {
-        "name": "MS. SHELA RON NAVAL",
-        "title": "Engineering Supervisor"
+        "name": "MR. ERIK BENJAMIN ADAN",
+        "title": "Engineering Team Leader"
       },
       "checkedBy": {
         "name": "MR. YUICHIRO MAENO",
@@ -118,19 +172,16 @@
   },
   "manualOverrides": {
     "tasks": {
-      "1780877927688": {
-        "unitPage": 1
-      },
-      "1780878197439": {
-        "unitPage": 1
-      }
+      "1780888507822": {},
+      "1780888522731": {},
+      "1780888527139": {},
+      "1780888530719": {},
+      "1780888534770": {}
     },
-    "footer": {
-      "overhead": 6700
-    }
+    "footer": {}
   },
   "collapsedTaskIds": [],
   "chatLog": [],
   "layoutVariant": "special",
-  "savedAt": "2026-06-08T00:37:48.471Z"
+  "savedAt": "2026-06-08T03:19:05.356Z"
 }

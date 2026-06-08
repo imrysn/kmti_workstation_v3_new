@@ -154,6 +154,39 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
           } else {
             // Fresh DB record, populate with defaults
             resetToNew(initialQuotNo, variant || 'special')
+
+            // If the record was created via Billing Monitoring, pre-fill from DB columns
+            if (res.data) {
+              const q = res.data
+              if (q.clientName) {
+                updateClientInfo(prev => ({ ...prev, company: q.clientName }))
+              }
+              if (q.customerIncharge) {
+                updateClientInfo(prev => ({ ...prev, contact: q.customerIncharge }))
+              }
+              if (q.date) {
+                updateQuotationDetails({ date: q.date })
+              }
+              if (q.grandTotal) {
+                updateManualOverrides(prev => ({
+                  ...prev,
+                  footer: {
+                    ...prev.footer,
+                    adjustment: q.grandTotal
+                  }
+                }))
+              }
+              updateBillingDetails({
+                quotationStatus: q.quotationStatus || 'DRAFT',
+                projectStatus: q.projectStatus || 'On Going',
+                submittedToAdminAt: q.submittedToAdminAt || '',
+                updateDetail: q.updateDetail || '',
+                projectInCharge: q.designerName || '',
+                billTo: q.billTo || '',
+                clientName: q.clientName || '',
+              })
+              setHasUnsavedChanges(false) // Keep it clean on initial hydration load
+            }
           }
         } catch (e) {
           console.error('DB Hydration failed:', e)
@@ -579,6 +612,61 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
     document.title = `${unsaved}${docName} - KMTI Quotation`
     return () => { document.title = 'KMTI Workstation' }
   }, [quotNo, quotationDetails.quotationNo, hasUnsavedChanges])
+
+  // Listen for real-time database mutations (e.g. status/billing edits made by admin in Billing Monitoring)
+  useEffect(() => {
+    const handleDbMutation = (e: CustomEvent) => {
+      const { target, action, data } = e.detail
+      if (target !== 'quotations' || action !== 'UPDATE') return
+
+      // Verify if the mutated quotation ID matches the current workspace ID
+      if (Number(data.id) !== Number(quotId)) return
+
+      console.log('[workspace] Received remote database mutation for current quotation:', data)
+
+      // Map backend fields to local state:
+      if (data.client_name !== undefined) {
+        updateClientInfo(prev => {
+          if (prev.company === data.client_name) return prev
+          return { ...prev, company: data.client_name || '' }
+        })
+      }
+
+      updateQuotationDetails({
+        quotationNo: data.quot_no !== undefined ? data.quot_no : quotationDetails.quotationNo,
+        date: data.date !== undefined ? data.date : quotationDetails.date,
+      })
+
+      updateBillingDetails({
+        quotationStatus: data.quotation_status !== undefined ? data.quotation_status : billingDetails.quotationStatus,
+        projectStatus: data.project_status !== undefined ? data.project_status : billingDetails.projectStatus,
+        submittedToAdminAt: data.submitted_to_admin_at !== undefined ? data.submitted_to_admin_at : billingDetails.submittedToAdminAt,
+        updateDetail: data.update_detail !== undefined ? data.update_detail : billingDetails.updateDetail,
+        projectInCharge: data.designer_name !== undefined ? data.designer_name : billingDetails.projectInCharge,
+        billTo: data.bill_to !== undefined ? data.bill_to : billingDetails.billTo,
+        clientName: data.client_name !== undefined ? data.client_name : billingDetails.clientName,
+      })
+    }
+
+    window.addEventListener('kmti:db_mutation', handleDbMutation as EventListener)
+    return () => {
+      window.removeEventListener('kmti:db_mutation', handleDbMutation as EventListener)
+    }
+  }, [
+    quotId,
+    updateClientInfo,
+    updateQuotationDetails,
+    updateBillingDetails,
+    quotationDetails.quotationNo,
+    quotationDetails.date,
+    billingDetails.quotationStatus,
+    billingDetails.projectStatus,
+    billingDetails.submittedToAdminAt,
+    billingDetails.updateDetail,
+    billingDetails.projectInCharge,
+    billingDetails.billTo,
+    billingDetails.clientName,
+  ])
 
   // Reset preview and logs when switching quotations
   useEffect(() => {

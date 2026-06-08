@@ -165,13 +165,33 @@ function killBackend() {
   }
 }
 
-// Ensure Windows Notifications display the true app name instead of 'electron.app.Electron'
-if (process.platform === 'win32') {
-  app.setAppUserModelId('KMTI Workstation')
-}
+const gotTheLock = app.requestSingleInstanceLock()
 
-app.whenReady().then(() => {
-  initLogStream()
+if (!gotTheLock) {
+  dialog.showErrorBox('KMTI Workstation', 'Another instance of KMTI Workstation is already running.')
+  app.quit()
+} else {
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.focus()
+      mainWindow.flashFrame(true)
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.flashFrame(false)
+        }
+      }, 3000)
+    }
+  })
+
+  // Ensure Windows Notifications display the true app name instead of 'electron.app.Electron'
+  if (process.platform === 'win32') {
+    app.setAppUserModelId('KMTI Workstation')
+  }
+
+  app.whenReady().then(() => {
+    initLogStream()
 
   ipcMain.handle('get-file-icon', async (_, filePath, isFolder) => {
     try {
@@ -411,7 +431,7 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
 
 app.on('will-quit', () => {
   killBackend()

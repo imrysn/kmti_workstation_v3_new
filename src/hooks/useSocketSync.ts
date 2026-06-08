@@ -3,7 +3,7 @@ import { io, Socket } from 'socket.io-client'
 import { SERVER_BASE, setApiSocketId } from '../services/api'
 
 export interface DbMutationPayload<T = any> {
-  target: 'materials' | 'designers';
+  target: 'materials' | 'designers' | 'quotations';
   action: 'INSERT' | 'UPDATE' | 'DELETE';
   data: T;
   timestamp: number; // Millisecond epoch Unix timestamp

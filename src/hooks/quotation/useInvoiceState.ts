@@ -610,6 +610,7 @@ export function useInvoiceState() {
     setCollapsedTaskIds([])
     setChatLog([])
     setClientInfo(defaultClient)
+    setCompanyInfo(DEFAULT_COMPANY)
     setLayoutVariant(variant)
     setCurrentFilePath(null)
     setHasUnsavedChanges(false)

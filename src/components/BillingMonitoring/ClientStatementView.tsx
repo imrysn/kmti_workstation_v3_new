@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import type { IQuotation } from '../../types'
 import { normalizeClientName } from '../../hooks/useBillingMonitoring'
 import { useModal } from '../ModalContext'
@@ -34,6 +34,22 @@ export default function ClientStatementView({
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
   const printRef = useRef<HTMLDivElement>(null)
+
+  interface ICustomRow {
+    id: string
+    date: string
+    reference: string
+    billedAmount: number
+    paymentsCredits: number
+    datePaid: string
+  }
+
+  const [customRows, setCustomRows] = useState<ICustomRow[]>([])
+
+  // Clear custom rows when client changes
+  useEffect(() => {
+    setCustomRows([])
+  }, [selectedClient])
 
   // Get unique clients (exclude clients with their own SOA)
   const uniqueClients = useMemo(() => {
@@ -113,12 +129,17 @@ export default function ClientStatementView({
       }
     })
 
+    customRows.forEach(row => {
+      totalBilled += row.billedAmount
+      totalPaid += row.paymentsCredits
+    })
+
     return {
       totalBilled,
       totalPaid,
       outstanding: totalBilled - totalPaid
     }
-  }, [clientInvoices])
+  }, [clientInvoices, customRows])
 
   const billingPeriod = useMemo(() => {
     if (clientInvoices.length === 0) return 'N/A'
@@ -585,14 +606,153 @@ export default function ClientStatementView({
                     </tr>
                   )
                 })}
-                {clientInvoices.length === 0 && (
+
+                {/* Custom manually added rows */}
+                {customRows.map((row, idx) => {
+                  const isEven = (clientInvoices.length + idx) % 2 === 0
+                  return (
+                    <tr key={row.id} className={isEven ? 'soa-row-even' : 'soa-row-odd'}>
+                      <td className="soa-td-center">
+                        {isEditing ? (
+                          <input
+                            type="date"
+                            className="soa-editable-input"
+                            value={row.date}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setCustomRows(prev => prev.map(r => r.id === row.id ? { ...r, date: val } : r))
+                            }}
+                            style={{ textAlign: 'center', fontSize: '11px', padding: '2px 4px' }}
+                          />
+                        ) : (
+                          formatDateToSlash(row.date)
+                        )}
+                      </td>
+                      <td className="soa-td-qno">
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            className="soa-editable-input"
+                            value={row.reference}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setCustomRows(prev => prev.map(r => r.id === row.id ? { ...r, reference: val } : r))
+                            }}
+                            style={{ textAlign: 'left', fontWeight: '600', padding: '2px 4px' }}
+                            placeholder="Reference"
+                          />
+                        ) : (
+                          row.reference || '—'
+                        )}
+                      </td>
+                      <td className="soa-td-amount">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            className="soa-editable-input"
+                            value={row.billedAmount || 0}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0
+                              setCustomRows(prev => prev.map(r => r.id === row.id ? { ...r, billedAmount: val } : r))
+                            }}
+                            style={{ textAlign: 'right', padding: '2px 4px' }}
+                          />
+                        ) : (
+                          formatCurrency(row.billedAmount)
+                        )}
+                      </td>
+                      <td className="soa-td-amount">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            className="soa-editable-input"
+                            value={row.paymentsCredits || 0}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 0
+                              setCustomRows(prev => prev.map(r => r.id === row.id ? { ...r, paymentsCredits: val } : r))
+                            }}
+                            style={{ textAlign: 'right', padding: '2px 4px' }}
+                          />
+                        ) : (
+                          row.paymentsCredits ? formatCurrency(row.paymentsCredits) : '—'
+                        )}
+                      </td>
+                      <td className="soa-td-center">
+                        {isEditing ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <input
+                              type="date"
+                              className="soa-editable-input"
+                              value={row.datePaid}
+                              onChange={(e) => {
+                                const val = e.target.value
+                                setCustomRows(prev => prev.map(r => r.id === row.id ? { ...r, datePaid: val } : r))
+                              }}
+                              style={{ textAlign: 'center', fontSize: '11px', padding: '2px 4px', flex: 1 }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCustomRows(prev => prev.filter(r => r.id !== row.id))
+                              }}
+                              style={{
+                                background: '#ef4444',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '4px',
+                                padding: '2px 6px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: '11px'
+                              }}
+                              title="Delete Row"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : (
+                          row.datePaid ? formatDateToSlash(row.datePaid) : 'Unpaid'
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                {isEditing && (
+                  <tr className="no-print">
+                    <td colSpan={5} style={{ textAlign: 'left', padding: '8px 12px' }}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => {
+                          setCustomRows(prev => [
+                            ...prev,
+                            {
+                              id: Math.random().toString(36).substring(2, 9),
+                              date: new Date().toISOString().split('T')[0],
+                              reference: '',
+                              billedAmount: 0,
+                              paymentsCredits: 0,
+                              datePaid: ''
+                            }
+                          ])
+                        }}
+                        style={{ fontSize: '11.5px', padding: '4px 8px' }}
+                      >
+                        + Add Custom Row
+                      </button>
+                    </td>
+                  </tr>
+                )}
+
+                {clientInvoices.length === 0 && customRows.length === 0 && (
                   <tr>
                     <td colSpan={5} className="soa-empty-row">No records found for this client.</td>
                   </tr>
                 )}
               </tbody>
               {/* Totals row */}
-              {clientInvoices.length > 0 && (
+              {(clientInvoices.length > 0 || customRows.length > 0) && (
                 <tfoot>
                   <tr className="soa-totals-row">
                     <td colSpan={2} className="soa-total-label">TOTAL</td>

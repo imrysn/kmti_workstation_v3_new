@@ -147,13 +147,9 @@ export default function TableRow({
               }
               setActiveCell(null)
             }}
-            onKeyDown={async e => {
+            onKeyDown={e => {
               if (e.key === 'Enter') {
-                const val = q.date ? q.date.substring(0, 10) : ''
-                if (editForm.date !== val) {
-                  await handleSingleFieldSave(q.id, { date: editForm.date || null })
-                }
-                setActiveCell(null)
+                e.currentTarget.blur()
               } else if (e.key === 'Escape') {
                 setActiveCell(null)
               }
@@ -267,13 +263,9 @@ export default function TableRow({
               }
               setActiveCell(null)
             }}
-            onKeyDown={async e => {
+            onKeyDown={e => {
               if (e.key === 'Enter') {
-                const val = q.submittedToAdminAt ? q.submittedToAdminAt.substring(0, 10) : ''
-                if (editForm.submittedToAdminAt !== val) {
-                  await handleSingleFieldSave(q.id, { submittedToAdminAt: editForm.submittedToAdminAt || null })
-                }
-                setActiveCell(null)
+                e.currentTarget.blur()
               } else if (e.key === 'Escape') {
                 setActiveCell(null)
               }
@@ -372,13 +364,9 @@ export default function TableRow({
               }
               setActiveCell(null)
             }}
-            onKeyDown={async e => {
+            onKeyDown={e => {
               if (e.key === 'Enter') {
-                const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
-                if (editForm.datePaid !== val) {
-                  await handleSingleFieldSave(q.id, { datePaid: editForm.datePaid || null })
-                }
-                setActiveCell(null)
+                e.currentTarget.blur()
               } else if (e.key === 'Escape') {
                 setActiveCell(null)
               }
@@ -419,13 +407,9 @@ export default function TableRow({
               }
               setActiveCell(null)
             }}
-            onKeyDown={async e => {
+            onKeyDown={e => {
               if (e.key === 'Enter') {
-                const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
-                if (editForm.lastUpdatedAt !== val) {
-                  await handleSingleFieldSave(q.id, { lastUpdatedAt: editForm.lastUpdatedAt || null })
-                }
-                setActiveCell(null)
+                e.currentTarget.blur()
               } else if (e.key === 'Escape') {
                 setActiveCell(null)
               }
@@ -462,14 +446,9 @@ export default function TableRow({
               }
               setActiveCell(null)
             }}
-            onKeyDown={async e => {
+            onKeyDown={e => {
               if (e.key === 'Enter') {
-                const val = (q.updateDetail || '').trim()
-                const typed = (editForm.updateDetail || '').trim()
-                if (typed !== val) {
-                  await handleSingleFieldSave(q.id, { updateDetail: typed })
-                }
-                setActiveCell(null)
+                e.currentTarget.blur()
               } else if (e.key === 'Escape') {
                 setActiveCell(null)
               }

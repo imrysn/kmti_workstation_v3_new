@@ -600,6 +600,7 @@ export function useBillingMonitoring() {
       const res = await quotationApi.create(payload)
       if (res.data?.success) {
         notify('New row created successfully', 'success')
+        resetFilters()
         await loadData()
       } else {
         notify('Failed to create new row', 'error')

@@ -78,6 +78,11 @@ export function useHeartbeat() {
         if (path.includes('quotation')) module = 'Quotation';
         if (path.includes('settings')) module = 'Settings';
         if (path.includes('admin-help')) module = 'Help Center';
+        if (path.includes('billing-monitoring')) module = 'Billing Monitoring';
+        if (path.includes('users')) module = 'Users';
+        if (path.includes('it-controls')) module = 'IT Controls';
+        if (path.includes('designers')) module = 'Designers';
+        if (path.includes('materials')) module = 'Materials';
 
         // Detect if app is minimized/hidden
         if (document.visibilityState === 'hidden') {
