@@ -19,6 +19,15 @@ export default function BillingMonitoring() {
   const [activeView, setActiveView] = useState<BillingView>(() => {
     return (location.state as any)?.activeView || 'dashboard'
   })
+  const [leaderboardMonth, setLeaderboardMonth] = useState<string>('all')
+
+  const [isBannerDismissed, setIsBannerDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem('kmti:billing-banner-dismissed') === 'true'
+    } catch {
+      return false
+    }
+  })
 
   useEffect(() => {
     if (activeView !== 'dashboard') {
@@ -107,7 +116,9 @@ export default function BillingMonitoring() {
     globalSettings,
     saveGlobalSettings,
     getCompletedAmount,
-    getForecastAmount
+    getForecastAmount,
+    selectedAgingBucket,
+    setSelectedAgingBucket
   } = useBillingMonitoring()
 
   return (
@@ -225,12 +236,90 @@ export default function BillingMonitoring() {
           setSelectedBillingStatus={setSelectedBillingStatus}
           uniqueInchargeValues={uniqueInchargeValues}
           resetFilters={resetFilters}
+          selectedAgingBucket={selectedAgingBucket}
+          setSelectedAgingBucket={setSelectedAgingBucket}
         />
       )}
 
       {/* ── DASHBOARD VIEW ─────────────────────────────── */}
       {activeView === 'dashboard' && (
         <div className="billing-view billing-view-dashboard">
+          {/* Aging Alert Banner */}
+          {!isBannerDismissed && (() => {
+            const unpaidStatuses = ['Approved', 'Partial Billing', 'Billing Completion']
+            let aging30Count = 0
+            let aging60Count = 0
+
+            quotations.forEach(q => {
+              const qStatus = q.quotationStatus || 'For Approval'
+              const bStatus = q.billingStatus || ''
+              const isUnpaid = (unpaidStatuses.includes(qStatus) || bStatus === 'BILLED' || bStatus === 'FOR BILLING') && !q.datePaid && bStatus !== 'PAID'
+              if (isUnpaid) {
+                const startStr = q.submittedToAdminAt || q.date || q.modifiedAt
+                if (startStr) {
+                  const startDate = new Date(startStr)
+                  if (!isNaN(startDate.getTime())) {
+                    const diffTime = Math.max(0, Date.now() - startDate.getTime())
+                    const ageDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+                    if (ageDays > 60) {
+                      aging60Count++
+                    } else if (ageDays > 30) {
+                      aging30Count++
+                    }
+                  }
+                }
+              }
+            })
+
+            if (aging30Count === 0 && aging60Count === 0) return null
+
+            return (
+              <div className="dashboard-alert-banner" style={{
+                background: 'rgba(239, 68, 68, 0.06)',
+                border: '1px solid rgba(239, 68, 68, 0.15)',
+                borderRadius: '12px',
+                padding: '12px 18px',
+                marginBottom: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                color: 'var(--text-primary)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ fontSize: '13px', lineHeight: '1.4' }}>
+                    <strong>Outstanding Receivables Warning:</strong> You have {aging60Count > 0 ? <span style={{ color: '#ef4444', fontWeight: '700' }}>{aging60Count} overdue invoices (over 60 days)</span> : null}
+                    {aging60Count > 0 && aging30Count > 0 ? ' and ' : null}
+                    {aging30Count > 0 ? <span style={{ color: '#d97706', fontWeight: '700' }}>{aging30Count} aging invoices (31-60 days)</span> : null}
+                    {' '}requiring follow-up or payment updates.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <button
+                    className="view-toggle-btn active"
+                    onClick={() => {
+                      setSelectedAgingBucket('all')
+                      setActiveView('table')
+                    }}
+                    style={{ fontSize: '11px', padding: '6px 12px', height: 'auto', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    Inspect Invoices
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsBannerDismissed(true)
+                      try { sessionStorage.setItem('kmti:billing-banner-dismissed', 'true') } catch {}
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '14px', padding: '4px' }}
+                    title="Dismiss alert"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            )
+          })()}
+
           {/* KPI Summary Cards */}
           {/* Side-by-Side Analytics Grid (Completely eliminates dead space) */}
           <div className="analytics-grid" style={{ gridTemplateColumns: '2.2fr 7.8fr' }}>
@@ -296,32 +385,62 @@ export default function BillingMonitoring() {
             formatCurrency={formatCurrency}
             activeYear={activeYear}
             getCompletedAmount={getCompletedAmount}
+            selectedAgingBucket={selectedAgingBucket}
+            setSelectedAgingBucket={setSelectedAgingBucket}
+            setActiveView={setActiveView}
           />
 
           {/* Engineer Leaderboard Solo Card */}
           <div className="dashboard-enhancements-panel" style={{ marginTop: '24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
-                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                <path d="M4 22h16" />
-                <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
-                <path d="M12 2a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4 4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z" />
-              </svg>
-              <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Engineer Leaderboard</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border)', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }}>
+                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                  <path d="M4 22h16" />
+                  <path d="M10 14.66V17c0 .55-.45 1-1 1H4v2h16v-2h-5c-.55 0-1-.45-1-1v-2.34" />
+                  <path d="M12 2a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4 4 4 0 0 1-4-4V6a4 4 0 0 1 4-4z" />
+                </svg>
+                <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>Engineer Leaderboard</h2>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter:</span>
+                <select
+                  value={leaderboardMonth}
+                  onChange={e => setLeaderboardMonth(e.target.value)}
+                  className="filter-input"
+                  style={{ fontSize: '12px', padding: '4px 10px', height: '28px', width: '130px', margin: 0 }}
+                >
+                  <option value="all">All Months ({activeYear})</option>
+                  <option value="0">January</option>
+                  <option value="1">February</option>
+                  <option value="2">March</option>
+                  <option value="3">April</option>
+                  <option value="4">May</option>
+                  <option value="5">June</option>
+                  <option value="6">July</option>
+                  <option value="7">August</option>
+                  <option value="8">September</option>
+                  <option value="9">October</option>
+                  <option value="10">November</option>
+                  <option value="11">December</option>
+                </select>
+              </div>
             </div>
-            <div style={{ padding: '0' }}>
+            <div style={{ padding: '0 20px 20px 20px' }}>
               <EngineerLeaderboard
                 quotations={quotations}
                 formatCurrency={formatCurrency}
                 getCompletedAmount={getCompletedAmount}
                 getForecastAmount={getForecastAmount}
+                activeYear={activeYear}
+                selectedMonth={leaderboardMonth}
               />
             </div>
           </div>
         </div>
       )}
- 
+
       {/* ── TABLE VIEW ─────────────────────────────────── */}
       {activeView === 'table' && (
         <div className="billing-view billing-view-table">

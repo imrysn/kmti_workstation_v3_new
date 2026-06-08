@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import type { IQuotation } from '../../types'
 import { normalizeClientName } from '../../hooks/useBillingMonitoring'
 
@@ -7,15 +7,20 @@ interface BillingDashboardEnhancementsProps {
   formatCurrency: (val?: number) => string
   activeYear: number
   getCompletedAmount: (q: IQuotation) => number
+  selectedAgingBucket: string | null
+  setSelectedAgingBucket: (bucket: string | null) => void
+  setActiveView: (view: 'dashboard' | 'table' | 'statement') => void
 }
 
 export default function BillingDashboardEnhancements({
   quotations,
   formatCurrency,
   activeYear,
-  getCompletedAmount
+  getCompletedAmount,
+  selectedAgingBucket,
+  setSelectedAgingBucket,
+  setActiveView
 }: BillingDashboardEnhancementsProps) {
-  const [selectedAgingBucket, setSelectedAgingBucket] = useState<string | null>(null)
 
   // ── 1. AGING COMPUTATION ──────────────────────────────────────────────
   const agingData = useMemo(() => {
@@ -121,19 +126,67 @@ export default function BillingDashboardEnhancements({
         <div className="enhancements-content" style={{ padding: '20px', flex: 1 }}>
           <div className="aging-panel">
             <div className="aging-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              {Object.entries(agingData).map(([key, bucket]) => (
-                <div
-                  key={key}
-                  className={`aging-card ${selectedAgingBucket === key ? 'selected' : ''}`}
-                  onClick={() => setSelectedAgingBucket(selectedAgingBucket === key ? null : key)}
-                  style={{ cursor: 'pointer', margin: 0 }}
-                >
-                  <div className="aging-label">{bucket.label}</div>
-                  <div className="aging-value" style={{ fontSize: '16px', fontWeight: '700', margin: '4px 0' }}>{formatCurrency(bucket.total)}</div>
-                  <div className="aging-count" style={{ fontSize: '10px' }}>{bucket.count} invoices</div>
-                  <div className="aging-action-hint" style={{ fontSize: '9px', marginTop: '4px' }}>Click to inspect</div>
-                </div>
-              ))}
+              {Object.entries(agingData).map(([key, bucket]) => {
+                let bucketIcon = null
+                let cardClass = ""
+                if (key === '0-30') {
+                  cardClass = "aging-card-green"
+                  bucketIcon = (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                  )
+                } else if (key === '31-60') {
+                  cardClass = "aging-card-blue"
+                  bucketIcon = (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                  )
+                } else if (key === '61-90') {
+                  cardClass = "aging-card-amber"
+                  bucketIcon = (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                      <line x1="12" y1="9" x2="12" y2="13" />
+                      <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                  )
+                } else {
+                  cardClass = "aging-card-red"
+                  bucketIcon = (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                  )
+                }
+
+                return (
+                  <div
+                    key={key}
+                    className={`aging-card ${cardClass} ${selectedAgingBucket === key ? 'selected' : ''}`}
+                    onClick={() => {
+                      setSelectedAgingBucket(key)
+                      setActiveView('table')
+                    }}
+                    style={{ cursor: 'pointer', margin: 0 }}
+                  >
+                    <div className="aging-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                      <div className="aging-label">{bucket.label}</div>
+                      <span className="aging-card-icon">{bucketIcon}</span>
+                    </div>
+                    <div className="aging-value" style={{ fontSize: '18px', fontWeight: '700', margin: '6px 0' }}>{formatCurrency(bucket.total)}</div>
+                    <div className="aging-count" style={{ fontSize: '10.5px' }}>{bucket.count} invoices</div>
+                    <div className="aging-action-hint">
+                      Click to inspect <span className="arrow">→</span>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             {selectedAgingBucket && (
@@ -199,8 +252,40 @@ export default function BillingDashboardEnhancements({
                       <td style={{ fontWeight: '600', paddingLeft: '8px' }}>{row.name.substring(0, 3)}</td>
                       <td className="cell-amount">{formatCurrency(row.current)}</td>
                       <td className="cell-amount">{formatCurrency(row.previous)}</td>
-                      <td className={`cell-amount ${row.pct >= 0 ? 'text-green' : 'text-red'}`} style={{ fontWeight: '700' }}>
-                        {row.pct >= 0 ? '+' : ''}{row.pct.toFixed(1)}%
+                      <td className="cell-amount" style={{ verticalAlign: 'middle' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                          <span className={row.pct >= 0 ? 'text-green' : 'text-red'} style={{ fontWeight: '700', minWidth: '48px', textAlign: 'right' }}>
+                            {row.pct >= 0 ? '+' : ''}{row.pct.toFixed(1)}%
+                          </span>
+                          <div className="variance-track" style={{ width: '90px', height: '6px', background: 'var(--border-subtle)', borderRadius: '3px', position: 'relative', overflow: 'hidden' }}>
+                            {row.pct >= 0 ? (
+                              <div 
+                                className="variance-bar-positive" 
+                                style={{ 
+                                  position: 'absolute', 
+                                  left: '50%', 
+                                  width: `${Math.min(row.pct / 2, 50)}%`, 
+                                  height: '100%', 
+                                  background: '#10b981', 
+                                  borderRadius: '0 3px 3px 0' 
+                                }} 
+                              />
+                            ) : (
+                              <div 
+                                className="variance-bar-negative" 
+                                style={{ 
+                                  position: 'absolute', 
+                                  right: '50%', 
+                                  width: `${Math.min(Math.abs(row.pct) / 2, 50)}%`, 
+                                  height: '100%', 
+                                  background: '#ef4444', 
+                                  borderRadius: '3px 0 0 3px' 
+                                }} 
+                              />
+                            )}
+                            <div style={{ position: 'absolute', left: '50%', width: '1px', height: '100%', background: 'var(--border)', zIndex: 2 }} />
+                          </div>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -212,13 +297,47 @@ export default function BillingDashboardEnhancements({
                     <td className="cell-amount">
                       {formatCurrency(monthlyComparison.reduce((sum, r) => sum + r.previous, 0))}
                     </td>
-                    <td className="cell-amount">
+                    <td className="cell-amount" style={{ verticalAlign: 'middle' }}>
                       {(() => {
                         const curTotal = monthlyComparison.reduce((sum, r) => sum + r.current, 0)
                         const prevTotal = monthlyComparison.reduce((sum, r) => sum + r.previous, 0)
                         const diff = curTotal - prevTotal
                         const pct = prevTotal > 0 ? (diff / prevTotal) * 100 : curTotal > 0 ? 100 : 0
-                        return `${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%`
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                            <span className={pct >= 0 ? 'text-green' : 'text-red'} style={{ fontWeight: '700', minWidth: '48px', textAlign: 'right' }}>
+                              {pct >= 0 ? '+' : ''}{pct.toFixed(1)}%
+                            </span>
+                            <div className="variance-track" style={{ width: '90px', height: '6px', background: 'var(--border-subtle)', borderRadius: '3px', position: 'relative', overflow: 'hidden' }}>
+                              {pct >= 0 ? (
+                                <div 
+                                  className="variance-bar-positive" 
+                                  style={{ 
+                                    position: 'absolute', 
+                                    left: '50%', 
+                                    width: `${Math.min(pct / 2, 50)}%`, 
+                                    height: '100%', 
+                                    background: '#10b981', 
+                                    borderRadius: '0 3px 3px 0' 
+                                  }} 
+                                />
+                              ) : (
+                                <div 
+                                  className="variance-bar-negative" 
+                                  style={{ 
+                                    position: 'absolute', 
+                                    right: '50%', 
+                                    width: `${Math.min(Math.abs(pct) / 2, 50)}%`, 
+                                    height: '100%', 
+                                    background: '#ef4444', 
+                                    borderRadius: '3px 0 0 3px' 
+                                  }} 
+                                />
+                              )}
+                              <div style={{ position: 'absolute', left: '50%', width: '1px', height: '100%', background: 'var(--border)', zIndex: 2 }} />
+                            </div>
+                          </div>
+                        )
                       })()}
                     </td>
                   </tr>

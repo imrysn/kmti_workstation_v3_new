@@ -55,7 +55,7 @@ export default function Quotation() {
       (window as any).onWorkstationBack = () => {
         sessionStorage.removeItem('kmti_quot_current_session')
         if (activeSession.referrer) {
-          navigate(activeSession.referrer, { state: { activeView: 'table' } })
+          navigate(-1)
         } else {
           setActiveSession(null)
         }

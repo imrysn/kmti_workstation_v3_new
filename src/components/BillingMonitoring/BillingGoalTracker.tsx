@@ -198,12 +198,22 @@ export default function BillingGoalTracker({
 
       <div className="goal-progress-section">
         {/* Progress Bar Container */}
-        <div className="progress-bar-container">
+        <div className={`progress-bar-container ${percent >= 100 ? 'exceeded-glow' : ''}`}>
           <div
             className="progress-bar-fill"
             style={{ width: `${percent}%` }}
           >
             <div className="progress-bar-shimmer"></div>
+          </div>
+          <div className="progress-milestones">
+            {[25, 50, 75, 100].map(m => (
+              <div 
+                key={m} 
+                className={`progress-milestone-node ${percent >= m ? 'reached' : ''}`}
+                style={{ left: `${m}%` }}
+                title={`Milestone ${m}%`}
+              />
+            ))}
           </div>
           {percent > 0 && (
             <span
@@ -235,18 +245,43 @@ export default function BillingGoalTracker({
 
       {/* Grid detailing performance breakdown */}
       <div className="goal-stats-grid">
-        <div className="goal-stat-card">
-          <span className="stat-card-lbl">Current Billing Total</span>
+        <div className="goal-stat-card card-total">
+          <div className="goal-stat-card-header">
+            <span className="stat-card-lbl">Current Billing Total</span>
+            <span className="goal-card-icon icon-total">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"></line>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+              </svg>
+            </span>
+          </div>
           <span className="stat-card-val sum-highlight">{formatCurrency(revenueSum)}</span>
         </div>
 
-        <div className="goal-stat-card">
-          <span className="stat-card-lbl">Average Deal Value</span>
+        <div className="goal-stat-card card-avg">
+          <div className="goal-stat-card-header">
+            <span className="stat-card-lbl">Average Deal Value</span>
+            <span className="goal-card-icon icon-avg">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path>
+                <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
+              </svg>
+            </span>
+          </div>
           <span className="stat-card-val">{formatCurrency(avgDealValue)}</span>
         </div>
 
-        <div className="goal-stat-card">
-          <span className="stat-card-lbl">Remaining Deficit</span>
+        <div className="goal-stat-card card-deficit">
+          <div className="goal-stat-card-header">
+            <span className="stat-card-lbl">Remaining Deficit</span>
+            <span className="goal-card-icon icon-deficit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </span>
+          </div>
           <span className="stat-card-val deficit-highlight">
             {remaining > 0 ? formatCurrency(remaining) : '¥0'}
           </span>

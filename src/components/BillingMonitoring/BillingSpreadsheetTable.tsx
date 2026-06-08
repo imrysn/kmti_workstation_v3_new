@@ -87,6 +87,7 @@ export default function BillingSpreadsheetTable({
       referrer: '/billing-monitoring'
     }
     sessionStorage.setItem('kmti_quot_current_session', JSON.stringify(session))
+    navigate('/billing-monitoring', { replace: true, state: { activeView: 'table' } })
     navigate('/quotation')
   }
 

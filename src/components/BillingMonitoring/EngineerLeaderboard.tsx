@@ -8,6 +8,8 @@ interface EngineerLeaderboardProps {
   formatCurrency: (val?: number) => string
   getCompletedAmount: (q: IQuotation) => number
   getForecastAmount: (q: IQuotation) => number
+  activeYear: number
+  selectedMonth: string
 }
 
 interface MemberStat {
@@ -35,14 +37,17 @@ export default function EngineerLeaderboard({
   quotations,
   formatCurrency,
   getCompletedAmount,
-  getForecastAmount
+  getForecastAmount,
+  activeYear,
+  selectedMonth
 }: EngineerLeaderboardProps) {
   // Collapsed/Expanded state per Team Leader
   const [expandedLeaders, setExpandedLeaders] = useState<Record<string, boolean>>({})
 
-  // Helper to normalize casing of names (Title Case)
+  // Helper to normalize casing of names (Title Case) and clean prefixes
   const normalizeName = (name: string): string => {
-    const trimmed = name.trim()
+    const cleanName = name.replace(/^[^a-zA-Z0-9]+/, '')
+    const trimmed = cleanName.trim()
     if (!trimmed) return ''
     return trimmed
       .split(/\s+/)
@@ -76,6 +81,14 @@ export default function EngineerLeaderboard({
     }> = {}
 
     quotations.forEach(q => {
+      if (!q.date) return
+      const qDate = new Date(q.date)
+      if (qDate.getFullYear() !== activeYear) return
+
+      if (selectedMonth !== 'all') {
+        if (qDate.getMonth().toString() !== selectedMonth) return
+      }
+
       const leader = normalizeName(q.designerName || 'Unassigned')
       const completedTotal = getCompletedAmount(q)
       const forecastTotal = getForecastAmount(q)
@@ -291,7 +304,14 @@ export default function EngineerLeaderboard({
         }
       })
       .sort((a, b) => b.total - a.total)
-  }, [quotations, getCompletedAmount, getForecastAmount])
+  }, [quotations, getCompletedAmount, getForecastAmount, activeYear, selectedMonth])
+
+  const renderRank = (rank: number) => {
+    if (rank === 1) return <span className="leaderboard-rank rank-1" title="1st Place">1</span>
+    if (rank === 2) return <span className="leaderboard-rank rank-2" title="2nd Place">2</span>
+    if (rank === 3) return <span className="leaderboard-rank rank-3" title="3rd Place">3</span>
+    return <span className="leaderboard-rank rank-other">{rank}</span>
+  }
 
   return (
     <div className="designers-panel">
@@ -299,19 +319,21 @@ export default function EngineerLeaderboard({
         <table className="spreadsheet-table" style={{ minWidth: '100%' }}>
           <thead>
             <tr>
-              <th style={{ width: '40px' }}></th>
+              <th style={{ width: '50px', textAlign: 'center' }}>Rank</th>
+              <th style={{ width: '30px' }}></th>
               <th>Team Leader / Engineer</th>
               <th style={{ textAlign: 'center' }}>Invoices Count</th>
-              <th>Completed Sales</th>
-              <th>Forecast / Approved</th>
-              <th>Total Managed Sales</th>
-              <th>Avg Invoice Value</th>
+              <th style={{ textAlign: 'right', paddingRight: '8px' }}>Completed Sales</th>
+              <th style={{ textAlign: 'right', paddingRight: '8px' }}>Forecast / Approved</th>
+              <th style={{ textAlign: 'right', paddingRight: '8px' }}>Total Managed Sales</th>
+              <th style={{ textAlign: 'right', paddingRight: '8px' }}>Avg Invoice Value</th>
             </tr>
           </thead>
           <tbody>
-            {leaderStats.map(stat => {
+            {leaderStats.map((stat, idx) => {
               const isExpanded = !!expandedLeaders[stat.name]
               const hasMembers = stat.members.length > 0
+              const rank = idx + 1
 
               return (
                 <Fragment key={stat.name}>
@@ -325,36 +347,40 @@ export default function EngineerLeaderboard({
                     onClick={() => hasMembers && toggleLeader(stat.name)}
                   >
                     <td style={{ textAlign: 'center', padding: '10px 0' }}>
+                      {renderRank(rank)}
+                    </td>
+                    <td style={{ textAlign: 'center', padding: '0 4px', overflow: 'visible', textOverflow: 'clip' }}>
                       {hasMembers && (
                         <span style={{ 
-                          display: 'inline-block', 
+                          display: 'inline-flex', 
                           transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.15s ease',
-                          fontSize: '10px',
+                          transition: 'transform 0.2s ease',
                           color: 'var(--text-muted)'
                         }}>
-                          ▶
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
                         </span>
                       )}
                     </td>
                     <td style={{ paddingLeft: '8px' }}>
                       <span style={{ color: 'var(--text-primary)' }}>{stat.name}</span>
-                      <span style={{ 
-                        marginLeft: '8px', 
-                        fontSize: '11px', 
-                        fontWeight: 'normal',
-                        color: 'var(--text-muted)',
-                        backgroundColor: 'var(--border)',
-                        padding: '2px 6px',
-                        borderRadius: '4px'
-                      }}>
+                      <span className="leaderboard-badge-team">
                         Team
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>{stat.count}</td>
                     <td className="cell-amount" style={{ color: '#10b981' }}>{formatCurrency(stat.completed)}</td>
                     <td className="cell-amount" style={{ color: '#3b82f6' }}>{formatCurrency(stat.active)}</td>
-                    <td className="cell-amount" style={{ fontWeight: '700' }}>{formatCurrency(stat.total)}</td>
+                    <td className="cell-amount" style={{ fontWeight: '700' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                        <span>{formatCurrency(stat.total)}</span>
+                        <div className="leaderboard-ratio-bar" title={`Completed vs Forecast ratio`}>
+                          <div style={{ width: `${stat.total > 0 ? (stat.completed / stat.total) * 100 : 0}%`, background: '#10b981' }} />
+                          <div style={{ width: `${stat.total > 0 ? (stat.active / stat.total) * 100 : 0}%`, background: '#3b82f6' }} />
+                        </div>
+                      </div>
+                    </td>
                     <td className="cell-amount">{formatCurrency(stat.avg)}</td>
                   </tr>
 
@@ -368,27 +394,33 @@ export default function EngineerLeaderboard({
                       }}
                     >
                       <td></td>
-                      <td style={{ paddingLeft: '24px', color: 'var(--text-muted)' }}>
-                        <span style={{ marginRight: '8px', opacity: 0.5, fontFamily: 'monospace' }}>└─</span>
-                        <span style={{ 
-                          color: member.isLeaderDirect ? 'var(--text-muted)' : 'var(--text-secondary)',
-                          fontStyle: member.isLeaderDirect ? 'italic' : 'normal'
-                        }}>
-                          {member.name}
-                        </span>
-                        <span style={{
-                          marginLeft: '8px',
-                          fontSize: '11px',
-                          color: 'var(--text-muted)',
-                          fontStyle: 'normal'
-                        }}>
-                          ({member.percentage.toFixed(0)}%)
-                        </span>
+                      <td></td>
+                      <td style={{ paddingLeft: '16px', color: 'var(--text-muted)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="leaderboard-tree-guide"></span>
+                          <span style={{ 
+                            color: member.isLeaderDirect ? 'var(--text-muted)' : 'var(--text-secondary)',
+                            fontStyle: member.isLeaderDirect ? 'italic' : 'normal'
+                          }}>
+                            {member.name}
+                          </span>
+                          <span className="leaderboard-member-percentage">
+                            {member.percentage.toFixed(0)}%
+                          </span>
+                        </div>
                       </td>
                       <td style={{ textAlign: 'center', color: 'var(--text-muted)' }}>{member.count}</td>
                       <td className="cell-amount" style={{ color: '#059669', opacity: 0.85 }}>{formatCurrency(member.completed)}</td>
                       <td className="cell-amount" style={{ color: '#2563eb', opacity: 0.85 }}>{formatCurrency(member.active)}</td>
-                      <td className="cell-amount" style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>{formatCurrency(member.total)}</td>
+                      <td className="cell-amount" style={{ color: 'var(--text-secondary)', fontWeight: '600' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                          <span>{formatCurrency(member.total)}</span>
+                          <div className="leaderboard-ratio-bar" title={`Completed vs Forecast ratio`}>
+                            <div style={{ width: `${member.total > 0 ? (member.completed / member.total) * 100 : 0}%`, background: '#059669' }} />
+                            <div style={{ width: `${member.total > 0 ? (member.active / member.total) * 100 : 0}%`, background: '#2563eb' }} />
+                          </div>
+                        </div>
+                      </td>
                       <td className="cell-amount" style={{ color: 'var(--text-muted)' }}>{formatCurrency(member.avg)}</td>
                     </tr>
                   ))}
@@ -397,7 +429,7 @@ export default function EngineerLeaderboard({
             })}
             {leaderStats.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
                   No engineer sales recorded for this timeframe.
                 </td>
               </tr>

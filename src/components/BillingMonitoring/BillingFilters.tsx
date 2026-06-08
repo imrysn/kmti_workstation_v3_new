@@ -15,6 +15,8 @@ interface BillingFiltersProps {
   setSelectedBillingStatus: (val: string) => void
   uniqueInchargeValues: string[]
   resetFilters: () => void
+  selectedAgingBucket: string | null
+  setSelectedAgingBucket: (val: string | null) => void
 }
 
 export default function BillingFilters({
@@ -33,9 +35,11 @@ export default function BillingFilters({
   selectedBillingStatus,
   setSelectedBillingStatus,
   uniqueInchargeValues,
-  resetFilters
+  resetFilters,
+  selectedAgingBucket,
+  setSelectedAgingBucket
 }: BillingFiltersProps) {
-  const activeFilterCount = [selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, search]
+  const activeFilterCount = [selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, search, selectedAgingBucket ? 'aging' : '']
     .filter(Boolean).length
 
   return (
@@ -176,6 +180,27 @@ export default function BillingFilters({
             <span className="filter-active-badge">{activeFilterCount}</span>
           )}
         </button>
+        {selectedAgingBucket && (
+          <span 
+            className="aging-badge aging-danger" 
+            style={{ 
+              margin: '0 0 0 8px', 
+              padding: '8px 14px', 
+              fontSize: '11px', 
+              borderRadius: '20px', 
+              display: 'inline-flex', 
+              alignItems: 'center', 
+              gap: '6px',
+              cursor: 'pointer',
+              height: '36px',
+              boxSizing: 'border-box'
+            }}
+            onClick={() => setSelectedAgingBucket(null)}
+            title="Click to clear filter"
+          >
+            Outstanding: {selectedAgingBucket === 'all' ? 'All' : selectedAgingBucket === '0-30' ? '0-30 Days' : selectedAgingBucket === '31-60' ? '31-60 Days' : selectedAgingBucket === '61-90' ? '61-90 Days' : '90+ Days'} ✕
+          </span>
+        )}
       </div>
     </div>
   )

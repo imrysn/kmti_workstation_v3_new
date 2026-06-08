@@ -49,6 +49,32 @@ export default function TableRow({
   const isLastUpdatedEditing = activeCell?.id === q.id && activeCell?.field === 'lastUpdatedAt'
   const isUpdateDetailEditing = activeCell?.id === q.id && activeCell?.field === 'updateDetail'
 
+  // Aging calculation
+  const unpaidStatuses = ['Approved', 'Partial Billing', 'Billing Completion']
+  const status = q.quotationStatus || 'For Approval'
+  const billingStatus = q.billingStatus || ''
+  const isUnpaid = (unpaidStatuses.includes(status) || billingStatus === 'BILLED' || billingStatus === 'FOR BILLING') && !q.datePaid && billingStatus !== 'PAID'
+  
+  let agingClass = ''
+  let agingTooltip = ''
+  if (isUnpaid) {
+    const startStr = q.submittedToAdminAt || q.date || q.modifiedAt
+    if (startStr) {
+      const startDate = new Date(startStr)
+      if (!isNaN(startDate.getTime())) {
+        const diffTime = Math.max(0, Date.now() - startDate.getTime())
+        const ageDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+        if (ageDays > 60) {
+          agingClass = 'aging-purple'
+          agingTooltip = `Outstanding: ${ageDays} Days (Overdue)`
+        } else if (ageDays > 30) {
+          agingClass = 'aging-amber'
+          agingTooltip = `Outstanding: ${ageDays} Days`
+        }
+      }
+    }
+  }
+
   return (
     <tr
       key={q.id}
@@ -114,10 +140,14 @@ export default function TableRow({
       </td>
 
       {/* Quotation Number - Read-only Link */}
-      <td className="cell-qno" style={{ padding: '0px', textAlign: 'left' }}>
+      <td
+        className={`cell-qno ${agingClass ? 'tooltip-cell' : ''}`}
+        style={{ padding: '0px', textAlign: 'left' }}
+        data-tooltip={agingTooltip || undefined}
+      >
         {q.quotationNo ? (
           <button
-            className="btn-qno-link"
+            className={`btn-qno-link ${agingClass}`.trim()}
             onClick={() => handleGoToQuotation(q)}
           >
             <svg className="qno-link-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

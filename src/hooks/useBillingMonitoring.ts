@@ -66,36 +66,101 @@ export function useBillingMonitoring() {
   const [loading, setLoading] = useState(true)
   const [globalSettings, setGlobalSettings] = useState<any>(null)
 
+  // Load state from sessionStorage if exists
+  const savedState = useMemo(() => {
+    try {
+      const data = sessionStorage.getItem('kmti:billing-monitoring-state')
+      return data ? JSON.parse(data) : {}
+    } catch {
+      return {}
+    }
+  }, [])
+
   // Filters State
-  const [search, setSearch] = useState('')
-  const [selectedDesigner, setSelectedDesigner] = useState('')
-  const [selectedQStatus, setSelectedQStatus] = useState('')
-  const [selectedPStatus, setSelectedPStatus] = useState<string>('')
-  const [selectedBillTo, setSelectedBillTo] = useState<string>('')
-  const [selectedMonth, setSelectedMonth] = useState<string>('')
-  const [selectedBillingStatus, setSelectedBillingStatus] = useState<string>('')
+  const [search, setSearch] = useState(savedState.search ?? '')
+  const [selectedDesigner, setSelectedDesigner] = useState(savedState.selectedDesigner ?? '')
+  const [selectedQStatus, setSelectedQStatus] = useState(savedState.selectedQStatus ?? '')
+  const [selectedPStatus, setSelectedPStatus] = useState<string>(savedState.selectedPStatus ?? '')
+  const [selectedBillTo, setSelectedBillTo] = useState<string>(savedState.selectedBillTo ?? '')
+  const [selectedMonth, setSelectedMonth] = useState<string>(savedState.selectedMonth ?? '')
+  const [selectedBillingStatus, setSelectedBillingStatus] = useState<string>(savedState.selectedBillingStatus ?? '')
 
   // Pagination State
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(50)
+  const [currentPage, setCurrentPage] = useState(savedState.currentPage ?? 1)
+  const [itemsPerPage, setItemsPerPage] = useState(savedState.itemsPerPage ?? 50)
 
   // Per-Cell Editing State
   const [activeCell, setActiveCell] = useState<IActiveCell | null>(null)
   const [editForm, setEditForm] = useState<Partial<IQuotation>>({})
 
   // UI / Chart States
-  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>('year')
-  const [showCompleted, setShowCompleted] = useState(true)
-  const [showApprovedActive, setShowApprovedActive] = useState(true)
-  const [showPending, setShowPending] = useState(true)
-  const [showCancelled, setShowCancelled] = useState(true)
-  const [chartView, setChartView] = useState<'total-sales' | 'client-sales'>('total-sales')
+  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>(savedState.timeframe ?? 'year')
+  const [showCompleted, setShowCompleted] = useState(savedState.showCompleted ?? true)
+  const [showApprovedActive, setShowApprovedActive] = useState(savedState.showApprovedActive ?? true)
+  const [showPending, setShowPending] = useState(savedState.showPending ?? true)
+  const [showCancelled, setShowCancelled] = useState(savedState.showCancelled ?? true)
+  const [chartView, setChartView] = useState<'total-sales' | 'client-sales'>(savedState.chartView ?? 'total-sales')
   const [clientColors, setClientColors] = useState<Record<string, string>>({})
-  const [selectedYear, setSelectedYear] = useState<number | null>(null)
-  const [startMonth, setStartMonth] = useState<number>(0)
-  const [endMonth, setEndMonth] = useState<number>(11)
-  const [sortColumn, setSortColumn] = useState<string | null>('date')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+  const [selectedYear, setSelectedYear] = useState<number | null>(savedState.selectedYear ?? null)
+  const [startMonth, setStartMonth] = useState<number>(savedState.startMonth ?? 0)
+  const [endMonth, setEndMonth] = useState<number>(savedState.endMonth ?? 11)
+  const [sortColumn, setSortColumn] = useState<string | null>(savedState.sortColumn ?? 'date')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(savedState.sortDirection ?? 'asc')
+  const [selectedAgingBucket, setSelectedAgingBucket] = useState<string | null>(savedState.selectedAgingBucket ?? null)
+
+  // Sync state to sessionStorage
+  useEffect(() => {
+    try {
+      const stateToSave = {
+        search,
+        selectedDesigner,
+        selectedQStatus,
+        selectedPStatus,
+        selectedBillTo,
+        selectedMonth,
+        selectedBillingStatus,
+        currentPage,
+        itemsPerPage,
+        timeframe,
+        showCompleted,
+        showApprovedActive,
+        showPending,
+        showCancelled,
+        chartView,
+        selectedYear,
+        startMonth,
+        endMonth,
+        sortColumn,
+        sortDirection,
+        selectedAgingBucket
+      }
+      sessionStorage.setItem('kmti:billing-monitoring-state', JSON.stringify(stateToSave))
+    } catch (e) {
+      console.warn('Failed to save billing monitoring state:', e)
+    }
+  }, [
+    search,
+    selectedDesigner,
+    selectedQStatus,
+    selectedPStatus,
+    selectedBillTo,
+    selectedMonth,
+    selectedBillingStatus,
+    currentPage,
+    itemsPerPage,
+    timeframe,
+    showCompleted,
+    showApprovedActive,
+    showPending,
+    showCancelled,
+    chartView,
+    selectedYear,
+    startMonth,
+    endMonth,
+    sortColumn,
+    sortDirection,
+    selectedAgingBucket
+  ])
 
   const handleSort = (column: string) => {
     if (sortColumn === column) {
@@ -218,10 +283,9 @@ export function useBillingMonitoring() {
     loadData()
   }, [loadData])
 
-  // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus])
+  }, [search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, selectedAgingBucket])
 
   // Filter Logic
   const filteredQuotations = useMemo(() => {
@@ -239,7 +303,44 @@ export function useBillingMonitoring() {
       const matchesMonth = !selectedMonth || (q.date && new Date(q.date).getMonth().toString() === selectedMonth)
       const matchesBillingStatus = !selectedBillingStatus || (q.billingStatus || '') === selectedBillingStatus
 
-      return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth && matchesBillingStatus
+      let matchesAging = true
+      if (selectedAgingBucket) {
+        const unpaidStatuses = ['Approved', 'Partial Billing', 'Billing Completion']
+        const qStatus = q.quotationStatus || 'For Approval'
+        const bStatus = q.billingStatus || ''
+        const isUnpaid = (unpaidStatuses.includes(qStatus) || bStatus === 'BILLED' || bStatus === 'FOR BILLING') && !q.datePaid && bStatus !== 'PAID'
+        
+        if (isUnpaid) {
+          const startStr = q.submittedToAdminAt || q.date || q.modifiedAt
+          if (startStr) {
+            const startDate = new Date(startStr)
+            if (!isNaN(startDate.getTime())) {
+              const diffTime = Math.max(0, Date.now() - startDate.getTime())
+              const ageDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+              
+              if (selectedAgingBucket === '0-30') {
+                matchesAging = ageDays <= 30
+              } else if (selectedAgingBucket === '31-60') {
+                matchesAging = ageDays > 30 && ageDays <= 60
+              } else if (selectedAgingBucket === '61-90') {
+                matchesAging = ageDays > 60 && ageDays <= 90
+              } else if (selectedAgingBucket === '90+') {
+                matchesAging = ageDays > 90
+              } else if (selectedAgingBucket === 'all') {
+                matchesAging = ageDays > 30
+              }
+            } else {
+              matchesAging = false
+            }
+          } else {
+            matchesAging = false
+          }
+        } else {
+          matchesAging = false
+        }
+      }
+
+      return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth && matchesBillingStatus && matchesAging
     })
 
     if (sortColumn) {
@@ -273,7 +374,7 @@ export function useBillingMonitoring() {
     }
 
     return result
-  }, [quotations, search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, sortColumn, sortDirection])
+  }, [quotations, search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, selectedAgingBucket, sortColumn, sortDirection])
 
   // Pagination Computations
   const totalItems = filteredQuotations.length
@@ -644,6 +745,7 @@ export function useBillingMonitoring() {
     setSelectedBillTo('')
     setSelectedMonth('')
     setSelectedBillingStatus('')
+    setSelectedAgingBucket(null)
   }
 
   const saveGlobalSettings = async (updates: Record<string, any>) => {
@@ -863,6 +965,8 @@ export function useBillingMonitoring() {
     saveGlobalSettings,
     getCompletedAmount,
     getForecastAmount,
-    getForBillingAmount
+    getForBillingAmount,
+    selectedAgingBucket,
+    setSelectedAgingBucket
   }
 }
