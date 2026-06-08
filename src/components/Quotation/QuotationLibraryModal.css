@@ -5,35 +5,75 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
-  animation: fadeIn 0.3s ease;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.dark-theme .quot-library-overlay {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.void-theme .quot-library-overlay {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .quot-library-modal {
   width: 90vw;
   max-width: 1100px;
   height: 80vh;
-  background: var(--bg-primary);
-  border-radius: 16px;
-  box-shadow: var(--shadow-lg);
+  background: rgba(255, 255, 255, 0.94);
+  color: #000000;
+  border-radius: 28px;
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-top: 24px;
+  position: relative;
+}
+
+body.dark-theme .quot-library-modal {
+  background: rgba(28, 28, 30, 0.94);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+body.void-theme .quot-library-modal {
+  background: rgba(10, 0, 2, 0.95);
+  color: #ff2040;
+  border-color: rgba(255, 0, 64, 0.4);
+  box-shadow: 0 20px 40px rgba(255, 0, 64, 0.15);
 }
 
 .quot-library-header {
-  padding: 24px 32px;
+  padding: 12px 32px 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background: linear-gradient(to right, var(--bg-surface), var(--bg-secondary));
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  background: transparent;
+}
+
+body.dark-theme .quot-library-header {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+body.void-theme .quot-library-header {
+  border-bottom-color: rgba(255, 0, 64, 0.15);
 }
 
 .quot-library-header-main h2 {

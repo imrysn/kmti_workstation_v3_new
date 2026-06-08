@@ -1,16 +1,22 @@
-/* AvatarPickerModal.css */
-
 .apm-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: apmFadeIn 0.2s ease forwards;
+  animation: apmFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+body.dark-theme .apm-backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.void-theme .apm-backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 @keyframes apmFadeIn {
@@ -19,34 +25,51 @@
 }
 
 .apm-modal {
-  background: var(--bg-primary, #ffffff);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 20px;
-  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.94);
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 28px;
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
   width: 720px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 64px);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: apmSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: apmSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  padding-top: 24px;
+  position: relative;
 }
 
 body.dark-theme .apm-modal {
-  background: #0f172a;
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.55);
+  background: rgba(28, 28, 30, 0.94);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 body.void-theme .apm-modal {
-  background: #0a0a0c;
-  border-color: rgba(255, 0, 64, 0.2);
-  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.9), 0 0 60px rgba(255, 0, 64, 0.12);
+  background: rgba(10, 0, 2, 0.95);
+  color: #ff2040;
+  border-color: rgba(255, 0, 64, 0.4);
+  box-shadow: 0 20px 40px rgba(255, 0, 64, 0.15);
 }
 
 @keyframes apmSlideUp {
-  from { transform: translateY(24px) scale(0.97); opacity: 0; }
-  to   { transform: translateY(0) scale(1); opacity: 1; }
+  from {
+    opacity: 0;
+    transform: translateY(60px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */

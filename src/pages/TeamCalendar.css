@@ -896,7 +896,7 @@
   border: 2px dashed var(--cal-primary) !important;
 }
 
-/* ── MODALS AND BACKDROP STYLING ───────────────────────────────── */
+/* ── MODALS AND BACKDROP STYLING (WhatsNewModal iOS Style) ─────── */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -904,12 +904,21 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: calFadeIn 0.2s ease-out;
+  animation: calFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.dark-theme .modal-backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.void-theme .modal-backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 /* Standardizing distinct card dialogs for professional KMTI calendar modals */
@@ -917,44 +926,105 @@
   width: 620px;
   max-width: 95vw;
   max-height: 85vh;
-  background: var(--bg-secondary);
-  border: 1px solid var(--cal-card-border);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #000000;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 28px;
   padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-  box-shadow: var(--shadow-lg);
-  animation: calZoomIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  animation: calZoomIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-y: auto;
+  position: relative;
+}
+
+body.dark-theme .modal-content.cal-modal-card {
+  background: rgba(28, 28, 30, 0.94);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+body.void-theme .modal-content.cal-modal-card {
+  background: rgba(10, 0, 2, 0.95);
+  color: #ff2040;
+  border-color: rgba(255, 0, 64, 0.4);
+  box-shadow: 0 20px 40px rgba(255, 0, 64, 0.15);
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--cal-card-border);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   padding-bottom: 12px;
 }
 
+body.dark-theme .modal-header {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+body.void-theme .modal-header {
+  border-bottom-color: rgba(255, 0, 64, 0.15);
+}
+
 .modal-header h3 {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 750;
   margin: 0;
-  color: var(--cal-text-primary);
+  color: inherit;
+  letter-spacing: -0.015em;
+}
+
+body.void-theme .modal-header h3 {
+  text-shadow: 0 0 8px rgba(255, 0, 64, 0.4);
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 22px;
-  color: var(--cal-text-muted);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(120, 120, 128, 0.12);
+  color: rgba(60, 60, 67, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+  border: none;
+  font-size: 18px;
   line-height: 1;
+  transition: all 0.2s;
+}
+
+body.dark-theme .close-btn {
+  background: rgba(120, 120, 128, 0.24);
+  color: rgba(235, 235, 245, 0.6);
+}
+
+body.void-theme .close-btn {
+  background: rgba(255, 0, 64, 0.1);
+  color: #ff2040;
 }
 
 .close-btn:hover {
-  color: var(--cal-text-primary);
+  background: rgba(120, 120, 128, 0.2);
+  color: inherit;
+}
+
+body.dark-theme .close-btn:hover {
+  background: rgba(120, 120, 128, 0.36);
+}
+
+body.void-theme .close-btn:hover {
+  background: rgba(255, 0, 64, 0.2);
 }
 
 .claim-confirm-details {
@@ -1631,23 +1701,63 @@
   display: inline-block;
 }
 
-/* ── LANDING AGENDA MODAL POPUP STYLING ────────────────────── */
+/* ── LANDING AGENDA MODAL POPUP STYLING (WhatsNewModal iOS Style) ── */
 .landing-agenda-backdrop {
-  backdrop-filter: blur(8px) saturate(110%);
-  background-color: rgba(15, 23, 42, 0.4);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+body.dark-theme .landing-agenda-backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+body.void-theme .landing-agenda-backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
 
 .landing-agenda-modal {
   max-width: 520px !important;
   width: 90% !important;
-  border-radius: 20px !important;
-  border: 1px solid var(--cal-card-border) !important;
-  background: var(--bg-secondary) !important;
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 28px !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  color: #000000 !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
   display: flex;
   flex-direction: column;
   padding: 0 !important;
   overflow: hidden;
+  position: relative;
+}
+
+body.dark-theme .landing-agenda-modal {
+  background: rgba(28, 28, 30, 0.94) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+}
+
+body.void-theme .landing-agenda-modal {
+  background: rgba(10, 0, 2, 0.95) !important;
+  color: #ff2040 !important;
+  border-color: rgba(255, 0, 64, 0.4) !important;
+  box-shadow: 0 20px 40px rgba(255, 0, 64, 0.15) !important;
 }
 
 .landing-agenda-header {
