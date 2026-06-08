@@ -34,7 +34,7 @@ const Highlight = memo(({ text, query }: { text: string; query: string }) => {
 
 export default function CharacterSearch() {
   const { confirm, notify } = useModal()
-  const { hasRole } = useAuth()
+  const { hasRole, isOfflineMode } = useAuth()
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ICharacterMapping[]>([])
@@ -160,7 +160,7 @@ export default function CharacterSearch() {
     }
   }, [focusedIndex])
 
-  const canManage = hasRole('admin', 'it')
+  const canManage = hasRole('admin', 'it') && !isOfflineMode
 
   const handleDelete = (id: number, text: string) => {
     confirm(
@@ -193,6 +193,7 @@ export default function CharacterSearch() {
   return (
     <div className="char-search-container" onKeyDown={handleKeyDown}>
       <header className="char-search-header">
+
         <h1 className="page-title">Drafting Notes</h1>
         <p className="page-subtitle">English to Japanese Translation and Drafting Templates</p>
       </header>

@@ -77,7 +77,7 @@ function ModuleGuard({
 }
 
 function WorkstationShell() {
-  const { hasRole, isLoggingOut } = useAuth()
+  const { hasRole, isLoggingOut, isOfflineMode } = useAuth()
   const { flags } = useFlags()
   const location = useLocation()
   const navigate = useNavigate()
@@ -124,6 +124,27 @@ function WorkstationShell() {
   return (
     <div className={shellClass}>
       <TitleBar />
+      {isOfflineMode && (
+        <div className="global-offline-banner" style={{
+          background: '#ef4444',
+          color: '#fff',
+          textAlign: 'center',
+          padding: '6px 12px',
+          fontSize: '12px',
+          fontWeight: 700,
+          zIndex: 99,
+          position: 'relative',
+          letterSpacing: '0.5px',
+          boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px'
+        }}>
+          <span>⚠️</span>
+          <span>Offline Mode Active. Central server is unreachable. Reference sections are Read-Only.</span>
+        </div>
+      )}
       <div className={`app-body${!isHomePage ? ' has-back-button' : ''}`}>
         {!isHomePage && (
           <div className="content-back-btn-container no-print">
@@ -302,6 +323,19 @@ function AppContent() {
   useEffect(() => {
     setApiToken(token)
   }, [token])
+
+  // Preload offline caches when user starts/restores session and is online
+  useEffect(() => {
+    if (user && token) {
+      const timeout = setTimeout(async () => {
+        try {
+          const { preloadOfflineCache } = await import('./services/api')
+          preloadOfflineCache().catch(() => {})
+        } catch (e) {}
+      }, 3000)
+      return () => clearTimeout(timeout)
+    }
+  }, [user, token])
 
   // Trigger update check once per day (Production only)
   useEffect(() => {

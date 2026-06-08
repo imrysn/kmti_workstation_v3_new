@@ -5,8 +5,8 @@ import type { IProject, IQuotation, IQuotationHistory, ICustomPage, ICustomMappi
 export const SERVER_BASE = (() => {
   const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null
   if (override) return override
-  // DEV mode always uses localhost — VITE_API_PROD_URL is production-only
-  if (import.meta.env.DEV) return 'http://localhost:8000'
+  // Dev mode checks VITE_API_DEV_URL first, falling back to localhost:8000
+  if (import.meta.env.DEV) return import.meta.env.VITE_API_DEV_URL || 'http://localhost:8000'
   return import.meta.env.VITE_API_PROD_URL || 'http://192.168.200.105:8000'
 })()
 export const API_BASE = `${SERVER_BASE}/api`
@@ -111,16 +111,63 @@ export const partsApi = {
 
 // --- Character Search (Drafting Notes) ---
 export const charsApi = {
-  search: (q: string, limit: number = 50, offset: number = 0, signal?: AbortSignal) =>
-    api.get('/chars/', { params: { q, limit, offset }, signal }),
+  search: async (q: string, limit: number = 50, offset: number = 0, signal?: AbortSignal) => {
+    try {
+      return await api.get('/chars/', { params: { q, limit, offset }, signal })
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_chars')
+      if (cachedStr) {
+        const all = JSON.parse(cachedStr)
+        const term = q.toLowerCase().trim()
+        const filtered = all.filter((c: any) =>
+          c.englishChar.toLowerCase().includes(term) ||
+          c.japaneseChar.toLowerCase().includes(term)
+        )
+        return { data: filtered.slice(offset, offset + limit) }
+      }
+      throw err
+    }
+  },
   create: (data: { englishChar: string; japaneseChar: string }) =>
     api.post('/chars/', data),
   update: (id: number, data: { englishChar?: string; japaneseChar?: string }) =>
     api.patch(`/chars/${id}`, data),
   delete: (id: number) => api.delete(`/chars/${id}`),
-  getHeatTreatmentCategories: () => api.get('/chars/heat-treatment/categories'),
-  getHeatTreatment: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
-    api.get('/chars/heat-treatment', { params: { category, q, limit, offset } }),
+  getHeatTreatmentCategories: async () => {
+    try {
+      return await api.get('/chars/heat-treatment/categories')
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_heat_treatment')
+      if (cachedStr) {
+        const all = JSON.parse(cachedStr)
+        const categories = Array.from(new Set(all.map((h: any) => h.category))).filter(Boolean)
+        return { data: categories }
+      }
+      throw err
+    }
+  },
+  getHeatTreatment: async (category?: string, q?: string, limit: number = 50, offset: number = 0) => {
+    try {
+      return await api.get('/chars/heat-treatment', { params: { category, q, limit, offset } })
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_heat_treatment')
+      if (cachedStr) {
+        let filtered = JSON.parse(cachedStr)
+        if (category) {
+          filtered = filtered.filter((h: any) => h.category === category)
+        }
+        if (q) {
+          const term = q.toLowerCase().trim()
+          filtered = filtered.filter((h: any) =>
+            h.englishChar.toLowerCase().includes(term) ||
+            h.japaneseChar.toLowerCase().includes(term)
+          )
+        }
+        return { data: filtered.slice(offset, offset + limit) }
+      }
+      throw err
+    }
+  },
   createHeatTreatment: (data: { category: string; englishChar: string; japaneseChar: string }) =>
     api.post('/chars/heat-treatment', data),
   updateHeatTreatment: (id: number, data: { category?: string; englishChar?: string; japaneseChar?: string }) =>
@@ -130,8 +177,25 @@ export const charsApi = {
 
 // --- Materials ---
 export const materialsApi = {
-  list: (q?: string, limit: number = 50, offset: number = 0) =>
-    api.get('/materials/', { params: { q, limit, offset } }),
+  list: async (q?: string, limit: number = 50, offset: number = 0) => {
+    try {
+      return await api.get('/materials/', { params: { q, limit, offset } })
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_materials')
+      if (cachedStr) {
+        let filtered = JSON.parse(cachedStr)
+        if (q) {
+          const term = q.toLowerCase().trim()
+          filtered = filtered.filter((m: any) =>
+            m.englishName.toLowerCase().includes(term) ||
+            m.japaneseName.toLowerCase().includes(term)
+          )
+        }
+        return { data: filtered.slice(offset, offset + limit) }
+      }
+      throw err
+    }
+  },
   create: (data: { englishName: string; japaneseName: string }) =>
     api.post('/materials/', data),
   update: (id: number, data: { englishName?: string; japaneseName?: string }) =>
@@ -141,9 +205,41 @@ export const materialsApi = {
 
 // --- Designers ---
 export const designersApi = {
-  getCategories: () => api.get('/designers/categories'),
-  list: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
-    api.get('/designers', { params: { category, q, limit, offset } }),
+  getCategories: async () => {
+    try {
+      return await api.get('/designers/categories')
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_designers')
+      if (cachedStr) {
+        const all = JSON.parse(cachedStr)
+        const categories = Array.from(new Set(all.map((d: any) => d.category))).filter(Boolean)
+        return { data: categories }
+      }
+      throw err
+    }
+  },
+  list: async (category?: string, q?: string, limit: number = 50, offset: number = 0) => {
+    try {
+      return await api.get('/designers', { params: { category, q, limit, offset } })
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_designers')
+      if (cachedStr) {
+        let filtered = JSON.parse(cachedStr)
+        if (category) {
+          filtered = filtered.filter((d: any) => d.category === category)
+        }
+        if (q) {
+          const term = q.toLowerCase().trim()
+          filtered = filtered.filter((d: any) =>
+            d.englishName.toLowerCase().includes(term) ||
+            (d.japaneseName && d.japaneseName.toLowerCase().includes(term))
+          )
+        }
+        return { data: filtered.slice(offset, offset + limit) }
+      }
+      throw err
+    }
+  },
   create: (data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
     api.post('/designers', data),
   update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
@@ -153,8 +249,28 @@ export const designersApi = {
 
 // --- Clients ---
 export const clientsApi = {
-  list: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
-    api.get('/clients', { params: { category, q, limit, offset } }),
+  list: async (category?: string, q?: string, limit: number = 50, offset: number = 0) => {
+    try {
+      return await api.get('/clients', { params: { category, q, limit, offset } })
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_clients')
+      if (cachedStr) {
+        let filtered = JSON.parse(cachedStr)
+        if (category) {
+          filtered = filtered.filter((c: any) => c.category === category)
+        }
+        if (q) {
+          const term = q.toLowerCase().trim()
+          filtered = filtered.filter((c: any) =>
+            c.englishName.toLowerCase().includes(term) ||
+            (c.japaneseName && c.japaneseName.toLowerCase().includes(term))
+          )
+        }
+        return { data: filtered.slice(offset, offset + limit) }
+      }
+      throw err
+    }
+  },
   create: (data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
     api.post('/clients', data),
   update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
@@ -164,8 +280,28 @@ export const clientsApi = {
 
 // --- Project Incharges ---
 export const projectInchargesApi = {
-  list: (category?: string, q?: string, limit: number = 50, offset: number = 0) =>
-    api.get('/project-incharges', { params: { category, q, limit, offset } }),
+  list: async (category?: string, q?: string, limit: number = 50, offset: number = 0) => {
+    try {
+      return await api.get('/project-incharges', { params: { category, q, limit, offset } })
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_project_incharges')
+      if (cachedStr) {
+        let filtered = JSON.parse(cachedStr)
+        if (category) {
+          filtered = filtered.filter((c: any) => c.category === category)
+        }
+        if (q) {
+          const term = q.toLowerCase().trim()
+          filtered = filtered.filter((c: any) =>
+            c.englishName.toLowerCase().includes(term) ||
+            (c.japaneseName && c.japaneseName.toLowerCase().includes(term))
+          )
+        }
+        return { data: filtered.slice(offset, offset + limit) }
+      }
+      throw err
+    }
+  },
   create: (data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
     api.post('/project-incharges', data),
   update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
@@ -359,5 +495,30 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// --- Preload Offline Cache ---
+export async function preloadOfflineCache() {
+  try {
+    console.log('>>> [OFFLINE CACHE] Preloading reference tables in background...')
+    const [chars, heat, materials, designers, clients, incharges] = await Promise.all([
+      api.get('/chars/', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
+      api.get('/chars/heat-treatment', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
+      api.get('/materials/', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
+      api.get('/designers', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
+      api.get('/clients', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
+      api.get('/project-incharges', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
+    ])
+
+    if (chars) localStorage.setItem('kmti_cache_chars', JSON.stringify(chars))
+    if (heat) localStorage.setItem('kmti_cache_heat_treatment', JSON.stringify(heat))
+    if (materials) localStorage.setItem('kmti_cache_materials', JSON.stringify(materials))
+    if (designers) localStorage.setItem('kmti_cache_designers', JSON.stringify(designers))
+    if (clients) localStorage.setItem('kmti_cache_clients', JSON.stringify(clients))
+    if (incharges) localStorage.setItem('kmti_cache_project_incharges', JSON.stringify(incharges))
+    console.log('>>> [OFFLINE CACHE] Reference tables preloaded successfully.')
+  } catch (e) {
+    console.warn('[OFFLINE CACHE] Preload failed:', e)
+  }
+}
 
 export default api

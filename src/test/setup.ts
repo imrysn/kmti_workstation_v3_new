@@ -1,0 +1,37 @@
+import '@testing-library/jest-dom'
+import { vi } from 'vitest'
+
+// Mock Electron window object
+window.electronAPI = {
+  openFolder: vi.fn(),
+  openFile: vi.fn(),
+  minimizeWindow: vi.fn(),
+  maximizeWindow: vi.fn(),
+  isWindowMaximized: vi.fn().mockResolvedValue(false),
+  onWindowMaximized: vi.fn(),
+  closeWindow: vi.fn(),
+  selectFolder: vi.fn(),
+  getFileIcon: vi.fn(),
+  loginSuccess: vi.fn(),
+  logoutReset: vi.fn(),
+  captureScreenshot: vi.fn(),
+  getWorkstationInfo: vi.fn().mockResolvedValue({ computerName: 'Test-PC' }),
+  flashWindow: vi.fn(),
+  checkForUpdate: vi.fn(),
+  downloadUpdate: vi.fn(),
+  installAndRestart: vi.fn(),
+  getStopwatchRecords: vi.fn(),
+  saveStopwatchRecords: vi.fn(),
+  openStopwatchFolder: vi.fn(),
+  onUpdateAvailable: vi.fn(),
+  onUpdateNotAvailable: vi.fn(),
+  onUpdateDownloaded: vi.fn(),
+  onUpdateProgress: vi.fn(),
+  onUpdateError: vi.fn(),
+  print: vi.fn(),
+  printToPDF: vi.fn(),
+  showSaveDialog: vi.fn(),
+  writeFile: vi.fn(),
+  removeUpdateListeners: vi.fn(),
+  removeWindowMaximizedListener: vi.fn(),
+}

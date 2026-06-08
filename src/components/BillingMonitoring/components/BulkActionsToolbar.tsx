@@ -145,7 +145,6 @@ export default function BulkActionsToolbar({
             }
           }}
         >
-          <option value="" disabled>Select Client...</option>
           <option value="AGC Ceramics Co., Ltd.">AGC Ceramics</option>
           <option value="NEXT ENGINEERING Co., Ltd.">NEXT ENGINEERING Co., Ltd.</option>
           <option value="Kusakabe Electric and Machinery Co., Ltd.">Kusakabe</option>

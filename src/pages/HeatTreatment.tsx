@@ -15,8 +15,8 @@ import './HeatTreatment/HeatTreatment.css'
 
 function SpecialProcessView() {
   const { notify, confirm } = useModal()
-  const { hasRole } = useAuth()
-  const canManage = hasRole('admin', 'it')
+  const { hasRole, isOfflineMode } = useAuth()
+  const canManage = hasRole('admin', 'it') && !isOfflineMode
 
   const [categories, setCategories] = useState<string[]>([])
   const [selectedCategory, setSelectedCategory] = useState('')
@@ -176,8 +176,8 @@ function SpecialProcessView() {
 
 function MaterialView() {
   const { notify, confirm } = useModal()
-  const { hasRole } = useAuth()
-  const canManage = hasRole('admin', 'it')
+  const { hasRole, isOfflineMode } = useAuth()
+  const canManage = hasRole('admin', 'it') && !isOfflineMode
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<IMaterial[]>([])
@@ -317,8 +317,8 @@ interface CustomMappingViewProps {
 
 function CustomMappingView({ pageId, pageTitle }: CustomMappingViewProps) {
   const { notify, confirm } = useModal()
-  const { hasRole } = useAuth()
-  const canManage = hasRole('admin', 'it')
+  const { hasRole, isOfflineMode } = useAuth()
+  const canManage = hasRole('admin', 'it') && !isOfflineMode
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ICustomMapping[]>([])
@@ -654,8 +654,8 @@ function CustomMappingModal({ isOpen, onClose, onSaved, editingItem, pageId }: C
 
 export default function HeatTreatment() {
   const { notify, confirm, prompt } = useModal()
-  const { hasRole } = useAuth()
-  const canManage = hasRole('admin', 'it')
+  const { hasRole, isOfflineMode } = useAuth()
+  const canManage = hasRole('admin', 'it') && !isOfflineMode
 
   const [activeTab, setActiveTab] = useState<string>('special-process')
   const [customPages, setCustomPages] = useState<ICustomPage[]>([])
@@ -737,6 +737,7 @@ export default function HeatTreatment() {
 
   return (
     <div className="heat-treatment-container">
+
       {/* Centered pill toggle — replaces the header entirely */}
       <div className="ht-toggle-bar">
         <div className="ht-pill-toggle">

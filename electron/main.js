@@ -140,6 +140,19 @@ function startBackend() {
 
   pythonProcess.stdout.on('data', (data) => console.log(`[BACKEND] ${data}`))
   pythonProcess.stderr.on('data', (data) => console.error(`[BACKEND-ERR] ${data}`))
+  pythonProcess.on('close', (code) => {
+    console.log(`[BACKEND] Process exited with code ${code}`)
+    if (pythonProcess !== null) {
+      console.log('>>> [BACKEND] Unexpected exit. Restarting in 2 seconds...')
+      setTimeout(() => {
+        // Double check that we didn't quit/kill the backend in the meantime
+        if (pythonProcess === null && !mainWindow?.isDestroyed()) {
+          startBackend()
+        }
+      }, 2000)
+      pythonProcess = null
+    }
+  })
 }
 
 function killBackend() {
@@ -431,6 +444,7 @@ if (!gotTheLock) {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
 }
 
 app.on('will-quit', () => {

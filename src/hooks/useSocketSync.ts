@@ -35,16 +35,19 @@ export function useSocketSync() {
     socket.on('connect', () => {
       console.log(`[SocketSync] Connected. ID: ${socket.id}`)
       setApiSocketId(socket.id || null)
+      window.dispatchEvent(new CustomEvent('kmti:server-status', { detail: { online: true } }))
     })
 
     socket.on('disconnect', (reason) => {
       console.warn(`[SocketSync] Disconnected: ${reason}`)
       setApiSocketId(null)
+      window.dispatchEvent(new CustomEvent('kmti:server-status', { detail: { online: false } }))
     })
 
     socket.on('connect_error', (error) => {
       console.error(`[SocketSync] Connection error:`, error)
       setApiSocketId(null)
+      window.dispatchEvent(new CustomEvent('kmti:server-status', { detail: { online: false } }))
     })
 
     // Listen for real-time DB mutations

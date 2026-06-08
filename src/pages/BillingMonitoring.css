@@ -2398,11 +2398,11 @@ body.void-theme .progress-bar-container {
 }
 
 .soa-row-even {
-  background: var(--bg-primary);
+  background: #ffffff;
 }
 
 .soa-row-odd {
-  background: var(--bg-secondary);
+  background: #ffffff;
 }
 
 .soa-ledger-table tbody td {

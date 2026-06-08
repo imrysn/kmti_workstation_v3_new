@@ -26,6 +26,13 @@ export interface AuthUser {
   role: UserRole
 }
 
+async function hashPassword(password: string): Promise<string> {
+  const msgUint8 = new TextEncoder().encode(password)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 interface AuthContextValue {
   user: AuthUser | null
   token: string | null
@@ -33,6 +40,7 @@ interface AuthContextValue {
   loginSucceeded: boolean
   isLoggingOut: boolean
   sessionExpired: boolean
+  isOfflineMode: boolean
   login: (username: string, password: string) => Promise<void>
   logout: () => void
   dismissSessionExpired: () => void
@@ -67,6 +75,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessionExpired, setSessionExpired] = useState(false)
   const [hasRestored, setHasRestored] = useState(false)
 
+  const [isOfflineMode, setIsOfflineMode] = useState(false)
+
+  // Sync isOfflineMode with server-status dot
+  useEffect(() => {
+    const handleServerStatus = (e: Event) => {
+      const customEvent = e as CustomEvent
+      setIsOfflineMode(!customEvent.detail?.online)
+    }
+    window.addEventListener('kmti:server-status', handleServerStatus)
+    return () => window.removeEventListener('kmti:server-status', handleServerStatus)
+  }, [])
+
   // Trigger login-success only after explicit user login
   useEffect(() => {
     if (user && token && !hasRestored) {
@@ -80,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (username: string, password: string) => {
     setIsLoading(true)
+    const normalizedUsername = username.toLowerCase().trim()
     try {
       const body = new URLSearchParams()
       body.append('username', username)
@@ -104,7 +125,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('kmti_landing_agenda_shown')
       localStorage.removeItem('kmti_suppress_agenda_date')
       
+      // Cache last successful credentials/user for offline login
+      try {
+        const passHash = await hashPassword(password)
+        const offlineCache = {
+          username: normalizedUsername,
+          passHash,
+          user: data.user,
+          token: data.access_token,
+        }
+        localStorage.setItem(`kmti_offline_cache_${normalizedUsername}`, JSON.stringify(offlineCache))
+        
+        // Trigger preloading in the background
+        const { preloadOfflineCache } = await import('../services/api')
+        preloadOfflineCache().catch(() => {})
+      } catch (e) {
+        console.error('Failed to cache credentials for offline use', e)
+      }
+
       setToken(data.access_token)
+      setIsOfflineMode(false)
 
       setLoginSucceeded(true)
       await new Promise(resolve => setTimeout(resolve, 380))
@@ -114,6 +154,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await new Promise(resolve => setTimeout(resolve, 120))
       setUser(data.user)
       setLoginSucceeded(false)
+    } catch (err: any) {
+      // If server is down, try offline authentication
+      const isNetworkError = err.message === 'Failed to fetch' || err.name === 'TypeError'
+      if (isNetworkError) {
+        const cachedStr = localStorage.getItem(`kmti_offline_cache_${normalizedUsername}`)
+        if (cachedStr) {
+          try {
+            const cached = JSON.parse(cachedStr)
+            const passHash = await hashPassword(password)
+            if (cached.passHash === passHash) {
+              // Success! Offline login
+              sessionStorage.setItem('kmti_token', cached.token)
+              sessionStorage.setItem('kmti_user', JSON.stringify(cached.user))
+              sessionStorage.removeItem('kmti_landing_agenda_shown')
+              localStorage.removeItem('kmti_suppress_agenda_date')
+
+              setToken(cached.token)
+              setIsOfflineMode(true)
+
+              setLoginSucceeded(true)
+              await new Promise(resolve => setTimeout(resolve, 380))
+              ;(window as any).electronAPI?.loginSuccess?.()
+              await new Promise(resolve => setTimeout(resolve, 120))
+              setUser(cached.user)
+              setLoginSucceeded(false)
+              return
+            } else {
+              throw new Error('Incorrect password. Offline credentials do not match.')
+            }
+          } catch (e: any) {
+            console.error('Failed to authenticate offline', e)
+            throw new Error(e.message || 'Failed to authenticate offline')
+          }
+        } else {
+          throw new Error('No offline login cache found for this user. You must sign in online at least once.')
+        }
+      }
+      throw err
     } finally {
       setIsLoading(false)
     }
@@ -187,7 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider value={{
       user, token, isLoading, loginSucceeded, isLoggingOut,
-      sessionExpired,
+      sessionExpired, isOfflineMode,
       login, logout,
       dismissSessionExpired,
       triggerSessionExpired: () => setSessionExpired(true),

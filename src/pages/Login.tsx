@@ -60,6 +60,7 @@ export default function Login() {
   }, [])
 
   const [showWarningModal, setShowWarningModal] = useState(false)
+  const [showOfflineModal, setShowOfflineModal] = useState(false)
 
   async function performLogin() {
     setError(null)
@@ -94,6 +95,15 @@ export default function Login() {
       setShowWarningModal(true)
       return
     }
+    if (serverHealth.db === 'DISCONNECTED') {
+      setShowOfflineModal(true)
+      return
+    }
+    await performLogin()
+  }
+
+  async function handleConfirmOffline() {
+    setShowOfflineModal(false)
     await performLogin()
   }
 
@@ -245,6 +255,8 @@ export default function Login() {
               {error && <div className="login-input-error">{error}</div>}
             </div>
 
+            {/* Notice removed to preserve layout, handled by confirm modal on submit */}
+
             <button className="login-submit-btn" type="submit" disabled={isLoading || !username || !password}>
               {isLoading ? (
                 'VERIFYING...'
@@ -319,7 +331,7 @@ export default function Login() {
             </div>
             <div className="login-warning-body">
               <p>
-                We are transitioning from the shared <strong>"user"</strong> account to individual 
+                We are transitioning from the shared <strong>"user"</strong> account to individual
                 <strong> FMS user accounts</strong>.
               </p>
               <p>
@@ -329,6 +341,35 @@ export default function Login() {
             <div className="login-warning-footer">
               <button className="login-warning-btn cancel" onClick={() => setShowWarningModal(false)}>
                 Back to Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showOfflineModal && (
+        <div className="login-warning-overlay" onClick={() => setShowOfflineModal(false)}>
+          <div className="login-warning-modal" onClick={e => e.stopPropagation()}>
+            <div className="login-warning-header" style={{ background: '#fef2f2', borderColor: '#fee2e2' }}>
+              <span className="login-warning-icon">⚠️</span>
+              <h2 style={{ color: '#b91c1c' }}>Offline Mode Connection</h2>
+            </div>
+            <div className="login-warning-body">
+              <p>
+                The central server is currently offline or unreachable.
+              </p>
+              <p>
+                Would you like to sign in using your <strong>cached offline credentials</strong>?
+              </p>
+              <p style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                Note: Offline mode runs in Read-Only mode. You cannot make any changes or sync data until connection is restored.
+              </p>
+            </div>
+            <div className="login-warning-footer">
+              <button className="login-warning-btn cancel" onClick={() => setShowOfflineModal(false)}>
+                Cancel
+              </button>
+              <button className="login-warning-btn continue" onClick={handleConfirmOffline}>
+                Continue Sign In
               </button>
             </div>
           </div>

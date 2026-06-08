@@ -300,7 +300,6 @@ export default function TableRow({
               setActiveCell(null)
             }}
           >
-            <option value="">-- Select Client --</option>
             <option value="AGC Ceramics Co., Ltd.">AGC Ceramics Co., Ltd.</option>
             <option value="NEXT ENGINEERING Co., Ltd.">NEXT ENGINEERING Co., Ltd.</option>
             <option value="Kusakabe Electric and Machinery Co., Ltd.">Kusakabe Electric and Machinery Co., Ltd.</option>

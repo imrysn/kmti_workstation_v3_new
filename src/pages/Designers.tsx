@@ -10,8 +10,8 @@ import './Designers/Designers.css'
 
 export default function Designers() {
   const { notify, confirm } = useModal()
-  const { hasRole } = useAuth()
-  const canManage = hasRole('admin', 'it')
+  const { hasRole, isOfflineMode } = useAuth()
+  const canManage = hasRole('admin', 'it') && !isOfflineMode
 
   // State
   const [categories, setCategories] = useState<string[]>([])
@@ -231,6 +231,7 @@ export default function Designers() {
   return (
     <div className="designers-container">
       <header className="char-search-header" style={{ flexShrink: 0, padding: '24px 0' }}>
+
         <h1 className="page-title">Clients</h1>
         <p className="page-subtitle">Directory of engineering clients and contact details</p>
       </header>

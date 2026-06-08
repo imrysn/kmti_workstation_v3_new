@@ -439,3 +439,22 @@
   color: #00ff7f;
   gap: 8px;
 }
+
+.server-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.server-status-dot.online {
+  background-color: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.server-status-dot.offline {
+  background-color: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+  animation: pulse-red 2s infinite;
+}

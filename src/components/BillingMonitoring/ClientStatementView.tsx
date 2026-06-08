@@ -83,7 +83,7 @@ export default function ClientStatementView({
         const isClient = normalizeClientName(q.billTo) === selectedClient
         const isPositive = positiveStatuses.includes(q.quotationStatus || '')
         if (!isClient || !isPositive) return false
-        
+
         // Month filters (startDate and endDate are format YYYY-MM)
         if (q.date) {
           const qMonth = q.date.substring(0, 7) // "YYYY-MM"
@@ -92,7 +92,7 @@ export default function ClientStatementView({
         } else if (startDate || endDate) {
           return false
         }
-        
+
         return true
       })
       .sort((a, b) => {
@@ -146,15 +146,15 @@ export default function ClientStatementView({
     const dates = clientInvoices.map(q => q.date).filter(Boolean) as string[]
     if (dates.length === 0) return 'N/A'
     const sorted = [...dates].sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
-    
+
     const startD = new Date(sorted[0])
     const endD = new Date(sorted[sorted.length - 1])
-    
+
     const startMonthStr = startD.toLocaleDateString('en-US', { month: 'long' })
     const endMonthStr = endD.toLocaleDateString('en-US', { month: 'long' })
     const startYear = startD.getFullYear()
     const endYear = endD.getFullYear()
-    
+
     if (startYear === endYear) {
       if (startMonthStr === endMonthStr) {
         return `${startMonthStr} ${startYear}`
@@ -324,7 +324,6 @@ export default function ClientStatementView({
             value={selectedClient}
             onChange={(e) => setSelectedClient(e.target.value)}
           >
-            <option value="">-- Select Client --</option>
             {uniqueClients.map(client => (
               <option key={client} value={client}>{client}</option>
             ))}

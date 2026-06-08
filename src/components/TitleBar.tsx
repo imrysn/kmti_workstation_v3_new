@@ -109,7 +109,17 @@ export default function TitleBar() {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0)
   const [isOnlineOpen, setIsOnlineOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isServerOnline, setIsServerOnline] = useState(true)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleServerStatus = (e: Event) => {
+      const customEvent = e as CustomEvent
+      setIsServerOnline(!!customEvent.detail?.online)
+    }
+    window.addEventListener('kmti:server-status', handleServerStatus)
+    return () => window.removeEventListener('kmti:server-status', handleServerStatus)
+  }, [])
 
   useEffect(() => {
     const handleStatusChange = (e: Event) => {
@@ -217,9 +227,14 @@ export default function TitleBar() {
   return (
     <div className="titlebar">
       <div className="titlebar-drag-region" />
-      <div className="titlebar-app-info">
-        <img src={logo} alt="K" className="titlebar-logo-img" style={{ height: '20px', width: 'auto', objectFit: 'contain' }} />
-        <span className="titlebar-title">KMTI Workstation</span>
+      <div className="titlebar-app-info" style={{ pointerEvents: 'auto' }}>
+        <img src={logo} alt="K" className="titlebar-logo-img" style={{ height: '20px', width: 'auto', objectFit: 'contain', pointerEvents: 'none' }} />
+        <span className="titlebar-title" style={{ pointerEvents: 'none' }}>KMTI Workstation</span>
+        <span 
+          className={`server-status-dot ${isServerOnline ? 'online' : 'offline'}`} 
+          title={isServerOnline ? "Connected to KMTI Server" : "Disconnected from KMTI Server (Reconnecting...)"}
+          style={{ cursor: 'pointer' }}
+        />
       </div>
 
       <nav className="titlebar-nav">
