@@ -266,10 +266,8 @@ if (!gotTheLock) {
       height: winH 
     }, false)
     
-    // Respect previous state rather than forcing maximize
-    if (windowState.isMaximized) {
-      mainWindow.maximize()
-    }
+    // Maximize by default after login
+    mainWindow.maximize()
   })
 
   ipcMain.handle('logout-reset', () => {
