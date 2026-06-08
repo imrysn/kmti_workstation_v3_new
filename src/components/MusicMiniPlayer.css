@@ -1,0 +1,181 @@
+/* ============================================================
+   MusicMiniPlayer.css — Theme-aware floating mini player
+   Uses global CSS vars: works on light / dark / void themes
+   ============================================================ */
+
+.music-mini-player {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--accent);
+  border-radius: 40px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-lg), 0 0 20px var(--accent-subtle);
+  z-index: 999;
+  animation: slide-up-fade 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 380px;
+  box-sizing: border-box;
+  transition: background-color var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+@keyframes slide-up-fade {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Disc */
+.mini-disc-container {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-vinyl {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #2a2a2a 15%, #000 60%);
+  border: 2px solid var(--border);
+  position: relative;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+
+.mini-vinyl::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.05) 0px,
+    rgba(255, 255, 255, 0.05) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+}
+
+.mini-vinyl-center {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.mini-vinyl.spinning {
+  animation: spin 3.5s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Track info */
+.mini-track-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 140px;
+}
+
+.mini-track-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+
+.mini-track-title:hover {
+  color: var(--accent);
+}
+
+.mini-dj-name {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+
+/* Controls */
+.mini-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+}
+
+.mini-play-btn,
+.mini-leave-btn,
+.mini-mute-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background var(--transition), color var(--transition);
+  width: 26px;
+  height: 26px;
+}
+
+.mini-play-btn:hover,
+.mini-mute-btn:hover {
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
+}
+
+.mini-play-btn.playing {
+  color: var(--success);
+}
+
+.mini-volume-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mini-volume-slider {
+  width: 50px;
+  height: 3px;
+  background: var(--border);
+  outline: none;
+  appearance: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.mini-volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.mini-leave-btn {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.mini-leave-btn:hover {
+  background: var(--bg-danger-subtle);
+  color: var(--danger);
+}

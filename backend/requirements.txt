@@ -18,3 +18,4 @@ onnxruntime
 mecab-python3
 unidic-lite
 cachetools
+httpx

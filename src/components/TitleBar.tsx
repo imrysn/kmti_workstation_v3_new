@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useModal } from './ModalContext'
@@ -97,6 +97,7 @@ const nav = [
 ]
 
 export default function TitleBar() {
+  const navigate = useNavigate()
   const { user, logout, hasRole } = useAuth()
   const { theme, toggleTheme, themeLocked } = useTheme()
   const { confirm, notify } = useModal()
@@ -228,7 +229,14 @@ export default function TitleBar() {
     <div className="titlebar">
       <div className="titlebar-drag-region" />
       <div className="titlebar-app-info" style={{ pointerEvents: 'auto' }}>
-        <img src={logo} alt="K" className="titlebar-logo-img" style={{ height: '20px', width: 'auto', objectFit: 'contain', pointerEvents: 'none' }} />
+        <img 
+          src={logo} 
+          alt="K" 
+          className="titlebar-logo-img" 
+          style={{ height: '20px', width: 'auto', objectFit: 'contain', cursor: 'pointer' }} 
+          onDoubleClick={() => navigate('/music-room')}
+          title="KMTI Workstation"
+        />
         <span className="titlebar-title" style={{ pointerEvents: 'none' }}>KMTI Workstation</span>
         <span 
           className={`server-status-dot ${isServerOnline ? 'online' : 'offline'}`} 

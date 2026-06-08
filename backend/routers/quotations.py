@@ -455,6 +455,13 @@ async def blur_field(sid: str, data: dict):
 @sio.event
 async def disconnect(sid: str):
     """Cleanup presence on socket disconnect."""
+    # Music room user cleanup
+    try:
+        from routers.music_room import cleanup_music_user
+        await cleanup_music_user(sid)
+    except Exception as e:
+        print(f"[MusicRoom Cleanup Error] {e}")
+
     for q_id, users in list(_active_users.items()):
         if sid in users:
             user_info = users.pop(sid)

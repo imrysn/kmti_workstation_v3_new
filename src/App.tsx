@@ -19,7 +19,10 @@ import FeatureClosed from './pages/FeatureClosed'
 import Maintenance from './pages/Maintenance'
 import Login from './pages/Login'
 import BillingMonitoring from './pages/BillingMonitoring'
+import MusicRoom from './pages/MusicRoom'
 import ProtectedRoute from './components/ProtectedRoute'
+import { MusicProvider } from './context/MusicContext'
+import MusicMiniPlayer from './components/MusicMiniPlayer'
 import { ModalProvider } from './components/ModalContext'
 import { ModalContainer } from './components/modals'
 import WhatsNewModal from './components/modals/WhatsNewModal'
@@ -90,6 +93,18 @@ function WorkstationShell() {
 
   // Activate real-time multi-user socket synchronization
   useSocketSync()
+
+  // Easter egg keyboard shortcut Ctrl+Alt+M
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault()
+        navigate('/music-room')
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [navigate])
 
   const shellClass = `app-shell${isLoggingOut ? ' exiting' : ''}`
 
@@ -292,7 +307,14 @@ function WorkstationShell() {
                 </ProtectedRoute>
               }
             />
-
+            <Route
+              path="/music-room"
+              element={
+                <ProtectedRoute>
+                  <MusicRoom />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/closed" element={<FeatureClosed />} />
             <Route path="/maintenance" element={<Maintenance />} />
           </Routes>
@@ -307,6 +329,7 @@ function WorkstationShell() {
       <BroadcastFAB />
       <MandatoryUpdateOverlay />
       <UpdateToast />
+      <MusicMiniPlayer />
       <OnlineDrawer />
     </div>
   )
@@ -381,8 +404,10 @@ export default function App() {
           <UpdateProvider>
             <ModalProvider>
               <HashRouter>
-                <AppContent />
-                <AnniversaryOverlay />
+                <MusicProvider>
+                  <AppContent />
+                  <AnniversaryOverlay />
+                </MusicProvider>
               </HashRouter>
             </ModalProvider>
           </UpdateProvider>
