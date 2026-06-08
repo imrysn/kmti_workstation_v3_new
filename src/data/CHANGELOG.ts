@@ -12,6 +12,13 @@ export type ChangeType = 'new' | 'fix' | 'improvement'
 export interface ChangeEntry {
   type: ChangeType
   text: string
+  image?: string
+  action?: {
+    label: string
+    route: string
+    viewState?: any
+    roles?: string[]
+  }
 }
 
 export interface VersionChangelog {
@@ -20,7 +27,64 @@ export interface VersionChangelog {
   entries: ChangeEntry[]
 }
 
+import leaderboardImg from '../assets/updates/leaderboard_v3.png'
+import billingmonitoringImg from '../assets/updates/billing_monitoringv2.png'
+import spreadsheetv2 from '../assets/updates/spreadsheetv2.png'
+import soav2 from '../assets/updates/soav2.png'
+
+
+
 export const CHANGELOG: VersionChangelog[] = [
+  {
+    version: '3.8.2',
+    date: 'June 8, 2026',
+    entries: [
+      {
+        type: 'improvement',
+        text: 'Billing Monitoring Dashboard — Implemented KPI metrics, status tracking, and data visualization tools.',
+        image: billingmonitoringImg,
+        action: {
+          label: 'Open Dashboard',
+          route: '/billing-monitoring',
+          viewState: { activeView: 'dashboard' },
+          roles: ['admin', 'it']
+        }
+      },
+      {
+        type: 'new',
+        text: 'Spreadsheet Grid — Implemented spreadsheet-style data grid and status tracking components.',
+        image: spreadsheetv2,
+        action: {
+          label: 'Open Records Grid',
+          route: '/billing-monitoring',
+          viewState: { activeView: 'table' },
+          roles: ['admin', 'it']
+        }
+      },
+      {
+        type: 'improvement',
+        text: 'Leaderboard & Dashboard Polish — Improved Engineer Leaderboard UI/UX and data fields.',
+        image: leaderboardImg,
+        action: {
+          label: 'View Leaderboard',
+          route: '/billing-monitoring',
+          viewState: { activeView: 'dashboard' },
+          roles: ['admin', 'it']
+        }
+      },
+      {
+        type: 'new',
+        text: 'SOA — New SOA page with "download as pdf" for Clients. ',
+        image: soav2,
+        action: {
+          label: 'Open Client Statements',
+          route: '/billing-monitoring',
+          viewState: { activeView: 'statement' },
+          roles: ['admin', 'it']
+        }
+      }
+    ],
+  },
   {
     version: '3.8.1',
     date: 'June 5, 2026',
@@ -228,7 +292,7 @@ export const CHANGELOG: VersionChangelog[] = [
     date: 'April 1, 2026',
     entries: [
       { type: 'new', text: 'Quotation Dashboard — A brand new, professional way to create and manage your quotations and billing statements. (Feature under development)' },
-      { type: 'new', text: 'Admin Help Center — A centralized place for IT and Admin to manage and track support requests.' },
+      { type: 'new', text: 'Admin Help Center — A centralized place for Admin to manage and track support requests.' },
       { type: 'improvement', text: 'Faster Startup — The app now remembers your screen size and keeps you logged in across restarts for a faster experience.' },
     ],
   },
