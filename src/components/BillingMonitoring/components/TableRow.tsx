@@ -15,6 +15,8 @@ interface TableRowProps {
   formatCurrency: (val?: number) => string
   activeCell: IActiveCell | null
   setActiveCell: (cell: IActiveCell | null) => void
+  editForm: Partial<IQuotation>
+  setEditForm: (form: Partial<IQuotation>) => void
 }
 
 export default function TableRow({
@@ -29,7 +31,9 @@ export default function TableRow({
   formatDateToSlash,
   formatCurrency,
   activeCell,
-  setActiveCell
+  setActiveCell,
+  editForm,
+  setEditForm
 }: TableRowProps) {
   const isEven = idx % 2 === 1
   const isSelected = selectedIds.includes(q.id)
@@ -39,13 +43,19 @@ export default function TableRow({
   const isPStatusEditing = activeCell?.id === q.id && activeCell?.field === 'projectStatus'
   const isBillToEditing = activeCell?.id === q.id && activeCell?.field === 'billTo'
   const isBStatusEditing = activeCell?.id === q.id && activeCell?.field === 'billingStatus'
+  const isDateEditing = activeCell?.id === q.id && activeCell?.field === 'date'
+  const isSubmittedEditing = activeCell?.id === q.id && activeCell?.field === 'submittedToAdminAt'
+  const isDatePaidEditing = activeCell?.id === q.id && activeCell?.field === 'datePaid'
+  const isLastUpdatedEditing = activeCell?.id === q.id && activeCell?.field === 'lastUpdatedAt'
+  const isUpdateDetailEditing = activeCell?.id === q.id && activeCell?.field === 'updateDetail'
 
   return (
     <tr
       key={q.id}
       className={[
         isSelected ? 'editing-row-highlight' : '',
-        isEven ? 'row-stripe' : ''
+        isEven ? 'row-stripe' : '',
+        (q.quotationStatus === 'CANCELLED' || q.quotationStatus === 'REVISED') ? 'row-cancelled' : ''
       ].filter(Boolean).join(' ')}
     >
       {/* Index */}
@@ -104,7 +114,7 @@ export default function TableRow({
       </td>
 
       {/* Quotation Number - Read-only Link */}
-      <td className="cell-qno" style={{ padding: '0px' }}>
+      <td className="cell-qno" style={{ padding: '0px', textAlign: 'left' }}>
         {q.quotationNo ? (
           <button
             className="btn-qno-link"
@@ -122,9 +132,46 @@ export default function TableRow({
         )}
       </td>
 
-      {/* Date - Read-only */}
-      <td>
-        {formatDateToSlash(q.date) !== '-' ? formatDateToSlash(q.date) : <span className="cell-empty">—</span>}
+      {/* Date - Click-to-Edit Date */}
+      <td className={isDateEditing ? 'editing-cell' : ''}>
+        {isDateEditing ? (
+          <input
+            type="date"
+            className="cell-input"
+            value={editForm.date || ''}
+            onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+            onBlur={async () => {
+              const val = q.date ? q.date.substring(0, 10) : ''
+              if (editForm.date !== val) {
+                await handleSingleFieldSave(q.id, { date: editForm.date || null })
+              }
+              setActiveCell(null)
+            }}
+            onKeyDown={async e => {
+              if (e.key === 'Enter') {
+                const val = q.date ? q.date.substring(0, 10) : ''
+                if (editForm.date !== val) {
+                  await handleSingleFieldSave(q.id, { date: editForm.date || null })
+                }
+                setActiveCell(null)
+              } else if (e.key === 'Escape') {
+                setActiveCell(null)
+              }
+            }}
+            autoFocus
+          />
+        ) : (
+          <div
+            className="clickable-cell-trigger editable-text-cell"
+            onClick={() => {
+              const val = q.date ? q.date.substring(0, 10) : ''
+              setActiveCell({ id: q.id, field: 'date' })
+              setEditForm({ date: val })
+            }}
+          >
+            {formatDateToSlash(q.date) !== '-' ? formatDateToSlash(q.date) : <span className="cell-empty">—</span>}
+          </div>
+        )}
       </td>
 
       {/* Amount - Read-only */}
@@ -152,6 +199,7 @@ export default function TableRow({
             <option value="Partial Billing">Partial Billing</option>
             <option value="Billing Completion">Billing Completion</option>
             <option value="CANCELLED">CANCELLED</option>
+            <option value="REVISED">REVISED</option>
           </select>
         ) : (
           <div style={{ display: 'inline-flex', padding: '4px' }}>
@@ -160,7 +208,8 @@ export default function TableRow({
                 q.quotationStatus === 'Billing Completion' ? 'status-q-completion' :
                   q.quotationStatus === 'CANCELLED' ? 'status-q-cancelled' :
                     q.quotationStatus === 'For Approval' ? 'status-q-for-approval' :
-                      'status-q-draft'
+                      q.quotationStatus === 'REVISED' ? 'status-q-revised' :
+                        'status-q-draft'
               }`}>
               {q.quotationStatus || 'DRAFT'}
             </span>
@@ -186,12 +235,14 @@ export default function TableRow({
             <option value="On Going">On Going</option>
             <option value="Finished">Finished</option>
             <option value="CANCELLED">CANCELLED</option>
+            <option value="REVISED">REVISED</option>
           </select>
         ) : (
           <div style={{ display: 'inline-flex', padding: '4px' }}>
             <span className={`status-badge ${q.projectStatus === 'Finished' ? 'status-p-finished' :
               q.projectStatus === 'CANCELLED' ? 'status-p-cancelled' :
-                'status-p-ongoing'
+                q.projectStatus === 'REVISED' ? 'status-p-revised' :
+                  'status-p-ongoing'
               }`}>
               {q.projectStatus || 'On Going'}
             </span>
@@ -199,9 +250,48 @@ export default function TableRow({
         )}
       </td>
 
-      {/* Submitted to Admin - Read-only */}
-      <td>
-        {formatDateToSlash(q.submittedToAdminAt)}
+      {/* Submitted to Admin - Click-to-Edit Date */}
+      <td className={isSubmittedEditing ? 'editing-cell' : ''} onClick={(e) => { if (q.quotationStatus === 'CANCELLED') e.stopPropagation() }}>
+        {q.quotationStatus === 'CANCELLED' ? (
+          <div style={{ color: '#ef4444', fontWeight: 'bold', textAlign: 'center' }}>CANCELLED</div>
+        ) : isSubmittedEditing ? (
+          <input
+            type="date"
+            className="cell-input"
+            value={editForm.submittedToAdminAt || ''}
+            onChange={e => setEditForm({ ...editForm, submittedToAdminAt: e.target.value })}
+            onBlur={async () => {
+              const val = q.submittedToAdminAt ? q.submittedToAdminAt.substring(0, 10) : ''
+              if (editForm.submittedToAdminAt !== val) {
+                await handleSingleFieldSave(q.id, { submittedToAdminAt: editForm.submittedToAdminAt || null })
+              }
+              setActiveCell(null)
+            }}
+            onKeyDown={async e => {
+              if (e.key === 'Enter') {
+                const val = q.submittedToAdminAt ? q.submittedToAdminAt.substring(0, 10) : ''
+                if (editForm.submittedToAdminAt !== val) {
+                  await handleSingleFieldSave(q.id, { submittedToAdminAt: editForm.submittedToAdminAt || null })
+                }
+                setActiveCell(null)
+              } else if (e.key === 'Escape') {
+                setActiveCell(null)
+              }
+            }}
+            autoFocus
+          />
+        ) : (
+          <div
+            className="clickable-cell-trigger editable-text-cell"
+            onClick={() => {
+              const val = q.submittedToAdminAt ? q.submittedToAdminAt.substring(0, 10) : ''
+              setActiveCell({ id: q.id, field: 'submittedToAdminAt' })
+              setEditForm({ submittedToAdminAt: val })
+            }}
+          >
+            {formatDateToSlash(q.submittedToAdminAt) !== '-' ? formatDateToSlash(q.submittedToAdminAt) : <span className="cell-empty">—</span>}
+          </div>
+        )}
       </td>
 
       {/* Bill To - Click-to-Edit Dropdown */}
@@ -267,9 +357,46 @@ export default function TableRow({
         )}
       </td>
 
-      {/* Date Paid - Read-only */}
-      <td>
-        {formatDateToSlash(q.datePaid) !== '-' ? formatDateToSlash(q.datePaid) : <span className="cell-empty">—</span>}
+      {/* Date Paid - Click-to-Edit Date */}
+      <td className={isDatePaidEditing ? 'editing-cell' : ''}>
+        {isDatePaidEditing ? (
+          <input
+            type="date"
+            className="cell-input"
+            value={editForm.datePaid || ''}
+            onChange={e => setEditForm({ ...editForm, datePaid: e.target.value })}
+            onBlur={async () => {
+              const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+              if (editForm.datePaid !== val) {
+                await handleSingleFieldSave(q.id, { datePaid: editForm.datePaid || null })
+              }
+              setActiveCell(null)
+            }}
+            onKeyDown={async e => {
+              if (e.key === 'Enter') {
+                const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+                if (editForm.datePaid !== val) {
+                  await handleSingleFieldSave(q.id, { datePaid: editForm.datePaid || null })
+                }
+                setActiveCell(null)
+              } else if (e.key === 'Escape') {
+                setActiveCell(null)
+              }
+            }}
+            autoFocus
+          />
+        ) : (
+          <div
+            className="clickable-cell-trigger editable-text-cell"
+            onClick={() => {
+              const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+              setActiveCell({ id: q.id, field: 'datePaid' })
+              setEditForm({ datePaid: val })
+            }}
+          >
+            {formatDateToSlash(q.datePaid) !== '-' ? formatDateToSlash(q.datePaid) : <span className="cell-empty">—</span>}
+          </div>
+        )}
       </td>
 
       {/* Updated By - Read-only */}
@@ -277,12 +404,90 @@ export default function TableRow({
         {q.updatedBy || <span className="cell-empty">—</span>}
       </td>
 
-      {/* Update Date - Read-only */}
-      <td className="cell-date">{formatDateToSlash(q.lastUpdatedAt)}</td>
+      {/* Update Date - Click-to-Edit Date */}
+      <td className={`cell-date ${isLastUpdatedEditing ? 'editing-cell' : ''}`}>
+        {isLastUpdatedEditing ? (
+          <input
+            type="date"
+            className="cell-input"
+            value={editForm.lastUpdatedAt || ''}
+            onChange={e => setEditForm({ ...editForm, lastUpdatedAt: e.target.value })}
+            onBlur={async () => {
+              const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
+              if (editForm.lastUpdatedAt !== val) {
+                await handleSingleFieldSave(q.id, { lastUpdatedAt: editForm.lastUpdatedAt || null })
+              }
+              setActiveCell(null)
+            }}
+            onKeyDown={async e => {
+              if (e.key === 'Enter') {
+                const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
+                if (editForm.lastUpdatedAt !== val) {
+                  await handleSingleFieldSave(q.id, { lastUpdatedAt: editForm.lastUpdatedAt || null })
+                }
+                setActiveCell(null)
+              } else if (e.key === 'Escape') {
+                setActiveCell(null)
+              }
+            }}
+            autoFocus
+          />
+        ) : (
+          <div
+            className="clickable-cell-trigger editable-text-cell"
+            onClick={() => {
+              const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
+              setActiveCell({ id: q.id, field: 'lastUpdatedAt' })
+              setEditForm({ lastUpdatedAt: val })
+            }}
+          >
+            {formatDateToSlash(q.lastUpdatedAt) !== '-' ? formatDateToSlash(q.lastUpdatedAt) : <span className="cell-empty">—</span>}
+          </div>
+        )}
+      </td>
 
-      {/* Update Detail - Read-only */}
-      <td className="tooltip-cell" data-tooltip={q.updateDetail || 'No details'}>
-        {q.updateDetail || '-'}
+      {/* Update Detail - Click-to-Edit Text */}
+      <td className={`tooltip-cell ${isUpdateDetailEditing ? 'editing-cell' : ''}`} data-tooltip={q.updateDetail || 'No details'}>
+        {isUpdateDetailEditing ? (
+          <input
+            type="text"
+            className="cell-input"
+            value={editForm.updateDetail || ''}
+            onChange={e => setEditForm({ ...editForm, updateDetail: e.target.value })}
+            onBlur={async () => {
+              const val = (q.updateDetail || '').trim()
+              const typed = (editForm.updateDetail || '').trim()
+              if (typed !== val) {
+                await handleSingleFieldSave(q.id, { updateDetail: typed })
+              }
+              setActiveCell(null)
+            }}
+            onKeyDown={async e => {
+              if (e.key === 'Enter') {
+                const val = (q.updateDetail || '').trim()
+                const typed = (editForm.updateDetail || '').trim()
+                if (typed !== val) {
+                  await handleSingleFieldSave(q.id, { updateDetail: typed })
+                }
+                setActiveCell(null)
+              } else if (e.key === 'Escape') {
+                setActiveCell(null)
+              }
+            }}
+            placeholder="Enter details..."
+            autoFocus
+          />
+        ) : (
+          <div
+            className="clickable-cell-trigger editable-text-cell"
+            onClick={() => {
+              setActiveCell({ id: q.id, field: 'updateDetail' })
+              setEditForm({ updateDetail: q.updateDetail || '' })
+            }}
+          >
+            {q.updateDetail || '-'}
+          </div>
+        )}
       </td>
     </tr>
   )

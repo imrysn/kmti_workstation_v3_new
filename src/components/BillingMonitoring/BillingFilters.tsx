@@ -92,6 +92,7 @@ export default function BillingFilters({
           <option value="Partial Billing">Partial Billing</option>
           <option value="Billing Completion">Billing Completion</option>
           <option value="CANCELLED">CANCELLED</option>
+          <option value="REVISED">REVISED</option>
         </select>
       </div>
 
@@ -106,6 +107,7 @@ export default function BillingFilters({
           <option value="On Going">On Going</option>
           <option value="Finished">Finished</option>
           <option value="CANCELLED">CANCELLED</option>
+          <option value="REVISED">REVISED</option>
         </select>
       </div>
 

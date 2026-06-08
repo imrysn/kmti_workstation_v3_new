@@ -191,6 +191,8 @@ export default function BillingSpreadsheetTable({
                       formatCurrency={formatCurrency}
                       activeCell={activeCell}
                       setActiveCell={setActiveCell}
+                      editForm={editForm}
+                      setEditForm={setEditForm}
                     />
                   )
                 })}

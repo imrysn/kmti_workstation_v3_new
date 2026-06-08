@@ -400,14 +400,14 @@
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 1px;
+  padding: 6px 10px 6px 0px;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
   text-decoration: none;
   transition: all 0.2s ease;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
 .btn-qno-link:hover {
@@ -512,9 +512,9 @@
 }
 
 .status-b-revised {
-  background: rgba(245, 158, 11, 0.15);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .status-b-none {
@@ -668,6 +668,7 @@
 .tooltip-cell {
   position: relative;
   cursor: help;
+  overflow: visible !important;
 }
 
 .tooltip-cell:hover::after {
@@ -2037,10 +2038,10 @@ body.void-theme .progress-bar-container {
 }
 
 /* Statement View Styling */
+/* ─────────────── CLIENT STATEMENT VIEW ─────────────── */
 .client-statement-view {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
   display: flex;
@@ -2079,299 +2080,505 @@ body.void-theme .progress-bar-container {
 .btn-print-statement:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
+/* ── Printable sheet (on-screen) ── */
 .printable-statement-sheet {
   background: var(--bg-primary);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 40px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 44px 48px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 28px;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
 }
 
-.statement-sheet-header {
+/* ── SOA Header ── */
+.soa-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  border-bottom: 2px solid var(--border);
-  padding-bottom: 24px;
+  gap: 24px;
 }
 
-.company-logo-wrap {
+.soa-letterhead {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.soa-logo-row {
   display: flex;
   align-items: center;
-  height: 54px;
+  height: 52px;
 }
 
 .kmti-text-logo-img {
-  max-height: 54px;
+  max-height: 52px;
   object-fit: contain;
-  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.15));
+  filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .kmti-gear-logo-img {
-  max-height: 54px;
+  max-height: 52px;
   object-fit: contain;
-  margin-left: -70px;
-  filter: drop-shadow(0px 2px 1px rgba(0, 0, 0, 1));
+  margin-left: -68px;
+  filter: drop-shadow(0px 2px 1px rgba(0, 0, 0, 0.9));
 }
 
-.company-address-block {
+.soa-company-block {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   font-size: 11px;
   color: var(--text-secondary);
-  line-height: 1.4;
-  margin-top: 8px;
+  line-height: 1.55;
+  margin-top: 2px;
 }
 
-.company-address-block .co-name {
+.soa-company-name {
   font-weight: 700;
   font-size: 13px;
   color: var(--text-primary);
   margin-bottom: 2px;
 }
 
-.company-address-block .co-tin {
+.soa-tin {
   font-weight: 600;
   color: var(--text-muted);
   margin-top: 4px;
 }
 
-.statement-meta-info {
+/* Right side of header */
+.soa-doc-info {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 12px;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
-.statement-title {
-  font-size: 22px;
-  font-weight: 800;
+.soa-doc-title {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 1px;
   color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.5px;
+  text-transform: uppercase;
 }
 
-.meta-details-table {
+.soa-meta-table {
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 11.5px;
 }
 
-.meta-details-table th {
+.soa-meta-table th {
   text-align: left;
   font-weight: 600;
   color: var(--text-muted);
-  padding: 3px 8px 3px 0;
+  padding: 3px 10px 3px 0;
+  white-space: nowrap;
 }
 
-.meta-details-table td {
+.soa-meta-table td {
   text-align: right;
   font-weight: 700;
   color: var(--text-primary);
-  padding: 3px 0 3px 8px;
+  padding: 1px 0 1px 8px;
 }
 
-.statement-recipient-summary-row {
+/* ── Editable Inputs ── */
+.soa-editable-input {
+  border: 1px solid var(--border, #cbd5e1);
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  padding: 3px 6px;
+  border-radius: 6px;
+  text-align: right;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.soa-editable-input:hover {
+  border-color: #94a3b8;
+}
+
+.soa-editable-input:focus {
+  border-color: var(--accent, #3b82f6);
+  background: var(--bg-primary, #ffffff);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Print fallback styles for inputs */
+@media print {
+  .soa-editable-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ── Divider ── */
+.soa-divider {
+  height: 2px;
+  border: 1px solid var(--border);
+  border-radius: 1px;
+  opacity: 0.5;
+  margin: -8px 0;
+}
+
+/* ── Bill To + Summary Row ── */
+.soa-bill-summary-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1.5fr;
   gap: 32px;
-  margin-top: 12px;
+  align-items: start;
 }
 
-.statement-bill-to {
+.soa-section-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 5px;
+  margin-bottom: 10px;
+}
+
+.soa-bill-client-stack {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  text-align: left;
-}
-
-.bill-to-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 4px;
-}
-
-.bill-to-client-details {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  align-items: flex-start;
+  gap: 12px;
   margin-top: 8px;
 }
 
-.client-name-bold {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.client-logo-embedded {
-  max-height: 48px;
-  max-width: 120px;
+.soa-client-logo-big {
+  max-height: 280px;
+  max-width: 350px;
   object-fit: contain;
 }
 
-.statement-summary-box {
+.soa-client-logo-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  background: var(--accent, #3b82f6);
+  color: #fff;
+  font-size: 32px;
+  font-weight: 800;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
+  align-items: center;
+  justify-content: center;
 }
 
-.summary-box-title {
+.soa-client-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+/* Summary Cards */
+.soa-summary-cards {
+  display: flex;
+  padding-top: 6%;
+  justify-content: center;
+  align-items: center;
+  gap: 36px;
+  margin-top: 10px;
+}
+
+.soa-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 2px 0 2px 18px;
+  border-left: 4px solid var(--border, #cbd5e1);
+  background: transparent;
+  text-align: left;
+  /* Keep internal labels/values aligned left */
+}
+
+.soa-card-balance {
+  border-left: 4px solid var(--border, #94a3b8);
+}
+
+.soa-card-unpaid {
+  border-left: 4px solid var(--border, #94a3b8);
+  /* red accent indicator */
+}
+
+.soa-card-clear {
+  border-left: 4px solid var(--border, #94a3b8);
+  /* green accent indicator */
+}
+
+.soa-card-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.soa-card-value {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: monospace;
+  color: var(--text-primary);
+}
+
+.soa-val-paid {
+  color: #10b981;
+}
+
+.soa-val-due {
+  color: #ef4444;
+}
+
+/* ── Ledger Table ── */
+.soa-table-section {
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.soa-ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.soa-ledger-table thead tr {
+  background: #374151;
+  color: #fff;
+}
+
+.soa-ledger-table thead th {
+  padding: 9px 12px;
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 1px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 4px;
-}
-
-.summary-box-grid {
-  display: flex;
-  gap: 16px;
-  justify-content: space-between;
-  margin-top: 8px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.summary-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-}
-
-.summary-item.highlight {
-  background: rgba(59, 130, 246, 0.05);
-  border-radius: 6px;
-  padding: 2px 6px;
-}
-
-.item-label {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-muted);
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-}
-
-.item-val {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.unpaid-label {
-  color: #ef4444;
-  font-weight: 600;
-}
-
-.statement-footer-remittance-block {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 40px;
-  margin-top: 24px;
-  border-top: 1px solid var(--border);
-  padding-top: 24px;
-}
-
-.remittance-details {
+  white-space: nowrap;
   text-align: left;
 }
 
-.remittance-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+.soa-th-date {
+  width: 15%;
+  text-align: center !important;
 }
 
-.remittance-desc {
+.soa-th-ref {
+  width: 25%;
+}
+
+.soa-th-amount {
+  width: 20%;
+  text-align: right !important;
+}
+
+.soa-th-credit {
+  width: 20%;
+  text-align: right !important;
+}
+
+.soa-th-datepaid {
+  width: 20%;
+  text-align: center !important;
+}
+
+.soa-row-even {
+  background: var(--bg-primary);
+}
+
+.soa-row-odd {
+  background: var(--bg-secondary);
+}
+
+.soa-ledger-table tbody td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.soa-td-center {
+  text-align: center;
+  font-size: 11.5px;
+}
+
+.soa-td-unpaid {
+  color: #ef4444 !important;
+  /* Red text color for Unpaid cells */
+  font-weight: 600;
+}
+
+.soa-td-qno {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--text-primary);
+}
+
+.soa-td-contact {
+  font-size: 11.5px;
+}
+
+.soa-td-amount {
+  text-align: right;
+  font-family: monospace;
+  font-weight: 500;
+}
+
+.soa-empty-row {
+  text-align: center;
+  padding: 32px !important;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Totals footer row */
+.soa-totals-row {
+  background: var(--bg-secondary);
+  border-top: 2px solid var(--border);
+}
+
+.soa-totals-row td {
+  padding: 10px 12px;
+}
+
+.soa-total-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-primary);
+}
+
+.soa-total-outstanding {
+  color: #ef4444 !important;
+  /* Vibrant red */
+}
+
+.soa-total-cleared {
+  color: #10b981 !important;
+  /* Vibrant green */
+}
+
+.soa-total-billed {
+  text-align: right;
+  font-family: monospace;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* ── Footer: Remittance + Signatures ── */
+.soa-footer-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 40px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin-top: 4px;
+}
+
+.soa-remittance {
+  text-align: left;
+}
+
+.soa-remittance-desc {
   font-size: 11px;
   color: var(--text-secondary);
   margin: 0 0 8px 0;
 }
 
-.remittance-info-table {
+.soa-remittance-table {
+  width: 100%;
   border-collapse: collapse;
   font-size: 11px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
-.remittance-info-table th {
+.soa-remittance-table th {
   text-align: left;
   font-weight: 600;
   color: var(--text-muted);
-  padding: 2px 12px 2px 0;
+  padding: 2px 14px 2px 0;
+  white-space: nowrap;
+  width: 120px;
+  /* Provide explicit label column width */
 }
 
-.remittance-info-table td {
+.soa-remittance-table td {
   text-align: left;
   font-weight: 700;
   color: var(--text-primary);
   padding: 2px 0;
 }
 
-.remittance-notice {
+/* Force left-aligned remittance editable inputs to stretch and fill the space */
+.soa-remittance-table .soa-editable-input {
+  text-align: left !important;
+  width: 100%;
+}
+
+.soa-remittance-notice {
   font-size: 10px;
   color: var(--text-muted);
   line-height: 1.4;
   margin: 0;
 }
 
-.authorization-signatures {
+.soa-signatures {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 36px;
   justify-content: flex-end;
+  align-items: flex-end;
+  padding-right: 20px;
 }
 
-.sig-block {
+.soa-sig-block {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-.sig-line {
   width: 200px;
-  border-bottom: 1px solid var(--text-primary);
 }
 
-.sig-label {
+.soa-sig-line {
+  width: 100%;
+  border-bottom: 1px solid var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.soa-sig-label {
   font-size: 10px;
   font-weight: 600;
   color: var(--text-muted);
-  margin-top: 6px;
+  text-align: center;
 }
 
-.statement-table-wrapper {
-  margin-top: 12px;
-}
-
-
-/* Print Overrides */
+/* ─────────────── PRINT / PDF OVERRIDES ─────────────── */
 @media print {
 
-  /* Set page dimension to A4 portrait with 15mm margins */
+  /* A4 page */
   @page {
     size: A4 portrait;
-    margin: 15mm;
+    margin: 12mm 14mm;
   }
 
-  /* Hide app layouts, sidebar, title bar, controls, buttons, selects and scrollbars */
+  /* Hide everything that is not the printable sheet */
+  body>*,
   .title-bar,
   #titlebar,
   .datetime-overlay,
@@ -2393,14 +2600,15 @@ body.void-theme .progress-bar-container {
     visibility: hidden !important;
   }
 
-  /* Reset layout structure for printing */
+  /* Reset all layout containers */
   html,
   body,
   #root,
   .app-shell,
   .app-body,
   .app-content,
-  .billing-monitoring-page {
+  .billing-monitoring-page,
+  .client-statement-view {
     position: static !important;
     overflow: visible !important;
     height: auto !important;
@@ -2410,9 +2618,11 @@ body.void-theme .progress-bar-container {
     background: white !important;
     color: black !important;
     box-shadow: none !important;
+    border: none !important;
+    display: block !important;
   }
 
-  /* Target statement sheet formatting */
+  /* Make the sheet fill the page */
   .printable-statement-sheet {
     display: flex !important;
     flex-direction: column !important;
@@ -2425,18 +2635,184 @@ body.void-theme .progress-bar-container {
     background: white !important;
     color: black !important;
     visibility: visible !important;
+    gap: 20px !important;
   }
 
   .printable-statement-sheet * {
     visibility: visible !important;
   }
 
-  /* Force background colors and colors to render in print/PDF */
+  /* Override CSS variables with print-safe colors */
+  .soa-header,
+  .soa-bill-summary-row,
+  .soa-table-section,
+  .soa-footer-row {
+    color: black !important;
+  }
+
+  .soa-doc-title {
+    color: black !important;
+  }
+
+  .soa-client-name {
+    color: black !important;
+  }
+
+  .soa-client-info-details {
+    color: #555 !important;
+  }
+
+  .soa-client-info-details span {
+    color: #555 !important;
+  }
+
+  .soa-company-name {
+    color: black !important;
+  }
+
+  .soa-company-block,
+  .soa-company-block span {
+    color: #555 !important;
+  }
+
+  .soa-tin {
+    color: #777 !important;
+  }
+
+  .soa-meta-table th {
+    color: #555 !important;
+  }
+
+  .soa-meta-table td {
+    color: black !important;
+  }
+
+  .soa-section-label {
+    color: #777 !important;
+    border-bottom-color: #ccc !important;
+  }
+
+  .soa-divider {
+    background: #1d4ed8 !important;
+    opacity: 1 !important;
+  }
+
+  /* Table header in dark gray for print */
+  .soa-ledger-table thead tr {
+    background: #374151 !important;
+  }
+
+  .soa-ledger-table thead th {
+    color: white !important;
+  }
+
+  .soa-row-even {
+    background: white !important;
+  }
+
+  .soa-row-odd {
+    background: #f9fafb !important;
+  }
+
+  .soa-ledger-table tbody td {
+    color: black !important;
+    border-bottom-color: #e5e7eb !important;
+  }
+
+  .soa-td-qno {
+    color: black !important;
+  }
+
+  .soa-td-unpaid {
+    color: #dc2626 !important;
+    /* Print-safe red for Unpaid ledger cells */
+  }
+
+  .soa-totals-row {
+    background: #f3f4f6 !important;
+    border-top-color: #d1d5db !important;
+  }
+
+  .soa-total-label {
+    color: black !important;
+  }
+
+  .soa-total-outstanding {
+    color: #dc2626 !important;
+    /* Print-safe red */
+  }
+
+  .soa-total-cleared {
+    color: #059669 !important;
+    /* Print-safe green */
+  }
+
+  .soa-total-billed {
+    color: black !important;
+  }
+
+  .soa-summary-card {
+    background: transparent !important;
+    border: none !important;
+    border-left: 4px solid #ccc !important;
+    padding: 2px 0 2px 18px !important;
+  }
+
+  /* Only colorize the left-border if the element explicitly has both soa-card-balance AND unpaid/clear classes */
+  .soa-card-balance.soa-card-unpaid {
+    border-left-color: #dc2626 !important;
+  }
+
+  .soa-card-balance.soa-card-clear {
+    border-left-color: #059669 !important;
+  }
+
+  .soa-card-label {
+    color: #555 !important;
+  }
+
+  .soa-card-value {
+    color: black !important;
+  }
+
+  .soa-remittance-desc {
+    color: #555 !important;
+  }
+
+  .soa-remittance-table th {
+    color: #555 !important;
+  }
+
+  .soa-remittance-table td {
+    color: black !important;
+  }
+
+  .soa-remittance-notice {
+    color: #777 !important;
+  }
+
+  .soa-sig-line {
+    border-bottom-color: black !important;
+  }
+
+  .soa-sig-label,
+  .soa-sig-name-input {
+    color: black !important;
+  }
+
+  .soa-footer-row {
+    border-top-color: #ccc !important;
+  }
+
+  /* Force exact color rendering */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 }
+
+
+
 
 /* Engineer Leaderboard Styles (Theme Responsive) */
 .leaderboard-leader-row {
@@ -2454,4 +2830,23 @@ body.void-theme .progress-bar-container {
 
 .leaderboard-member-row:hover {
   background-color: var(--bg-surface-hover, rgba(0, 0, 0, 0.01)) !important;
+}
+
+/* Row cancelled state: turn text into red color */
+.row-cancelled td:not(.cell-checkbox) {
+  color: #ef4444 !important;
+}
+
+.row-cancelled td:not(.cell-checkbox) button,
+.row-cancelled td:not(.cell-checkbox) div,
+.row-cancelled td:not(.cell-checkbox) span:not(.status-badge) {
+  color: #ef4444 !important;
+}
+
+/* Status badge styling for REVISED in quotation/project columns */
+.status-q-revised,
+.status-p-revised {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }

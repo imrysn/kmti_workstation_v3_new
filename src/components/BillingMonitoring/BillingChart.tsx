@@ -568,7 +568,7 @@ export default function BillingChart({
                 }}
               />
               <ChartTooltip content={<CustomTooltip />} />
-              {clientSalesData.map((client) => (
+              {clientSalesData.filter(c => c.name !== 'Unknown Client').map((client) => (
                 <Bar
                   key={client.name}
                   dataKey={client.name}
@@ -624,7 +624,7 @@ export default function BillingChart({
         </div>
       ) : (
         <div className="client-legend-container">
-          {clientSalesData.map((client, idx) => {
+          {clientSalesData.filter(c => c.name !== 'Unknown Client').map((client, idx) => {
             const color = clientColors[client.name] || '#3b82f6'
             return (
               <div key={`client-legend-${idx}`} className="client-legend-item">

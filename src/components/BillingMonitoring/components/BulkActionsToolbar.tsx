@@ -107,6 +107,7 @@ export default function BulkActionsToolbar({
           <option value="Partial Billing">Partial Billing</option>
           <option value="Billing Completion">Billing Completion</option>
           <option value="CANCELLED">CANCELLED</option>
+          <option value="REVISED">REVISED</option>
         </select>
 
         <div className="bulk-actions-divider" />
@@ -127,6 +128,7 @@ export default function BulkActionsToolbar({
           <option value="On Going">On Going</option>
           <option value="Finished">Finished</option>
           <option value="CANCELLED">CANCELLED</option>
+          <option value="REVISED">REVISED</option>
         </select>
 
         <div className="bulk-actions-divider" />
