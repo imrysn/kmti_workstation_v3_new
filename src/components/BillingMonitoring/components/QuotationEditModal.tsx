@@ -7,6 +7,8 @@ interface QuotationEditModalProps {
   setEditForm: (form: Partial<IQuotation>) => void
   clientsList: string[]
   handleSingleFieldSave: (id: number, updates: Partial<IQuotation>) => Promise<void>
+  isDuplicateMode?: boolean
+  handleCreateRow?: (updates: Partial<IQuotation>) => Promise<void>
 }
 
 export default function QuotationEditModal({
@@ -15,7 +17,9 @@ export default function QuotationEditModal({
   editForm,
   setEditForm,
   clientsList,
-  handleSingleFieldSave
+  handleSingleFieldSave,
+  isDuplicateMode,
+  handleCreateRow
 }: QuotationEditModalProps) {
   if (!editingQuotation) return null
 
@@ -49,7 +53,7 @@ export default function QuotationEditModal({
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '10px' }}>
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>
-            Edit Quotation Billing Details
+            {isDuplicateMode ? 'Duplicate Quotation Details (Create Copy)' : 'Edit Quotation Billing Details'}
           </h3>
           <button
             onClick={() => setEditingQuotation(null)}
@@ -110,11 +114,13 @@ export default function QuotationEditModal({
 
           {/* 4. Quotation Number */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1.4, minWidth: '100px' }}>
-            <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Quotation No</label>
+            <label style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-secondary)', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              Quotation No {isDuplicateMode && <span style={{ color: '#ef4444' }}>*</span>}
+            </label>
             <input
               type="text"
               className="filter-input"
-              style={{ width: '100%', fontSize: '11px', padding: '4px 6px' }}
+              style={{ width: '100%', fontSize: '11px', padding: '4px 6px', border: isDuplicateMode ? '1px solid #f59e0b' : undefined }}
               value={editForm.quotationNo || ''}
               onChange={e => setEditForm({ ...editForm, quotationNo: e.target.value })}
             />
@@ -286,28 +292,38 @@ export default function QuotationEditModal({
             className="btn"
             style={{ background: 'var(--accent)', color: '#fff' }}
             onClick={async () => {
-              const updates: Partial<IQuotation> = {
-                designerName: editForm.designerName,
-                customerIncharge: editForm.customerIncharge,
-                clientName: editForm.clientName,
-                quotationNo: editForm.quotationNo,
-                date: editForm.date,
-                grandTotal: editForm.grandTotal,
-                quotationStatus: editForm.quotationStatus,
-                projectStatus: editForm.projectStatus,
-                submittedToAdminAt: editForm.submittedToAdminAt,
-                billTo: editForm.billTo,
-                billingStatus: editForm.billingStatus,
-                datePaid: editForm.datePaid,
-                updatedBy: editForm.updatedBy,
-                lastUpdatedAt: editForm.lastUpdatedAt,
-                updateDetail: editForm.updateDetail,
+              if (isDuplicateMode) {
+                if (!editForm.quotationNo || editForm.quotationNo.trim() === editingQuotation.quotationNo?.trim()) {
+                  alert('Duplication Safety Alert: You MUST change the Quotation Number (e.g., append -R1, -Copy, or a new sequence) to prevent database conflicts and duplicate records.')
+                  return
+                }
+                if (handleCreateRow) {
+                  await handleCreateRow(editForm)
+                }
+              } else {
+                const updates: Partial<IQuotation> = {
+                  designerName: editForm.designerName,
+                  customerIncharge: editForm.customerIncharge,
+                  clientName: editForm.clientName,
+                  quotationNo: editForm.quotationNo,
+                  date: editForm.date,
+                  grandTotal: editForm.grandTotal,
+                  quotationStatus: editForm.quotationStatus,
+                  projectStatus: editForm.projectStatus,
+                  submittedToAdminAt: editForm.submittedToAdminAt,
+                  billTo: editForm.billTo,
+                  billingStatus: editForm.billingStatus,
+                  datePaid: editForm.datePaid,
+                  updatedBy: editForm.updatedBy,
+                  lastUpdatedAt: editForm.lastUpdatedAt,
+                  updateDetail: editForm.updateDetail,
+                }
+                await handleSingleFieldSave(editingQuotation.id, updates)
               }
-              await handleSingleFieldSave(editingQuotation.id, updates)
               setEditingQuotation(null)
             }}
           >
-            Save Changes
+            {isDuplicateMode ? 'Create Duplicate' : 'Save Changes'}
           </button>
         </div>
       </div>

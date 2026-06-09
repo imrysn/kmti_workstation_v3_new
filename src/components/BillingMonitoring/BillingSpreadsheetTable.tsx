@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { IQuotation } from '../../types'
 import type { IActiveCell } from '../../hooks/useBillingMonitoring'
 import { useNavigate } from 'react-router-dom'
@@ -34,6 +34,7 @@ interface BillingSpreadsheetTableProps {
   filteredQuotations: IQuotation[]
   getCompletedAmount: (q: IQuotation) => number
   handleDeleteRows?: (ids: number[]) => Promise<void>
+  handleAddNewRow: (initialData: Partial<IQuotation>) => Promise<void>
 }
 
 export default function BillingSpreadsheetTable({
@@ -56,12 +57,14 @@ export default function BillingSpreadsheetTable({
   sortDirection,
   handleSort,
   filteredQuotations,
-  getCompletedAmount
+  getCompletedAmount,
+  handleAddNewRow
 }: BillingSpreadsheetTableProps) {
   const navigate = useNavigate()
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [clientsList, setClientsList] = useState<string[]>([])
   const [editingQuotation, setEditingQuotation] = useState<IQuotation | null>(null)
+  const [isDuplicateMode, setIsDuplicateMode] = useState(false)
 
   useEffect(() => {
     clientsApi.list().then(res => {
@@ -177,6 +180,47 @@ export default function BillingSpreadsheetTable({
                 {paginatedQuotations.map((q, idx) => {
                   const rowNumber = (currentPage - 1) * itemsPerPage + idx + 1
 
+                  if (q.quotationStatus === 'Partial Billing') {
+                    return (
+                      <React.Fragment key={q.id}>
+                        <TableRow
+                          q={q}
+                          idx={idx}
+                          rowNumber={rowNumber}
+                          selectedIds={selectedIds}
+                          setSelectedIds={setSelectedIds}
+                          clientsList={clientsList}
+                          handleSingleFieldSave={handleSingleFieldSave}
+                          handleGoToQuotation={handleGoToQuotation}
+                          formatDateToSlash={formatDateToSlash}
+                          formatCurrency={formatCurrency}
+                          activeCell={activeCell}
+                          setActiveCell={setActiveCell}
+                          editForm={editForm}
+                          setEditForm={setEditForm}
+                          partialRowType="dp"
+                        />
+                        <TableRow
+                          q={q}
+                          idx={idx}
+                          rowNumber={rowNumber}
+                          selectedIds={selectedIds}
+                          setSelectedIds={setSelectedIds}
+                          clientsList={clientsList}
+                          handleSingleFieldSave={handleSingleFieldSave}
+                          handleGoToQuotation={handleGoToQuotation}
+                          formatDateToSlash={formatDateToSlash}
+                          formatCurrency={formatCurrency}
+                          activeCell={activeCell}
+                          setActiveCell={setActiveCell}
+                          editForm={editForm}
+                          setEditForm={setEditForm}
+                          partialRowType="remaining"
+                        />
+                      </React.Fragment>
+                    )
+                  }
+
                   return (
                     <TableRow
                       key={q.id}
@@ -232,6 +276,8 @@ export default function BillingSpreadsheetTable({
               handleBulkStatus={handleBulkStatus}
               handleBulkProjectStatus={handleBulkProjectStatus}
               handleBulkBillTo={handleBulkBillTo}
+              isDuplicateMode={isDuplicateMode}
+              setIsDuplicateMode={setIsDuplicateMode}
             />
           )}
 
@@ -242,6 +288,8 @@ export default function BillingSpreadsheetTable({
             setEditForm={setEditForm}
             clientsList={clientsList}
             handleSingleFieldSave={handleSingleFieldSave}
+            isDuplicateMode={isDuplicateMode}
+            handleCreateRow={handleAddNewRow}
           />
         </>
       )}

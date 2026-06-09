@@ -62,6 +62,7 @@
   /* Enable child scroll boundaries */
   min-width: 0;
   /* Allows inner components to shrink fluidly */
+  transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── LEFT SIDEBAR: AESTHETIC GOOGLE-STYLE PANEL ──────────────── */
@@ -76,7 +77,80 @@
   padding: 24px;
   min-height: 0;
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden; /* Prevents child text-wrapping layout calculations during transition */
+}
+
+.calendar-sidebar.collapsed {
+  width: 0 !important;
+  padding: 0 !important;
+  border-color: transparent !important;
+  margin: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none;
+  box-shadow: none !important;
+}
+
+.sidebar-collapse-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--cal-card-border);
+  background: var(--bg-secondary);
+  color: var(--cal-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.sidebar-collapse-btn:hover {
+  background: var(--bg-hover);
+  color: var(--cal-text-primary);
+  transform: scale(1.05);
+}
+
+.sidebar-expand-btn {
+  position: absolute;
+  left: 0;
+  top: 140px;
+  width: 24px;
+  height: 48px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--cal-card-border);
+  border-left: none;
+  border-radius: 0 10px 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  color: var(--cal-text-muted);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.sidebar-expand-btn:hover {
+  color: var(--cal-text-primary);
+  background: var(--bg-hover);
+  width: 28px;
+}
+
+/* Page wrapper container alignment when collapsed */
+.team-calendar-layout.sidebar-collapsed {
+  gap: 0px;
 }
 
 /* Pill Create Action Button */

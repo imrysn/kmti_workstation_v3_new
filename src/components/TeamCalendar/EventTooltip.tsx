@@ -78,27 +78,27 @@ export default function EventTooltip({ event, position, anchorRect, isVisible }:
                 : isCompleted
                   ? <CheckIcon />
                   : (() => {
-                      const tt = inferTaskType(event.todo_title, event.todo_description)
-                      const label = TASK_TYPE_PILL_LABELS[tt]
-                      if (!label) return null
-                      return (
-                        <span style={{
-                          fontSize: '8.5px',
-                          fontWeight: 800,
-                          letterSpacing: '0.05em',
-                          padding: '2px 5px',
-                          borderRadius: '3px',
-                          background: TASK_TYPE_COLORS[tt].bg,
-                          color: TASK_TYPE_COLORS[tt].text,
-                          border: `1px solid ${TASK_TYPE_COLORS[tt].border}`,
-                          lineHeight: '1.4',
-                          userSelect: 'none',
-                          flexShrink: 0,
-                        }}>
-                          {label}
-                        </span>
-                      )
-                    })()}
+                    const tt = inferTaskType(event.todo_title, event.todo_description)
+                    const label = TASK_TYPE_PILL_LABELS[tt]
+                    if (!label) return null
+                    return (
+                      <span style={{
+                        fontSize: '8.5px',
+                        fontWeight: 800,
+                        letterSpacing: '0.05em',
+                        padding: '2px 5px',
+                        borderRadius: '3px',
+                        background: TASK_TYPE_COLORS[tt].bg,
+                        color: TASK_TYPE_COLORS[tt].text,
+                        border: `1px solid ${TASK_TYPE_COLORS[tt].border}`,
+                        lineHeight: '1.4',
+                        userSelect: 'none',
+                        flexShrink: 0,
+                      }}>
+                        {label}
+                      </span>
+                    )
+                  })()}
         </span>
         <span className="calendar-tooltip-title">
           {isOffsetHoliday
@@ -110,11 +110,11 @@ export default function EventTooltip({ event, position, anchorRect, isVisible }:
                 : event.todo_title}
         </span>
       </div>
-      
+
       {!isCompanyEvent && !isOffsetHoliday && !isAbsence && (
         <div className="calendar-tooltip-body">
           <div className="calendar-tooltip-row">
-            <span className="calendar-tooltip-label">Assignee:</span>
+            <span className="calendar-tooltip-label">Engineer:</span>
             <span className="calendar-tooltip-value">{event.engineer_name || event.username}</span>
           </div>
           {event.due_date && (

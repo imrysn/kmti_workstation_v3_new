@@ -121,12 +121,14 @@ export default function ClientStatementView({
     clientInvoices.forEach(q => {
       const isPartial = q.quotationStatus === 'Partial Billing'
       const pct = isPartial ? getPartialBillingPercentage(q.updateDetail) : 100
-      const actualBilled = (q.grandTotal || 0) * (pct / 100)
+      
+      const billedAmount = q.grandTotal || 0
+      const paidAmount = (q.datePaid || q.billingStatus === 'PAID')
+        ? (isPartial ? (q.grandTotal || 0) * (pct / 100) : (q.grandTotal || 0))
+        : 0
 
-      totalBilled += actualBilled
-      if (q.datePaid) {
-        totalPaid += actualBilled
-      }
+      totalBilled += billedAmount
+      totalPaid += paidAmount
     })
 
     customRows.forEach(row => {
@@ -565,10 +567,13 @@ export default function ClientStatementView({
               </thead>
               <tbody>
                 {clientInvoices.map((q, i) => {
-                  const isPaid = !!q.datePaid
+                  const isPaid = !!q.datePaid || q.billingStatus === 'PAID'
                   const isPartial = q.quotationStatus === 'Partial Billing'
                   const pct = isPartial ? getPartialBillingPercentage(q.updateDetail) : 100
-                  const actualBilled = (q.grandTotal || 0) * (pct / 100)
+                  const billedAmount = q.grandTotal || 0
+                  const paidAmount = isPaid
+                    ? (isPartial ? (q.grandTotal || 0) * (pct / 100) : (q.grandTotal || 0))
+                    : 0
                   const displayQNo = quotationOverrides[q.id] !== undefined ? quotationOverrides[q.id] : (q.quotationNo || '')
                   return (
                     <tr key={q.id} className={i % 2 === 0 ? 'soa-row-even' : 'soa-row-odd'}>
@@ -595,12 +600,12 @@ export default function ClientStatementView({
                           </>
                         )}
                       </td>
-                      <td className="soa-td-amount">{formatCurrency(actualBilled)}</td>
+                      <td className="soa-td-amount">{formatCurrency(billedAmount)}</td>
                       <td className="soa-td-amount">
-                        {isPaid ? formatCurrency(actualBilled) : '—'}
+                        {isPaid ? formatCurrency(paidAmount) : '—'}
                       </td>
                       <td className={`soa-td-center ${!isPaid ? 'soa-td-unpaid' : ''}`}>
-                        {isPaid ? formatDateToSlash(q.datePaid) : 'Unpaid'}
+                        {isPaid ? (q.datePaid ? formatDateToSlash(q.datePaid) : 'Paid') : 'Unpaid'}
                       </td>
                     </tr>
                   )

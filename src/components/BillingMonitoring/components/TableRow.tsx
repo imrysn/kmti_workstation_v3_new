@@ -33,7 +33,8 @@ export default function TableRow({
   activeCell,
   setActiveCell,
   editForm,
-  setEditForm
+  setEditForm,
+  partialRowType
 }: TableRowProps) {
   const isEven = idx % 2 === 1
   const isSelected = selectedIds.includes(q.id)
@@ -42,10 +43,10 @@ export default function TableRow({
   const isQStatusEditing = activeCell?.id === q.id && activeCell?.field === 'quotationStatus'
   const isPStatusEditing = activeCell?.id === q.id && activeCell?.field === 'projectStatus'
   const isBillToEditing = activeCell?.id === q.id && activeCell?.field === 'billTo'
-  const isBStatusEditing = activeCell?.id === q.id && activeCell?.field === 'billingStatus'
+  const isBStatusEditing = activeCell?.id === q.id && (partialRowType === 'dp' ? activeCell?.field === 'billingStatus-dp' : activeCell?.field === 'billingStatus')
   const isDateEditing = activeCell?.id === q.id && activeCell?.field === 'date'
   const isSubmittedEditing = activeCell?.id === q.id && activeCell?.field === 'submittedToAdminAt'
-  const isDatePaidEditing = activeCell?.id === q.id && activeCell?.field === 'datePaid'
+  const isDatePaidEditing = activeCell?.id === q.id && (partialRowType === 'dp' ? activeCell?.field === 'datePaid-dp' : activeCell?.field === 'datePaid')
   const isLastUpdatedEditing = activeCell?.id === q.id && activeCell?.field === 'lastUpdatedAt'
   const isUpdateDetailEditing = activeCell?.id === q.id && activeCell?.field === 'updateDetail'
 
@@ -75,6 +76,191 @@ export default function TableRow({
     }
   }
 
+  const getPartialBillingPercentage = (detail?: string | null): number => {
+    if (!detail) return 50
+    const match = detail.match(/(\d+)\s*%/)
+    if (match) {
+      const percent = parseInt(match[1])
+      if (percent > 0 && percent < 100) return percent
+    }
+    return 50
+  }
+
+  const pct = getPartialBillingPercentage(q.updateDetail)
+
+  // If this is the remaining row of a partial billing split, only render columns 13 to 17
+  if (partialRowType === 'remaining') {
+    const displayBStatus = q.billingStatus === 'PAID' ? 'PAID' : (q.billingStatus || 'BILLED')
+    return (
+      <tr
+        key={`${q.id}-remaining`}
+        className={[
+          isSelected ? 'editing-row-highlight' : '',
+          isEven ? 'row-stripe' : '',
+          (q.quotationStatus === 'CANCELLED' || q.quotationStatus === 'REVISED') ? 'row-cancelled' : ''
+        ].filter(Boolean).join(' ')}
+      >
+        {/* Billing Status - Click-to-Edit Dropdown */}
+        <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isBStatusEditing) setActiveCell({ id: q.id, field: 'billingStatus' }) }}>
+          {isBStatusEditing ? (
+            <select
+              className="cell-input cell-select"
+              value={q.billingStatus || ''}
+              autoFocus
+              onBlur={() => setActiveCell(null)}
+              onChange={async e => {
+                const val = e.target.value
+                await handleSingleFieldSave(q.id, { billingStatus: val || null })
+                setActiveCell(null)
+              }}
+            >
+              <option value="">— Not Set —</option>
+              <option value="FOR BILLING">FOR BILLING</option>
+              <option value="BILLED">BILLED</option>
+              <option value="PAID">PAID</option>
+              <option value="CANCELLED">CANCELLED</option>
+              <option value="REVISED">REVISED</option>
+            </select>
+          ) : (
+            <div style={{ display: 'inline-flex', padding: '4px' }}>
+              <span className={`status-badge ${displayBStatus === 'FOR BILLING' ? 'status-b-for-billing' :
+                displayBStatus === 'BILLED' ? 'status-b-billed' :
+                  displayBStatus === 'PAID' ? 'status-b-paid' :
+                    displayBStatus === 'CANCELLED' ? 'status-b-cancelled' :
+                      displayBStatus === 'REVISED' ? 'status-b-revised' :
+                        'status-b-none'
+                }`}>
+                {displayBStatus}
+              </span>
+            </div>
+          )}
+        </td>
+
+        {/* Date Paid - Click-to-Edit Date */}
+        <td className={isDatePaidEditing ? 'editing-cell' : ''}>
+          {isDatePaidEditing ? (
+            <input
+              type="date"
+              className="cell-input"
+              value={editForm.datePaid || ''}
+              onChange={e => setEditForm({ ...editForm, datePaid: e.target.value })}
+              onBlur={async () => {
+                const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+                if (editForm.datePaid !== val) {
+                  await handleSingleFieldSave(q.id, { datePaid: editForm.datePaid || null })
+                }
+                setActiveCell(null)
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur()
+                } else if (e.key === 'Escape') {
+                  setActiveCell(null)
+                }
+              }}
+              autoFocus
+            />
+          ) : (
+            <div
+              className="clickable-cell-trigger editable-text-cell"
+              onClick={() => {
+                const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+                setActiveCell({ id: q.id, field: 'datePaid' })
+                setEditForm({ datePaid: val })
+              }}
+            >
+              {q.billingStatus === 'PAID' && q.datePaid ? formatDateToSlash(q.datePaid) : <span className="cell-empty">—</span>}
+            </div>
+          )}
+        </td>
+
+        {/* Updated By - Read-only */}
+        <td>
+          {q.updatedBy || <span className="cell-empty">—</span>}
+        </td>
+
+        {/* Update Date - Read-only/Editable */}
+        <td className={`cell-date ${isLastUpdatedEditing ? 'editing-cell' : ''}`}>
+          {isLastUpdatedEditing ? (
+            <input
+              type="date"
+              className="cell-input"
+              value={editForm.lastUpdatedAt || ''}
+              onChange={e => setEditForm({ ...editForm, lastUpdatedAt: e.target.value })}
+              onBlur={async () => {
+                const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
+                if (editForm.lastUpdatedAt !== val) {
+                  await handleSingleFieldSave(q.id, { lastUpdatedAt: editForm.lastUpdatedAt || null })
+                }
+                setActiveCell(null)
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur()
+                } else if (e.key === 'Escape') {
+                  setActiveCell(null)
+                }
+              }}
+              autoFocus
+            />
+          ) : (
+            <div
+              className="clickable-cell-trigger editable-text-cell"
+              onClick={() => {
+                const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
+                setActiveCell({ id: q.id, field: 'lastUpdatedAt' })
+                setEditForm({ lastUpdatedAt: val })
+              }}
+            >
+              {formatDateToSlash(q.lastUpdatedAt) !== '-' ? formatDateToSlash(q.lastUpdatedAt) : <span className="cell-empty">—</span>}
+            </div>
+          )}
+        </td>
+
+        {/* Update Detail - Click-to-Edit Text */}
+        <td className={`tooltip-cell ${isUpdateDetailEditing ? 'editing-cell' : ''}`} data-tooltip={q.updateDetail || 'No details'}>
+          {isUpdateDetailEditing ? (
+            <input
+              type="text"
+              className="cell-input"
+              value={editForm.updateDetail || ''}
+              onChange={e => setEditForm({ ...editForm, updateDetail: e.target.value })}
+              onBlur={async () => {
+                const val = (q.updateDetail || '').trim()
+                const typed = (editForm.updateDetail || '').trim()
+                if (typed !== val) {
+                  await handleSingleFieldSave(q.id, { updateDetail: typed })
+                }
+                setActiveCell(null)
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur()
+                } else if (e.key === 'Escape') {
+                  setActiveCell(null)
+                }
+              }}
+              placeholder="Enter details..."
+              autoFocus
+            />
+          ) : (
+            <div
+              className="clickable-cell-trigger editable-text-cell"
+              onClick={() => {
+                setActiveCell({ id: q.id, field: 'updateDetail' })
+                setEditForm({ updateDetail: q.updateDetail || '' })
+              }}
+            >
+              {q.updateDetail || `${100 - pct}% Balance Billed`}
+            </div>
+          )}
+        </td>
+      </tr>
+    )
+  }
+
+  const useRowSpan = partialRowType === 'dp'
+
   return (
     <tr
       key={q.id}
@@ -85,10 +271,10 @@ export default function TableRow({
       ].filter(Boolean).join(' ')}
     >
       {/* Index */}
-      <td className="cell-index sticky-col-index" title={`Row ${rowNumber}`}>{rowNumber}</td>
+      <td className="cell-index sticky-col-index" title={`Row ${rowNumber}`} rowSpan={useRowSpan ? 2 : undefined}>{rowNumber}</td>
 
       {/* Checkbox */}
-      <td className="cell-checkbox" style={{ textAlign: 'center' }}>
+      <td className="cell-checkbox" style={{ textAlign: 'center' }} rowSpan={useRowSpan ? 2 : undefined}>
         <input
           type="checkbox"
           className="row-checkbox"
@@ -104,17 +290,17 @@ export default function TableRow({
       </td>
 
       {/* Project Incharge (Designer Name) - Read-only */}
-      <td className="sticky-col-name">
+      <td className="sticky-col-name" rowSpan={useRowSpan ? 2 : undefined}>
         {q.designerName || <span className="cell-empty">—</span>}
       </td>
 
       {/* Customer Incharge - Read-only */}
-      <td>
+      <td rowSpan={useRowSpan ? 2 : undefined}>
         {q.customerIncharge || <span className="cell-empty">—</span>}
       </td>
 
       {/* Customer (Client Name) - Click-to-Edit Dropdown */}
-      <td style={{ padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isCustomerEditing) setActiveCell({ id: q.id, field: 'clientName' }) }}>
+      <td style={{ padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isCustomerEditing) setActiveCell({ id: q.id, field: 'clientName' }) }} rowSpan={useRowSpan ? 2 : undefined}>
         {isCustomerEditing ? (
           <select
             className="cell-input cell-select"
@@ -144,6 +330,7 @@ export default function TableRow({
         className={`cell-qno ${agingClass ? 'tooltip-cell' : ''}`}
         style={{ padding: '0px', textAlign: 'left' }}
         data-tooltip={agingTooltip || undefined}
+        rowSpan={useRowSpan ? 2 : undefined}
       >
         {q.quotationNo ? (
           <button
@@ -163,7 +350,7 @@ export default function TableRow({
       </td>
 
       {/* Date - Click-to-Edit Date */}
-      <td className={isDateEditing ? 'editing-cell' : ''}>
+      <td className={isDateEditing ? 'editing-cell' : ''} rowSpan={useRowSpan ? 2 : undefined}>
         {isDateEditing ? (
           <input
             type="date"
@@ -201,12 +388,12 @@ export default function TableRow({
       </td>
 
       {/* Amount - Read-only */}
-      <td className="cell-amount">
+      <td className="cell-amount" rowSpan={useRowSpan ? 2 : undefined}>
         {formatCurrency(q.grandTotal)}
       </td>
 
       {/* Quotation Status - Click-to-Edit Dropdown */}
-      <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isQStatusEditing) setActiveCell({ id: q.id, field: 'quotationStatus' }) }}>
+      <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isQStatusEditing) setActiveCell({ id: q.id, field: 'quotationStatus' }) }} rowSpan={useRowSpan ? 2 : undefined}>
         {isQStatusEditing ? (
           <select
             className="cell-input cell-select"
@@ -244,7 +431,7 @@ export default function TableRow({
       </td>
 
       {/* Project Status - Click-to-Edit Dropdown */}
-      <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isPStatusEditing) setActiveCell({ id: q.id, field: 'projectStatus' }) }}>
+      <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isPStatusEditing) setActiveCell({ id: q.id, field: 'projectStatus' }) }} rowSpan={useRowSpan ? 2 : undefined}>
         {isPStatusEditing ? (
           <select
             className="cell-input cell-select"
@@ -277,7 +464,7 @@ export default function TableRow({
       </td>
 
       {/* Submitted to Admin - Click-to-Edit Date */}
-      <td className={isSubmittedEditing ? 'editing-cell' : ''} onClick={(e) => { if (q.quotationStatus === 'CANCELLED') e.stopPropagation() }}>
+      <td className={isSubmittedEditing ? 'editing-cell' : ''} onClick={(e) => { if (q.quotationStatus === 'CANCELLED') e.stopPropagation() }} rowSpan={useRowSpan ? 2 : undefined}>
         {q.quotationStatus === 'CANCELLED' ? (
           <div style={{ color: '#ef4444', fontWeight: 'bold', textAlign: 'center' }}>CANCELLED</div>
         ) : isSubmittedEditing ? (
@@ -317,7 +504,7 @@ export default function TableRow({
       </td>
 
       {/* Bill To - Click-to-Edit Dropdown */}
-      <td style={{ padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isBillToEditing) setActiveCell({ id: q.id, field: 'billTo' }) }}>
+      <td style={{ padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isBillToEditing) setActiveCell({ id: q.id, field: 'billTo' }) }} rowSpan={useRowSpan ? 2 : undefined}>
         {isBillToEditing ? (
           <select
             className="cell-input cell-select"
@@ -342,161 +529,240 @@ export default function TableRow({
         )}
       </td>
 
-      {/* Billing Status - Click-to-Edit Dropdown */}
-      <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isBStatusEditing) setActiveCell({ id: q.id, field: 'billingStatus' }) }}>
-        {isBStatusEditing ? (
-          <select
-            className="cell-input cell-select"
-            value={q.billingStatus || ''}
-            autoFocus
-            onBlur={() => setActiveCell(null)}
-            onChange={async e => {
-              const val = e.target.value
-              await handleSingleFieldSave(q.id, { billingStatus: val || null })
-              setActiveCell(null)
-            }}
-          >
-            <option value="">— Not Set —</option>
-            <option value="FOR BILLING">FOR BILLING</option>
-            <option value="BILLED">BILLED</option>
-            <option value="PAID">PAID</option>
-            <option value="CANCELLED">CANCELLED</option>
-            <option value="REVISED">REVISED</option>
-          </select>
-        ) : (
-          <div style={{ display: 'inline-flex', padding: '4px' }}>
-            <span className={`status-badge ${q.billingStatus === 'FOR BILLING' ? 'status-b-for-billing' :
-              q.billingStatus === 'BILLED' ? 'status-b-billed' :
-                q.billingStatus === 'PAID' ? 'status-b-paid' :
-                  q.billingStatus === 'CANCELLED' ? 'status-b-cancelled' :
-                    q.billingStatus === 'REVISED' ? 'status-b-revised' :
-                      'status-b-none'
-              }`}>
-              {q.billingStatus || '—'}
-            </span>
-          </div>
-        )}
-      </td>
+      {/* Billing Status - Render PAID for DP row if datePaid is set, otherwise show current billingStatus */}
+      {useRowSpan ? (
+        <>
+          <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isBStatusEditing) setActiveCell({ id: q.id, field: 'billingStatus-dp' }) }}>
+            {isBStatusEditing ? (
+              <select
+                className="cell-input cell-select"
+                value={q.datePaid ? 'PAID' : (q.billingStatus === 'FOR BILLING' ? 'FOR BILLING' : 'BILLED')}
+                autoFocus
+                onBlur={() => setActiveCell(null)}
+                onChange={async e => {
+                  const val = e.target.value
+                  if (val === 'PAID') {
+                    const todayStr = new Date().toISOString().split('T')[0]
+                    await handleSingleFieldSave(q.id, { datePaid: todayStr })
+                  } else {
+                    await handleSingleFieldSave(q.id, { datePaid: null, billingStatus: val })
+                  }
+                  setActiveCell(null)
+                }}
+              >
+                <option value="FOR BILLING">FOR BILLING</option>
+                <option value="BILLED">BILLED</option>
+                <option value="PAID">PAID</option>
+              </select>
+            ) : (
+              <div style={{ display: 'inline-flex', padding: '4px' }}>
+                <span className={`status-badge ${q.datePaid ? 'status-b-paid' : (q.billingStatus === 'FOR BILLING' ? 'status-b-for-billing' : 'status-b-billed')}`}>
+                  {q.datePaid ? 'PAID' : (q.billingStatus === 'FOR BILLING' ? 'FOR BILLING' : 'BILLED')}
+                </span>
+              </div>
+            )}
+          </td>
+          <td className={isDatePaidEditing ? 'editing-cell' : ''}>
+            {isDatePaidEditing ? (
+              <input
+                type="date"
+                className="cell-input"
+                value={editForm.datePaid || ''}
+                onChange={e => setEditForm({ ...editForm, datePaid: e.target.value })}
+                onBlur={async () => {
+                  const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+                  if (editForm.datePaid !== val) {
+                    await handleSingleFieldSave(q.id, { datePaid: editForm.datePaid || null })
+                  }
+                  setActiveCell(null)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  } else if (e.key === 'Escape') {
+                    setActiveCell(null)
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <div
+                className="clickable-cell-trigger editable-text-cell"
+                onClick={() => {
+                  const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+                  setActiveCell({ id: q.id, field: 'datePaid-dp' })
+                  setEditForm({ datePaid: val })
+                }}
+              >
+                {q.datePaid ? formatDateToSlash(q.datePaid) : <span className="cell-empty">—</span>}
+              </div>
+            )}
+          </td>
+          <td>{q.updatedBy || <span className="cell-empty">—</span>}</td>
+          <td>{formatDateToSlash(q.lastUpdatedAt) !== '-' ? formatDateToSlash(q.lastUpdatedAt) : <span className="cell-empty">—</span>}</td>
+          <td>
+            <div style={{ padding: '6px 8px' }}>{`${pct}% DP PAID`}</div>
+          </td>
+        </>
+      ) : (
+        <>
+          {/* Normal Billing Status */}
+          <td style={{ textAlign: 'center', padding: '2px 4px', cursor: 'pointer' }} onClick={() => { if (!isBStatusEditing) setActiveCell({ id: q.id, field: 'billingStatus' }) }}>
+            {isBStatusEditing ? (
+              <select
+                className="cell-input cell-select"
+                value={q.billingStatus || ''}
+                autoFocus
+                onBlur={() => setActiveCell(null)}
+                onChange={async e => {
+                  const val = e.target.value
+                  await handleSingleFieldSave(q.id, { billingStatus: val || null })
+                  setActiveCell(null)
+                }}
+              >
+                <option value="">— Not Set —</option>
+                <option value="FOR BILLING">FOR BILLING</option>
+                <option value="BILLED">BILLED</option>
+                <option value="PAID">PAID</option>
+                <option value="CANCELLED">CANCELLED</option>
+                <option value="REVISED">REVISED</option>
+              </select>
+            ) : (
+              <div style={{ display: 'inline-flex', padding: '4px' }}>
+                <span className={`status-badge ${q.billingStatus === 'FOR BILLING' ? 'status-b-for-billing' :
+                  q.billingStatus === 'BILLED' ? 'status-b-billed' :
+                    q.billingStatus === 'PAID' ? 'status-b-paid' :
+                      q.billingStatus === 'CANCELLED' ? 'status-b-cancelled' :
+                        q.billingStatus === 'REVISED' ? 'status-b-revised' :
+                          'status-b-none'
+                  }`}>
+                  {q.billingStatus || '—'}
+                </span>
+              </div>
+            )}
+          </td>
 
-      {/* Date Paid - Click-to-Edit Date */}
-      <td className={isDatePaidEditing ? 'editing-cell' : ''}>
-        {isDatePaidEditing ? (
-          <input
-            type="date"
-            className="cell-input"
-            value={editForm.datePaid || ''}
-            onChange={e => setEditForm({ ...editForm, datePaid: e.target.value })}
-            onBlur={async () => {
-              const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
-              if (editForm.datePaid !== val) {
-                await handleSingleFieldSave(q.id, { datePaid: editForm.datePaid || null })
-              }
-              setActiveCell(null)
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur()
-              } else if (e.key === 'Escape') {
-                setActiveCell(null)
-              }
-            }}
-            autoFocus
-          />
-        ) : (
-          <div
-            className="clickable-cell-trigger editable-text-cell"
-            onClick={() => {
-              const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
-              setActiveCell({ id: q.id, field: 'datePaid' })
-              setEditForm({ datePaid: val })
-            }}
-          >
-            {formatDateToSlash(q.datePaid) !== '-' ? formatDateToSlash(q.datePaid) : <span className="cell-empty">—</span>}
-          </div>
-        )}
-      </td>
+          {/* Normal Date Paid */}
+          <td className={isDatePaidEditing ? 'editing-cell' : ''}>
+            {isDatePaidEditing ? (
+              <input
+                type="date"
+                className="cell-input"
+                value={editForm.datePaid || ''}
+                onChange={e => setEditForm({ ...editForm, datePaid: e.target.value })}
+                onBlur={async () => {
+                  const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+                  if (editForm.datePaid !== val) {
+                    await handleSingleFieldSave(q.id, { datePaid: editForm.datePaid || null })
+                  }
+                  setActiveCell(null)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  } else if (e.key === 'Escape') {
+                    setActiveCell(null)
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <div
+                className="clickable-cell-trigger editable-text-cell"
+                onClick={() => {
+                  const val = q.datePaid ? q.datePaid.substring(0, 10) : ''
+                  setActiveCell({ id: q.id, field: 'datePaid' })
+                  setEditForm({ datePaid: val })
+                }}
+              >
+                {formatDateToSlash(q.datePaid) !== '-' ? formatDateToSlash(q.datePaid) : <span className="cell-empty">—</span>}
+              </div>
+            )}
+          </td>
 
-      {/* Updated By - Read-only */}
-      <td>
-        {q.updatedBy || <span className="cell-empty">—</span>}
-      </td>
+          {/* Normal Updated By */}
+          <td>
+            {q.updatedBy || <span className="cell-empty">—</span>}
+          </td>
 
-      {/* Update Date - Click-to-Edit Date */}
-      <td className={`cell-date ${isLastUpdatedEditing ? 'editing-cell' : ''}`}>
-        {isLastUpdatedEditing ? (
-          <input
-            type="date"
-            className="cell-input"
-            value={editForm.lastUpdatedAt || ''}
-            onChange={e => setEditForm({ ...editForm, lastUpdatedAt: e.target.value })}
-            onBlur={async () => {
-              const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
-              if (editForm.lastUpdatedAt !== val) {
-                await handleSingleFieldSave(q.id, { lastUpdatedAt: editForm.lastUpdatedAt || null })
-              }
-              setActiveCell(null)
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur()
-              } else if (e.key === 'Escape') {
-                setActiveCell(null)
-              }
-            }}
-            autoFocus
-          />
-        ) : (
-          <div
-            className="clickable-cell-trigger editable-text-cell"
-            onClick={() => {
-              const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
-              setActiveCell({ id: q.id, field: 'lastUpdatedAt' })
-              setEditForm({ lastUpdatedAt: val })
-            }}
-          >
-            {formatDateToSlash(q.lastUpdatedAt) !== '-' ? formatDateToSlash(q.lastUpdatedAt) : <span className="cell-empty">—</span>}
-          </div>
-        )}
-      </td>
+          {/* Normal Update Date */}
+          <td className={`cell-date ${isLastUpdatedEditing ? 'editing-cell' : ''}`}>
+            {isLastUpdatedEditing ? (
+              <input
+                type="date"
+                className="cell-input"
+                value={editForm.lastUpdatedAt || ''}
+                onChange={e => setEditForm({ ...editForm, lastUpdatedAt: e.target.value })}
+                onBlur={async () => {
+                  const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
+                  if (editForm.lastUpdatedAt !== val) {
+                    await handleSingleFieldSave(q.id, { lastUpdatedAt: editForm.lastUpdatedAt || null })
+                  }
+                  setActiveCell(null)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  } else if (e.key === 'Escape') {
+                    setActiveCell(null)
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <div
+                className="clickable-cell-trigger editable-text-cell"
+                onClick={() => {
+                  const val = q.lastUpdatedAt ? q.lastUpdatedAt.substring(0, 10) : ''
+                  setActiveCell({ id: q.id, field: 'lastUpdatedAt' })
+                  setEditForm({ lastUpdatedAt: val })
+                }}
+              >
+                {formatDateToSlash(q.lastUpdatedAt) !== '-' ? formatDateToSlash(q.lastUpdatedAt) : <span className="cell-empty">—</span>}
+              </div>
+            )}
+          </td>
 
-      {/* Update Detail - Click-to-Edit Text */}
-      <td className={`tooltip-cell ${isUpdateDetailEditing ? 'editing-cell' : ''}`} data-tooltip={q.updateDetail || 'No details'}>
-        {isUpdateDetailEditing ? (
-          <input
-            type="text"
-            className="cell-input"
-            value={editForm.updateDetail || ''}
-            onChange={e => setEditForm({ ...editForm, updateDetail: e.target.value })}
-            onBlur={async () => {
-              const val = (q.updateDetail || '').trim()
-              const typed = (editForm.updateDetail || '').trim()
-              if (typed !== val) {
-                await handleSingleFieldSave(q.id, { updateDetail: typed })
-              }
-              setActiveCell(null)
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.currentTarget.blur()
-              } else if (e.key === 'Escape') {
-                setActiveCell(null)
-              }
-            }}
-            placeholder="Enter details..."
-            autoFocus
-          />
-        ) : (
-          <div
-            className="clickable-cell-trigger editable-text-cell"
-            onClick={() => {
-              setActiveCell({ id: q.id, field: 'updateDetail' })
-              setEditForm({ updateDetail: q.updateDetail || '' })
-            }}
-          >
-            {q.updateDetail || '-'}
-          </div>
-        )}
-      </td>
+          {/* Normal Update Detail */}
+          <td className={`tooltip-cell ${isUpdateDetailEditing ? 'editing-cell' : ''}`} data-tooltip={q.updateDetail || 'No details'}>
+            {isUpdateDetailEditing ? (
+              <input
+                type="text"
+                className="cell-input"
+                value={editForm.updateDetail || ''}
+                onChange={e => setEditForm({ ...editForm, updateDetail: e.target.value })}
+                onBlur={async () => {
+                  const val = (q.updateDetail || '').trim()
+                  const typed = (editForm.updateDetail || '').trim()
+                  if (typed !== val) {
+                    await handleSingleFieldSave(q.id, { updateDetail: typed })
+                  }
+                  setActiveCell(null)
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  } else if (e.key === 'Escape') {
+                    setActiveCell(null)
+                  }
+                }}
+                placeholder="Enter details..."
+                autoFocus
+              />
+            ) : (
+              <div
+                className="clickable-cell-trigger editable-text-cell"
+                onClick={() => {
+                  setActiveCell({ id: q.id, field: 'updateDetail' })
+                  setEditForm({ updateDetail: q.updateDetail || '' })
+                }}
+              >
+                {q.updateDetail || '-'}
+              </div>
+            )}
+          </td>
+        </>
+      )}
     </tr>
   )
 }

@@ -77,132 +77,199 @@ export const exportBillingToExcel = async (quotations: IQuotation[]) => {
         cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }
       }
 
+      const getPartialBillingPercentage = (detail?: string | null): number => {
+        if (!detail) return 50
+        const match = detail.match(/(\d+)\s*%/)
+        if (match) {
+          const percent = parseInt(match[1])
+          if (percent > 0 && percent < 100) return percent
+        }
+        return 50
+      }
+
       // Add Data
       yearQuotations.forEach((q, idx) => {
-        const row = sheet.addRow({
-          index: idx + 1,
-          designerName: q.designerName || '-',
-          customerIncharge: q.customerIncharge || '-',
-          clientName: q.clientName || '-',
-          quotationNo: q.quotationNo || '-',
-          date: parseDate(q.date),
-          amount: q.grandTotal ? q.grandTotal : 0,
-          quotationStatus: q.quotationStatus || 'DRAFT',
-          projectStatus: q.projectStatus || 'On Going',
-          submittedToAdminAt: parseDate(q.submittedToAdminAt),
-          billTo: q.billTo || '-',
-          billingStatus: q.billingStatus || '-',
-          datePaid: parseDate(q.datePaid),
-          updatedBy: q.updatedBy || '-',
-          lastUpdatedAt: parseDate(q.lastUpdatedAt),
-          updateDetail: q.updateDetail || '-',
-        })
+        const isPartial = q.quotationStatus === 'Partial Billing'
+        const pct = isPartial ? getPartialBillingPercentage(q.updateDetail) : 100
 
-        // Format Amount Column to currency string or number
-        row.getCell('amount').numFmt = '"¥"#,##0;[Red]"¥"-#,##0'
-        row.getCell('amount').alignment = { horizontal: 'right' }
+        const formatRow = (row: ExcelJS.Row) => {
+          // Format Amount Column to currency string or number
+          row.getCell('amount').numFmt = '"¥"#,##0;[Red]"¥"-#,##0'
+          row.getCell('amount').alignment = { horizontal: 'right' }
 
-        // Format Date Columns
-        const dateCells = ['date', 'submittedToAdminAt', 'datePaid', 'lastUpdatedAt']
-        dateCells.forEach(key => {
-          const cell = row.getCell(key)
-          cell.numFmt = 'yyyy/mm/dd'
-          cell.alignment = { horizontal: 'center', vertical: 'middle' }
-          // Add date validation to prompt date picker in supported Excel versions
-          cell.dataValidation = {
-            type: 'date',
-            allowBlank: true,
-            operator: 'greaterThan',
-            showErrorMessage: true,
-            errorTitle: 'Invalid Date',
-            error: 'Please enter a valid date.',
-            formulae: [new Date(2000, 0, 1)]
+          // Format Date Columns
+          const dateCells = ['date', 'submittedToAdminAt', 'datePaid', 'lastUpdatedAt']
+          dateCells.forEach(key => {
+            const cell = row.getCell(key)
+            cell.numFmt = 'yyyy/mm/dd'
+            cell.alignment = { horizontal: 'center', vertical: 'middle' }
+            // Add date validation to prompt date picker in supported Excel versions
+            cell.dataValidation = {
+              type: 'date',
+              allowBlank: true,
+              operator: 'greaterThan',
+              showErrorMessage: true,
+              errorTitle: 'Invalid Date',
+              error: 'Please enter a valid date.',
+              formulae: [new Date(2000, 0, 1)]
+            }
+          })
+
+          // Format Alignment
+          row.alignment = { vertical: 'middle', horizontal: 'center' }
+          row.getCell('amount').alignment = { horizontal: 'right', vertical: 'middle' }
+          row.height = 25
+
+          // Row styling based on status
+          let rowTextColor = 'FF000000' // Default black
+          let rowBgColor: string | null = null
+
+          const isCancelledOrRevised =
+            q.quotationStatus === 'CANCELLED' ||
+            q.quotationStatus === 'REVISED' ||
+            q.billingStatus === 'CANCELLED' ||
+            q.billingStatus === 'REVISED' ||
+            q.projectStatus === 'CANCELLED'
+
+          if (isCancelledOrRevised) {
+            rowTextColor = 'FFDC2626' // Red text
+          } else if (q.quotationStatus === 'Approved') {
+            rowBgColor = 'FF86EFAC' // Darker green background
+          } else if (isPartial) {
+            rowBgColor = 'FFDBEAFE' // Light blue background
           }
-        })
 
-        // Format Alignment
-        row.alignment = { vertical: 'middle', horizontal: 'center' }
-        row.getCell('amount').alignment = { horizontal: 'right', vertical: 'middle' }
-        row.height = 25
-
-        // Row styling based on status
-        let rowTextColor = 'FF000000' // Default black
-        let rowBgColor: string | null = null
-
-        const isCancelledOrRevised =
-          q.quotationStatus === 'CANCELLED' ||
-          q.quotationStatus === 'REVISED' ||
-          q.billingStatus === 'CANCELLED' ||
-          q.billingStatus === 'REVISED' ||
-          q.projectStatus === 'CANCELLED'
-
-        if (isCancelledOrRevised) {
-          rowTextColor = 'FFDC2626' // Red text
-        } else if (q.quotationStatus === 'Approved') {
-          rowBgColor = 'FF86EFAC' // Darker green background
-        }
-
-        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          if (colNumber <= 15) {
-            cell.font = { color: { argb: rowTextColor } }
-            if (rowBgColor) {
-              cell.fill = {
-                type: 'pattern',
-                pattern: 'solid',
-                fgColor: { argb: rowBgColor }
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            if (colNumber <= 15) {
+              cell.font = { color: { argb: rowTextColor } }
+              if (rowBgColor) {
+                cell.fill = {
+                  type: 'pattern',
+                  pattern: 'solid',
+                  fgColor: { argb: rowBgColor }
+                }
               }
             }
+          })
+
+          // Apply Status Colors for Quotation Status
+          const qStatusCell = row.getCell('quotationStatus')
+          qStatusCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+          // Add Dropdown Validation
+          qStatusCell.dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: ['"DRAFT,For Approval,Approved,Partial Billing,Billing Completion,CANCELLED"']
           }
-        })
 
-        // Apply Status Colors for Quotation Status
-        const qStatusCell = row.getCell('quotationStatus')
-        qStatusCell.alignment = { horizontal: 'center', vertical: 'middle' }
+          const qStatus = q.quotationStatus || 'DRAFT'
 
-        // Add Dropdown Validation
-        qStatusCell.dataValidation = {
-          type: 'list',
-          allowBlank: true,
-          formulae: ['"DRAFT,For Approval,Approved,Partial Billing,Billing Completion,CANCELLED"']
+          let qBg = 'FFFFFFFF'
+          let qColor = 'FF000000'
+
+          if (qStatus === 'DRAFT') { qBg = 'FFF1F5F9'; qColor = 'FF94A3B8' }
+          else if (qStatus === 'For Approval') { qBg = 'FFFDF0D5'; qColor = 'FFD97706' }
+          else if (qStatus === 'Approved') { qBg = 'FF86EFAC'; qColor = 'FF16A34A' }
+          else if (qStatus === 'Partial Billing') { qBg = 'FFDBEAFE'; qColor = 'FF2563EB' }
+          else if (qStatus === 'Billing Completion') { qBg = 'FFF3E8FF'; qColor = 'FF9333EA' }
+          else if (qStatus === 'CANCELLED') { qBg = 'FFFEE2E2'; qColor = 'FFDC2626' }
+
+          qStatusCell.font = { color: { argb: qColor }, bold: true }
+          qStatusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: qBg } }
+
+          // Apply Status Colors for Project Status
+          const pStatusCell = row.getCell('projectStatus')
+          pStatusCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+          // Add Dropdown Validation
+          pStatusCell.dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: ['"On Going,Finished,CANCELLED"']
+          }
+
+          const pStatus = q.projectStatus || 'On Going'
+
+          let pBg = 'FFFFFFFF'
+          let pColor = 'FF000000'
+
+          if (pStatus === 'On Going') { pBg = 'FFCFFAFE'; pColor = 'FF0891B2' }
+          else if (pStatus === 'Finished') { pBg = 'FF86EFAC'; pColor = 'FF059669' }
+          else if (pStatus === 'CANCELLED') { pBg = 'FFFEE2E2'; pColor = 'FFDC2626' }
+
+          pStatusCell.font = { color: { argb: pColor }, bold: true }
+          pStatusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pBg } }
         }
 
-        const qStatus = q.quotationStatus || 'DRAFT'
+        if (isPartial) {
+          const row1 = sheet.addRow({
+            index: idx + 1,
+            designerName: q.designerName || '-',
+            customerIncharge: q.customerIncharge || '-',
+            clientName: q.clientName || '-',
+            quotationNo: q.quotationNo || '-',
+            date: parseDate(q.date),
+            amount: q.grandTotal ? q.grandTotal : 0,
+            quotationStatus: q.quotationStatus || 'DRAFT',
+            projectStatus: q.projectStatus || 'On Going',
+            submittedToAdminAt: parseDate(q.submittedToAdminAt),
+            billTo: q.billTo || '-',
+            billingStatus: q.datePaid ? 'PAID' : (q.billingStatus === 'FOR BILLING' ? 'FOR BILLING' : 'BILLED'),
+            datePaid: parseDate(q.datePaid),
+            updatedBy: q.updatedBy || '-',
+            lastUpdatedAt: parseDate(q.lastUpdatedAt),
+            updateDetail: q.datePaid ? `${pct}% DP PAID` : `${pct}% DP BILLED`,
+          })
 
-        let qBg = 'FFFFFFFF'
-        let qColor = 'FF000000'
+          const row2 = sheet.addRow({
+            index: idx + 1,
+            designerName: q.designerName || '-',
+            customerIncharge: q.customerIncharge || '-',
+            clientName: q.clientName || '-',
+            quotationNo: q.quotationNo || '-',
+            date: parseDate(q.date),
+            amount: q.grandTotal ? q.grandTotal : 0,
+            quotationStatus: q.quotationStatus || 'DRAFT',
+            projectStatus: q.projectStatus || 'On Going',
+            submittedToAdminAt: parseDate(q.submittedToAdminAt),
+            billTo: q.billTo || '-',
+            billingStatus: q.billingStatus === 'PAID' ? 'PAID' : (q.datePaid ? (q.billingStatus || 'BILLED') : '-'),
+            datePaid: q.billingStatus === 'PAID' ? parseDate(q.datePaid) : null,
+            updatedBy: q.updatedBy || '-',
+            lastUpdatedAt: parseDate(q.lastUpdatedAt),
+            updateDetail: q.updateDetail || `${100 - pct}% Balance Billed`,
+          })
 
-        if (qStatus === 'DRAFT') { qBg = 'FFF1F5F9'; qColor = 'FF94A3B8' }
-        else if (qStatus === 'For Approval') { qBg = 'FFFDF0D5'; qColor = 'FFD97706' }
-        else if (qStatus === 'Approved') { qBg = 'FF86EFAC'; qColor = 'FF16A34A' }
-        else if (qStatus === 'Partial Billing') { qBg = 'FFDBEAFE'; qColor = 'FF2563EB' }
-        else if (qStatus === 'Billing Completion') { qBg = 'FFF3E8FF'; qColor = 'FF9333EA' }
-        else if (qStatus === 'CANCELLED') { qBg = 'FFFEE2E2'; qColor = 'FFDC2626' }
+          formatRow(row1)
+          formatRow(row2)
 
-        qStatusCell.font = { color: { argb: qColor }, bold: true }
-        qStatusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: qBg } }
-
-        // Apply Status Colors for Project Status
-        const pStatusCell = row.getCell('projectStatus')
-        pStatusCell.alignment = { horizontal: 'center', vertical: 'middle' }
-
-        // Add Dropdown Validation
-        pStatusCell.dataValidation = {
-          type: 'list',
-          allowBlank: true,
-          formulae: ['"On Going,Finished,CANCELLED"']
+          const r1Num = row1.number
+          const r2Num = row2.number
+          for (let col = 1; col <= 11; col++) {
+            sheet.mergeCells(r1Num, col, r2Num, col)
+          }
+        } else {
+          const row = sheet.addRow({
+            index: idx + 1,
+            designerName: q.designerName || '-',
+            customerIncharge: q.customerIncharge || '-',
+            clientName: q.clientName || '-',
+            quotationNo: q.quotationNo || '-',
+            date: parseDate(q.date),
+            amount: q.grandTotal ? q.grandTotal : 0,
+            quotationStatus: q.quotationStatus || 'DRAFT',
+            projectStatus: q.projectStatus || 'On Going',
+            submittedToAdminAt: parseDate(q.submittedToAdminAt),
+            billTo: q.billTo || '-',
+            billingStatus: q.billingStatus || '-',
+            datePaid: parseDate(q.datePaid),
+            updatedBy: q.updatedBy || '-',
+            lastUpdatedAt: parseDate(q.lastUpdatedAt),
+            updateDetail: q.updateDetail || '-',
+          })
+          formatRow(row)
         }
-
-        const pStatus = q.projectStatus || 'On Going'
-
-        let pBg = 'FFFFFFFF'
-        let pColor = 'FF000000'
-
-        if (pStatus === 'On Going') { pBg = 'FFCFFAFE'; pColor = 'FF0891B2' }
-        else if (pStatus === 'Finished') { pBg = 'FF86EFAC'; pColor = 'FF059669' }
-        else if (pStatus === 'CANCELLED') { pBg = 'FFFEE2E2'; pColor = 'FFDC2626' }
-
-        pStatusCell.font = { color: { argb: pColor }, bold: true }
-        pStatusCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pBg } }
       })
 
       // Add borders to all cells

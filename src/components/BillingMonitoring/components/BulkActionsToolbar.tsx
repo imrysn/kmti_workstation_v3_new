@@ -12,6 +12,8 @@ interface BulkActionsToolbarProps {
   handleBulkStatus: (val: string) => Promise<void>
   handleBulkProjectStatus: (val: string) => Promise<void>
   handleBulkBillTo: (val: string) => Promise<void>
+  isDuplicateMode: boolean
+  setIsDuplicateMode: (val: boolean) => void
 }
 
 export default function BulkActionsToolbar({
@@ -25,7 +27,9 @@ export default function BulkActionsToolbar({
   handleBulkCustomer,
   handleBulkStatus,
   handleBulkProjectStatus,
-  handleBulkBillTo
+  handleBulkBillTo,
+  isDuplicateMode,
+  setIsDuplicateMode
 }: BulkActionsToolbarProps) {
   return (
     <div className="bulk-actions-toolbar">
@@ -36,36 +40,74 @@ export default function BulkActionsToolbar({
 
       <div className="bulk-actions-group">
         {selectedIds.length === 1 && (
-          <button
-            className="bulk-action-btn"
-            onClick={() => {
-              const q = paginatedQuotations.find(item => item.id === selectedIds[0]) || filteredQuotations.find(item => item.id === selectedIds[0])
-              if (q) {
-                setEditingQuotation(q)
-                setEditForm({
-                  quotationNo: q.quotationNo || '',
-                  designerName: q.designerName || '',
-                  customerIncharge: q.customerIncharge || '',
-                  clientName: q.clientName || '',
-                  grandTotal: q.grandTotal || 0,
-                  date: q.date ? q.date.substring(0, 10) : '',
-                  datePaid: q.datePaid ? q.datePaid.substring(0, 10) : '',
-                  quotationStatus: q.quotationStatus || 'DRAFT',
-                  projectStatus: q.projectStatus || 'On Going',
-                  billingStatus: q.billingStatus || '',
-                  updatedBy: q.updatedBy || '',
-                  updateDetail: q.updateDetail || '',
-                })
-              }
-            }}
-            style={{ background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)', display: 'inline-flex', alignItems: 'center' }}
-          >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}>
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-            </svg>
-            Edit
-          </button>
+          <>
+            <button
+              className="bulk-action-btn"
+              onClick={() => {
+                setIsDuplicateMode(false)
+                const q = paginatedQuotations.find(item => item.id === selectedIds[0]) || filteredQuotations.find(item => item.id === selectedIds[0])
+                if (q) {
+                  setEditingQuotation(q)
+                  setEditForm({
+                    quotationNo: q.quotationNo || '',
+                    designerName: q.designerName || '',
+                    customerIncharge: q.customerIncharge || '',
+                    clientName: q.clientName || '',
+                    grandTotal: q.grandTotal || 0,
+                    date: q.date ? q.date.substring(0, 10) : '',
+                    datePaid: q.datePaid ? q.datePaid.substring(0, 10) : '',
+                    quotationStatus: q.quotationStatus || 'DRAFT',
+                    projectStatus: q.projectStatus || 'On Going',
+                    billingStatus: q.billingStatus || '',
+                    billTo: q.billTo || '',
+                    updatedBy: q.updatedBy || '',
+                    updateDetail: q.updateDetail || '',
+                  })
+                }
+              }}
+              style={{ background: 'var(--accent)', color: '#fff', border: '1px solid var(--accent)', display: 'inline-flex', alignItems: 'center' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}>
+                <path d="M12 20h9" />
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+              </svg>
+              Edit
+            </button>
+
+            <button
+              className="bulk-action-btn"
+              onClick={() => {
+                setIsDuplicateMode(true)
+                const q = paginatedQuotations.find(item => item.id === selectedIds[0]) || filteredQuotations.find(item => item.id === selectedIds[0])
+                if (q) {
+                  setEditingQuotation(q)
+                  setEditForm({
+                    quotationNo: q.quotationNo ? `${q.quotationNo}-Copy` : '',
+                    designerName: q.designerName || '',
+                    customerIncharge: q.customerIncharge || '',
+                    clientName: q.clientName || '',
+                    grandTotal: q.grandTotal || 0,
+                    date: q.date ? q.date.substring(0, 10) : '',
+                    datePaid: q.datePaid ? q.datePaid.substring(0, 10) : '',
+                    quotationStatus: q.quotationStatus || 'DRAFT',
+                    projectStatus: q.projectStatus || 'On Going',
+                    billingStatus: q.billingStatus || '',
+                    billTo: q.billTo || '',
+                    updatedBy: q.updatedBy || '',
+                    updateDetail: q.updateDetail || '',
+                  })
+                }
+              }}
+              style={{ background: '#059669', color: '#fff', border: '1px solid #059669', display: 'inline-flex', alignItems: 'center', marginLeft: '8px' }}
+              title="Duplicate this quotation (requires changing Quotation Number)"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: '6px' }}>
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy
+            </button>
+          </>
         )}
 
         <span style={{ fontSize: '12px', color: '#94a3b8', marginLeft: selectedIds.length === 1 ? '10px' : '0px' }}>CUSTOMER:</span>

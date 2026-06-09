@@ -77,7 +77,7 @@ export const formatDurationRange = (startStr: string, endStr: string) => {
 
 // ─── Task-Type Inference ──────────────────────────────────────────────────────
 // Infers task category by scanning the title + description for keywords.
-// Team leaders consistently include keywords like "3D Modelling" or "2D Detailing".
+// Team leaders consistently include keywords like "3D Modeling" or "2D Detailing".
 
 export type TaskType = '3D' | '2D' | 'Checking' | 'Other'
 
@@ -100,10 +100,10 @@ export function inferTaskType(
 
 // ─── Task-Type Color Map ──────────────────────────────────────────────────────
 export const TASK_TYPE_COLORS: Record<TaskType, { bg: string; border: string; text: string }> = {
-  '3D': { bg: 'rgba(37, 99, 235, 0.12)',  border: '#2563eb', text: '#2563eb' }, // blue
+  '3D': { bg: 'rgba(37, 99, 235, 0.12)', border: '#2563eb', text: '#2563eb' }, // blue
   '2D': { bg: 'rgba(220, 38, 38, 0.12)', border: '#dc2626', text: '#dc2626' }, // red
   'Checking': { bg: 'rgba(234, 90, 12, 0.12)', border: '#ea580c', text: '#ea580c' }, // orange
-  'Other':    { bg: 'rgba(107, 114, 128, 0.08)', border: '#6b7280', text: '#6b7280' }, // gray
+  'Other': { bg: 'rgba(107, 114, 128, 0.08)', border: '#6b7280', text: '#6b7280' }, // gray
 }
 
 // Pill labels shown as prefix icon-replacement chips on calendar badges

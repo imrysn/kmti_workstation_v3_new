@@ -1,5 +1,6 @@
-import { TASK_TYPE_COLORS, TASK_TYPE_PILL_LABELS, formatDisplayDate, type TaskType } from '../../utils/teamCalendarUtils'
-import { IPendingApproval } from '../../services/teamCalendarService'
+import { useState, useMemo } from 'react'
+import { TASK_TYPE_COLORS, TASK_TYPE_PILL_LABELS, formatDisplayDate, type TaskType, inferTaskType } from '../../utils/teamCalendarUtils'
+import { IPendingApproval, ICalendarEvent } from '../../services/teamCalendarService'
 
 interface CalendarSidebarProps {
   visibleTaskTypes: TaskType[]
@@ -14,15 +15,23 @@ interface CalendarSidebarProps {
   isAdminOrIT?: boolean
   onApproveLeave?: (eventId: number) => void
   onCancelLeave?: (eventId: number, name: string) => void
+  isCollapsed: boolean
+  onToggle: () => void
+  events: ICalendarEvent[]
+  selectedTaskType?: TaskType | null
+  onSelectTaskType?: (type: TaskType | null) => void
+  selectedStatus?: string | null
+  onSelectStatus?: (status: string | null) => void
+  selectedTeam?: string | null
+  onSelectTeam?: (team: string | null) => void
 }
 
 const TASK_TYPE_LABELS: Record<TaskType, string> = {
-  '3D': '3D Modelling',
+  '3D': '3D Modeling',
   '2D': '2D Detailing',
   'Checking': 'Checking / Review',
   'Other': 'Other Tasks',
 }
-
 
 export default function CalendarSidebar({
   visibleTaskTypes,
@@ -37,9 +46,121 @@ export default function CalendarSidebar({
   isAdminOrIT = false,
   onApproveLeave,
   onCancelLeave,
+  isCollapsed,
+  onToggle,
+  events,
+  selectedTaskType = null,
+  onSelectTaskType,
+  selectedStatus = null,
+  onSelectStatus,
+  selectedTeam = null,
+  onSelectTeam,
 }: CalendarSidebarProps) {
+  // Sorting states: 'default' | 'alphabetical' | 'count'
+  const [legendSort, setLegendSort] = useState<'default' | 'alphabetical' | 'count'>('default')
+  const [statusSort, setStatusSort] = useState<'default' | 'alphabetical' | 'count'>('default')
+  const [teamSort, setTeamSort] = useState<'default' | 'alphabetical' | 'count'>('default')
+
+  // --- Dynamic Count Calculations from viewed events ---
+  const taskTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    events.forEach(e => {
+      if (e.event_type !== 'Task_Claim') return
+      const type = inferTaskType(e.todo_title || '', e.todo_description || '')
+      counts[type] = (counts[type] || 0) + 1
+    })
+    return counts
+  }, [events])
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { Completed: 0, Overdue: 0, Active: 0 }
+    const todayMidnight = new Date()
+    todayMidnight.setHours(0, 0, 0, 0)
+    events.forEach(e => {
+      if (e.event_type !== 'Task_Claim') return
+      if (e.todo_status === 'Completed') {
+        counts['Completed'] += 1
+      } else if (e.due_date && new Date(e.due_date) < todayMidnight) {
+        counts['Overdue'] += 1
+      } else {
+        counts['Active'] += 1
+      }
+    })
+    return counts
+  }, [events])
+
+  const teamCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    events.forEach(e => {
+      if (!e.team || e.team.toLowerCase() === 'general') return
+      counts[e.team] = (counts[e.team] || 0) + 1
+    })
+    return counts
+  }, [events])
+
+  // --- Sorted Lists based on state ---
+  const sortedTaskTypes = useMemo(() => {
+    const list = [...visibleTaskTypes]
+    if (legendSort === 'alphabetical') {
+      return list.sort((a, b) => TASK_TYPE_LABELS[a].localeCompare(TASK_TYPE_LABELS[b]))
+    }
+    if (legendSort === 'count') {
+      return list.sort((a, b) => (taskTypeCounts[b] || 0) - (taskTypeCounts[a] || 0))
+    }
+    return list
+  }, [visibleTaskTypes, legendSort, taskTypeCounts])
+
+  const sortedStatusItems = useMemo(() => {
+    const statusItems = [
+      { key: 'Completed', label: 'Completed', color: '#059669' },
+      { key: 'Overdue', label: 'Overdue', color: '#dc2626' },
+      { key: 'Active', label: 'Active', color: 'var(--cal-card-border)', border: true }
+    ]
+    if (statusSort === 'alphabetical') {
+      return [...statusItems].sort((a, b) => a.label.localeCompare(b.label))
+    }
+    if (statusSort === 'count') {
+      return [...statusItems].sort((a, b) => (statusCounts[b.key] || 0) - (statusCounts[a.key] || 0))
+    }
+    return statusItems
+  }, [statusSort, statusCounts])
+
+  const sortedTeams = useMemo(() => {
+    const list = [...visibleTeams]
+    if (teamSort === 'alphabetical') {
+      return list.sort((a, b) => a.team.localeCompare(b.team))
+    }
+    if (teamSort === 'count') {
+      return list.sort((a, b) => (teamCounts[b.team] || 0) - (teamCounts[a.team] || 0))
+    }
+    return list
+  }, [visibleTeams, teamSort, teamCounts])
+
+  // Helper to toggle state
+  const cycleSort = (current: 'default' | 'alphabetical' | 'count', setter: (val: 'default' | 'alphabetical' | 'count') => void) => {
+    const next: Record<'default' | 'alphabetical' | 'count', 'default' | 'alphabetical' | 'count'> = {
+      default: 'alphabetical',
+      alphabetical: 'count',
+      count: 'default'
+    }
+    setter(next[current])
+  }
+
+  const getSortIndicator = (mode: 'default' | 'alphabetical' | 'count') => {
+    if (mode === 'alphabetical') return ' (A-Z)'
+    if (mode === 'count') return ' (Density)'
+    return ''
+  }
+
   return (
-    <aside className="calendar-sidebar">
+    <aside className={`calendar-sidebar${isCollapsed ? ' collapsed' : ''}`}>
+      {!isCollapsed && (
+        <button className="sidebar-collapse-btn" onClick={onToggle} title="Collapse">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+      )}
 
       {/* ── PENDING LEAVES ─────────────────────────────────── */}
       {pendingApprovals.length > 0 && (
@@ -158,11 +279,11 @@ export default function CalendarSidebar({
                         }}
                         onMouseEnter={e => {
                           (e.currentTarget as HTMLButtonElement).style.background = 'rgba(16, 185, 129, 0.2)'
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#10b981'
+                            ; (e.currentTarget as HTMLButtonElement).style.borderColor = '#10b981'
                         }}
                         onMouseLeave={e => {
                           (e.currentTarget as HTMLButtonElement).style.background = 'rgba(16, 185, 129, 0.1)'
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(16, 185, 129, 0.4)'
+                            ; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(16, 185, 129, 0.4)'
                         }}
                       >
                         ✓ Approve
@@ -183,11 +304,11 @@ export default function CalendarSidebar({
                         }}
                         onMouseEnter={e => {
                           (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239, 68, 68, 0.14)'
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor = '#ef4444'
+                            ; (e.currentTarget as HTMLButtonElement).style.borderColor = '#ef4444'
                         }}
                         onMouseLeave={e => {
                           (e.currentTarget as HTMLButtonElement).style.background = 'rgba(239, 68, 68, 0.06)'
-                          ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                            ; (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(239, 68, 68, 0.3)'
                         }}
                       >
                         ✕ Decline
@@ -202,15 +323,47 @@ export default function CalendarSidebar({
       )}
 
       {/* Task Type Legend — dynamic, only shows types in current view */}
-      {visibleTaskTypes.length > 0 && (
+      {sortedTaskTypes.length > 0 && (
         <div className="sidebar-section-container filter-legend-section" style={{ borderTop: 'none', paddingTop: '0', marginBottom: '16px' }}>
-          <h4 className="section-title-label">LEGEND</h4>
+          <h4
+            className="section-title-label"
+            style={{ cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'center' }}
+            onClick={() => cycleSort(legendSort, setLegendSort)}
+            title="Click to change sorting order"
+          >
+            LEGEND{getSortIndicator(legendSort)}
+          </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {visibleTaskTypes.map(type => {
+            {sortedTaskTypes.map(type => {
               const c = TASK_TYPE_COLORS[type]
               const pillLabel = TASK_TYPE_PILL_LABELS[type]
+              const countVal = taskTypeCounts[type] || 0
+              const isSelected = selectedTaskType === type
+              const hasAnySelected = selectedTaskType !== null
+              const itemOpacity = hasAnySelected && !isSelected ? 0.4 : 1
               return (
-                <div key={type} className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  key={type}
+                  className={`legend-chip-clickable ${isSelected ? 'active' : ''}`}
+                  onClick={() => onSelectTaskType?.(isSelected ? null : type)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    opacity: itemOpacity,
+                    transition: 'all 0.2s ease',
+                    padding: '4px 6px',
+                    margin: '0 -6px',
+                    borderRadius: '6px',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(120, 120, 120, 0.08)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
                   {pillLabel ? (
                     <span style={{
                       fontSize: '9px',
@@ -239,9 +392,14 @@ export default function CalendarSidebar({
                       opacity: 0.9,
                     }} />
                   )}
-                  <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>
+                  <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)', fontWeight: isSelected ? 700 : 400 }}>
                     {TASK_TYPE_LABELS[type]}
                   </span>
+                  {legendSort === 'count' && countVal > 0 && (
+                    <span style={{ fontSize: '10.5px', color: 'var(--cal-text-muted)', marginLeft: 'auto', fontWeight: 600 }}>
+                      ({countVal})
+                    </span>
+                  )}
                 </div>
               )
             })}
@@ -251,45 +409,128 @@ export default function CalendarSidebar({
 
       {/* Task Status Legend */}
       <div className="sidebar-section-container filter-legend-section" style={{ marginBottom: '16px' }}>
-        <h4 className="section-title-label">Task Status</h4>
+        <h4
+          className="section-title-label"
+          style={{ cursor: 'pointer', userSelect: 'none' }}
+          onClick={() => cycleSort(statusSort, setStatusSort)}
+          title="Click to change sorting order"
+        >
+          Task Status{getSortIndicator(statusSort)}
+        </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-          <div className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#059669', flexShrink: 0, opacity: 0.9 }} />
-            <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>Completed</span>
-          </div>
-          <div className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: '#dc2626', flexShrink: 0, opacity: 0.9 }} />
-            <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>Overdue</span>
-          </div>
-          <div className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ display: 'inline-block', width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--cal-card-border)', flexShrink: 0, opacity: 0.9 }} />
-            <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>Active</span>
-          </div>
+          {sortedStatusItems.map(item => {
+            const countVal = statusCounts[item.key] || 0
+            const isSelected = selectedStatus === item.key
+            const hasAnySelected = selectedStatus !== null
+            const itemOpacity = hasAnySelected && !isSelected ? 0.4 : 1
+            return (
+              <div
+                key={item.key}
+                className={`legend-chip-clickable ${isSelected ? 'active' : ''}`}
+                onClick={() => onSelectStatus?.(isSelected ? null : item.key)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  opacity: itemOpacity,
+                  transition: 'all 0.2s ease',
+                  padding: '4px 6px',
+                  margin: '0 -6px',
+                  borderRadius: '6px',
+                }}
+                onMouseEnter={e => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(120, 120, 120, 0.08)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
+              >
+                <span style={{
+                  display: 'inline-block',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '3px',
+                  backgroundColor: item.border ? 'var(--bg-surface)' : item.color,
+                  border: item.border ? `1px solid ${item.color}` : 'none',
+                  flexShrink: 0,
+                  opacity: 0.9
+                }} />
+                <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)', fontWeight: isSelected ? 700 : 400 }}>
+                  {item.label}
+                </span>
+                {statusSort === 'count' && countVal > 0 && (
+                  <span style={{ fontSize: '10.5px', color: 'var(--cal-text-muted)', marginLeft: 'auto', fontWeight: 600 }}>
+                    ({countVal})
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
 
       {/* Team Legend — dynamic, teams present in current view (General excluded) */}
       {visibleTeams.length > 0 && (
         <div className="sidebar-section-container filter-legend-section" style={{ marginBottom: '16px' }}>
-          <h4 className="section-title-label">Teams</h4>
+          <h4
+            className="section-title-label"
+            style={{ cursor: 'pointer', userSelect: 'none' }}
+            onClick={() => cycleSort(teamSort, setTeamSort)}
+            title="Click to change sorting order"
+          >
+            Teams{getSortIndicator(teamSort)}
+          </h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-            {visibleTeams.map(({ team, color }) => (
-              <div key={team} className="legend-chip" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span
+            {sortedTeams.map(({ team, color }) => {
+              const countVal = teamCounts[team] || 0
+              const isSelected = selectedTeam === team
+              const hasAnySelected = selectedTeam !== null
+              const itemOpacity = hasAnySelected && !isSelected ? 0.4 : 1
+              return (
+                <div
+                  key={team}
+                  className={`legend-chip-clickable ${isSelected ? 'active' : ''}`}
+                  onClick={() => onSelectTeam?.(isSelected ? null : team)}
                   style={{
-                    display: 'inline-block',
-                    width: '4px',
-                    height: '16px',
-                    borderRadius: '2px',
-                    backgroundColor: color,
-                    flexShrink: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    opacity: itemOpacity,
+                    transition: 'all 0.2s ease',
+                    padding: '4px 6px',
+                    margin: '0 -6px',
+                    borderRadius: '6px',
                   }}
-                />
-                <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)' }}>
-                  {team}
-                </span>
-              </div>
-            ))}
+                  onMouseEnter={e => {
+                    if (!isSelected) e.currentTarget.style.backgroundColor = 'rgba(120, 120, 120, 0.08)'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.backgroundColor = 'transparent'
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'inline-block',
+                      width: '4px',
+                      height: '16px',
+                      borderRadius: '2px',
+                      backgroundColor: color,
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span className="legend-name" style={{ fontSize: '12px', color: 'var(--cal-text-secondary)', fontWeight: isSelected ? 700 : 400 }}>
+                    {team}
+                  </span>
+                  {teamSort === 'count' && countVal > 0 && (
+                    <span style={{ fontSize: '10.5px', color: 'var(--cal-text-muted)', marginLeft: 'auto', fontWeight: 600 }}>
+                      ({countVal})
+                    </span>
+                  )}
+                </div>
+              )
+            })}
           </div>
           <p style={{ fontSize: '10.5px', color: 'var(--cal-text-muted)', marginTop: '6px', lineHeight: '1.4' }}>
             Left border color on task badges

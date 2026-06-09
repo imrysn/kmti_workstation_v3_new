@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTeamCalendar } from '../hooks/useTeamCalendar'
 import CalendarSidebar from '../components/TeamCalendar/CalendarSidebar'
 import CalendarToolbar from '../components/TeamCalendar/CalendarToolbar'
@@ -12,13 +12,29 @@ import EventDetailsModal from '../components/TeamCalendar/modals/EventDetailsMod
 import DayEventsPopover from '../components/TeamCalendar/modals/DayEventsPopover'
 import LandingAgendaModal from '../components/TeamCalendar/modals/LandingAgendaModal'
 
-import { formatLocalDate } from '../utils/teamCalendarUtils'
+import { formatLocalDate, inferTaskType, type TaskType } from '../utils/teamCalendarUtils'
 import './TeamCalendar.css'
 
 export default function TeamCalendar() {
   const cal = useTeamCalendar()
   const [showLandingAgenda, setShowLandingAgenda] = useState(false)
   const [pcName, setPcName] = useState<string>('')
+  const [selectedTaskType, setSelectedTaskType] = useState<TaskType | null>(null)
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
+
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem('kmti_calendar_sidebar_collapsed')
+    return saved !== null ? saved === 'true' : false
+  })
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('kmti_calendar_sidebar_collapsed', String(next))
+      return next
+    })
+  }
 
   useEffect(() => {
     const todayStr = formatLocalDate(new Date())
@@ -41,11 +57,53 @@ export default function TeamCalendar() {
     }
   }, [])
 
+  // Compute filteredEvents list
+  const filteredEvents = useMemo(() => {
+    const todayMidnight = new Date()
+    todayMidnight.setHours(0, 0, 0, 0)
+
+    return cal.events.filter(e => {
+      // 1. Task Type Filter
+      if (selectedTaskType) {
+        if (e.event_type !== 'Task_Claim') return false
+        const type = inferTaskType(e.todo_title || '', e.todo_description || '')
+        if (type !== selectedTaskType) return false
+      }
+
+      // 2. Status Filter
+      if (selectedStatus) {
+        if (e.event_type !== 'Task_Claim') return false
+        let status = 'Active'
+        if (e.todo_status === 'Completed') {
+          status = 'Completed'
+        } else if (e.due_date && new Date(e.due_date) < todayMidnight) {
+          status = 'Overdue'
+        } else {
+          status = 'Active'
+        }
+        if (status !== selectedStatus) return false
+      }
+
+      // 3. Team Filter
+      if (selectedTeam) {
+        if (e.team !== selectedTeam) return false
+      }
+
+      return true
+    })
+  }, [cal.events, selectedTaskType, selectedStatus, selectedTeam])
+
   return (
     <div className="team-calendar-page page-container">
+      {isSidebarCollapsed && (
+        <button className="sidebar-expand-btn" onClick={toggleSidebar} title="Expand">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+      )}
 
-
-      <div className="team-calendar-layout">
+      <div className={`team-calendar-layout${isSidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
         <CalendarSidebar
           visibleTaskTypes={cal.visibleTaskTypes}
           visibleTeams={cal.visibleTeams}
@@ -58,6 +116,15 @@ export default function TeamCalendar() {
           pendingApprovals={cal.pendingApprovals}
           isAdminOrIT={cal.isAdminOrIT}
           onApproveLeave={cal.handleApproveEvent}
+          isCollapsed={isSidebarCollapsed}
+          onToggle={toggleSidebar}
+          events={cal.events}
+          selectedTaskType={selectedTaskType}
+          onSelectTaskType={setSelectedTaskType}
+          selectedStatus={selectedStatus}
+          onSelectStatus={setSelectedStatus}
+          selectedTeam={selectedTeam}
+          onSelectTeam={setSelectedTeam}
           onCancelLeave={(eventId, name) =>
             cal.confirm(
               `Decline leave request from ${name}? This will remove the pending event.`,
@@ -96,7 +163,7 @@ export default function TeamCalendar() {
             {cal.viewMode === 'agenda' ? (
               <AgendaView
                 agendaDays={cal.agendaDays}
-                events={cal.events}
+                events={filteredEvents}
                 phHolidays={cal.phHolidays}
                 showClaims={cal.showClaims}
                 showAbsences={cal.showAbsences}
@@ -107,7 +174,7 @@ export default function TeamCalendar() {
               <CalendarTimeline
                 isLoading={cal.isLoading}
                 calendarDays={cal.calendarDays}
-                events={cal.events}
+                events={filteredEvents}
                 phHolidays={cal.phHolidays}
                 showClaims={cal.showClaims}
                 showAbsences={cal.showAbsences}
@@ -119,7 +186,7 @@ export default function TeamCalendar() {
                 viewMode={cal.viewMode}
                 calendarDays={cal.calendarDays}
                 displayDate={cal.displayDate}
-                events={cal.events}
+                events={filteredEvents}
                 phHolidays={cal.phHolidays}
                 showClaims={cal.showClaims}
                 showAbsences={cal.showAbsences}
@@ -181,7 +248,7 @@ export default function TeamCalendar() {
       {cal.activePopoverDate && (
         <DayEventsPopover
           activePopoverDate={cal.activePopoverDate}
-          events={cal.events}
+          events={filteredEvents}
           phHolidays={cal.phHolidays}
           showClaims={cal.showClaims}
           showAbsences={cal.showAbsences}

@@ -467,6 +467,7 @@ export default function BillingMonitoring() {
             filteredQuotations={filteredQuotations}
             getCompletedAmount={getCompletedAmount}
             handleDeleteRows={handleDeleteRows}
+            handleAddNewRow={handleAddNewRow}
           />
         </div>
       )}
