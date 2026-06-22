@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime
+from sqlalchemy import Column, String, Integer, DateTime, Text
 from sqlalchemy.sql import func
 from db.database import Base
 
@@ -17,4 +17,6 @@ class WorkstationStatus(Base):
     version = Column(String(20), nullable=True)
     status_message = Column(String(200), nullable=True)
     equipped_skin = Column(String(100), nullable=True)
+    telemetry_data = Column(Text, nullable=True)  # JSON blob: persists achievement counters across restarts
     last_ping = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+

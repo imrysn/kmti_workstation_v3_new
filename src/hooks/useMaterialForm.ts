@@ -60,6 +60,9 @@ export function useMaterialForm(mode: 'scratchpad' | 'form') {
     if (formShape === 'SquarePipe') {
       return `${mat} □${s(formDims.od, 'od')}×${s(formDims.wt, 'wt')}-${s(formDims.length, 'length')} ${formQty}`
     }
+    if (formShape === 'RectangularPipe') {
+      return `${mat} □${s(formDims.w, 'w')}×${s(formDims.side, 'side')}×${s(formDims.wt, 'wt')}-${s(formDims.length, 'length')} ${formQty}`
+    }
     if (formShape === 'Plate') {
       return `${mat} ${s(formDims.t, 't')}×${s(formDims.w, 'w')}-${s(formDims.length, 'length')} ${formQty}`
     }
@@ -90,6 +93,8 @@ export function useMaterialForm(mode: 'scratchpad' | 'form') {
         return formDims.side !== '' && formDims.length !== ''
       case 'SquarePipe':
         return formDims.od !== '' && formDims.wt !== '' && formDims.length !== ''
+      case 'RectangularPipe':
+        return formDims.w !== '' && formDims.side !== '' && formDims.wt !== '' && formDims.length !== ''
       case 'Plate':
         return formDims.t !== '' && formDims.w !== '' && formDims.length !== ''
       case 'Block':

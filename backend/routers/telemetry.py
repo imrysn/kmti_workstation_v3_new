@@ -1,9 +1,13 @@
 from fastapi import APIRouter, Depends, Request, Form
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from db.database import get_db
+from db.database import get_db, AsyncSessionLocal
 from models.telemetry import WorkstationStatus
 from datetime import datetime, timedelta, date as date_type
+import json
+import logging
+
+logger = logging.getLogger("kmti_backend.telemetry")
 
 router = APIRouter()
 
@@ -29,6 +33,9 @@ workstation_days_seen: dict = {}
 # ── Manual achievement unlocks  key: comp_name -> set[str] ───────────────────
 unlocked_achievements: dict = {}
 
+# ── Workstations with ALL achievements force-unlocked (by computer_name) ──────
+ALL_ACHIEVEMENTS_UNLOCKED: set = {"admin2"}
+
 # ── Behavioral flags and counters ───────────────────────────────────────────
 weekend_workers: dict = {}        # key: comp_name -> set[str] (dates)
 broadcast_senders: dict = {}      # key: comp_name -> int (count)
@@ -44,9 +51,82 @@ daily_ai_sessions: dict = {}
 # ── Stopwatch record counts  key: comp_name -> int  (populated from stopwatch router) ──
 stopwatch_counts: dict = {}
 
+# ── Heartbeat counter for throttled DB saves  key: comp_name -> int ──────────
+_heartbeat_save_counter: dict = {}
+SAVE_EVERY_N_HEARTBEATS = 10  # persist counters every ~1.5 minutes (10 × 9s heartbeat)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Helpers
+# Persistence helpers
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _pack_telemetry(c: str) -> str:
+    """Serialize all in-memory counters for a single workstation to a JSON string."""
+    return json.dumps({
+        "module_durations":   daily_module_durations.get(c, {}),
+        "time_records":       list(daily_time_records.get(c, set())),
+        "days_seen":          workstation_days_seen.get(c, []),
+        "weekend_workers":    list(weekend_workers.get(c, set())),
+        "broadcast_senders":  broadcast_senders.get(c, 0),
+        "ticket_submitters":  ticket_submitters.get(c, 0),
+        "continuous_streaks": continuous_module_streaks.get(c, {}),
+        "ai_sessions":        daily_ai_sessions.get(c, 0),
+        "stopwatch_counts":   stopwatch_counts.get(c, 0),
+        "unlocked":           list(unlocked_achievements.get(c, set())),
+    }, default=str)
+
+
+def _unpack_telemetry(c: str, blob: str) -> None:
+    """Restore in-memory counters for a single workstation from a JSON string."""
+    try:
+        d = json.loads(blob)
+    except (json.JSONDecodeError, TypeError):
+        return
+    daily_module_durations[c]   = d.get("module_durations", {})
+    daily_time_records[c]       = set(d.get("time_records", []))
+    workstation_days_seen[c]    = d.get("days_seen", [])
+    weekend_workers[c]          = set(d.get("weekend_workers", []))
+    broadcast_senders[c]        = d.get("broadcast_senders", 0)
+    ticket_submitters[c]        = d.get("ticket_submitters", 0)
+    continuous_module_streaks[c]= d.get("continuous_streaks", {})
+    daily_ai_sessions[c]        = d.get("ai_sessions", 0)
+    stopwatch_counts[c]         = d.get("stopwatch_counts", 0)
+    unlocked_achievements[c]    = set(d.get("unlocked", []))
+
+
+async def _save_telemetry(c: str, db: AsyncSession) -> None:
+    """Persist telemetry counters for workstation `c` into its DB row."""
+    try:
+        result = await db.execute(
+            select(WorkstationStatus).where(WorkstationStatus.computer_name == c)
+        )
+        row = result.scalars().first()
+        if row:
+            row.telemetry_data = _pack_telemetry(c)
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"[Telemetry] Failed to save telemetry for {c}: {e}")
+
+
+async def load_all_telemetry() -> None:
+    """Called at server startup — restore all workstation counters from the DB."""
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(WorkstationStatus))
+            rows = result.scalars().all()
+            restored = 0
+            for row in rows:
+                c = row.computer_name
+                if c and row.telemetry_data:
+                    _unpack_telemetry(c, row.telemetry_data)
+                    restored += 1
+            logger.info(f"  [SUCCESS] Restored telemetry counters for {restored} workstation(s).")
+    except Exception as e:
+        logger.warning(f"  [WARNING] Failed to restore telemetry counters: {e}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Achievement helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def get_active_streaks(comp_name: str, active_comps: list) -> list:
@@ -150,12 +230,17 @@ def _check_tagapagma(comp: str) -> bool:
     return False
 
 
-def _build_achievements(comp: str | None, active_names: list) -> dict:
+def _build_achievements(comp: str | None, active_names: list, current_user: str | None = None) -> dict:
     """Compute all 34 achievement flags for a workstation with extreme, expert difficulty thresholds."""
     if not comp:
         return {k: False for k in _ACHIEVEMENT_KEYS}
 
     c = comp.strip()
+    u = (current_user or '').strip()
+
+    # Admin override: match by computer_name OR current_user (login name)
+    if c in ALL_ACHIEVEMENTS_UNLOCKED or (u and u in ALL_ACHIEVEMENTS_UNLOCKED):
+        return {k: True for k in _ACHIEVEMENT_KEYS}
     mods = daily_module_durations.get(c, {})
     times = daily_time_records.get(c, set())
     days_seen = workstation_days_seen.get(c, [])
@@ -315,6 +400,14 @@ async def heartbeat(
         if is_valid_focus:
             continuous_module_streaks[c][tracking_name] = continuous_module_streaks[c].get(tracking_name, 0) + 1
 
+    # Throttled DB persistence of achievement counters
+    if computer_name:
+        c = computer_name.strip()
+        _heartbeat_save_counter[c] = _heartbeat_save_counter.get(c, 0) + 1
+        if _heartbeat_save_counter[c] >= SAVE_EVERY_N_HEARTBEATS:
+            _heartbeat_save_counter[c] = 0
+            await _save_telemetry(c, db)
+
     # Nudge check
     nudge_version = None
     if computer_name and computer_name in pending_nudges:
@@ -363,7 +456,7 @@ async def get_all_status(db: AsyncSession = Depends(get_db)):
                 "equipped_skin": s.equipped_skin,
                 "last_ping": s.last_ping.isoformat() if s.last_ping else None,
                 "streaks": get_active_streaks(s.computer_name, active_names),
-                "achievements": _build_achievements(s.computer_name, active_names),
+                "achievements": _build_achievements(s.computer_name, active_names, s.current_user),
             }
             for s in statuses
         ]
@@ -479,3 +572,27 @@ async def save_equipped_skin(
     await db.commit()
     return {"success": True, "message": f"Equipped skin '{skin_key}' saved for {c}."}
 
+
+@router.post("/unlock-all")
+async def set_all_achievements_unlocked(
+    computer_name: str = Form(...),
+    enabled: bool = Form(True),
+):
+    """Force-unlock ALL achievements for a specific workstation (by computer_name).
+
+    Set enabled=true to add to the override list, false to remove it.
+    Changes take effect immediately without a server restart.
+    """
+    c = computer_name.strip()
+    if enabled:
+        ALL_ACHIEVEMENTS_UNLOCKED.add(c)
+        return {"success": True, "message": f"All achievements force-unlocked for '{c}'."}
+    else:
+        ALL_ACHIEVEMENTS_UNLOCKED.discard(c)
+        return {"success": True, "message": f"Achievement override removed for '{c}'."}
+
+
+@router.get("/unlock-all")
+async def list_all_achievements_unlocked():
+    """List all workstations currently in the all-achievements override."""
+    return {"success": True, "unlocked_all": sorted(ALL_ACHIEVEMENTS_UNLOCKED)}

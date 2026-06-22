@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext'
 import QuotationEntryModal from '../components/Quotation/QuotationEntryModal'
 import QuotationWorkspace from '../components/Quotation/QuotationWorkspace'
 import { quotationApi } from '../services/api'
+import { CUSTOMERS_CONFIG, generateQuotationNumber } from '../utils/quotation'
 import './Quotation.css'
 
 export default function Quotation() {
@@ -35,6 +36,7 @@ export default function Quotation() {
     autoStartTutorial?: boolean
     workstation?: string
     referrer?: string
+    customerId?: string
   } | null>(() => {
     const saved = sessionStorage.getItem('kmti_quot_current_session')
     return saved ? JSON.parse(saved) : null
@@ -83,7 +85,7 @@ export default function Quotation() {
     }
   }, [notify])
 
-  const handleCreateNew = useCallback(async (name: string, variant: 'special' | 'kemco', password?: string) => {
+  const handleCreateNew = useCallback(async (name: string, variant: 'special' | 'kemco', customerId: string, password?: string) => {
     try {
       // 1. Fetch workstation/hostname (The true Owner ID)
       let computerName = ''
@@ -97,10 +99,15 @@ export default function Quotation() {
       // For newly created quotations, use the user's fullName if logged in, otherwise fallback to computerName.
       const workstation = user ? user.fullName : computerName
 
-      // Generate a formal quotation number
-      const today = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2)
-      const seq = Math.floor(Math.random() * 900 + 100).toString()
-      const quotNo = `KMTE-${today}-${seq}`
+      // Generate a formal quotation number based on selected customer
+      const customerConfig = CUSTOMERS_CONFIG.find(c => c.id === customerId)
+      const prefix = customerConfig ? customerConfig.prefix : 'KMTE-'
+      const today = new Date().toISOString().split('T')[0]
+      const seq = prefix === 'KM-'
+        ? Math.floor(Math.random() * 9000 + 1000).toString() // 4 digits for KEMCO (e.g. 1121)
+        : Math.floor(Math.random() * 900 + 100).toString()   // 3 digits for others
+      
+      const quotNo = generateQuotationNumber(today, prefix, seq)
       // Display name is the user-provided label (e.g. "Draft for Client X")
       const displayName = name || quotNo
 
@@ -109,11 +116,14 @@ export default function Quotation() {
         quot_no: quotNo, 
         display_name: displayName, 
         password,
-        workstation 
+        workstation,
+        client_name: customerConfig?.clientName || '',
+        customer_incharge: customerConfig?.contact || '',
+        bill_to: customerConfig?.clientName || '',
       })
       const { id } = res.data
 
-      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create', variant, workstation })
+      setActiveSession({ quotId: id, quotNo, password, displayName, mode: 'create', variant, workstation, customerId })
     } catch (e: any) {
       const msg = e?.response?.data?.detail || 'Failed to create workspace.'
       notify?.(msg, 'error')

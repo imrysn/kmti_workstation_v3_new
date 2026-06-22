@@ -235,8 +235,31 @@ const PrintPreviewModal = memo(({
         }
       })
 
-      // 2. Paginate KEMCO rows (calculateTotal = 0 since price is merged at table level)
-      const slices = computePages(kemcoRows, () => 0, printMode)
+      // 2. Paginate KEMCO rows with KEMCO-specific limits
+      // KEMCO rows are more compact than standard tasks, so we use larger per-page limits
+      // to avoid spurious 2nd pages with only the leasing fee row.
+      const KEMCO_FINAL_LIMIT = 16   // max rows on final (only) page
+      const KEMCO_STANDARD_LIMIT = 20 // max rows on non-final pages
+      const computeKemcoPages = <T,>(items: T[]): PageSlice<T>[] => {
+        if (items.length <= KEMCO_FINAL_LIMIT) {
+          return [{ tasks: items, totals: items.map(() => 0), startIndex: 0 }]
+        }
+        const pages: PageSlice<T>[] = []
+        let i = 0
+        while (i < items.length) {
+          const remainingCount = items.length - i
+          const isLast = remainingCount <= KEMCO_FINAL_LIMIT
+          const limit = isLast ? KEMCO_FINAL_LIMIT : KEMCO_STANDARD_LIMIT
+          const slice = items.slice(i, i + limit)
+          pages.push({ tasks: slice, totals: slice.map(() => 0), startIndex: i })
+          i += limit
+          if (i === items.length && !isLast) {
+            pages.push({ tasks: [], totals: [], startIndex: i })
+          }
+        }
+        return pages.length === 0 ? [{ tasks: [], totals: [], startIndex: 0 }] : pages
+      }
+      const slices = computeKemcoPages(kemcoRows)
 
       // 3. Map back to what PrintPage expects (pageTasks: Task[])
       const mappedPages = slices.map(slice => {
@@ -358,6 +381,21 @@ const PrintPreviewModal = memo(({
       font-size: inherit !important;
       font-weight: inherit !important;
       text-align: inherit !important;
+    }
+    .quotation-visual-exact [contenteditable] {
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      cursor: default !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      color: inherit !important;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      font-weight: inherit !important;
+      text-align: inherit !important;
+      white-space: pre-wrap !important;
     }
     .quotation-visual-exact .contact-header,
     .quotation-visual-exact .table-header th,
@@ -660,6 +698,7 @@ const PrintPreviewModal = memo(({
                               // Return exactly how many fillers are needed to hit the limit
                               return Math.max(0, finalLimit - totalSoFar)
                             })()}
+                            isCompressed={layoutVariant === 'kemco' && page.tasks.length > 10}
                           />
                         </div>
                       )

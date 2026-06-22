@@ -16,7 +16,7 @@ const BADGE_LABEL: Record<string, string> = {
 export default function WhatsNewModal() {
   const [visible, setVisible] = useState(false)
   const [dontShowAgain, setDontShowAgain] = useState(false)
-  const [activeSlide, setActiveSlide] = useState(0)
+  const [activeSlides, setActiveSlides] = useState<Record<string, number>>({})
   const [isHovering, setIsHovering] = useState(false)
   const navigate = useNavigate()
   const { hasRole } = useAuth()
@@ -28,14 +28,12 @@ export default function WhatsNewModal() {
     const dismissed = localStorage.getItem(STORAGE_KEY)
     const dismissedVersion = localStorage.getItem(VERSION_KEY)
 
-      // ── Global Trigger ──
-      // Allows manual trigger via console: window.showWhatsNew()
-      ; (window as any).showWhatsNew = () => setVisible(true)
+    // Global Trigger
+    ; (window as any).showWhatsNew = () => setVisible(true)
 
     // Show if user has NOT ticked "Do not show again" for THIS version
     const shouldShow = !(dismissed === 'true' && dismissedVersion === currentVersion)
     if (shouldShow) {
-      // Small delay so the workstation shell renders first
       const t = setTimeout(() => setVisible(true), 600)
       return () => clearTimeout(t)
     }
@@ -50,19 +48,18 @@ export default function WhatsNewModal() {
   }
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [visible, dontShowAgain]);
+      if (e.key === 'Escape') handleClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [visible, dontShowAgain])
 
   // Scroll-driven entrance animations
   useEffect(() => {
     if (!visible) return
 
-    // Small delay to ensure DOM is fully rendered and classes applied
     const t = setTimeout(() => {
       const scrollContainer = document.querySelector('.wnm-body')
       if (!scrollContainer) return
@@ -72,7 +69,7 @@ export default function WhatsNewModal() {
           entries.forEach(entry => {
             if (entry.isIntersecting) {
               entry.target.classList.add('visible')
-              observer.unobserve(entry.target) // Animate once
+              observer.unobserve(entry.target)
             }
           })
         },
@@ -94,25 +91,28 @@ export default function WhatsNewModal() {
     return () => clearTimeout(t)
   }, [visible])
 
-  // Show the latest release entry at the top of the changelog
-  const latest = CHANGELOG[0]
-
-  // Extract slides (entries with an image, or action/featured badge) and regular updates
-  const slides = latest ? latest.entries.filter(e => e.image || e.action) : []
-  const regularLatestEntries = latest ? latest.entries.filter(e => !e.image && !e.action) : []
-
-  // Auto-slide effect that pauses when the user hovers over the carousel
+  // Auto-slide effect that pauses when the user hovers over a carousel
   useEffect(() => {
-    if (!visible || slides.length <= 1 || isHovering) return
+    if (!visible || isHovering) return
 
     const interval = setInterval(() => {
-      setActiveSlide(prev => (prev + 1) % slides.length)
+      setActiveSlides(prev => {
+        const next = { ...prev }
+        CHANGELOG.forEach(release => {
+          const slides = release.entries.filter(e => e.image || e.action)
+          if (slides.length > 1) {
+            const currentIdx = prev[release.version] || 0
+            next[release.version] = (currentIdx + 1) % slides.length
+          }
+        })
+        return next
+      })
     }, 5000)
 
     return () => clearInterval(interval)
-  }, [visible, slides.length, isHovering])
+  }, [visible, isHovering])
 
-  // Helper to render beautiful vector illustrations when screenshots aren't provided
+  // Vector illustration fallbacks
   function renderFeatureIcon(_type: string, route?: string) {
     const strokeColor = "currentColor"
     const size = 56
@@ -171,18 +171,147 @@ export default function WhatsNewModal() {
     )
   }
 
+  // Unified Renderer for Release Entries
+  const renderReleaseSection = (release: typeof CHANGELOG[0], isLatestRelease: boolean) => {
+    const slides = release.entries.filter(e => e.image || e.action)
+    const regularEntries = release.entries.filter(e => !e.image && !e.action)
+    const activeSlide = activeSlides[release.version] || 0
+
+    return (
+      <div key={release.version} className={`wnm-version-section ${isLatestRelease ? 'latest' : 'older'}`}>
+        <p className="wnm-section-label">
+          {isLatestRelease ? 'Latest Highlights' : `Version ${release.version} · ${release.date}`}
+        </p>
+
+        {slides.length > 0 && (
+          <div 
+            className="wnm-slideshow-container"
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            style={{ marginBottom: '16px' }}
+          >
+            <div className="wnm-slideshow-track">
+              {slides.map((slide, sIdx) => (
+                <div 
+                  key={sIdx} 
+                  className={`wnm-slide ${activeSlide === sIdx ? 'active' : ''}`}
+                  style={{ display: activeSlide === sIdx ? 'block' : 'none' }}
+                >
+                  <div className="wnm-slide-image-wrapper">
+                    {slide.image ? (
+                      <img src={slide.image} alt={slide.text} className="wnm-slide-img" />
+                    ) : (
+                      <div className="wnm-slide-placeholder-art">
+                        <div className="wnm-placeholder-glow" />
+                        <div className="wnm-placeholder-icon">
+                          {renderFeatureIcon(slide.type, slide.action?.route)}
+                        </div>
+                      </div>
+                    )}
+                    <div className="wnm-slide-nav-overlay">
+                      <button 
+                        type="button"
+                        className="wnm-slide-nav-btn prev" 
+                        onClick={() => {
+                          const nextIdx = (activeSlide - 1 + slides.length) % slides.length
+                          setActiveSlides(prev => ({ ...prev, [release.version]: nextIdx }))
+                        }}
+                        title="Previous highlight"
+                      >
+                        ‹
+                      </button>
+                      <button 
+                        type="button"
+                        className="wnm-slide-nav-btn next" 
+                        onClick={() => {
+                          const nextIdx = (activeSlide + 1) % slides.length
+                          setActiveSlides(prev => ({ ...prev, [release.version]: nextIdx }))
+                        }}
+                        title="Next highlight"
+                      >
+                        ›
+                      </button>
+                    </div>
+                  </div>
+                  <div className="wnm-slide-info">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                      <span className={`wnm-entry-badge ${slide.type}`}>
+                        {BADGE_LABEL[slide.type] ?? slide.type}
+                      </span>
+                      {slide.action && (!slide.action.roles || hasRole(...slide.action.roles as any)) && (
+                        <button 
+                          type="button"
+                          className="wnm-try-now-btn"
+                          onClick={() => {
+                            navigate(slide.action!.route, { state: slide.action!.viewState })
+                            handleClose()
+                          }}
+                        >
+                          {slide.action.label} ➔
+                        </button>
+                      )}
+                    </div>
+                    <p className="wnm-slide-text">{slide.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Slider Dots */}
+            {slides.length > 1 && (
+              <div className="wnm-slide-dots">
+                {slides.map((_, sIdx) => (
+                  <button
+                    key={sIdx}
+                    type="button"
+                    className={`wnm-slide-dot ${activeSlide === sIdx ? 'active' : ''}`}
+                    onClick={() => setActiveSlides(prev => ({ ...prev, [release.version]: sIdx }))}
+                    title={`Go to slide ${sIdx + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {regularEntries.length > 0 && (
+          <>
+            {isLatestRelease && slides.length > 0 && (
+              <p className="wnm-section-label" style={{ marginTop: '12px', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Other Updates</p>
+            )}
+            <ul className="wnm-entries">
+              {regularEntries.map((entry, i) => (
+                <li key={i} className="wnm-entry">
+                  <div className="wnm-entry-content">
+                    <div className="wnm-entry-header-row">
+                      <span className={`wnm-entry-badge ${entry.type}`}>
+                        {BADGE_LABEL[entry.type] ?? entry.type}
+                      </span>
+                      <span className="wnm-entry-text">{entry.text}</span>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    )
+  }
+
   if (!visible) return null
+
+  const latest = CHANGELOG[0]
   if (!latest) return null
 
   return (
     <div className="wnm-overlay" onClick={handleClose}>
       <div className="wnm-modal" onClick={(e) => e.stopPropagation()}>
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="wnm-header">
           <div className="wnm-header-top">
             <div className="wnm-icon-wrap">
-              {/* Sparkle / star icon */}
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
                 stroke="rgba(255,255,255,0.9)" strokeWidth="1.8"
                 strokeLinecap="round" strokeLinejoin="round">
@@ -210,135 +339,16 @@ export default function WhatsNewModal() {
           </div>
         </div>
 
-        {/* ── Change entries ── */}
+        {/* Change entries */}
         <div className="wnm-body">
-          {/* Latest Release Interactive Slideshow */}
-          {slides.length > 0 && (
-            <div 
-              className="wnm-slideshow-container"
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => setIsHovering(false)}
-            >
-              <div className="wnm-slideshow-track">
-                {slides.map((slide, sIdx) => (
-                  <div 
-                    key={sIdx} 
-                    className={`wnm-slide ${activeSlide === sIdx ? 'active' : ''}`}
-                    style={{ display: activeSlide === sIdx ? 'block' : 'none' }}
-                  >
-                    <div className="wnm-slide-image-wrapper">
-                      {slide.image ? (
-                        <img src={slide.image} alt={slide.text} className="wnm-slide-img" />
-                      ) : (
-                        <div className="wnm-slide-placeholder-art">
-                          <div className="wnm-placeholder-glow" />
-                          <div className="wnm-placeholder-icon">
-                            {renderFeatureIcon(slide.type, slide.action?.route)}
-                          </div>
-                        </div>
-                      )}
-                      <div className="wnm-slide-nav-overlay">
-                        <button 
-                          type="button"
-                          className="wnm-slide-nav-btn prev" 
-                          onClick={() => setActiveSlide(prev => (prev - 1 + slides.length) % slides.length)}
-                          title="Previous highlight"
-                        >
-                          ‹
-                        </button>
-                        <button 
-                          type="button"
-                          className="wnm-slide-nav-btn next" 
-                          onClick={() => setActiveSlide(prev => (prev + 1) % slides.length)}
-                          title="Next highlight"
-                        >
-                          ›
-                        </button>
-                      </div>
-                    </div>
-                    <div className="wnm-slide-info">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                        <span className={`wnm-entry-badge ${slide.type}`}>
-                          {BADGE_LABEL[slide.type] ?? slide.type}
-                        </span>
-                        {slide.action && (!slide.action.roles || hasRole(...slide.action.roles as any)) && (
-                          <button 
-                            type="button"
-                            className="wnm-try-now-btn"
-                            onClick={() => {
-                              navigate(slide.action!.route, { state: slide.action!.viewState })
-                              handleClose()
-                            }}
-                          >
-                            {slide.action.label} ➔
-                          </button>
-                        )}
-                      </div>
-                      <p className="wnm-slide-text">{slide.text}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Slider Dots */}
-              <div className="wnm-slide-dots">
-                {slides.map((_, sIdx) => (
-                  <button
-                    key={sIdx}
-                    type="button"
-                    className={`wnm-slide-dot ${activeSlide === sIdx ? 'active' : ''}`}
-                    onClick={() => setActiveSlide(sIdx)}
-                    title={`Go to slide ${sIdx + 1}`}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Regular / Other updates in Latest Release */}
-          {regularLatestEntries.length > 0 && (
-            <div className="wnm-version-section latest">
-              <p className="wnm-section-label">Other Latest Updates</p>
-              <ul className="wnm-entries">
-                {regularLatestEntries.map((entry, i) => (
-                  <li key={i} className="wnm-entry">
-                    <div className="wnm-entry-content">
-                      <div className="wnm-entry-header-row">
-                        <span className={`wnm-entry-badge ${entry.type}`}>
-                          {BADGE_LABEL[entry.type] ?? entry.type}
-                        </span>
-                        <span className="wnm-entry-text">{entry.text}</span>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Latest Release */}
+          {renderReleaseSection(latest, true)}
 
           {/* Older Releases */}
-          {CHANGELOG.slice(1).map((release) => (
-            <div key={release.version} className="wnm-version-section older">
-              <p className="wnm-section-label">Version {release.version} &nbsp;·&nbsp; {release.date}</p>
-              <ul className="wnm-entries">
-                {release.entries.map((entry, i) => (
-                  <li key={i} className="wnm-entry">
-                    <div className="wnm-entry-content">
-                      <div className="wnm-entry-header-row">
-                        <span className={`wnm-entry-badge ${entry.type}`}>
-                          {BADGE_LABEL[entry.type] ?? entry.type}
-                        </span>
-                        <span className="wnm-entry-text">{entry.text}</span>
-                      </div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {CHANGELOG.slice(1).map((release) => renderReleaseSection(release, false))}
         </div>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <div className="wnm-footer">
           <label className="wnm-checkbox-label">
             <input

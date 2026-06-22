@@ -1,4 +1,36 @@
 /* KEMCO VARIANT OVERRIDES */
+
+/* KEMCO progressive compression for higher row counts */
+.variant-kemco.task-count-14 .table-visual th,
+.variant-kemco.task-count-14 .table-visual td {
+  padding: 3px 2px !important;
+  font-size: 10px !important;
+}
+
+.variant-kemco.task-count-15 .table-visual th,
+.variant-kemco.task-count-15 .table-visual td {
+  padding: 2.5px 2px !important;
+  font-size: 9.5px !important;
+}
+
+.variant-kemco.task-count-16 .table-visual th,
+.variant-kemco.task-count-16 .table-visual td {
+  padding: 2px 1.5px !important;
+  font-size: 9px !important;
+}
+
+.variant-kemco.task-count-14 .contact-section-visual,
+.variant-kemco.task-count-15 .contact-section-visual,
+.variant-kemco.task-count-16 .contact-section-visual {
+  margin-bottom: 6px !important;
+}
+
+.variant-kemco.task-count-14 .qh-meta-block,
+.variant-kemco.task-count-15 .qh-meta-block,
+.variant-kemco.task-count-16 .qh-meta-block {
+  margin-bottom: 4px !important;
+}
+
 .mode-quotation:has(.col-code) .col-no { width: 4%; }
 .mode-quotation:has(.col-code) .col-reference { width: 12%; }
 .mode-quotation:has(.col-code) .col-description { width: 30%; }

@@ -3,6 +3,7 @@ import { quotationApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import QuotationLibraryModal from './QuotationLibraryModal'
 import { LobbyTutorial } from './LobbyTutorial'
+import { CUSTOMERS_CONFIG } from '../../utils/quotation'
 import './QuotationEntryModal.css'
 
 interface ActiveSession {
@@ -19,11 +20,12 @@ interface NewRoomForm {
   name: string
   password?: string
   variant: 'special' | 'kemco'
+  customerId: string
 }
 
 interface Props {
   onJoin: (id: number, password?: string) => void
-  onCreateNew: (name: string, variant: 'special' | 'kemco', password?: string) => void
+  onCreateNew: (name: string, variant: 'special' | 'kemco', customerId: string, password?: string) => void
   onStartTutorial: () => void
   onClose?: () => void
   mandatory?: boolean
@@ -35,7 +37,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
   const [isCreating, setIsCreating] = useState(false)
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
   const [isLobbyTutorialOpen, setIsLobbyTutorialOpen] = useState(false)
-  const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '', variant: 'special' })
+  const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '', variant: 'special', customerId: 'TEX_WAKAYAMA' })
   const [joiningSession, setJoiningSession] = useState<ActiveSession | null>(null)
   const [joinPassword, setJoinPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -58,6 +60,11 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
     }
   }
 
+  const handleCustomerChange = (id: string) => {
+    const variant = id === 'KUSAKABE' ? 'kemco' : 'special'
+    setNewRoom(prev => ({ ...prev, customerId: id, variant }))
+  }
+
   useEffect(() => {
     fetchSessions()
     const timer = setInterval(() => fetchSessions(true), 10000)
@@ -74,7 +81,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onCreateNew(newRoom.name.trim(), newRoom.variant, newRoom.password)
+    onCreateNew(newRoom.name.trim(), newRoom.variant, newRoom.customerId, newRoom.password)
   }
 
   const handleJoinClick = (s: ActiveSession) => {
@@ -159,14 +166,16 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
                   Back to lobby
                 </button>
                 <form onSubmit={handleCreateSubmit} className="quot-entry-form">
-                  {/* Layout Mode - Now at the TOP for better hierarchy */}
+                  {/* Project Layout & Customer Selection */}
                   <div className="form-group">
-                    <label>PROJECT</label>
+                    <label>PROJECT LAYOUT</label>
                     <div className={`variant-toggle-group ${newRoom.variant === 'kemco' ? 'kemco-active' : ''}`}>
                       <button
                         type="button"
                         className={`variant-btn ${newRoom.variant === 'special' ? 'active' : ''}`}
                         onClick={() => setNewRoom(prev => ({ ...prev, variant: 'special' }))}
+                        disabled // Disabled because customer selection dictates variant
+                        style={{ opacity: newRoom.variant === 'special' ? 1 : 0.5, cursor: 'not-allowed' }}
                       >
                         Special
                       </button>
@@ -174,9 +183,52 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
                         type="button"
                         className={`variant-btn ${newRoom.variant === 'kemco' ? 'active' : ''}`}
                         onClick={() => setNewRoom(prev => ({ ...prev, variant: 'kemco' }))}
+                        disabled // Disabled because customer selection dictates variant
+                        style={{ opacity: newRoom.variant === 'kemco' ? 1 : 0.5, cursor: 'not-allowed' }}
                       >
                         KEMCO
                       </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>CUSTOMER</label>
+                    <div className="input-with-icon">
+                      <svg className="input-icon-prefix" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                      </svg>
+                      <select
+                        className="form-input"
+                        value={newRoom.customerId}
+                        onChange={e => handleCustomerChange(e.target.value)}
+                        style={{
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          cursor: 'pointer',
+                          paddingRight: '40px',
+                        }}
+                      >
+                        {CUSTOMERS_CONFIG.map(c => (
+                          <option key={c.id} value={c.id} style={{ color: '#000000' }}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{
+                        position: 'absolute',
+                        right: '16px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        opacity: 0.6
+                      }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                      </div>
                     </div>
                   </div>
 

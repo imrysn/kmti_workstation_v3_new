@@ -84,6 +84,16 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate status_message column: {migrate_err}")
 
             try:
+                res = await conn.execute(text("SHOW COLUMNS FROM kmti_workstation_status LIKE 'telemetry_data'"))
+                if not res.fetchone():
+                    logger.info("  [MIGRATION] Adding 'telemetry_data' column to 'kmti_workstation_status'...")
+                    await conn.execute(text("ALTER TABLE kmti_workstation_status ADD COLUMN telemetry_data LONGTEXT DEFAULT NULL"))
+                    await conn.commit()
+                    logger.info("  [SUCCESS] 'telemetry_data' column added successfully.")
+            except Exception as migrate_err:
+                logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate telemetry_data column: {migrate_err}")
+
+            try:
                 res = await conn.execute(text("SHOW COLUMNS FROM quotations LIKE 'is_deleted'"))
                 if not res.fetchone():
                     logger.info("  [MIGRATION] Adding 'is_deleted' column to 'quotations'...")
@@ -104,11 +114,19 @@ async def lifespan(app: FastAPI):
                             await conn.execute(text("ALTER TABLE cad_file_index ADD COLUMN content_text LONGTEXT DEFAULT NULL"))
                             await conn.commit()
                             logger.info("  [SUCCESS] 'content_text' column added successfully.")
+
+                        # Modify quotations.data and quotation_history.data columns to LONGTEXT to prevent data truncation
+                        if conn.dialect.name == "mysql":
+                            logger.info("  [MIGRATION] Modifying quotations.data and quotation_history.data columns to LONGTEXT...")
+                            await conn.execute(text("ALTER TABLE quotations MODIFY COLUMN data LONGTEXT NOT NULL"))
+                            await conn.execute(text("ALTER TABLE quotation_history MODIFY COLUMN data LONGTEXT NOT NULL"))
+                            await conn.commit()
+                            logger.info("  [SUCCESS] Modified data columns to LONGTEXT successfully.")
                     finally:
                         await conn.execute(text("SELECT RELEASE_LOCK('kmti_migration_lock')"))
                         await conn.commit()
             except Exception as migrate_err:
-                logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate content_text column: {migrate_err}")
+                logger.warning(f"  [MIGRATION WARNING] Failed to run content_text or LONGTEXT migrations: {migrate_err}")
 
         # Setup FTS index on boot to match the columns list
         try:
@@ -120,6 +138,10 @@ async def lifespan(app: FastAPI):
             logger.warning(f"  [WARNING] Failed to verify FULLTEXT index: {fts_err}")
     except Exception as e:
         logger.error(f"  [ERROR] Database initialization failed: {e}")
+
+    # Restore persisted achievement counters from DB
+    from routers.telemetry import load_all_telemetry
+    await load_all_telemetry()
 
     try:
         async with fms_engine.connect() as conn:

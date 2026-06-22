@@ -852,8 +852,8 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   let totalAmountRow = TABLE_END + extraRows + 1
 
   if (isKemco) {
-    leasingRowIdx = TABLE_START + kemcoRows.length + extraRows
-    totalAmountRow = TABLE_END + extraRows + 1
+    leasingRowIdx = TABLE_START + kemcoRows.length  // the empty filler row reserved by effectiveTaskRows
+    totalAmountRow = TABLE_END + extraRows + 1       // unchanged — row immediately after table end
 
     const leasingRow = sheet.getRow(leasingRowIdx)
 

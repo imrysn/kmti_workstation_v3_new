@@ -24,6 +24,7 @@ export type ShapeType =
   | 'HexBar'
   | 'RoundPipe'
   | 'SquarePipe'
+  | 'RectangularPipe'
   | 'AngleBar';
 
 export const SHAPE_LABELS: Record<ShapeType, string> = {
@@ -32,6 +33,7 @@ export const SHAPE_LABELS: Record<ShapeType, string> = {
   HexBar: 'Hexagonal Bar (六角棒)',
   RoundPipe: 'Round Pipe/Tube (鋼管)',
   SquarePipe: 'Square Pipe (角パイプ)',
+  RectangularPipe: 'Rectangular Pipe (長方形角パイプ)',
   AngleBar: 'Angle Bar (山形鋼)',
 };
 
@@ -539,8 +541,117 @@ export function calculateSolution(
           };
         }
 
-        // Fallback math: Square Pipe hollow
+        // Fallback math: Square / Rectangular Pipe hollow
         const normParts = normalize(specPartRaw).split('x');
+        if (normParts.length === 3) {
+          const w = parseFloat(normParts[0]);
+          const h = parseFloat(normParts[1]);
+          const wt = parseFloat(normParts[2]);
+
+          if (isNaN(w)) return fail(
+            `Cannot read Outer Width (W) from "${normParts[0]}".`,
+            [`${materialRaw} □80×40×3.2-${length} ${qty}`],
+            [
+              { title: 'Diagnose Input', desc: `Rectangular Pipe spec: "□${specPartRaw}", parsed part[0]: "${normParts[0]}".` },
+              { title: 'Parse Error — Outer Width (W) Invalid', desc: `"${normParts[0]}" is not a valid number.` },
+              { title: 'How to Fix', desc: `Format: □W×H×WT-L.\nExample: ${materialRaw} □80×40×3.2-1000 ${qty}` }
+            ],
+            'parse', 'B3'
+          );
+          if (isNaN(h)) return fail(
+            `Cannot read Outer Height (H) from "${normParts[1]}".`,
+            [`${materialRaw} □80×40×3.2-${length} ${qty}`],
+            [
+              { title: 'Diagnose Input', desc: `Rectangular Pipe spec: "□${specPartRaw}", parsed part[1]: "${normParts[1]}".` },
+              { title: 'Parse Error — Outer Height (H) Invalid', desc: `"${normParts[1]}" is not a valid number.` },
+              { title: 'How to Fix', desc: `Format: □W×H×WT-L.\nExample: ${materialRaw} □80×40×3.2-1000 ${qty}` }
+            ],
+            'parse', 'B3'
+          );
+          if (isNaN(wt)) return fail(
+            `Cannot read Wall Thickness (WT) from "${normParts[2]}".`,
+            [`${materialRaw} □80×40×3.2-${length} ${qty}`],
+            [
+              { title: 'Diagnose Input', desc: `Rectangular Pipe spec: "□${specPartRaw}", parsed part[2]: "${normParts[2]}".` },
+              { title: 'Parse Error — Wall Thickness (WT) Invalid', desc: `"${normParts[2]}" is not a valid number.` },
+              { title: 'How to Fix', desc: `Format: □W×H×WT-L.\nExample: ${materialRaw} □80×40×3.2-1000 ${qty}` }
+            ],
+            'parse', 'B4'
+          );
+          if (wt <= 0 || wt >= w / 2 || wt >= h / 2) return fail(
+            `Wall Thickness (${fmt(wt)} mm) violates constraint: must be > 0 and < W/2 (${fmt(w / 2)} mm) and < H/2 (${fmt(h / 2)} mm).`,
+            [`${materialRaw} □${fmt(w)}×${fmt(h)}×${fmt(parseFloat((Math.min(w, h) * 0.1).toFixed(1)))}-${length} ${qty}`],
+            [
+              {
+                title: 'Diagnose Input',
+                desc: `Rectangular Pipe: Outer Width (W) = ${fmt(w)} mm, Outer Height (H) = ${fmt(h)} mm, Wall Thickness (WT) = ${fmt(wt)} mm, Length = ${fmt(length)} mm.`
+              },
+              {
+                title: 'Constraint Violation — Wall Thickness Out of Range',
+                desc: `Constraint: 0 < WT < min(W, H)/2.\nWith W = ${fmt(w)} mm, H = ${fmt(h)} mm, WT must satisfy: 0 < WT < ${fmt(Math.min(w, h) / 2)} mm.\nYour WT = ${fmt(wt)} mm is out of bounds.`
+              },
+              {
+                title: 'How to Fix',
+                desc: `Choose a wall thickness between 0 and ${fmt(Math.min(w, h) / 2)} mm.`
+              }
+            ],
+            'constraint', 'C1'
+          );
+
+          const W = w;
+          const H = h;
+          const innerW = W - 2 * wt;
+          const innerH = H - 2 * wt;
+          const volume = (W * H - innerW * innerH) * length;
+          const result = (volume * density * 0.000001) * qty;
+
+          return {
+            ...base,
+            shape: 'Rectangular Pipe',
+            steps: [
+              { label: 'Outer Width (W)', value: `${fmt(W)} mm` },
+              { label: 'Outer Height (H)', value: `${fmt(H)} mm` },
+              { label: 'Inner Width (w)', value: `${fmt(innerW)} mm` },
+              { label: 'Inner Height (h)', value: `${fmt(innerH)} mm` },
+              { label: 'Length (L)', value: `${fmt(length)} mm` },
+              { label: 'Volume (V)', value: `${fmt(volume)} mm³` },
+              { label: 'Density (ρ)', value: `${fmt(density)} g/cm³`, sub: densitySource === 'fallback' ? 'fallback default' : undefined },
+              { label: 'Qty', value: `× ${qty}` },
+            ],
+            detailedSteps: [
+              {
+                title: 'Extract Dimensions',
+                desc: `Outer Width (W) = ${fmt(W)} mm, Outer Height (H) = ${fmt(H)} mm, Wall Thickness (WT) = ${fmt(wt)} mm, Length (L) = ${fmt(length)} mm.`
+              },
+              {
+                title: 'Compute Inner Side Lengths',
+                desc: 'Inner side lengths are outer dimensions minus two times the wall thickness.',
+                formula: 'w = W − 2×WT,  h = H − 2×WT',
+                equation: `w = ${fmt(W)} mm − 2×${fmt(wt)} mm = ${fmt(innerW)} mm,  h = ${fmt(H)} mm − 2×${fmt(wt)} mm = ${fmt(innerH)} mm`
+              },
+              {
+                title: 'Calculate Volume (V)',
+                desc: 'Compute hollow rectangular volume using outer and inner area difference.',
+                formula: 'V = (W×H − w×h) × L',
+                equation: `((${fmt(W)} mm × ${fmt(H)} mm) − (${fmt(innerW)} mm × ${fmt(innerH)} mm)) × ${fmt(length)} mm = ${fmt(volume)} mm³`
+              },
+              {
+                title: 'Retrieve Material Density',
+                desc: `Density (ρ) for "${materialRaw}" is ${fmt(density)} g/cm³.`
+              },
+              {
+                title: 'Compute Total Weight',
+                desc: 'Multiply volume by density, quantity, and conversion factor (10⁻⁶).',
+                formula: 'Weight = V × Density × 10⁻⁶ × Qty',
+                equation: `${fmt(volume)} mm³ × ${fmt(density)} g/cm³ × 10⁻⁶ × ${qty} = ${fmt(result)} kg`
+              }
+            ],
+            formula: `${fmt(volume)} × ${fmt(density)} × 10⁻⁶ × ${qty} = ${fmt(result)} kg`,
+            result,
+            isError: false,
+          };
+        }
+
         if (normParts.length === 2) {
           const od = parseFloat(normParts[0]);
           const wt = parseFloat(normParts[1]);
@@ -637,20 +748,20 @@ export function calculateSolution(
         }
 
         return fail(
-          `Square Pipe spec before the dash could not be split into 2 dimensions.`,
-          [`${materialRaw} □60×4.5-${Math.round(length)} ${qty}`],
+          `Square / Rectangular Pipe spec before the dash could not be split into 2 or 3 dimensions.`,
+          [`${materialRaw} □80×40×3.2-${Math.round(length)} ${qty}`, `${materialRaw} □60×4.5-${Math.round(length)} ${qty}`],
           [
             {
               title: 'Diagnose Input',
               desc: `Square symbol "□" detected with dash separator. Spec before dash: "${specPartRaw}", Length: ${Math.round(length)} mm.`
             },
             {
-              title: 'Format Error — Square Pipe Spec Invalid',
-              desc: `Expected exactly 2 values: □OUTER_SIDE×WALL_THICKNESS-LENGTH.\nGot: "□${specPartRaw}" which does not split cleanly into 2 parts at "×".`
+              title: 'Format Error — Hollow Section Spec Invalid',
+              desc: `Expected 2 values for Square Pipe (□OD×WT-L) or 3 values for Rectangular Pipe (□W×H×WT-L).\nGot: "□${specPartRaw}".`
             },
             {
               title: 'How to Fix',
-              desc: `Use format: MATERIAL □A×WT-L QTY\nExample: ${materialRaw} □60×4.5-1000 ${qty}\n• A = outer side length (mm)\n• WT = wall thickness (mm)\n• L = length (mm)`
+              desc: `• Square Pipe: ${materialRaw} □60×4.5-1000 ${qty}\n• Rectangular Pipe: ${materialRaw} □80×40×3.2-1000 ${qty}`
             }
           ],
           'format', 'A6'
@@ -1373,6 +1484,17 @@ export function calculateExcelBatchWeight(
         if (wpm && !isNaN(length)) return (wpm * length * 0.001) * qty;
 
         const normParts = normalize(specPartRaw).split('x');
+        if (normParts.length === 3 && !isNaN(length)) {
+          const w = parseFloat(normParts[0]);
+          const h = parseFloat(normParts[1]);
+          const wt = parseFloat(normParts[2]);
+          if (!isNaN(w) && !isNaN(h) && !isNaN(wt) && wt > 0 && wt < w / 2 && wt < h / 2) {
+            const innerW = w - 2 * wt;
+            const innerH = h - 2 * wt;
+            const area = w * h - innerW * innerH;
+            return (area * length * density * 0.000001) * qty;
+          }
+        }
         if (normParts.length === 2 && !isNaN(length)) {
           const od = parseFloat(normParts[0]);
           const wt = parseFloat(normParts[1]);

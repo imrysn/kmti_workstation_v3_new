@@ -53,6 +53,13 @@ const IconSquarePipe = () => (
   </svg>
 )
 
+const IconRectangularPipe = () => (
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <rect x="2" y="5" width="24" height="18" rx="1.5" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
+    <rect x="6" y="9" width="16" height="10" rx="0.5" fill="var(--bg-secondary)" stroke="var(--accent)" strokeWidth="1.5" />
+  </svg>
+)
+
 const IconPlate = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
     <rect x="3" y="9" width="22" height="10" rx="1.5" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
@@ -232,6 +239,49 @@ const FORMULAS: FormulaEntry[] = [
     detailedVars: [
       { sym: 'A', desc: 'is the outer side width.' },
       { sym: 'a', desc: 'is the inner side width.' },
+      { sym: 't', desc: 'is the wall thickness.' },
+      { sym: 'L', desc: 'is the length of the pipe.' }
+    ]
+  },
+  {
+    label: 'Rectangular Pipe (Hollow Rectangle)',
+    shortLabel: 'Rectangular Pipe',
+    example: 'SS400 □80×40×3.2-1000 1',
+    formula: 'V × ρ × 10⁻⁶',
+    volFormula: 'V = (W·H − w·h) × L',
+    icon: <IconRectangularPipe />,
+    variables: [
+      { sym: 'V', desc: 'Volume (mm³)' },
+      { sym: 'W', desc: 'Outer Width (mm)' },
+      { sym: 'H', desc: 'Outer Height (mm)' },
+      { sym: 'w', desc: 'Inner Width (W − 2×WT) (mm)' },
+      { sym: 'h', desc: 'Inner Height (H − 2×WT) (mm)' },
+      { sym: 'L', desc: 'Length (mm)' },
+      { sym: 'ρ', desc: 'Density (g/cm³)' },
+    ],
+    note: 'Dash after W×H×WT separates length.',
+    description: 'A rectangular pipe features a hollow rectangular cross-section. The volume of the material is the outer rectangular volume minus the inner empty rectangular volume.',
+    variants: [
+      {
+        label: 'Formula using Side Lengths:',
+        formula: (
+          <div className="fp-math-display">
+            <span>V = (W·H − w·h) · L</span>
+          </div>
+        )
+      },
+      {
+        label: 'Formula using Wall Thickness (t):',
+        formula: (
+          <div className="fp-math-display">
+            <span>V = (W·H − (W − 2t)·(H − 2t)) · L</span>
+          </div>
+        )
+      }
+    ],
+    detailedVars: [
+      { sym: 'W / H', desc: 'are the outer width / outer height.' },
+      { sym: 'w / h', desc: 'are the inner width / inner height.' },
       { sym: 't', desc: 'is the wall thickness.' },
       { sym: 'L', desc: 'is the length of the pipe.' }
     ]

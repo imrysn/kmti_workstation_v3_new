@@ -282,26 +282,44 @@ export const PrintPage = memo(({
                     {span > 0 && (
                       <>
                         <td className="col-ref-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                          <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resRef} onChange={e => onTaskOverride?.(targetId, { referenceNumber: e.target.value })} />
+                          <div
+                            contentEditable
+                            suppressContentEditableWarning
+                            className="ppm-unit-input"
+                            style={{ textAlign: 'center', width: '100%', fontWeight: 'bold', border: 'none', outline: 'none', background: 'transparent', cursor: 'text', minHeight: '16px' }}
+                            onBlur={e => onTaskOverride?.(targetId, { referenceNumber: e.currentTarget.textContent || '' })}
+                          >
+                            {resRef}
+                          </div>
                         </td>
                         <td className="col-machine-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                          <input type="text" className="ppm-unit-input" style={{ textAlign: 'center', width: '100%', fontWeight: 'bold' }} value={resMachine} onChange={e => onTaskOverride?.(targetId, { machineCode: e.target.value })} />
+                          <div
+                            contentEditable
+                            suppressContentEditableWarning
+                            className="ppm-unit-input"
+                            style={{ textAlign: 'center', width: '100%', fontWeight: 'bold', border: 'none', outline: 'none', background: 'transparent', cursor: 'text', minHeight: '16px' }}
+                            onBlur={e => onTaskOverride?.(targetId, { machineCode: e.currentTarget.textContent || '' })}
+                          >
+                            {resMachine}
+                          </div>
                         </td>
                       </>
                     )}
                     <td className="col-unit-cell">
-                      <input
-                        type="text"
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
                         className="ppm-unit-input"
-                        style={{ textAlign: 'center', width: '100%' }}
-                        value={resUnit}
-                        onChange={e => {
-                          const parts = e.target.value.split(',').map(s => s.trim())
+                        style={{ textAlign: 'center', width: '100%', border: 'none', outline: 'none', background: 'transparent', cursor: 'text', minHeight: '16px' }}
+                        onBlur={e => {
+                          const parts = (e.currentTarget.textContent || '').split(',').map(s => s.trim())
                           row.subgroupTasks.forEach((t, tIdx) => {
                             onTaskOverride?.(t.id, { unitCode: parts[tIdx] || '' })
                           })
                         }}
-                      />
+                      >
+                        {resUnit}
+                      </div>
                     </td>
                     {span > 0 && (
                       <td className="description-cell" rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'left', paddingLeft: '8px' }}>
@@ -336,31 +354,38 @@ export const PrintPage = memo(({
                     )}
                     {span > 0 && (
                       <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                        <input
-                          type="text"
+                        <div
+                          contentEditable
+                          suppressContentEditableWarning
                           className="ppm-unit-input"
-                          style={{ textAlign: 'center', width: '100%' }}
-                          value={typeof resPercent === 'number' ? `${resPercent.toFixed(0)}%` : resPercent}
-                          onChange={e => onTaskOverride?.(targetId, { percentage: parseFloat(e.target.value.replace('%', '')) || 0 })}
-                        />
+                          style={{ textAlign: 'center', width: '100%', border: 'none', outline: 'none', background: 'transparent', cursor: 'text', minHeight: '16px' }}
+                          onBlur={e => {
+                            const val = parseFloat((e.currentTarget.textContent || '').replace('%', ''))
+                            onTaskOverride?.(targetId, { percentage: isNaN(val) ? 0 : val })
+                          }}
+                        >
+                          {typeof resPercent === 'number' ? `${resPercent.toFixed(0)}%` : resPercent}
+                        </div>
                       </td>
                     )}
                     {span > 0 && (
                       <td rowSpan={span} style={{ verticalAlign: 'middle', textAlign: 'center' }}>
-                        <input
-                          type="text"
+                        <div
+                          contentEditable
+                          suppressContentEditableWarning
                           className="ppm-unit-input"
-                          style={{ textAlign: 'center', width: '100%' }}
-                          value={resType}
-                          onChange={e => {
+                          style={{ textAlign: 'center', width: '100%', border: 'none', outline: 'none', background: 'transparent', cursor: 'text', minHeight: '16px' }}
+                          onBlur={e => {
                             if (row.subgroupTasks.length > 0) {
-                              onTaskOverride?.(row.subgroupTasks[0].id, { type: e.target.value })
+                              onTaskOverride?.(row.subgroupTasks[0].id, { type: e.currentTarget.textContent || '' })
                             }
                           }}
-                        />
+                        >
+                          {resType}
+                        </div>
                       </td>
                     )}
-                    {rowIndex === 0 && (
+                    {rowIndex === 0 && isFirstPage && (
                       <td className="price-cell kemco-merged-price" rowSpan={kemcoRows.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
                         ¥{(1848400).toLocaleString()}
                       </td>
@@ -428,7 +453,7 @@ export const PrintPage = memo(({
                 )}
                 {(() => {
                   const actualFillerCount = layoutVariant === 'kemco'
-                    ? Math.max(0, 10 - kemcoRows.length - 1)
+                    ? Math.max(0, 13 - kemcoRows.length)  // 13 = 14 target rows - 1 leasing fee
                     : fillerRowCount
                   return Array.from({ length: actualFillerCount }, (_, i) => (
                     <tr key={`empty-${i}`}>
@@ -446,7 +471,18 @@ export const PrintPage = memo(({
             )}
 
             {!isLastPage && (
-              <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>
+              <>
+                {layoutVariant === 'kemco' && (() => {
+                  // Fill non-last KEMCO pages to look full (20 row target - actual rows)
+                  const fillers = Math.max(0, 18 - kemcoRows.length)
+                  return Array.from({ length: fillers }, (_, i) => (
+                    <tr key={`empty-nonlast-${i}`}>
+                      {Array.from({ length: 8 }).map((_, j) => <td key={j}>&nbsp;</td>)}
+                    </tr>
+                  ))
+                })()}
+                <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>
+              </>
             )}
           </tbody>
         </table>

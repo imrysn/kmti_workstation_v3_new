@@ -70,9 +70,10 @@ interface Props extends WorkspaceSession {
   autoStartTutorial?: boolean
   workstation?: string
   variant?: 'special' | 'kemco'
+  customerId?: string
 }
 
-export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial, workstation, variant }: Props) {
+export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: initialQuotNo, password, displayName, mode, onLeave, onSwitchSession, autoStartTutorial, workstation, variant, customerId }: Props) {
   const { notify, confirm: showConfirm } = useModal()
   const { user, token } = useAuth()
 
@@ -153,7 +154,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             setQuotNo(res.data.quotationDetails.quotationNo || initialQuotNo)
           } else {
             // Fresh DB record, populate with defaults
-            resetToNew(initialQuotNo, variant || 'special')
+            resetToNew(initialQuotNo, variant || 'special', customerId)
 
             // If the record was created via Billing Monitoring, pre-fill from DB columns
             if (res.data) {
@@ -195,7 +196,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
         }
       } else if (mode === 'create') {
         // Fallback for edge cases where ID wasn't provisioned
-        resetToNew(initialQuotNo, variant || 'special')
+        resetToNew(initialQuotNo, variant || 'special', customerId)
       }
     }
     hydrate()
@@ -1162,6 +1163,7 @@ export default function QuotationWorkspace({ quotId: initialQuotId, quotNo: init
             userName={myEffectiveName}
             myColor={myColor}
             chatLog={chatLog}
+            workspaceName={quotNo}
             onDeleteChat={isPreview ? undefined : syncDeleteChat}
             onEditChat={isPreview ? undefined : syncEditChat}
             onReadChat={isPreview ? undefined : syncReadChat}

@@ -85,6 +85,15 @@ def _get_audit_label(path: str, full_state: dict = None) -> str:
     if "footer" in p: return f"Footer {field}"
     return path
 
+def safe_json_loads(val: Optional[str]) -> dict:
+    if not val:
+        return {}
+    try:
+        return json.loads(val)
+    except Exception as e:
+        print(f"Error decoding JSON: {e}")
+        return {}
+
 # ─── Socket.IO Event Handlers ──────────────────────────────────────────────────
 
 @sio.event
@@ -520,8 +529,12 @@ async def chat_message(sid: str, data: dict):
     message = data.get("message")
     if not q_id or not message: return
     
+    import uuid
+    msg_id = str(uuid.uuid4())
+    
     user_info = _active_users.get(q_id, {}).get(sid, {})
     await sio.emit("remote_chat", {
+        "id": msg_id,
         "sid": sid,
         "name": user_info.get("name", "User"),
         "color": user_info.get("color", "#4A90D9"),
@@ -627,7 +640,7 @@ async def list_quotations(
                 "projectStatus": i.project_status or "On Going",
                 "submittedToAdminAt": i.submitted_to_admin_at.strftime("%Y-%m-%d") if i.submitted_to_admin_at else None,
                 "billTo": (
-                    (json.loads(i.data).get("clientInfo", {}).get("company", "") if i.data else "") or 
+                    (safe_json_loads(i.data).get("clientInfo", {}).get("company", "") if i.data else "") or 
                     i.bill_to or 
                     ""
                 ),
@@ -636,7 +649,7 @@ async def list_quotations(
                 "lastUpdatedAt": i.last_updated_at.strftime("%Y-%m-%d %H:%M") if i.last_updated_at else None,
                 "updateDetail": i.update_detail or "",
                 "billingStatus": i.billing_status or None,
-                "data": json.loads(i.data) if i.data else {}
+                "data": safe_json_loads(i.data) if i.data else {}
             } for i in items
         ]
     }
@@ -814,7 +827,7 @@ async def get_quotation(q_id: int, db: AsyncSession = Depends(get_db)):
     if not quot:
         raise HTTPException(status_code=404, detail="Quotation not found")
     
-    data = json.loads(quot.data) if quot.data else {}
+    data = safe_json_loads(quot.data) if quot.data else {}
     if "billingDetails" not in data:
         data["billingDetails"] = {}
         
@@ -949,7 +962,7 @@ async def update_billing_monitoring(
     
     # Sync with inner JSON
     try:
-        data = json.loads(quot.data) if quot.data else {}
+        data = safe_json_loads(quot.data) if quot.data else {}
         if "billingDetails" not in data:
             data["billingDetails"] = {}
         data["billingDetails"]["quotationStatus"] = quot.quotation_status
@@ -1033,7 +1046,7 @@ async def restore_history(q_id: int, h_id: int, db: AsyncSession = Depends(get_d
     history = result.scalar_one_or_none()
     if not history:
         raise HTTPException(status_code=404, detail="History entry not found")
-    return json.loads(history.data)
+    return safe_json_loads(history.data)
 
 @router.delete("/{q_id}")
 async def delete_quotation(

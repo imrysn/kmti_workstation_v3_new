@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useDebounceCallback } from '../useDebounce'
-import { getKemcoRankAndPrice } from '../../utils/quotation'
+import { getKemcoRankAndPrice, generateQuotationNumber, CUSTOMERS_CONFIG } from '../../utils/quotation'
+
+export { generateQuotationNumber }
 
 import type {
   Task, BaseRates, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails,
@@ -18,15 +20,7 @@ export type {
 type NotificationType = 'success' | 'error' | 'info' | 'warning'
 
 
-const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
-
-export function generateQuotationNumber(date: string, sequential = '001'): string {
-  const dateObj = new Date(date + 'T00:00:00')
-  const year = dateObj.getFullYear().toString().slice(-2)
-  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0')
-  const day = dateObj.getDate().toString().padStart(2, '0')
-  return `KMTE-${year}${month}${day}-${sequential}`
-}
+export const GENERATED_QUOT_PATTERN = /^(KM|KMN|KMJFE|KMAG|KMTE|KMOK|KMAC)-\d{4,8}-\d{3,4}.*$/
 
 const DEFAULT_COMPANY: CompanyInfo = {
   name: 'KUSAKABE & MAENO TECH., INC',
@@ -572,14 +566,28 @@ export function useInvoiceState() {
     setHasUnsavedChanges(true)
   }, [setChatLog, setHasUnsavedChanges])
 
-  const resetToNew = useCallback((forcedQuotNo?: string, variant: 'special' | 'kemco' = 'special') => {
+  const resetToNew = useCallback((forcedQuotNo?: string, variant: 'special' | 'kemco' = 'special', customerId?: string) => {
     const newToday = new Date().toISOString().split('T')[0]
     const newQuotNo = forcedQuotNo || generateQuotationNumber(newToday)
     const newDetails: QuotationDetails = { quotationNo: newQuotNo, referenceNo: '', date: newToday }
-    const newBilling: BillingDetails = { ...DEFAULT_BILLING_DETAILS, invoiceNo: '', jobOrderNo: '' }
     const newTasks: Task[] = [makeBlankTask(0, null)]
 
-    const defaultClient = variant === 'kemco' ? DEFAULT_CLIENT_KEMCO : DEFAULT_CLIENT
+    const customer = customerId ? CUSTOMERS_CONFIG.find(c => c.id === customerId) : undefined
+
+    const defaultClient = customer ? {
+      company: customer.clientName,
+      contact: customer.contact,
+      address: customer.address,
+      phone: customer.phone
+    } : (variant === 'kemco' ? DEFAULT_CLIENT_KEMCO : DEFAULT_CLIENT)
+
+    const newBilling: BillingDetails = {
+      ...DEFAULT_BILLING_DETAILS,
+      invoiceNo: '',
+      jobOrderNo: '',
+      billTo: customer ? customer.clientName : '',
+      clientName: customer ? customer.clientName : ''
+    }
 
     // Pre-seed the new namespace before switching so useStickyState resync
     // reads correct values (not empty defaults) when ns changes.

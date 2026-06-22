@@ -91,13 +91,25 @@ export function parseLineToFormState(line: string) {
       const specPartRaw = specContent.substring(0, dashIdx)
       const length = parseFloat(specContent.substring(dashIdx + 1)) || 1000
       const normParts = specPartRaw.split(/[x×*]/)
-      const od = parseFloat(normParts[0]) || 60
-      const wt = parseFloat(normParts[1]) || 4.5
-      return {
-        shape: 'SquarePipe',
-        material,
-        qty,
-        dims: { od, wt, length }
+      if (normParts.length === 3) {
+        const w = parseFloat(normParts[0]) || 80
+        const side = parseFloat(normParts[1]) || 40
+        const wt = parseFloat(normParts[2]) || 3.2
+        return {
+          shape: 'RectangularPipe',
+          material,
+          qty,
+          dims: { w, side, wt, length }
+        }
+      } else {
+        const od = parseFloat(normParts[0]) || 60
+        const wt = parseFloat(normParts[1]) || 4.5
+        return {
+          shape: 'SquarePipe',
+          material,
+          qty,
+          dims: { od, wt, length }
+        }
       }
     } else {
       const normParts = specContent.split(/[x×*]/)
@@ -192,6 +204,7 @@ export const SHAPE_MATERIALS_DEFAULTS: Record<string, string[]> = {
   RoundPipe: ['STKM', 'STKM13A', 'STKM16A', 'SUS304TP', 'SGP', 'STPG370'],
   SquareBar: ['SS400', 'S45C', 'SUS304'],
   SquarePipe: ['STKR', 'STKR400', 'SUS304TP'],
+  RectangularPipe: ['STKR', 'STKR400', 'SUS304TP'],
   Plate: ['SS400', 'SUS304', 'A5052', 'S50C', 'S55C', 'SPCC', 'SPHC', '縞鋼板'],
   Block: ['FC200', 'FC250', 'FC300', 'FCD400', 'SS400'],
   Profile: ['H形鋼', 'I形鋼', '溝形鋼', '山形鋼', 'STKR400', 'SUS304TP'],
@@ -211,7 +224,7 @@ export function categorizeMaterial(matName: string, shape: string): boolean {
   if (shape === 'SquareBar') {
     return name.startsWith('SS') || name.startsWith('S45') || name.includes('SUS304') || name.includes('SPCC');
   }
-  if (shape === 'SquarePipe') {
+  if (shape === 'SquarePipe' || shape === 'RectangularPipe') {
     return name.includes('STKR') || name.includes('TP') || name.includes('STKM');
   }
   if (shape === 'Plate') {

@@ -40,6 +40,7 @@ export default function ManualFormMode({
               { id: 'RoundPipe', label: 'Round Pipe' },
               { id: 'SquareBar', label: 'Square Bar' },
               { id: 'SquarePipe', label: 'Square Pipe' },
+              { id: 'RectangularPipe', label: 'Rectangular Pipe' },
               { id: 'Plate', label: 'Plate' },
               { id: 'Block', label: 'Block' },
               { id: 'Profile', label: 'Profile' },
@@ -357,6 +358,99 @@ export default function ManualFormMode({
                   </div>
                 </div>
                 <div className="dim-field full-width-sm">
+                  <span className="dim-label">Length (L)</span>
+                  <div className="dim-input-wrapper has-select">
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={formDims.length}
+                      onChange={(e) => setFormDims(prev => ({ ...prev, length: parseOrEmpty(e.target.value) }))}
+                      step="any"
+                      min="0"
+                    />
+                    <select
+                      className="dim-unit-select"
+                      value={dimUnits.length}
+                      onChange={(e) => setDimUnits(prev => ({ ...prev, length: e.target.value as any }))}
+                    >
+                      <option value="mm">mm</option>
+                      <option value="cm">cm</option>
+                      <option value="m">m</option>
+                    </select>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {formShape === 'RectangularPipe' && (
+              <>
+                <div className="dim-field">
+                  <span className="dim-label">Outer Width (W)</span>
+                  <div className="dim-input-wrapper has-select">
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={formDims.w}
+                      onChange={(e) => setFormDims(prev => ({ ...prev, w: parseOrEmpty(e.target.value) }))}
+                      step="any"
+                      min="0"
+                    />
+                    <select
+                      className="dim-unit-select"
+                      value={dimUnits.w}
+                      onChange={(e) => setDimUnits(prev => ({ ...prev, w: e.target.value as any }))}
+                    >
+                      <option value="mm">mm</option>
+                      <option value="cm">cm</option>
+                      <option value="m">m</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="dim-field">
+                  <span className="dim-label">Outer Height (H)</span>
+                  <div className="dim-input-wrapper has-select">
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={formDims.side}
+                      onChange={(e) => setFormDims(prev => ({ ...prev, side: parseOrEmpty(e.target.value) }))}
+                      step="any"
+                      min="0"
+                    />
+                    <select
+                      className="dim-unit-select"
+                      value={dimUnits.side}
+                      onChange={(e) => setDimUnits(prev => ({ ...prev, side: e.target.value as any }))}
+                    >
+                      <option value="mm">mm</option>
+                      <option value="cm">cm</option>
+                      <option value="m">m</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="dim-field">
+                  <span className="dim-label">Wall Thickness (WT)</span>
+                  <div className="dim-input-wrapper has-select">
+                    <input
+                      type="number"
+                      className="form-input"
+                      value={formDims.wt}
+                      onChange={(e) => setFormDims(prev => ({ ...prev, wt: parseOrEmpty(e.target.value) }))}
+                      step="any"
+                      min="0"
+                    />
+                    <select
+                      className="dim-unit-select"
+                      value={dimUnits.wt}
+                      onChange={(e) => setDimUnits(prev => ({ ...prev, wt: e.target.value as any }))}
+                    >
+                      <option value="mm">mm</option>
+                      <option value="cm">cm</option>
+                      <option value="m">m</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="dim-field">
                   <span className="dim-label">Length (L)</span>
                   <div className="dim-input-wrapper has-select">
                     <input

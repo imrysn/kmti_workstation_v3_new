@@ -1,4 +1,5 @@
 import { memo, useState } from 'react'
+import { GENERATED_QUOT_PATTERN } from '../../../hooks/quotation'
 import type { QuotationDetails } from '../../../hooks/quotation'
 import { useCollaborationContext } from '../../../context/CollaborationContext'
 import { CollaborativeField } from './CollaborativeField'
@@ -8,9 +9,6 @@ interface Props {
   onUpdate?: (updates: Partial<QuotationDetails>) => void
   isCollapsed?: boolean
 }
-
-// Pattern for auto-generated quotation numbers: KMTE-YYMMDD-NNN
-const GENERATED_QUOT_PATTERN = /^KMTE-\d{6}-\d{3}$/
 
 const QuotationDetailsCard = memo(({ quotationDetails, onUpdate, isCollapsed = false }: Props) => {
   const { remoteUsers, emitFocus, emitBlur } = useCollaborationContext()

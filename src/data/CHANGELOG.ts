@@ -31,10 +31,39 @@ import leaderboardImg from '../assets/updates/leaderboard_v3.png'
 import billingmonitoringImg from '../assets/updates/billing_monitoringv2.png'
 import spreadsheetv2 from '../assets/updates/spreadsheetv2.png'
 import soav2 from '../assets/updates/soav2.png'
-
-
+import recPipeImg from '../assets/updates/rec_pipe.png'
+import quotationCustomerImg from '../assets/updates/quotation_customer.png'
 
 export const CHANGELOG: VersionChangelog[] = [
+  {
+    version: '3.8.4',
+    date: 'June 17, 2026',
+    entries: [
+      {
+        type: 'new',
+        text: 'Quotation Workspace — Added Customer selection dropdown in workspace creation. Automatically aligns the generated Quotation No prefix with the customer and syncs details downstream.',
+        image: quotationCustomerImg
+      },
+      {
+        type: 'new',
+        text: 'Material Calculator — Added Rectangular Pipe (□W×H×WT-L) hollow section weight calculations.',
+        image: recPipeImg
+      },
+      {
+        type: 'improvement',
+        text: 'KEMCO Quotations — Changed the percentage weight logic to be dynamically time-based (duration in minutes) instead of node-count based.'
+      }
+    ]
+  },
+  {
+    version: '3.8.3',
+    date: 'June 9, 2026',
+    entries: [
+      { type: 'new', text: 'Admin Features — "Copy/Duplicate Row", better split for "Partial Billing" status. ' },
+      { type: 'improvement', text: 'Improved UI — Better user experience.' },
+      { type: 'fix', text: 'Fix Errors — Fixed several bugs for better optimization and performance.' }
+    ]
+  },
   {
     version: '3.8.2',
     date: 'June 8, 2026',

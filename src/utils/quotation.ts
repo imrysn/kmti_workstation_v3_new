@@ -174,3 +174,37 @@ export function getKemcoRankAndPrice(time: number, level: number, type: string):
     }
   }
 }
+
+export interface Customer {
+  id: string
+  name: string
+  prefix: string
+  clientName: string
+  contact: string
+  address: string
+  phone: string
+}
+
+export const CUSTOMERS_CONFIG: Customer[] = [
+  { id: 'KUSAKABE', name: 'Kusakabe (KEMCO)', prefix: 'KM-', clientName: 'Kusakabe Electric and Machinery Co.,Ltd.', contact: 'Mr. Seiichi Fujiyama', address: '11-2,2Chome Murotani Nishiku Kobe, Japan (651-2241)', phone: 'TEL  078-992-9145 / FAX 078-992-9149' },
+  { id: 'NIKKO', name: 'Nikko', prefix: 'KMN-', clientName: 'Nikko Co., Ltd.', contact: 'Mr. Hasegawa/Mr. Kishima', address: 'Japan', phone: '' },
+  { id: 'JFE', name: 'JFE', prefix: 'KMJFE-', clientName: 'JFE Steel Corporation', contact: 'Mr. Hasegawa/Mr. Hayashi', address: 'Japan', phone: '' },
+  { id: 'AGCC', name: 'AGCC', prefix: 'KMAG-', clientName: 'AGCC', contact: 'Mr. Nabuchi', address: 'Japan', phone: '' },
+  { id: 'TEX_WAKAYAMA', name: 'Tex Wakayama', prefix: 'KMTE-', clientName: 'Tex Wakayama', contact: 'Mr. Hasegawa / Mr. Ueda', address: 'Japan', phone: '' },
+  { id: 'TEX_HANSHIN', name: 'Tex Hanshin', prefix: 'KMTE-', clientName: 'Tex Hanshin', contact: 'Mr. Hasegawa', address: 'Japan', phone: '' },
+  { id: 'OKINAKA', name: 'Okinaka', prefix: 'KMOK-', clientName: 'Okinaka', contact: 'Mr. Hasegawa', address: 'Japan', phone: '' },
+  { id: 'AMANO', name: 'Amano', prefix: 'KMAC-', clientName: 'Amano', contact: 'Mr. Hasegawa', address: 'Japan', phone: '' }
+]
+
+export function generateQuotationNumber(date: string, prefix = 'KMTE-', sequential = '001'): string {
+  const dateObj = new Date(date + 'T00:00:00')
+  const year = dateObj.getFullYear()
+  const yy = year.toString().slice(-2)
+  const month = (dateObj.getMonth() + 1).toString().padStart(2, '0')
+  const day = dateObj.getDate().toString().padStart(2, '0')
+  
+  if (prefix === 'KM-') {
+    return `KM-${year}-${month}${day}-${sequential}`
+  }
+  return `${prefix}${yy}${month}${day}-${sequential}`
+}
