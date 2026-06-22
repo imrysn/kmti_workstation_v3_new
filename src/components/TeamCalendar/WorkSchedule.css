@@ -1,0 +1,575 @@
+/* Work Schedule Dashboard Layout */
+.work-schedule-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+/* Timeline Card (Top Panel) */
+.timeline-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timeline-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-card-header h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-grid-wrapper {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+
+.timeline-table {
+  border-collapse: collapse;
+  width: max-content;
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: center;
+}
+
+.timeline-table th, 
+.timeline-table td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  min-width: 65px;
+  height: 32px;
+  vertical-align: middle;
+}
+
+.timeline-table th {
+  background: var(--bg-surface);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Header rows */
+.timeline-month-header {
+  background: var(--accent-subtle) !important;
+  color: var(--accent);
+  font-weight: 700 !important;
+  font-size: 13px;
+  text-align: left !important;
+  padding-left: 15px !important;
+}
+
+.timeline-member-col {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bg-secondary) !important;
+  font-weight: 700;
+  text-align: left !important;
+  min-width: 180px !important;
+  border-right: 2px solid var(--border) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Cell colors mapping original sheet */
+.cell-sat, .cell-sun {
+  background: rgba(245, 158, 11, 0.08); /* light brown/orange for weekends */
+}
+
+.cell-holiday {
+  background: rgba(236, 72, 153, 0.15); /* pink/magenta for holidays */
+  color: #f472b6;
+}
+
+.timeline-assignment-text {
+  font-family: var(--font-mono);
+  font-weight: bold;
+  color: var(--accent);
+  cursor: pointer;
+  background: var(--accent-subtle);
+  border-radius: 4px;
+  padding: 2px 4px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.timeline-assignment-text:hover {
+  background: var(--bg-surface-hover);
+  color: var(--accent-hover);
+}
+
+.timeline-cell-empty {
+  cursor: pointer;
+  height: 100%;
+  width: 100%;
+  display: block;
+}
+
+.timeline-cell-empty:hover {
+  background: var(--bg-surface-hover);
+}
+
+/* P2P Dragging highlighted range styles */
+.timeline-table td.cell-dragging {
+  background: var(--accent-subtle) !important;
+  outline: 2px dashed var(--accent) !important;
+  outline-offset: -2px;
+  z-index: 1;
+}
+
+/* Today column highlight styles */
+.timeline-table th.cell-today {
+  background: var(--accent) !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+}
+
+.timeline-table td.cell-today {
+  border-left: 2px solid var(--accent) !important;
+  border-right: 2px solid var(--accent) !important;
+  background: rgba(0, 150, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 999px rgba(0, 150, 255, 0.08) !important;
+}
+
+/* Gantt Arrow Line rendering - dashed line only */
+.timeline-table td.cell-arrow {
+  padding: 0 !important;
+  position: relative;
+}
+
+.gantt-arrow-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 0;
+  border-top: 3px dashed var(--accent);
+  z-index: 1;
+  background: transparent !important;
+}
+
+.gantt-arrow-line.arrow-end::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  top: -1.5px;
+  width: 7px;
+  height: 7px;
+  border-top: 2.5px solid var(--accent);
+  border-right: 2.5px solid var(--accent);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+
+
+
+
+
+/* Bottom Split Layout */
+.work-schedule-container {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  height: 520px;
+}
+
+/* Sidebar styling */
+.schedule-sidebar-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.search-input-wrapper {
+  position: relative;
+}
+
+.search-input-wrapper input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px 10px 35px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.search-input-wrapper input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
+}
+
+.search-icon-svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.job-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.job-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.job-item:hover {
+  background: var(--bg-surface-hover);
+  border-color: var(--border);
+}
+
+.job-item.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+}
+
+.job-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.job-title-id {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.job-deadline-badge {
+  font-size: 11px;
+  background: var(--bg-surface-hover);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-primary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Main Content Area */
+.schedule-main-panel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.schedule-header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 15px;
+}
+
+.active-job-details h2 {
+  margin: 0;
+  font-size: 22px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.active-job-details p {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.action-buttons-group {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-schedule-action {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-schedule-action:hover {
+  background: var(--bg-surface-hover);
+}
+
+.btn-schedule-action.primary {
+  background: var(--accent);
+  border-color: var(--accent-hover);
+  color: #fff;
+}
+
+.btn-schedule-action.primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-schedule-action.danger {
+  background: var(--bg-danger-subtle);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn-schedule-action.danger:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* Components Table */
+.components-table-container {
+  flex: 1;
+  overflow: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.components-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.components-table th {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.components-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.components-table tr:hover td {
+  background: var(--bg-surface-hover);
+}
+
+/* Status Badges */
+.status-badge-schedule {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge-schedule.completed {
+  background: var(--bg-success-subtle);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.status-badge-schedule.checking {
+  background: var(--bg-warning-subtle);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.status-badge-schedule.pending {
+  background: var(--bg-surface-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.status-badge-schedule.excluded {
+  background: var(--bg-danger-subtle);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+/* Grid parameters */
+.param-pill {
+  display: inline-block;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+/* Modal Overlay styling */
+.schedule-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.schedule-modal-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 480px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: var(--shadow-lg);
+  animation: modalScaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.schedule-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.schedule-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.schedule-form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.schedule-form-group select,
+.schedule-form-group input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.schedule-form-group select:focus,
+.schedule-form-group input:focus {
+  border-color: var(--accent);
+}
+
+.schedule-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+/* Empty placeholder */
+.no-schedule-selected {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  gap: 10px;
+}
+
+/* Spinner */
+.schedule-loading-spinner {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: var(--accent);
+  font-weight: 600;
+  gap: 8px;
+}
+
+.spinner-icon {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  100% { transform: rotate(360deg); }
+}

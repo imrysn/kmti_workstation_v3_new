@@ -500,6 +500,44 @@ export const ttsApi = {
     `${API_BASE}/tts/generate?text=${encodeURIComponent(text)}&voice=${voice}&speed=${speed}`
 }
 
+// --- Work Schedule ---
+export const scheduleApi = {
+  getJobs: () => api.get('/schedule/jobs').then(r => r.data),
+  getComponents: (jobId: string) => api.get(`/schedule/jobs/${jobId}/components`).then(r => r.data),
+  updateComponentStatus: (componentId: number, status: string, submittedDate?: string | null) =>
+    api.post(`/schedule/components/${componentId}/status`, { status, submitted_date: submittedDate }).then(r => r.data),
+  createJob: (jobId: string, deadline?: string | null) =>
+    api.post('/schedule/jobs', { job_id: jobId, deadline }).then(r => r.data),
+  createComponent: (jobId: string, data: {
+    unit_code: string;
+    assembly_3d?: string;
+    parts_3d?: string;
+    assembly_2d?: string;
+    parts_2d?: string;
+    status?: string;
+    submitted_date?: string | null;
+  }) => api.post(`/schedule/jobs/${jobId}/components`, data).then(r => r.data),
+  importFromExcel: () => api.post('/schedule/import').then(r => r.data),
+  exportToExcel: () => api.get('/schedule/export', { responseType: 'blob' }).then(r => r.data),
+  getTimeline: () => api.get('/schedule/timeline').then(r => r.data),
+  updateTimeline: (memberName: string, colIndex: number, value: string) => 
+    api.post('/schedule/timeline', { member_name: memberName, col_index: colIndex, value }).then(r => r.data),
+  updateTimelineSpan: (memberName: string, startCol: number, endCol: number, jobCode: string) =>
+    api.post('/schedule/timeline/span', { member_name: memberName, start_col: startCol, end_col: endCol, job_code: jobCode }).then(r => r.data),
+  deleteJob: (jobId: string) => api.delete(`/schedule/jobs/${jobId}`).then(r => r.data),
+  deleteComponent: (componentId: number) => api.delete(`/schedule/components/${componentId}`).then(r => r.data),
+  updateComponent: (componentId: number, data: {
+    unit_code?: string;
+    assembly_3d?: string;
+    parts_3d?: string;
+    assembly_2d?: string;
+    parts_2d?: string;
+    status?: string;
+    submitted_date?: string | null;
+  }) => api.patch(`/schedule/components/${componentId}`, data).then(r => r.data)
+}
+
+
 // --- Production Resiliency Interceptor ---
 // Automatically retry transient errors (503, 504) once before giving up.
 api.interceptors.response.use(

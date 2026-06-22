@@ -453,7 +453,7 @@ function SkinDraftingSage() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-drafting-bg)" />
       <g opacity="0.12" stroke="#F59E0B" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* drafting ruler */}
       <rect x="12" y="12" width="30" height="6" rx="1" fill="rgba(245,158,11,0.3)" stroke="#F59E0B" strokeWidth="1" />
@@ -493,7 +493,7 @@ function SkinQuotationAce() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-quot-bg)" />
       <g opacity="0.12" stroke="#60A5FA" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* document icon */}
       <rect x="72" y="10" width="18" height="22" rx="2" fill="none" stroke="#60A5FA" strokeWidth="1.5" />
@@ -531,7 +531,7 @@ function SkinHeatSpecialist() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-heat-bg)" />
       <g opacity="0.12" stroke="#EF4444" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* flame */}
       <path d="M82 32 C78 24 72 22 74 14 C70 18 66 26 70 32 C67 28 64 30 66 36 C64 34 61 36 63 42 C66 38 72 40 72 46 C76 40 84 40 82 32 Z" fill="#F97316" opacity="0.9" />
@@ -679,7 +679,7 @@ function SkinSystemGuardian() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-guard-bg)" />
       <g opacity="0.12" stroke="#6366F1" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* shield emblem */}
       <path d="M78 10 L88 15 L88 26 C88 32 83 36 78 38 C73 36 68 32 68 26 L68 15 Z" fill="rgba(99,102,241,0.25)" stroke="#6366F1" strokeWidth="1.5" />
@@ -751,7 +751,7 @@ function SkinModuleVeteran() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-vet-bg)" />
       <g opacity="0.12" stroke="#FBBF24" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* 3 service stripes */}
       <rect x="6" y="20" width="12" height="3" rx="1" fill="#FBBF24" opacity="0.9" />
@@ -819,7 +819,7 @@ function SkinPolyglot() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-poly-bg)" />
       <g opacity="0.12" stroke="#34D399" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       <text x="12" y="22" fill="#34D399" fontSize="10" opacity="0.6">語</text>
       <text x="78" y="28" fill="#34D399" fontSize="8" opacity="0.5">字</text>
@@ -891,7 +891,7 @@ function SkinLoyalOperator() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-loyal-bg)" />
       <g opacity="0.15" stroke="#FFD700" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* 30-day badge */}
       <path d="M75 8 L80 16 L90 16 L82 22 L85 32 L75 26 L65 32 L68 22 L60 16 L70 16 Z" fill="rgba(251,191,36,0.3)" stroke="#FBBF24" strokeWidth="1.5" />
@@ -937,7 +937,7 @@ function SkinBroadcaster() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-broad-bg)" />
       <g opacity="0.12" stroke="#60A5FA" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* broadcast waves left side */}
       <path d="M8 30 A22 22 0 0 0 8 60" fill="none" stroke="#60A5FA" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
@@ -978,7 +978,7 @@ function SkinHelpSeeker() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-help-bg)" />
       <g opacity="0.12" stroke="#38BDF8" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* help cross */}
       <circle cx="82" cy="20" r="10" fill="rgba(56,189,248,0.15)" stroke="#38BDF8" strokeWidth="1.5" />
@@ -1057,7 +1057,7 @@ function SkinStopwatchHero() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-stop-bg)" />
       <g opacity="0.12" stroke="#F472B6" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* stopwatch icon */}
       <circle cx="80" cy="22" r="10" fill="none" stroke="#F472B6" strokeWidth="1.5" />
@@ -1095,7 +1095,7 @@ function SkinPerfectAttendance() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-attend-bg)" />
       <g opacity="0.12" stroke="#10B981" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       {/* calendar icon */}
       <rect x="68" y="8" width="24" height="22" rx="3" fill="rgba(16,185,129,0.15)" stroke="#10B981" strokeWidth="1.5" />

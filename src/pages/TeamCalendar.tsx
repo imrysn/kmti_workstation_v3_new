@@ -13,10 +13,12 @@ import DayEventsPopover from '../components/TeamCalendar/modals/DayEventsPopover
 import LandingAgendaModal from '../components/TeamCalendar/modals/LandingAgendaModal'
 
 import { formatLocalDate, inferTaskType, type TaskType } from '../utils/teamCalendarUtils'
+import WorkSchedule from '../components/TeamCalendar/WorkSchedule'
 import './TeamCalendar.css'
 
 export default function TeamCalendar() {
   const cal = useTeamCalendar()
+  const [activeTab, setActiveTab] = useState<'calendar' | 'schedule'>('calendar')
   const [showLandingAgenda, setShowLandingAgenda] = useState(false)
   const [pcName, setPcName] = useState<string>('')
   const [selectedTaskType, setSelectedTaskType] = useState<TaskType | null>(null)
@@ -95,110 +97,161 @@ export default function TeamCalendar() {
 
   return (
     <div className="team-calendar-page page-container">
-      {isSidebarCollapsed && (
-        <button className="sidebar-expand-btn" onClick={toggleSidebar} title="Expand">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
+      {/* View Switcher */}
+      <div className="calendar-schedule-toggle no-print" style={{
+        display: 'flex',
+        gap: '4px',
+        marginBottom: '15px',
+        background: 'rgba(255, 255, 255, 0.05)',
+        padding: '4px',
+        borderRadius: '8px',
+        width: 'fit-content',
+        border: '1px solid rgba(255, 255, 255, 0.08)'
+      }}>
+        <button 
+          onClick={() => setActiveTab('calendar')}
+          style={{
+            background: activeTab === 'calendar' ? '#3b82f6' : 'transparent',
+            border: 'none',
+            color: '#fff',
+            padding: '6px 14px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 600,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Calendar View
         </button>
-      )}
-
-      <div className={`team-calendar-layout${isSidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
-        <CalendarSidebar
-          visibleTaskTypes={cal.visibleTaskTypes}
-          visibleTeams={cal.visibleTeams}
-          showClaims={cal.showClaims}
-          setShowClaims={cal.setShowClaims}
-          showAbsences={cal.showAbsences}
-          setShowAbsences={cal.setShowAbsences}
-          showSpans={cal.showSpans}
-          setShowSpans={cal.setShowSpans}
-          pendingApprovals={cal.pendingApprovals}
-          isAdminOrIT={cal.isAdminOrIT}
-          onApproveLeave={cal.handleApproveEvent}
-          isCollapsed={isSidebarCollapsed}
-          onToggle={toggleSidebar}
-          events={cal.events}
-          selectedTaskType={selectedTaskType}
-          onSelectTaskType={setSelectedTaskType}
-          selectedStatus={selectedStatus}
-          onSelectStatus={setSelectedStatus}
-          selectedTeam={selectedTeam}
-          onSelectTeam={setSelectedTeam}
-          onCancelLeave={(eventId, name) =>
-            cal.confirm(
-              `Decline leave request from ${name}? This will remove the pending event.`,
-              async () => {
-                try {
-                  const { teamCalendarApi } = await import('../services/teamCalendarService')
-                  const res = await teamCalendarApi.deleteEvent(eventId)
-                  if (res.success) {
-                    cal.notify('Leave request declined.', 'success')
-                    cal.loadData()
-                  }
-                } catch {
-                  cal.notify('Failed to decline leave request.', 'error')
-                }
-              },
-              undefined,
-              'danger',
-              'Decline Leave Request'
-            )
-          }
-        />
-
-        <main className="calendar-main-content" onWheel={cal.handleCalendarWheel}>
-          <CalendarToolbar
-            viewMode={cal.viewMode}
-            setViewMode={cal.setViewMode}
-            monthName={cal.monthName}
-            yearNum={cal.yearNum}
-            navigateDate={cal.navigateDate}
-            setIsAddingDayOff={cal.setIsAddingDayOff}
-            setDayOffStart={cal.setDayOffStart}
-            setDayOffEnd={cal.setDayOffEnd}
-          />
-
-          <div className={`calendar-grid-container ${cal.viewMode !== 'timeline' ? 'custom-scrollbar' : ''}`} style={cal.viewMode === 'timeline' ? { overflow: 'hidden' } : {}}>
-            {cal.viewMode === 'agenda' ? (
-              <AgendaView
-                agendaDays={cal.agendaDays}
-                events={filteredEvents}
-                phHolidays={cal.phHolidays}
-                showClaims={cal.showClaims}
-                showAbsences={cal.showAbsences}
-                showSpans={cal.showSpans}
-                setSelectedEvent={cal.setSelectedEvent}
-              />
-            ) : cal.viewMode === 'timeline' ? (
-              <CalendarTimeline
-                isLoading={cal.isLoading}
-                calendarDays={cal.calendarDays}
-                events={filteredEvents}
-                phHolidays={cal.phHolidays}
-                showClaims={cal.showClaims}
-                showAbsences={cal.showAbsences}
-                setSelectedEvent={cal.setSelectedEvent}
-              />
-            ) : (
-              <CalendarGrid
-                isLoading={cal.isLoading}
-                viewMode={cal.viewMode}
-                calendarDays={cal.calendarDays}
-                displayDate={cal.displayDate}
-                events={filteredEvents}
-                phHolidays={cal.phHolidays}
-                showClaims={cal.showClaims}
-                showAbsences={cal.showAbsences}
-                showSpans={cal.showSpans}
-                handleCellClick={cal.handleCellClick}
-                setSelectedEvent={cal.setSelectedEvent}
-                setActivePopoverDate={cal.setActivePopoverDate}
-              />
-            )}
-          </div>
-        </main>
+        <button 
+          onClick={() => setActiveTab('schedule')}
+          style={{
+            background: activeTab === 'schedule' ? '#3b82f6' : 'transparent',
+            border: 'none',
+            color: '#fff',
+            padding: '6px 14px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: 600,
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Work Schedule
+        </button>
       </div>
+
+      {activeTab === 'schedule' ? (
+        <WorkSchedule />
+      ) : (
+        <>
+          {isSidebarCollapsed && (
+            <button className="sidebar-expand-btn" onClick={toggleSidebar} title="Expand">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          )}
+
+          <div className={`team-calendar-layout${isSidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+            <CalendarSidebar
+              visibleTaskTypes={cal.visibleTaskTypes}
+              visibleTeams={cal.visibleTeams}
+              showClaims={cal.showClaims}
+              setShowClaims={cal.setShowClaims}
+              showAbsences={cal.showAbsences}
+              setShowAbsences={cal.setShowAbsences}
+              showSpans={cal.showSpans}
+              setShowSpans={cal.setShowSpans}
+              pendingApprovals={cal.pendingApprovals}
+              isAdminOrIT={cal.isAdminOrIT}
+              onApproveLeave={cal.handleApproveEvent}
+              isCollapsed={isSidebarCollapsed}
+              onToggle={toggleSidebar}
+              events={cal.events}
+              selectedTaskType={selectedTaskType}
+              onSelectTaskType={setSelectedTaskType}
+              selectedStatus={selectedStatus}
+              onSelectStatus={setSelectedStatus}
+              selectedTeam={selectedTeam}
+              onSelectTeam={setSelectedTeam}
+              onCancelLeave={(eventId, name) =>
+                cal.confirm(
+                  `Decline leave request from ${name}? This will remove the pending event.`,
+                  async () => {
+                    try {
+                      const { teamCalendarApi } = await import('../services/teamCalendarService')
+                      const res = await teamCalendarApi.deleteEvent(eventId)
+                      if (res.success) {
+                        cal.notify('Leave request declined.', 'success')
+                        cal.loadData()
+                      }
+                    } catch {
+                      cal.notify('Failed to decline leave request.', 'error')
+                    }
+                  },
+                  undefined,
+                  'danger',
+                  'Decline Leave Request'
+                )
+              }
+            />
+
+            <main className="calendar-main-content" onWheel={cal.handleCalendarWheel}>
+              <CalendarToolbar
+                viewMode={cal.viewMode}
+                setViewMode={cal.setViewMode}
+                monthName={cal.monthName}
+                yearNum={cal.yearNum}
+                navigateDate={cal.navigateDate}
+                setIsAddingDayOff={cal.setIsAddingDayOff}
+                setDayOffStart={cal.setDayOffStart}
+                setDayOffEnd={cal.setDayOffEnd}
+              />
+
+              <div className={`calendar-grid-container ${cal.viewMode !== 'timeline' ? 'custom-scrollbar' : ''}`} style={cal.viewMode === 'timeline' ? { overflow: 'hidden' } : {}}>
+                {cal.viewMode === 'agenda' ? (
+                  <AgendaView
+                    agendaDays={cal.agendaDays}
+                    events={filteredEvents}
+                    phHolidays={cal.phHolidays}
+                    showClaims={cal.showClaims}
+                    showAbsences={cal.showAbsences}
+                    showSpans={cal.showSpans}
+                    setSelectedEvent={cal.setSelectedEvent}
+                  />
+                ) : cal.viewMode === 'timeline' ? (
+                  <CalendarTimeline
+                    isLoading={cal.isLoading}
+                    calendarDays={cal.calendarDays}
+                    events={filteredEvents}
+                    phHolidays={cal.phHolidays}
+                    showClaims={cal.showClaims}
+                    showAbsences={cal.showAbsences}
+                    setSelectedEvent={cal.setSelectedEvent}
+                  />
+                ) : (
+                  <CalendarGrid
+                    isLoading={cal.isLoading}
+                    viewMode={cal.viewMode}
+                    calendarDays={cal.calendarDays}
+                    displayDate={cal.displayDate}
+                    events={filteredEvents}
+                    phHolidays={cal.phHolidays}
+                    showClaims={cal.showClaims}
+                    showAbsences={cal.showAbsences}
+                    showSpans={cal.showSpans}
+                    handleCellClick={cal.handleCellClick}
+                    setSelectedEvent={cal.setSelectedEvent}
+                    setActivePopoverDate={cal.setActivePopoverDate}
+                  />
+                )}
+              </div>
+            </main>
+          </div>
+        </>
+      )}
 
 
 

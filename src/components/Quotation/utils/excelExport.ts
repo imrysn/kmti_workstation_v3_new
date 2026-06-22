@@ -52,6 +52,8 @@ export async function exportToExcel(data: ExcelExportData) {
   // ── 3. Load workbook ──────────────────────────────────────────────────────
   const workbook = new ExcelJS.Workbook()
   await workbook.xlsx.load(templateBuffer)
+  workbook.created = new Date()
+  workbook.modified = new Date()
   const sheet = workbook.worksheets[0]
 
   // ── 4. Logo injection ─────────────────────────────────────────────────────
@@ -84,7 +86,8 @@ export async function exportToExcel(data: ExcelExportData) {
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
   const docType = mode === 'billing' ? 'Billing' : 'Quotation'
-  saveAs(blob, `${docType}_${quotNo}_${metaDate}.xlsx`)
+  const safeDate = metaDate.replace(/\//g, '-')
+  saveAs(blob, `${docType}_${quotNo}_${safeDate}.xlsx`)
 }
 
 function _fillBreakdownSheet(sheet: ExcelJS.Worksheet, d: {
