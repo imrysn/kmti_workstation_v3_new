@@ -99,3 +99,14 @@ class ProjectIncharge(Base):
     english_name = Column(String(255), index=True, unique=True, nullable=False)
     email = Column(String(255), nullable=True)
     japanese_name = Column(String(255), index=True, nullable=True)
+
+
+class MachineName(Base):
+    """Maps to `machines` table — English/Japanese machine code & names mappings."""
+    __tablename__ = "machines"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    machine_code = Column(String(255), nullable=False, unique=True, index=True)
+    english_name = Column(String(500), nullable=False, index=True)
+    japanese_name = Column(String(500), nullable=False)
+

@@ -126,3 +126,11 @@ export interface ICustomMapping {
   englishName: string
   japaneseName: string
 }
+
+export interface IMachineName {
+  id?: number
+  machineCode: string
+  englishName: string
+  japaneseName: string
+}
+

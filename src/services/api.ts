@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import axios from 'axios'
-import type { IProject, IQuotation, IQuotationHistory, ICustomPage, ICustomMapping } from '../types'
+import type { IProject, IQuotation, IQuotationHistory, ICustomPage, ICustomMapping, IMachineName } from '../types'
 
 export const SERVER_BASE = (() => {
   const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null
@@ -443,6 +443,34 @@ export const customDictionariesApi = {
   deleteMapping: (mappingId: number) => api.delete(`/custom-pages/mappings/${mappingId}`),
 }
 
+// --- Machine Names ---
+export const machinesApi = {
+  search: async (q: string, limit: number = 50, offset: number = 0, signal?: AbortSignal) => {
+    try {
+      return await api.get<IMachineName[]>('/machines/', { params: { q, limit, offset }, signal })
+    } catch (err) {
+      const cachedStr = localStorage.getItem('kmti_cache_machines')
+      if (cachedStr) {
+        const all = JSON.parse(cachedStr)
+        const term = q.toLowerCase().trim()
+        const filtered = all.filter((m: any) =>
+          m.machineCode.toLowerCase().includes(term) ||
+          m.englishName.toLowerCase().includes(term) ||
+          m.japaneseName.toLowerCase().includes(term)
+        )
+        return { data: filtered.slice(offset, offset + limit) }
+      }
+      throw err
+    }
+  },
+  create: (data: { machineCode: string; englishName: string; japaneseName: string }) =>
+    api.post<IMachineName>('/machines/', data),
+  update: (id: number, data: { machineCode?: string; englishName?: string; japaneseName?: string }) =>
+    api.patch<IMachineName>(`/machines/${id}`, data),
+  delete: (id: number) => api.delete(`/machines/${id}`),
+}
+
+
 // --- Stopwatch Records ---
 export const stopwatchApi = {
   list: (workstation?: string, user_name?: string, limit: number = 50) =>
@@ -500,13 +528,14 @@ api.interceptors.response.use(
 export async function preloadOfflineCache() {
   try {
     console.log('>>> [OFFLINE CACHE] Preloading reference tables in background...')
-    const [chars, heat, materials, designers, clients, incharges] = await Promise.all([
+    const [chars, heat, materials, designers, clients, incharges, machines] = await Promise.all([
       api.get('/chars/', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
       api.get('/chars/heat-treatment', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
       api.get('/materials/', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
       api.get('/designers', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
       api.get('/clients', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
       api.get('/project-incharges', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
+      api.get('/machines/', { params: { limit: 5000 } }).then(r => r.data).catch(() => null),
     ])
 
     if (chars) localStorage.setItem('kmti_cache_chars', JSON.stringify(chars))
@@ -515,6 +544,7 @@ export async function preloadOfflineCache() {
     if (designers) localStorage.setItem('kmti_cache_designers', JSON.stringify(designers))
     if (clients) localStorage.setItem('kmti_cache_clients', JSON.stringify(clients))
     if (incharges) localStorage.setItem('kmti_cache_project_incharges', JSON.stringify(incharges))
+    if (machines) localStorage.setItem('kmti_cache_machines', JSON.stringify(machines))
     console.log('>>> [OFFLINE CACHE] Reference tables preloaded successfully.')
   } catch (e) {
     console.warn('[OFFLINE CACHE] Preload failed:', e)

@@ -15,73 +15,111 @@ interface FormulaEntry {
   detailedVars?: { sym: string; desc: React.ReactNode }[]
 }
 
-// ── Cross-section SVG Icons ────────────────────────────────────
+// ── Premium 3D Isometric SVG Icons ───────────────────────────────
 const IconRoundBar = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <circle cx="14" cy="14" r="10" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
-    <line x1="14" y1="4" x2="14" y2="24" stroke="var(--accent)" strokeWidth="0.75" strokeDasharray="2 2" opacity="0.5" />
-    <line x1="4" y1="14" x2="24" y2="14" stroke="var(--accent)" strokeWidth="0.75" strokeDasharray="2 2" opacity="0.5" />
-    <line x1="9" y1="14" x2="19" y2="14" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" />
-    <text x="12" y="12" fontSize="5" fill="var(--accent)" fontFamily="monospace">D</text>
+    <defs>
+      <linearGradient id="gradRoundBar" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="var(--accent)" />
+        <stop offset="100%" stopColor="var(--accent-subtle)" />
+      </linearGradient>
+    </defs>
+    <path d="M 5 18 L 17 6 A 4.5 2.5 0 0 1 24 9.5 L 12 21.5 A 4.5 2.5 0 0 1 5 18 Z" fill="url(#gradRoundBar)" />
+    <ellipse cx="9.5" cy="19.5" rx="4.5" ry="2.5" transform="rotate(-15 9.5 19.5)" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1" />
   </svg>
 )
 
 const IconRoundPipe = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <circle cx="14" cy="14" r="10" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
-    <circle cx="14" cy="14" r="6" fill="var(--bg-secondary)" stroke="var(--accent)" strokeWidth="1.5" />
-    <line x1="14" y1="14" x2="24" y2="14" stroke="var(--accent)" strokeWidth="1" strokeLinecap="round" opacity="0.6" />
-    <line x1="14" y1="14" x2="20" y2="14" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round" />
-    <text x="21" y="13" fontSize="4" fill="var(--text-muted)" fontFamily="monospace">WT</text>
+    <defs>
+      <linearGradient id="gradRoundPipe" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="var(--accent)" />
+        <stop offset="100%" stopColor="var(--accent-subtle)" />
+      </linearGradient>
+    </defs>
+    <path d="M 5 18 L 17 6 A 4.5 2.5 0 0 1 24 9.5 L 12 21.5 A 4.5 2.5 0 0 1 5 18 Z" fill="url(#gradRoundPipe)" />
+    <path d="M 5 18 A 4.5 2.5 0 1 1 14 21 A 4.5 2.5 0 1 1 5 18 Z M 7.5 19 A 2 1.1 0 1 0 11.5 20 A 2 1.1 0 1 0 7.5 19 Z" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="0.75" fillRule="evenodd" />
+    <ellipse cx="9.5" cy="19.5" rx="2" ry="1.1" fill="var(--bg-secondary)" />
   </svg>
 )
 
 const IconSquareBar = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <rect x="4" y="4" width="20" height="20" rx="1.5" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
-    <line x1="4" y1="14" x2="24" y2="14" stroke="var(--accent)" strokeWidth="0.75" strokeDasharray="2 2" opacity="0.5" />
-    <line x1="14" y1="4" x2="14" y2="24" stroke="var(--accent)" strokeWidth="0.75" strokeDasharray="2 2" opacity="0.5" />
-    <line x1="4" y1="4" x2="24" y2="4" stroke="var(--accent)" strokeWidth="1" strokeLinecap="round" opacity="0.4" />
-    <text x="9" y="17" fontSize="6" fill="var(--accent)" fontFamily="monospace" fontWeight="bold">A²</text>
+    <defs>
+      <linearGradient id="gradSquareBarTop" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="var(--accent-subtle)" stopOpacity="0.6" />
+        <stop offset="100%" stopColor="var(--accent-subtle)" />
+      </linearGradient>
+    </defs>
+    <path d="M 4 12 L 10 15 L 22 9 L 16 6 Z" fill="url(#gradSquareBarTop)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 4 12 L 10 15 L 10 23 L 4 20 Z" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 10 15 L 22 9 L 22 17 L 10 23 Z" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1" />
   </svg>
 )
 
 const IconSquarePipe = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <rect x="3" y="3" width="22" height="22" rx="1.5" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
-    <rect x="8" y="8" width="12" height="12" rx="0.5" fill="var(--bg-secondary)" stroke="var(--accent)" strokeWidth="1.5" />
+    <defs>
+      <linearGradient id="gradSquarePipeTop" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="var(--accent-subtle)" stopOpacity="0.6" />
+        <stop offset="100%" stopColor="var(--accent-subtle)" />
+      </linearGradient>
+    </defs>
+    <path d="M 4 12 L 10 15 L 22 9 L 16 6 Z" fill="url(#gradSquarePipeTop)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 4 12 L 10 15 L 10 23 L 4 20 Z" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 5.5 14 L 8.5 15.5 L 8.5 21 L 5.5 19.5 Z" fill="var(--bg-secondary)" stroke="var(--accent)" strokeWidth="0.75" />
+    <path d="M 10 15 L 22 9 L 22 17 L 10 23 Z" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1" />
   </svg>
 )
 
 const IconRectangularPipe = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <rect x="2" y="5" width="24" height="18" rx="1.5" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
-    <rect x="6" y="9" width="16" height="10" rx="0.5" fill="var(--bg-secondary)" stroke="var(--accent)" strokeWidth="1.5" />
+    <defs>
+      <linearGradient id="gradRectPipeTop" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="var(--accent-subtle)" stopOpacity="0.6" />
+        <stop offset="100%" stopColor="var(--accent-subtle)" />
+      </linearGradient>
+    </defs>
+    <path d="M 3 13 L 11 16 L 23 10 L 15 7 Z" fill="url(#gradRectPipeTop)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 3 13 L 11 16 L 11 22 L 3 19 Z" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 5 14.5 L 9 16 L 9 20 L 5 18.5 Z" fill="var(--bg-secondary)" stroke="var(--accent)" strokeWidth="0.75" />
+    <path d="M 11 16 L 23 10 L 23 16 L 11 22 Z" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1" />
   </svg>
 )
 
 const IconPlate = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <rect x="3" y="9" width="22" height="10" rx="1.5" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
-    <line x1="3" y1="9" x2="25" y2="9" stroke="var(--accent)" strokeWidth="0.5" opacity="0.4" />
-    <text x="5" y="17" fontSize="5.5" fill="var(--accent)" fontFamily="monospace">T×W×L</text>
+    <defs>
+      <linearGradient id="gradPlateTop" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="var(--accent-subtle)" stopOpacity="0.8" />
+        <stop offset="100%" stopColor="var(--accent-subtle)" />
+      </linearGradient>
+    </defs>
+    <path d="M 3 13 L 13 17 L 25 11 L 15 7 Z" fill="url(#gradPlateTop)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 3 13 L 13 17 L 13 19 L 3 15 Z" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 13 17 L 25 11 L 25 13 L 13 19 Z" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1" />
   </svg>
 )
 
 const IconBlock = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <rect x="4" y="8" width="16" height="16" rx="1" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.5" />
-    <path d="M4 8 L10 3 L26 3 L26 19 L20 24" stroke="var(--accent)" strokeWidth="1" fill="none" strokeDasharray="2 1.5" opacity="0.6" />
-    <line x1="20" y1="3" x2="20" y2="19" stroke="var(--accent)" strokeWidth="1" opacity="0.6" />
-    <line x1="20" y1="19" x2="26" y2="19" stroke="var(--accent)" strokeWidth="1" opacity="0.6" />
+    <defs>
+      <linearGradient id="gradBlockTop" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="var(--accent-subtle)" stopOpacity="0.7" />
+        <stop offset="100%" stopColor="var(--accent-subtle)" />
+      </linearGradient>
+    </defs>
+    <path d="M 3 11 L 11 15 L 23 9 L 15 5 Z" fill="url(#gradBlockTop)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 3 11 L 11 15 L 11 23 L 3 19 Z" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 11 15 L 23 9 L 23 17 L 11 25 Z" fill="var(--accent)" stroke="var(--accent)" strokeWidth="1" />
   </svg>
 )
 
 const IconProfile = () => (
   <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <rect x="3" y="3" width="22" height="4" rx="1" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.2" />
-    <rect x="3" y="21" width="22" height="4" rx="1" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.2" />
-    <rect x="11" y="7" width="6" height="14" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1.2" />
+    <path d="M 3 9 L 19 9 L 19 11 L 13 11 L 13 17 L 19 17 L 19 19 L 3 19 L 3 17 L 9 17 L 9 11 L 3 11 Z" fill="var(--accent-subtle)" stroke="var(--accent)" strokeWidth="1" />
+    <path d="M 19 9 L 25 5 L 25 7 L 19 11 Z" fill="var(--accent)" opacity="0.8" stroke="var(--accent)" strokeWidth="0.75" />
+    <path d="M 3 9 L 9 5 L 25 5 L 19 9 Z" fill="var(--accent-subtle)" opacity="0.6" stroke="var(--accent)" strokeWidth="0.75" />
   </svg>
 )
 
