@@ -15,6 +15,7 @@ import LandingAgendaModal from '../components/TeamCalendar/modals/LandingAgendaM
 
 import { formatLocalDate, inferTaskType, type TaskType } from '../utils/teamCalendarUtils'
 import WorkSchedule from '../components/TeamCalendar/WorkSchedule'
+import { prefetchWorkScheduleData } from '../hooks/useWorkSchedule'
 import './TeamCalendar.css'
 
 export default function TeamCalendar() {
@@ -115,25 +116,29 @@ export default function TeamCalendar() {
             type="button"
             className={`calendar-toggle-btn ${activeTab === 'schedule' ? 'active' : ''}`}
             onClick={() => setActiveTab('schedule')}
+            onMouseEnter={prefetchWorkScheduleData}
           >
             Work Schedule
           </button>
         </div>
       </div>
 
-      {activeTab === 'schedule' ? (
+      {/* Keep both views always mounted — only toggle CSS visibility.
+           This avoids a full remount + API refetch on every tab switch. */}
+      <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }}>
         <WorkSchedule />
-      ) : (
-        <>
-          {isSidebarCollapsed && (
-            <button className="sidebar-expand-btn" onClick={toggleSidebar} title="Expand">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
-          )}
+      </div>
 
-          <div className={`team-calendar-layout${isSidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
+      <div style={{ display: activeTab === 'calendar' ? 'contents' : 'none' }}>
+        {isSidebarCollapsed && (
+          <button className="sidebar-expand-btn" onClick={toggleSidebar} title="Expand">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        )}
+
+        <div className={`team-calendar-layout${isSidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
             <CalendarSidebar
               visibleTaskTypes={cal.visibleTaskTypes}
               visibleTeams={cal.visibleTeams}
@@ -229,8 +234,7 @@ export default function TeamCalendar() {
               </div>
             </main>
           </div>
-        </>
-      )}
+        </div>
 
 
 

@@ -64,6 +64,82 @@ let cachedTimelineDays: ITimelineDay[] = []
 let cachedSelectedJob: IJob | null = null
 let cachedComponentsByJob: Record<string, IComponent[]> = {}
 
+// Cache freshness timestamps — used for TTL-based skip-fetch logic
+const CACHE_TTL_MS = 60_000 // 60 seconds
+let cachedJobsAt = 0
+let cachedTimelineAt = 0
+let isFetchingJobs = false
+let isFetchingTimeline = false
+
+/**
+ * Standalone prefetch function — can be called outside the hook
+ * (e.g., on hover) to warm up the cache before the tab is clicked.
+ * Uses the same TTL check so it never double-fetches.
+ */
+export async function prefetchWorkScheduleData() {
+  const now = Date.now()
+  const fetchJobs = !isFetchingJobs && (cachedJobs.length === 0 || now - cachedJobsAt > CACHE_TTL_MS)
+  const fetchTimeline = !isFetchingTimeline && (cachedTimelineDays.length === 0 || now - cachedTimelineAt > CACHE_TTL_MS)
+
+  if (!fetchJobs && !fetchTimeline) return // cache is warm — nothing to do
+
+  try {
+    const { scheduleApi } = await import('../services/api')
+    const fetches: Promise<void>[] = []
+
+    if (fetchJobs) {
+      isFetchingJobs = true
+      fetches.push(
+        scheduleApi.getJobs()
+          .then((res: any) => {
+            if (res.success) {
+              cachedJobs = res.jobs
+              cachedJobsAt = Date.now()
+              if (res.jobs.length > 0 && !cachedSelectedJob) {
+                cachedSelectedJob = res.jobs[0]
+              }
+            }
+          })
+          .catch((err: any) => console.warn('[prefetch] jobs failed:', err))
+          .finally(() => { isFetchingJobs = false })
+      )
+    }
+
+    if (fetchTimeline) {
+      isFetchingTimeline = true
+      const monthNames = [
+        'january','february','march','april','may','june',
+        'july','august','september','october','november','december'
+      ]
+      fetches.push(
+        scheduleApi.getTimeline()
+          .then((res: any) => {
+            if (res.success) {
+              cachedTimelineMembers = res.members
+              cachedTimelineDays = res.timeline.map((d: any) => {
+                const mIdx = monthNames.indexOf(d.month.toLowerCase())
+                if (mIdx !== -1) {
+                  const year = d.year || new Date().getFullYear()
+                  const date = new Date(year, mIdx, d.day)
+                  const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+                  return { ...d, weekday: weekdays[date.getDay()] }
+                }
+                return d
+              })
+              cachedTimelineAt = Date.now()
+            }
+          })
+          .catch((err: any) => console.warn('[prefetch] timeline failed:', err))
+          .finally(() => { isFetchingTimeline = false })
+      )
+    }
+
+    await Promise.all(fetches)
+  } catch (err) {
+    console.warn('[prefetch] failed to import api:', err)
+  }
+}
+
 export function useWorkSchedule() {
   const { flags } = useFlags()
   const { hasRole } = useAuth()
@@ -152,14 +228,28 @@ export function useWorkSchedule() {
 
   // Load jobs list
   const loadJobs = async () => {
+    const now = Date.now()
+    const isFresh = cachedJobs.length > 0 && (now - cachedJobsAt) < CACHE_TTL_MS
+    if (isFresh) {
+      // Cache is still warm — hydrate from cache immediately, skip network call
+      setJobs(cachedJobs)
+      if (!selectedJob && cachedJobs.length > 0) setSelectedJob(cachedJobs[0])
+      else if (selectedJob) {
+        const updated = cachedJobs.find((j: IJob) => j.job_id === selectedJob.job_id)
+        if (updated) setSelectedJob(updated)
+      }
+      return
+    }
     if (cachedJobs.length === 0) {
       setIsLoadingJobs(true)
     }
+    isFetchingJobs = true
     try {
       const res = await scheduleApi.getJobs()
       if (res.success) {
         setJobs(res.jobs)
         cachedJobs = res.jobs
+        cachedJobsAt = Date.now()
         // Auto-select first job if nothing is selected and jobs exist
         if (res.jobs.length > 0 && !selectedJob) {
           setSelectedJob(res.jobs[0])
@@ -173,6 +263,7 @@ export function useWorkSchedule() {
       console.error('Failed to load schedule jobs:', err)
     } finally {
       setIsLoadingJobs(false)
+      isFetchingJobs = false
     }
   }
 
@@ -196,7 +287,16 @@ export function useWorkSchedule() {
 
   // Load Gantt timeline data
   const loadTimeline = async (silent = false) => {
+    const now = Date.now()
+    const isFresh = cachedTimelineDays.length > 0 && (now - cachedTimelineAt) < CACHE_TTL_MS
+    if (isFresh && !silent) {
+      // Cache is still warm — hydrate from cache immediately, skip network call
+      setTimelineMembers(cachedTimelineMembers)
+      setAllTimelineDays(cachedTimelineDays)
+      return
+    }
     if (!silent && cachedTimelineDays.length === 0) setIsLoadingTimeline(true)
+    isFetchingTimeline = true
     try {
       const res = await scheduleApi.getTimeline()
       if (res.success) {
@@ -243,6 +343,7 @@ export function useWorkSchedule() {
 
         setAllTimelineDays(correctedTimeline)
         cachedTimelineDays = correctedTimeline
+        cachedTimelineAt = Date.now()
 
         // Scroll timeline to today or end after load
         if (!silent) {
@@ -262,6 +363,7 @@ export function useWorkSchedule() {
       console.error('Failed to load timeline:', err)
     } finally {
       if (!silent) setIsLoadingTimeline(false)
+      isFetchingTimeline = false
     }
   }
 
@@ -276,6 +378,12 @@ export function useWorkSchedule() {
   }
 
   useEffect(() => {
+    // Hydrate from prefetch cache instantly if available, then load fresh data
+    if (cachedJobs.length > 0) setJobs(cachedJobs)
+    if (cachedTimelineMembers.length > 0) setTimelineMembers(cachedTimelineMembers)
+    if (cachedTimelineDays.length > 0) setAllTimelineDays(cachedTimelineDays)
+    if (cachedSelectedJob && !selectedJob) setSelectedJob(cachedSelectedJob)
+
     loadPermissions()
     loadJobs()
     loadTimeline()
