@@ -326,84 +326,117 @@ const PrintPreviewModal = memo(({
   // ── Print style injection helper ────────────────────────────────
   // Shared between handlePrint and handleDownloadPDF to avoid duplication.
   const buildPrintStyleContent = () => `
-    .ppm-header, .ppm-footer-bar, .ppm-backdrop, .ppm-sidebar,
-    .ppm-page-break-indicator { display: none !important; }
-    .ppm-container, .ppm-body, .ppm-scroll-area {
-      position: static !important; display: block !important;
-      width: 210mm !important; height: auto !important;
-      overflow: visible !important; background: white !important;
-      padding: 0 !important; margin: 0 !important;
-      box-shadow: none !important; border: none !important;
-    }
-    .ppm-a4-scaler, .ppm-a4-scaler > div {
-      position: static !important; display: block !important;
-      width: 210mm !important; height: auto !important;
-      transform: none !important; box-shadow: none !important;
-      border-radius: 0 !important; background: white !important;
-      overflow: visible !important;
-    }
-    .preview-content {
-      display: block !important; width: 210mm !important;
-      height: auto !important; transform: none !important;
-      padding: 0 !important; margin: 0 !important;
-      overflow: visible !important; background: white !important;
-    }
-    .quotation-visual-exact {
-      display: flex !important; flex-direction: column !important;
-      width: 210mm !important; height: 297mm !important;
-      min-height: 297mm !important; max-height: 297mm !important;
-      overflow: hidden !important; box-sizing: border-box !important;
-      padding: 10mm !important; background: white !important;
-      page-break-after: always !important; break-after: page !important;
-      margin: 0 !important;
-    }
-    .quotation-visual-exact.compressed { padding: 5mm !important; }
-    .quotation-visual-exact:last-of-type {
-      page-break-after: avoid !important; break-after: avoid !important;
-    }
-    .quotation-visual-exact * { color: #000 !important; }
-    .quotation-visual-exact .text-red { color: red !important; }
-    .quotation-visual-exact .nothing-follow { color: #888 !important; }
-    .quotation-visual-exact input {
-      border: none !important;
-      background: transparent !important;
-      outline: none !important;
-      box-shadow: none !important;
-      -webkit-appearance: none !important;
-      appearance: none !important;
-      color: inherit !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      line-height: inherit !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      font-weight: inherit !important;
-      text-align: inherit !important;
-    }
-    .quotation-visual-exact [contenteditable] {
-      border: none !important;
-      outline: none !important;
-      background: transparent !important;
-      box-shadow: none !important;
-      cursor: default !important;
-      padding: 0 !important;
-      margin: 0 !important;
-      color: inherit !important;
-      font-family: inherit !important;
-      font-size: inherit !important;
-      font-weight: inherit !important;
-      text-align: inherit !important;
-      white-space: pre-wrap !important;
-    }
-    .quotation-visual-exact .contact-header,
-    .quotation-visual-exact .table-header th,
-    .quotation-visual-exact .total-amount-row { background: #f0f0f0 !important; }
-    .quotation-visual-exact .q-bottom-content {
-      margin-top: auto !important; display: flex !important;
-      flex-direction: column !important; width: 100% !important;
-      gap: 5px !important;
+    @media print {
+      @page {
+        size: A4 portrait !important;
+        margin: 0 !important;
+      }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        width: auto !important;
+        visibility: hidden !important;
+        background: white !important;
+        overflow: visible !important;
+      }
+      .print-preview-modal {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 210mm !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        transform: none !important;
+        visibility: visible !important;
+      }
+      .print-preview-modal * {
+        visibility: visible !important;
+      }
+      .ppm-header, .ppm-footer-bar, .ppm-backdrop, .ppm-sidebar,
+      .ppm-page-break-indicator { display: none !important; }
+      .ppm-container, .ppm-body, .ppm-scroll-area {
+        position: static !important; display: block !important;
+        width: 210mm !important; height: auto !important;
+        overflow: visible !important; background: white !important;
+        padding: 0 !important; margin: 0 !important;
+        box-shadow: none !important; border: none !important;
+      }
+      .ppm-a4-scaler, .ppm-a4-scaler > div {
+        position: static !important; display: block !important;
+        width: 210mm !important; height: auto !important;
+        transform: none !important; box-shadow: none !important;
+        border-radius: 0 !important; background: white !important;
+        overflow: visible !important;
+      }
+      .preview-content {
+        display: block !important; width: 210mm !important;
+        height: auto !important; transform: none !important;
+        padding: 0 !important; margin: 0 !important;
+        overflow: visible !important; background: white !important;
+      }
+      .quotation-visual-exact {
+        display: flex !important; flex-direction: column !important;
+        width: 210mm !important; height: 297mm !important;
+        min-height: 297mm !important; max-height: 297mm !important;
+        overflow: hidden !important; box-sizing: border-box !important;
+        padding: 8mm !important; background: white !important;
+        page-break-after: always !important; break-after: page !important;
+        margin: 0 !important;
+        position: relative !important;
+      }
+      .quotation-visual-exact.compressed { padding: 5mm !important; }
+      .quotation-visual-exact:last-of-type {
+        page-break-after: avoid !important; break-after: avoid !important;
+      }
+      .quotation-visual-exact * { color: #000 !important; }
+      .quotation-visual-exact .text-red { color: red !important; }
+      .quotation-visual-exact .nothing-follow { color: #888 !important; }
+      .quotation-visual-exact input {
+        border: none !important;
+        background: transparent !important;
+        outline: none !important;
+        box-shadow: none !important;
+        -webkit-appearance: none !important;
+        appearance: none !important;
+        color: inherit !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        line-height: inherit !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        text-align: inherit !important;
+      }
+      .quotation-visual-exact [contenteditable] {
+        border: none !important;
+        outline: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        cursor: default !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        color: inherit !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        text-align: inherit !important;
+        white-space: pre-wrap !important;
+      }
+      .quotation-visual-exact .contact-header,
+      .quotation-visual-exact .table-header th,
+      .quotation-visual-exact .total-amount-row { background: #f0f0f0 !important; }
+      .quotation-visual-exact .q-bottom-content {
+        margin-top: auto !important; display: flex !important;
+        flex-direction: column !important; width: 100% !important;
+        gap: 5px !important;
+      }
     }
   `
 
@@ -448,7 +481,7 @@ const PrintPreviewModal = memo(({
       const docType = printMode === 'billing' ? 'BillingStatement' : 'Quotation'
       const docNo = printMode === 'billing'
         ? (billingDetails.invoiceNo || quotationDetails.quotationNo || 'Draft')
-        : (quotationDetails.quotationNo || 'Draft')
+        : (quotationDetails.quotationNo || 'Draft');
       const defaultName = `${docType}_${docNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
 
       // Show save dialog first — before injecting print styles
@@ -475,7 +508,7 @@ const PrintPreviewModal = memo(({
         printBackground: true,
         pageSize: 'A4',
         landscape: false,
-        margins: { marginType: 'none' }
+        marginsType: 1
       })
 
       if (!pdfResult.success || !pdfResult.data) {

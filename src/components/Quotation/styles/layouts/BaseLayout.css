@@ -31,13 +31,15 @@
 
   .quotation-visual-exact {
     box-sizing: border-box !important;
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     min-height: 297mm !important;
     height: auto !important;
     background-color: white !important;
     transform: none !important;
     margin: 0 !important;
     padding: 8mm !important;
+    position: relative !important;
     page-break-after: always !important;
     page-break-inside: avoid !important;
   }

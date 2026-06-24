@@ -102,7 +102,9 @@ export const PrintPage = memo(({
     pushCurrentGroup()
   }
 
-  const taskCountForCompression = layoutVariant === 'kemco' ? kemcoRows.length : pageTasks.length
+  const taskCountForCompression = layoutVariant === 'kemco'
+    ? kemcoRows.length + (isLastPage ? 1 : 0)
+    : pageTasks.length
 
   const renderSignatures = () => {
     if (!isLastPage) return null
@@ -206,9 +208,35 @@ export const PrintPage = memo(({
 
       const totalWeight = topLevelCounts.reduce((acc, t) => acc + t.count, 0)
 
-      topLevelCounts.forEach(t => {
-        assemblyPercentages[t.id] = totalWeight > 0 ? (t.count / totalWeight) * 100 : 0
-      })
+      if (totalWeight > 0) {
+        // Largest Remainder Method (Hare-Niemeyer) to ensure rounded sum is exactly 100%
+        const items = topLevelCounts.map(t => {
+          const exact = (t.count / totalWeight) * 100
+          const floored = Math.floor(exact)
+          const remainder = exact - floored
+          return { id: t.id, count: t.count, floored, remainder }
+        })
+
+        const currentSum = items.reduce((acc, item) => acc + item.floored, 0)
+        const difference = 100 - currentSum
+
+        // Sort by remainder descending
+        items.sort((a, b) => b.remainder - a.remainder || b.count - a.count || a.id - b.id)
+
+        for (let i = 0; i < difference; i++) {
+          if (items[i]) {
+            items[i].floored += 1
+          }
+        }
+
+        items.forEach(item => {
+          assemblyPercentages[item.id] = item.floored
+        })
+      } else {
+        topLevelCounts.forEach(t => {
+          assemblyPercentages[t.id] = 0
+        })
+      }
     }
 
     const getAssemblyRowSpan = (rowIndex: number) => {
@@ -401,16 +429,18 @@ export const PrintPage = memo(({
                     <td>{task.referenceNumber || ''}</td>
                     <td className="description-cell">{task.description}</td>
                     <td className="col-unitpage">
-                      <input
-                        type="text"
-                        inputMode="numeric"
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
                         className="ppm-unit-input"
-                        value={resolveUnitPage(task) === 0 ? '' : resolveUnitPage(task)}
-                        onChange={e => {
-                          const val = parseInt(e.target.value.replace(/\D/g, '')) || 0
+                        style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '16px' }}
+                        onBlur={e => {
+                          const val = parseInt((e.currentTarget.textContent || '').replace(/\D/g, '')) || 0
                           onTaskOverride?.(task.id, { unitPage: val })
                         }}
-                      />
+                      >
+                        {resolveUnitPage(task) === 0 ? '' : resolveUnitPage(task)}
+                      </div>
                     </td>
                     <td>{task.type || '3D'}</td>
                     <td className="price-cell">{fmt(pageTotals[i])}</td>
@@ -520,13 +550,15 @@ export const PrintPage = memo(({
             <div className="qh-meta-row">
               <span className="qh-meta-label">Quotation NO.:</span>
               <span className="qh-meta-value">
-                <input
-                  type="text"
+                <div
+                  contentEditable={!!onQuotationDetailsChange}
+                  suppressContentEditableWarning
                   className="ppm-unit-input"
-                  value={quotationDetails.quotationNo || ''}
-                  onChange={e => onQuotationDetailsChange?.({ quotationNo: e.target.value })}
-                  readOnly={!onQuotationDetailsChange}
-                />
+                  style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '13px' }}
+                  onBlur={e => onQuotationDetailsChange?.({ quotationNo: e.currentTarget.textContent || '' })}
+                >
+                  {quotationDetails.quotationNo || ''}
+                </div>
               </span>
             </div>
             <div className="qh-meta-row">
@@ -536,16 +568,18 @@ export const PrintPage = memo(({
             <div className="qh-meta-row">
               <span className="qh-meta-label">DATE:</span>
               <span className="qh-meta-value">
-                <input
-                  type="text"
+                <div
+                  contentEditable={!!onQuotationDetailsChange}
+                  suppressContentEditableWarning
                   className="ppm-unit-input"
-                  value={(quotationDetails.date || '').replace(/-/g, '/')}
-                  onChange={e => {
-                    const normalized = e.target.value.replace(/\//g, '-')
+                  style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '13px' }}
+                  onBlur={e => {
+                    const normalized = (e.currentTarget.textContent || '').replace(/\//g, '-')
                     onQuotationDetailsChange?.({ date: normalized })
                   }}
-                  readOnly={!onQuotationDetailsChange}
-                />
+                >
+                  {(quotationDetails.date || '').replace(/-/g, '/')}
+                </div>
               </span>
             </div>
           </div>
@@ -556,52 +590,60 @@ export const PrintPage = memo(({
             <div className="detail-row-visual">
               <span className="detail-label-visual">DATE:</span>
               <span className="detail-value-visual">
-                <input
-                  type="text"
+                <div
+                  contentEditable={!!onQuotationDetailsChange}
+                  suppressContentEditableWarning
                   className="ppm-unit-input"
-                  value={(quotationDetails.date || '').replace(/-/g, '/')}
-                  onChange={e => {
-                    const normalized = e.target.value.replace(/\//g, '-')
+                  style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '14px' }}
+                  onBlur={e => {
+                    const normalized = (e.currentTarget.textContent || '').replace(/\//g, '-')
                     onQuotationDetailsChange?.({ date: normalized })
                   }}
-                  readOnly={!onQuotationDetailsChange}
-                />
+                >
+                  {(quotationDetails.date || '').replace(/-/g, '/')}
+                </div>
               </span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Invoice No.:</span>
               <span className="detail-value-visual">
-                <input
-                  type="text"
+                <div
+                  contentEditable={!!onBillingDetailsChange}
+                  suppressContentEditableWarning
                   className="ppm-unit-input"
-                  value={billingDetails.invoiceNo || ''}
-                  onChange={e => onBillingDetailsChange?.({ invoiceNo: e.target.value })}
-                  readOnly={!onBillingDetailsChange}
-                />
+                  style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '14px' }}
+                  onBlur={e => onBillingDetailsChange?.({ invoiceNo: e.currentTarget.textContent || '' })}
+                >
+                  {billingDetails.invoiceNo || ''}
+                </div>
               </span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Quotation No.:</span>
               <span className="detail-value-visual">
-                <input
-                  type="text"
+                <div
+                  contentEditable={!!onQuotationDetailsChange}
+                  suppressContentEditableWarning
                   className="ppm-unit-input"
-                  value={quotationDetails.quotationNo || ''}
-                  onChange={e => onQuotationDetailsChange?.({ quotationNo: e.target.value })}
-                  readOnly={!onQuotationDetailsChange}
-                />
+                  style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '14px' }}
+                  onBlur={e => onQuotationDetailsChange?.({ quotationNo: e.currentTarget.textContent || '' })}
+                >
+                  {quotationDetails.quotationNo || ''}
+                </div>
               </span>
             </div>
             <div className="detail-row-visual">
               <span className="detail-label-visual">Job Order No.:</span>
               <span className="detail-value-visual">
-                <input
-                  type="text"
+                <div
+                  contentEditable={!!onBillingDetailsChange}
+                  suppressContentEditableWarning
                   className="ppm-unit-input"
-                  value={billingDetails.jobOrderNo || ''}
-                  onChange={e => onBillingDetailsChange?.({ jobOrderNo: e.target.value })}
-                  readOnly={!onBillingDetailsChange}
-                />
+                  style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '14px' }}
+                  onBlur={e => onBillingDetailsChange?.({ jobOrderNo: e.currentTarget.textContent || '' })}
+                >
+                  {billingDetails.jobOrderNo || ''}
+                </div>
               </span>
             </div>
           </div>

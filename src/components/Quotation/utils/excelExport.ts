@@ -534,38 +534,20 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   const kemcoRows: ExcelKemcoRow[] = []
 
   if (isKemco) {
-    let currentAssembly: Task | null = null
-    let currentSubgroup: Task[] = []
-
-    mainTasks.forEach(task => {
-      if (task.level === 0) {
-        if (currentSubgroup.length > 0 && currentAssembly) {
-          kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
-          currentSubgroup = []
-        }
-        currentAssembly = task
+    const level0Tasks = tasks.filter(t => t.level === 0)
+    level0Tasks.forEach(assembly => {
+      const subTasks = tasks.filter(t => t.parentId === assembly.id && t.level === 1)
+      if (subTasks.length === 0) {
+        kemcoRows.push({ assemblyTask: assembly, tasks: [] })
       } else {
-        if (!currentAssembly || currentAssembly.id !== task.parentId) {
-          if (currentSubgroup.length > 0 && currentAssembly) {
-            kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
-            currentSubgroup = []
-          }
-          currentAssembly = tasks.find(at => at.id === task.parentId && at.level === 0) || task
-        }
-
-        currentSubgroup.push(task)
-        if (currentSubgroup.length === 2) {
-          kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
-          currentSubgroup = []
+        for (let k = 0; k < subTasks.length; k += 2) {
+          kemcoRows.push({
+            assemblyTask: assembly,
+            tasks: subTasks.slice(k, k + 2)
+          })
         }
       }
     })
-
-    if (currentSubgroup.length > 0 && currentAssembly) {
-      kemcoRows.push({ assemblyTask: currentAssembly, tasks: currentSubgroup })
-    } else if (currentAssembly && kemcoRows.filter(r => r.assemblyTask.id === currentAssembly!.id).length === 0) {
-      kemcoRows.push({ assemblyTask: currentAssembly, tasks: [] })
-    }
   }
 
   const TEMPLATE_TASK_ROWS = 10
@@ -598,9 +580,35 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
 
     const totalWeight = topLevelCounts.reduce((acc, t) => acc + t.count, 0)
 
-    topLevelCounts.forEach(t => {
-      assemblyPercentages[t.id] = totalWeight > 0 ? (t.count / totalWeight) * 100 : 0
-    })
+    if (totalWeight > 0) {
+      // Largest Remainder Method (Hare-Niemeyer) to ensure rounded sum is exactly 100%
+      const items = topLevelCounts.map(t => {
+        const exact = (t.count / totalWeight) * 100
+        const floored = Math.floor(exact)
+        const remainder = exact - floored
+        return { id: t.id, count: t.count, floored, remainder }
+      })
+
+      const currentSum = items.reduce((acc, item) => acc + item.floored, 0)
+      const difference = 100 - currentSum
+
+      // Sort by remainder descending
+      items.sort((a, b) => b.remainder - a.remainder || b.count - a.count || a.id - b.id)
+
+      for (let i = 0; i < difference; i++) {
+        if (items[i]) {
+          items[i].floored += 1
+        }
+      }
+
+      items.forEach(item => {
+        assemblyPercentages[item.id] = item.floored
+      })
+    } else {
+      topLevelCounts.forEach(t => {
+        assemblyPercentages[t.id] = 0
+      })
+    }
   }
 
   // ── Column header override: ensure UNIT/(PAGE) label is set correctly ──────
@@ -733,7 +741,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
           const refCell = sheet.getCell(`B${r}`)
           refCell.value = row.assemblyTask.referenceNumber || ''
           refCell.alignment = { horizontal: 'center', vertical: 'middle' }
-          refCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+          refCell.font = { name: 'Arial', size: 10, bold: true }
 
           // Machine Code (row-spanned)
           if (span > 1) {
@@ -742,7 +750,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
           const machCell = sheet.getCell(`C${r}`)
           machCell.value = row.assemblyTask.machineCode || ''
           machCell.alignment = { horizontal: 'center', vertical: 'middle' }
-          machCell.font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+          machCell.font = { name: 'Arial', size: 10, bold: true }
 
           // Description (row-spanned, strictly in column E!)
           if (span > 1) {
@@ -750,9 +758,9 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
           }
           const descCell = sheet.getCell(`E${r}`)
           const resDesc = _resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
-          descCell.value = resDesc || ''
+          descCell.value = (resDesc || '').replace(/^[ \u3000\t]+/g, '')
           descCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }
-          descCell.font = { name: 'ＭＳ Ｐゴシック', size: 10, bold: true }
+          descCell.font = { name: 'Arial', size: 10, bold: true }
 
           // Percent% (row-spanned)
           if (span > 1) {
@@ -780,7 +788,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
         const unitStr = row.tasks.map(t => t.unitCode || '').filter(Boolean).join(', ')
         sheet.getCell(`D${r}`).value = unitStr
         sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-        sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+        sheet.getCell(`D${r}`).font = { name: 'Arial', size: 10 }
 
         sheet.getCell(`H${r}`).value = null
       } else {
@@ -796,12 +804,12 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
 
       sheet.getCell(`B${r}`).value = task.referenceNumber || ''
       sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-      sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+      sheet.getCell(`B${r}`).font = { name: 'Arial', size: 10 }
       _safeMerge(sheet, `B${r}:C${r}`)
 
       sheet.getCell(`D${r}`).value = task.description || ''
       sheet.getCell(`D${r}`).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }
-      sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+      sheet.getCell(`D${r}`).font = { name: 'Arial', size: 10 }
 
       sheet.getCell(`E${r}`).value = unitPage
       sheet.getCell(`E${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
@@ -818,8 +826,15 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     }
   }
 
-  // Programmatically merge Price column in KEMCO mode
+  // Programmatically merge Price column in KEMCO mode and force styling on descriptions
   if (isKemco) {
+    // Force all description cells in Column E to be Arial Bold, left-aligned, and have no indentation
+    for (let r = TABLE_START; r <= TABLE_END + extraRows; r++) {
+      const cell = sheet.getCell(`E${r}`)
+      cell.font = { name: 'Arial', size: 10, bold: true }
+      cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true, indent: 0 }
+    }
+
     try { sheet.unMergeCells(`H${TABLE_START}:H${TABLE_END + extraRows}`) } catch (e) { }
 
     // Apply borders programmatically to all cells in Column H to prevent missing borders after unmerge
@@ -860,7 +875,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
 
     const leasingRow = sheet.getRow(leasingRowIdx)
 
-    leasingRow.getCell(1).value = isKemco ? (kemcoRows.length + 1) : (mainTasks.length + 1)
+    leasingRow.getCell(1).value = ''
     leasingRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
     leasingRow.getCell(1).font = { name: 'Arial', size: 11 }
 
@@ -1062,9 +1077,9 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
     sheet.getCell(`A${r}`).font = { name: 'Arial', size: 10 }
     sheet.getCell(`B${r}`).value = task.referenceNumber || ''
     sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
-    sheet.getCell(`B${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell(`B${r}`).font = { name: 'Arial', size: 10 }
     sheet.getCell(`D${r}`).value = task.description || ''
-    sheet.getCell(`D${r}`).font = { name: 'ＭＳ Ｐゴシック', size: 10 }
+    sheet.getCell(`D${r}`).font = { name: 'Arial', size: 10 }
     sheet.getCell(`E${r}`).value = unitPage
     sheet.getCell(`E${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getCell(`E${r}`).font = { name: 'Arial', size: 10 }

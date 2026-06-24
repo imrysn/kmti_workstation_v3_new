@@ -29,6 +29,7 @@
 .variant-kemco.task-count-15 .qh-meta-block,
 .variant-kemco.task-count-16 .qh-meta-block {
   margin-bottom: 4px !important;
+  top: 190px !important;
 }
 
 .mode-quotation:has(.col-code) .col-no { width: 4%; }
@@ -63,4 +64,9 @@
     color: #ff0000 !important;
     font-weight: 500 !important;
   }
+}
+
+/* KEMCO Billing Layout adjustments to prevent header overlap */
+.variant-kemco.mode-billing .quotation-details-visual {
+  top: 155px !important;
 }
