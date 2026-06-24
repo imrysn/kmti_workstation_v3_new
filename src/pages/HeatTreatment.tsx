@@ -659,6 +659,24 @@ export default function HeatTreatment() {
 
   const [activeTab, setActiveTab] = useState<string>('special-process')
   const [customPages, setCustomPages] = useState<ICustomPage[]>([])
+  const [sliderStyle, setSliderStyle] = useState({ width: 0, left: 0 })
+  const toggleRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!toggleRef.current) return
+      const activeBtn = toggleRef.current.querySelector('.ht-pill.active') as HTMLElement
+      if (activeBtn) {
+        const parentRect = toggleRef.current.getBoundingClientRect()
+        const rect = activeBtn.getBoundingClientRect()
+        setSliderStyle({
+          width: rect.width,
+          left: rect.left - parentRect.left
+        })
+      }
+    }, 50)
+    return () => clearTimeout(timer)
+  }, [activeTab, customPages])
 
   const fetchPages = async () => {
     try {
@@ -740,7 +758,14 @@ export default function HeatTreatment() {
 
       {/* Centered pill toggle — replaces the header entirely */}
       <div className="ht-toggle-bar">
-        <div className="ht-pill-toggle">
+        <div className="ht-pill-toggle" ref={toggleRef}>
+          <div
+            className="ht-sliding-bg-measured"
+            style={{
+              width: `${sliderStyle.width}px`,
+              transform: `translateX(${sliderStyle.left - 3}px)`
+            }}
+          />
           <button
             className={`ht-pill${activeTab === 'special-process' ? ' active' : ''}`}
             onClick={() => setActiveTab('special-process')}

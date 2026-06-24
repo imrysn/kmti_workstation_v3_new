@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useTeamCalendar } from '../hooks/useTeamCalendar'
 import CalendarSidebar from '../components/TeamCalendar/CalendarSidebar'
 import CalendarToolbar from '../components/TeamCalendar/CalendarToolbar'
@@ -18,7 +19,11 @@ import './TeamCalendar.css'
 
 export default function TeamCalendar() {
   const cal = useTeamCalendar()
-  const [activeTab, setActiveTab] = useState<'calendar' | 'schedule'>('calendar')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeTab = (searchParams.get('tab') === 'schedule') ? 'schedule' : 'calendar'
+  const setActiveTab = (tab: 'calendar' | 'schedule') => {
+    setSearchParams({ tab })
+  }
   const [showLandingAgenda, setShowLandingAgenda] = useState(false)
   const [pcName, setPcName] = useState<string>('')
   const [selectedTaskType, setSelectedTaskType] = useState<TaskType | null>(null)
@@ -96,50 +101,24 @@ export default function TeamCalendar() {
 
   return (
     <div className={`team-calendar-page page-container ${activeTab === 'schedule' ? 'schedule-active' : ''}`}>
-      {/* View Switcher */}
-      <div className="calendar-schedule-toggle no-print" style={{
-        display: 'flex',
-        gap: '4px',
-        margin: '0 auto 15px auto',
-        background: 'var(--bg-surface)',
-        padding: '4px',
-        borderRadius: '8px',
-        width: 'fit-content',
-        border: '1px solid var(--border)',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
-      }}>
-        <button
-          onClick={() => setActiveTab('calendar')}
-          style={{
-            background: activeTab === 'calendar' ? '#3b82f6' : 'transparent',
-            border: 'none',
-            color: activeTab === 'calendar' ? '#fff' : 'var(--text-muted)',
-            padding: '6px 14px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 600,
-            transition: 'all 0.2s ease'
-          }}
-        >
-          Calendar
-        </button>
-        <button
-          onClick={() => setActiveTab('schedule')}
-          style={{
-            background: activeTab === 'schedule' ? '#3b82f6' : 'transparent',
-            border: 'none',
-            color: activeTab === 'schedule' ? '#fff' : 'var(--text-muted)',
-            padding: '6px 14px',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 600,
-            transition: 'all 0.2s ease'
-          }}
-        >
-          Work Schedule
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }} className="no-print">
+        <div className="calendar-toggle-control">
+          <div className={`calendar-sliding-bg ${activeTab}`} />
+          <button
+            type="button"
+            className={`calendar-toggle-btn ${activeTab === 'calendar' ? 'active' : ''}`}
+            onClick={() => setActiveTab('calendar')}
+          >
+            Calendar
+          </button>
+          <button
+            type="button"
+            className={`calendar-toggle-btn ${activeTab === 'schedule' ? 'active' : ''}`}
+            onClick={() => setActiveTab('schedule')}
+          >
+            Work Schedule
+          </button>
+        </div>
       </div>
 
       {activeTab === 'schedule' ? (

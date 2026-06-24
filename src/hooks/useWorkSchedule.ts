@@ -91,6 +91,8 @@ export function useWorkSchedule() {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false)
   const [renamingEmployee, setRenamingEmployee] = useState<string | null>(null)
   const [employeeInputName, setEmployeeInputName] = useState('')
+  const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'deadline-asc' | 'deadline-desc' | 'status'>('name-asc')
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'checking' | 'pending' | 'excluded'>('all')
 
   // Compute filtered timelineDays based on chosen year
   const timelineDays = useMemo(() => {
@@ -288,10 +290,95 @@ export function useWorkSchedule() {
     }
   }, [selectedJob])
 
-  // Search filter
-  const filteredJobs = jobs.filter(j => 
-    j.job_id.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  // Helpers for sorting
+  const parseDeadlineDate = (deadlineStr: string): number => {
+    if (!deadlineStr) return Infinity
+    // Try matching YYYY-MM-DD first
+    const ymdMatch = deadlineStr.match(/(\d{4})-(\d{2})-(\d{2})/)
+    if (ymdMatch) {
+      return new Date(parseInt(ymdMatch[1]), parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3])).getTime()
+    }
+    // Try matching MM/DD or M/D
+    const mdMatch = deadlineStr.match(/(\d{1,2})\/(\d{1,2})/)
+    if (mdMatch) {
+      const year = new Date().getFullYear()
+      return new Date(year, parseInt(mdMatch[1]) - 1, parseInt(mdMatch[2])).getTime()
+    }
+    return Infinity
+  }
+
+  const getJobStatusScore = (j: IJob): number => {
+    if (j.total_components > 0 && j.completed_components === j.total_components) {
+      return 1 // Complete
+    }
+    if (j.checking_components > 0) {
+      return 2 // For Checking
+    }
+    if (j.completed_components > 0) {
+      return 3 // In Progress
+    }
+    return 4 // Pending / Not Started
+  }
+
+  // Search filter and sort
+  const filteredJobs = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim()
+    const result = [...jobs].filter(j => {
+      // 1. Search Query filter
+      if (query) {
+        const matchesJobId = j.job_id.toLowerCase().includes(query)
+        const matchesCompCode = j.components?.some(c => 
+          c.unit_code.toLowerCase().includes(query)
+        )
+        if (!matchesJobId && !matchesCompCode) return false
+      }
+
+      // 2. Status Filter
+      if (statusFilter !== 'all') {
+        if (statusFilter === 'completed') {
+          // Completed first/job complete
+          const isComplete = j.total_components > 0 && j.completed_components === j.total_components
+          if (!isComplete) return false
+        } else if (statusFilter === 'checking') {
+          // Any checking component
+          const isChecking = j.checking_components > 0
+          if (!isChecking) return false
+        } else if (statusFilter === 'pending') {
+          // Any pending/not started component
+          const hasPending = j.components?.some(c => {
+            const s = (c.status || '').trim().toLowerCase()
+            return s !== 'completed' && s !== 'complete' && !s.includes('checking') && s !== '-'
+          })
+          if (!hasPending) return false
+        } else if (statusFilter === 'excluded') {
+          // Any excluded/NA component (-)
+          const hasExcluded = j.components?.some(c => (c.status || '').trim() === '-')
+          if (!hasExcluded) return false
+        }
+      }
+
+      return true
+    })
+    if (sortBy === 'deadline-asc') {
+      result.sort((a, b) => parseDeadlineDate(a.deadline) - parseDeadlineDate(b.deadline))
+    } else if (sortBy === 'deadline-desc') {
+      result.sort((a, b) => {
+        const valA = parseDeadlineDate(a.deadline)
+        const valB = parseDeadlineDate(b.deadline)
+        if (valA === Infinity) return 1
+        if (valB === Infinity) return -1
+        return valB - valA
+      })
+    } else if (sortBy === 'status') {
+      result.sort((a, b) => getJobStatusScore(a) - getJobStatusScore(b))
+    } else if (sortBy === 'name-desc') {
+      result.sort((a, b) => b.job_id.localeCompare(a.job_id))
+    } else {
+      // Default: name-asc
+      result.sort((a, b) => a.job_id.localeCompare(b.job_id))
+    }
+    return result
+  }, [jobs, searchQuery, sortBy, statusFilter])
 
   // Handle excel export
   const handleExport = async () => {
@@ -896,6 +983,10 @@ export function useWorkSchedule() {
     renamingEmployee,
     setRenamingEmployee,
     employeeInputName,
-    setEmployeeInputName
+    setEmployeeInputName,
+    sortBy,
+    setSortBy,
+    statusFilter,
+    setStatusFilter
   }
 }

@@ -90,7 +90,7 @@ function JobCard({ j }: { j: IJob }) {
   )
 
   return (
-    <div className="schedule-main-panel" style={{ height: 'auto', flexShrink: 0 }}>
+    <div className="schedule-main-panel" style={{ height: 'auto', flexShrink: 0, breakInside: 'avoid', marginBottom: '20px' }}>
       {/* Header actions inside card */}
       <div className="schedule-header-actions" style={{ borderBottom: '1px solid var(--border-subtle)', paddingBottom: '12px', marginBottom: '12px' }}>
         <div className="active-job-details">
@@ -195,7 +195,11 @@ function WorkScheduleContent() {
     handleMouseEnter,
     handleMouseUpCell,
     handleAddEmployee,
-    setIsAddingEmployee
+    setIsAddingEmployee,
+    sortBy,
+    setSortBy,
+    statusFilter,
+    setStatusFilter
   } = useWorkScheduleContext()
 
   const [visibleCount, setVisibleCount] = useState(10)
@@ -337,16 +341,64 @@ function WorkScheduleContent() {
 
         {/* Top filter and actions bar */}
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', flexShrink: 0 }}>
-          <div className="search-input-wrapper" style={{ width: '300px' }}>
-            <svg className="search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search Jobs..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div className="search-input-wrapper" style={{ width: '300px' }}>
+              <svg className="search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search Jobs..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="year-selector"
+              style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+                height: '38px'
+              }}
+            >
+              <option value="name-asc">Sort by: Name (A-Z)</option>
+              <option value="name-desc">Sort by: Name (Z-A)</option>
+              <option value="deadline-asc">Sort by: Deadline (Soonest)</option>
+              <option value="deadline-desc">Sort by: Deadline (Latest)</option>
+              <option value="status">Sort by: Status (Complete First)</option>
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="year-selector"
+              style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+                height: '38px'
+              }}
+            >
+              <option value="all">Status: All</option>
+              <option value="completed">Status: Complete/Completed</option>
+              <option value="checking">Status: For Checking</option>
+              <option value="pending">Status: Pending/Not Started</option>
+              <option value="excluded">Status: Excluded/NA</option>
+            </select>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
@@ -366,7 +418,7 @@ function WorkScheduleContent() {
             )}
           </div>
         </div>
-        <div className="jobs-cards-scroll-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="jobs-cards-scroll-wrapper" style={{ columnCount: 2, columnGap: '20px', display: 'block' }}>
           {isLoadingJobs ? (
             <div className="schedule-loading-spinner" style={{ height: '200px' }}>
               <svg className="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">

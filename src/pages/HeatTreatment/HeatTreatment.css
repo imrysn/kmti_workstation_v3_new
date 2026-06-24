@@ -27,6 +27,7 @@
 }
 
 .ht-pill-toggle {
+  position: relative;
   display: flex;
   align-items: center;
   background: var(--bg-surface);
@@ -36,29 +37,40 @@
   gap: 2px;
 }
 
+.ht-sliding-bg-measured {
+  position: absolute;
+  top: 3px;
+  height: calc(100% - 6px);
+  background: var(--accent);
+  border-radius: 7px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.30);
+  pointer-events: none;
+}
+
 .ht-pill {
+  position: relative;
+  z-index: 2; /* Render text above sliding background */
   padding: 8px 28px;
   font-size: 13px;
   font-weight: 700;
   border: none;
   border-radius: 7px;
   cursor: pointer;
-  background: transparent;
+  background: transparent !important;
   color: var(--text-muted);
-  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: color 0.3s ease;
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
 
 .ht-pill:hover {
   color: var(--text-primary);
-  background: var(--bg-hover);
 }
 
 .ht-pill.active {
-  background: var(--accent);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.30);
 }
 
 .ht-add-page-btn {

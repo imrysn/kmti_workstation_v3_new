@@ -260,6 +260,7 @@ export default function CharacterSearch() {
       {/* Centered Toggle Bar for Tabs */}
       <div className="ht-toggle-bar">
         <div className="ht-pill-toggle">
+          <div className={`ht-sliding-bg ${activeTab}`} />
           <button
             className={`ht-pill${activeTab === 'drafting' ? ' active' : ''}`}
             onClick={() => handleTabChange('drafting')}

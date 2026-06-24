@@ -35,6 +35,66 @@
   --eng-color-8-bg: #65a30d;
 }
 
+/* Sliding Segmented Toggle matching Material Calculator */
+.calendar-toggle-control {
+  position: relative;
+  display: flex;
+  background: var(--bg-surface-subtle);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  width: 300px;
+}
+
+.calendar-sliding-bg {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  height: calc(100% - 8px);
+  background: var(--accent);
+  border-radius: 8px;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
+  pointer-events: none;
+}
+
+.calendar-sliding-bg.calendar {
+  transform: translateX(0);
+}
+
+.calendar-sliding-bg.schedule {
+  transform: translateX(100%);
+}
+
+.calendar-toggle-btn {
+  position: relative;
+  z-index: 2; /* Render text above sliding background */
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent !important;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  white-space: nowrap;
+}
+
+.calendar-toggle-btn.active {
+  color: #ffffff;
+}
+
+.calendar-toggle-btn:not(.active):hover {
+  color: var(--text-primary);
+}
+
 /* Bypass global padding in App.css for full-bleed calendar flexibility */
 .app-content:has(.team-calendar-page) {
   padding: 0 !important;
