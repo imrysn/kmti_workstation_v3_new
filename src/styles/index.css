@@ -1,29 +1,43 @@
 /* === KMTI Workstation v3 — Global Styles === */
 
 :root {
-  --bg-primary: #f1f5f9; /* Slate-50: Technical light background */
-  --bg-secondary: #ffffff; /* Pure white for working surfaces */
-  --bg-surface: #f8fafc; /* Slate-50: headers and subtle areas */
+  --bg-primary: #f1f5f9;
+  /* Slate-50: Technical light background */
+  --bg-secondary: #ffffff;
+  /* Pure white for working surfaces */
+  --bg-surface: #f8fafc;
+  /* Slate-50: headers and subtle areas */
   --bg-surface-subtle: #f1f5f9;
-  --bg-surface-hover: #e2e8f0; /* Slate-200: active selections */
-  --border: #cbd5e1; /* Slate-300: crisp structural lines */
+  --bg-surface-hover: #e2e8f0;
+  /* Slate-200: active selections */
+  --border: #cbd5e1;
+  /* Slate-300: crisp structural lines */
   --border-subtle: #e2e8f0;
-  --text-primary: #0f172a; /* Slate-900: near black for extreme legibility */
-  --text-secondary: #475569; /* Slate-600 */
-  --text-muted: #64748b; /* Slate-500 */
-  --accent: #0284c7; /* Sky-600: Blueprint CAD selection blue */
+  --text-primary: #0f172a;
+  /* Slate-900: near black for extreme legibility */
+  --text-secondary: #475569;
+  /* Slate-600 */
+  --text-muted: #64748b;
+  /* Slate-500 */
+  --accent: #0284c7;
+  /* Sky-600: Blueprint CAD selection blue */
   --accent-hover: #0369a1;
   --accent-subtle: rgba(2, 132, 199, 0.1);
-  --success: #059669; /* Emerald-600: precision success green */
+  --success: #059669;
+  /* Emerald-600: precision success green */
   --bg-success-subtle: rgba(5, 150, 105, 0.1);
   --warning: #d97706;
   --bg-warning-subtle: rgba(217, 119, 6, 0.1);
+  --completed: hsl(25, 100%, 72%);
+  /* Orange */
+  --bg-completed-subtle: rgba(249, 115, 22, 0.1);
   --danger: #dc2626;
   --bg-danger-subtle: rgba(220, 38, 38, 0.1);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --radius-sm: 4px; /* Sharper edges for engineering precision */
+  --radius-sm: 4px;
+  /* Sharper edges for engineering precision */
 
   --radius-md: 6px;
   --radius-lg: 10px;
@@ -35,23 +49,34 @@
 }
 
 body.dark-theme {
-  --bg-primary: #0f172a; /* Slate-900: Deep technical backgrounds */
-  --bg-secondary: #1e293b; /* Slate-800: Card/Surface backgrounds */
+  --bg-primary: #0f172a;
+  /* Slate-900: Deep technical backgrounds */
+  --bg-secondary: #1e293b;
+  /* Slate-800: Card/Surface backgrounds */
   --bg-surface: #1e293b;
   --bg-surface-subtle: #0f172a;
-  --bg-surface-hover: #334155; /* Slate-700 */
-  --border: #334155; /* Slate-700 */
+  --bg-surface-hover: #334155;
+  /* Slate-700 */
+  --border: #334155;
+  /* Slate-700 */
   --border-subtle: #1e293b;
-  --text-primary: #f8fafc; /* Slate-50: pure legibility in dark */
-  --text-secondary: #94a3b8; /* Slate-400 */
-  --text-muted: #64748b; /* Slate-500 */
-  --accent: #38bdf8; /* Sky-400: Glowing blueprint blue */
+  --text-primary: #f8fafc;
+  /* Slate-50: pure legibility in dark */
+  --text-secondary: #94a3b8;
+  /* Slate-400 */
+  --text-muted: #64748b;
+  /* Slate-500 */
+  --accent: #38bdf8;
+  /* Sky-400: Glowing blueprint blue */
   --accent-hover: #7dd3fc;
   --accent-subtle: rgba(56, 189, 248, 0.1);
   --success: #10b981;
   --bg-success-subtle: rgba(16, 185, 129, 0.15);
   --warning: #f59e0b;
   --bg-warning-subtle: rgba(245, 158, 11, 0.15);
+  --completed: #fb923c;
+  /* Orange */
+  --bg-completed-subtle: rgba(251, 146, 60, 0.15);
   --danger: #ef4444;
   --bg-danger-subtle: rgba(239, 68, 68, 0.15);
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -78,6 +103,8 @@ body.void-theme {
   --bg-success-subtle: rgba(255, 0, 64, 0.1);
   --warning: #ff4000;
   --bg-warning-subtle: rgba(255, 64, 0, 0.1);
+  --completed: #ff5500;
+  --bg-completed-subtle: rgba(255, 85, 0, 0.12);
   --danger: #ff0040;
   --bg-danger-subtle: rgba(255, 0, 64, 0.15);
   --shadow-sm: 0 1px 4px 0 rgba(255, 0, 64, 0.15);
@@ -94,8 +121,15 @@ body.void-theme ::-webkit-scrollbar-thumb {
 }
 
 @keyframes void-pulse {
-  0%, 100% { text-shadow: 0 0 4px rgba(255, 0, 64, 0.4); }
-  50% { text-shadow: 0 0 12px rgba(255, 0, 64, 0.8), 0 0 24px rgba(255, 0, 64, 0.3); }
+
+  0%,
+  100% {
+    text-shadow: 0 0 4px rgba(255, 0, 64, 0.4);
+  }
+
+  50% {
+    text-shadow: 0 0 12px rgba(255, 0, 64, 0.8), 0 0 24px rgba(255, 0, 64, 0.3);
+  }
 }
 
 body.void-theme .sidebar-brand span,
@@ -163,19 +197,22 @@ a {
 
 /* === Professional Skeleton Loader System === */
 @keyframes skeleton-shimmer {
-  0% { background-position: -468px 0; }
-  100% { background-position: 468px 0; }
+  0% {
+    background-position: -468px 0;
+  }
+
+  100% {
+    background-position: 468px 0;
+  }
 }
 
 .skeleton-base {
   background: #f6f7f8;
-  background-image: linear-gradient(
-    to right, 
-    #f6f7f8 0%, 
-    #edeef1 20%, 
-    #f6f7f8 40%, 
-    #f6f7f8 100%
-  );
+  background-image: linear-gradient(to right,
+      #f6f7f8 0%,
+      #edeef1 20%,
+      #f6f7f8 40%,
+      #f6f7f8 100%);
   background-repeat: no-repeat;
   background-size: 800px 104px;
   display: inline-block;

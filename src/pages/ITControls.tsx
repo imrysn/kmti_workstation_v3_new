@@ -40,6 +40,14 @@ const MODULES = [
     maintKey: 'character_search_maintenance',
   },
   {
+    id: 'wsched',
+    label: 'Work Schedule',
+    code: 'MOD_WSCD',
+    desc: 'Job tracking, drawing components, and Gantt timeline',
+    visibleKey: 'work_schedule_enabled',
+    maintKey: 'work_schedule_maintenance',
+  },
+  {
     id: 'heat',
     label: 'Heat Treatment',
     code: 'MOD_H_TRT',
@@ -62,6 +70,22 @@ const MODULES = [
     desc: 'Pricing and quotation generation tool',
     visibleKey: 'quotation_enabled',
     maintKey: 'quotation_maintenance',
+  },
+  {
+    id: 'designers',
+    label: 'Designers',
+    code: 'MOD_DSGN',
+    desc: 'Designer profiles and assignments management',
+    visibleKey: 'designers_enabled',
+    maintKey: 'designers_maintenance',
+  },
+  {
+    id: 'materials',
+    label: 'Materials',
+    code: 'MOD_MATL',
+    desc: 'Raw materials inventory and tracking',
+    visibleKey: 'materials_enabled',
+    maintKey: 'materials_maintenance',
   },
 ]
 

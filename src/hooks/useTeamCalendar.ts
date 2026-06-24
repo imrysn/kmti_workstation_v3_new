@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useCallback, useMemo, useRef } from 'react'
 import { io } from 'socket.io-client'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../components/ModalContext'
-import { teamCalendarApi, ICalendarEvent, ITodo, IActiveUser, IPendingApproval } from '../services/teamCalendarService'
+import { teamCalendarApi } from '../services/teamCalendarService'
+import { useTeamCalendarState } from './useTeamCalendarState'
+import { useTeamCalendarActions } from './useTeamCalendarActions'
 import {
   formatLocalDate,
   getPhilippineHolidays,
@@ -15,377 +17,204 @@ import {
 export function useTeamCalendar() {
   const { user, hasRole } = useAuth()
   const { notify, confirm } = useModal()
-
   const isAdminOrIT = hasRole('admin', 'it')
 
-  // --- Layout & Network State ---
-  const [isLoading, setIsLoading] = useState(true)
-  const [viewMode, setViewMode] = useState<'month' | 'week' | 'agenda' | 'timeline'>('month')
-  const [activeSidebarTab, setActiveSidebarTab] = useState<'backlog' | 'claims' | 'completed'>('backlog')
-  const [currentDate, setCurrentDate] = useState<Date>(new Date())
-  const [events, setEvents] = useState<ICalendarEvent[]>([])
-  const [backlog, setBacklog] = useState<ITodo[]>([])
-
-  // --- Workstation Identity Persistence ---
-  const [engineerName, setEngineerName] = useState<string>(
-    localStorage.getItem('kmti_engineer_name') || ''
-  )
-
-  // --- Search & Filters State ---
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showClaims, setShowClaims] = useState(true)
-  const [showAbsences, setShowAbsences] = useState(true)
-  const [showSpans, setShowSpans] = useState(false)
-
-  // --- Modals Form State ---
-  const [newTodoTitle, setNewTodoTitle] = useState('')
-  const [newTodoDesc, setNewTodoDesc] = useState('')
-  const [newTodoPriority, setNewTodoPriority] = useState<'Low' | 'Normal' | 'High' | 'Critical'>('Normal')
-  const [dayOffLeaveType, setDayOffLeaveType] = useState<string>('Vacation')
-  const [isAddingTodo, setIsAddingTodo] = useState(false)
-  const [isAddingDayOff, setIsAddingDayOff] = useState(false)
-  const [isAddingCompanyEvent, setIsAddingCompanyEvent] = useState(false)
-  const [companyEventTitle, setCompanyEventTitle] = useState('')
-  const [companyEventCategory, setCompanyEventCategory] = useState<'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other'>('Other')
-  const [companyEventStart, setCompanyEventStart] = useState('')
-  const [companyEventEnd, setCompanyEventEnd] = useState('')
-
-  // --- Admin Assignment & Approvals State ---
-  const [activeUsers, setActiveUsers] = useState<IActiveUser[]>([])
-  const [assigningTask, setAssigningTask] = useState<ITodo | null>(null)
-  const [assignUserId, setAssignUserId] = useState('')
-  const [assignEngineerName, setAssignEngineerName] = useState('')
-  const [assignStartDate, setAssignStartDate] = useState('')
-  const [assignEndDate, setAssignEndDate] = useState('')
-  const [assignSelectedTodoId, setAssignSelectedTodoId] = useState('')
-  const [pendingApprovals, setPendingApprovals] = useState<IPendingApproval[]>([])
-
-  // --- Modals Selection State ---
-  const [selectedEvent, setSelectedEvent] = useState<ICalendarEvent | null>(null)
-
-  // Interactive Claim Mode State
-  const [claimingTask, setClaimingTask] = useState<ITodo | null>(null)
-  const [claimStartDate, setClaimStartDate] = useState<string | null>(null)
-  const [activePopoverDate, setActivePopoverDate] = useState<Date | null>(null)
-  const lastScrollTime = useRef<number>(0)
-
-  // Claim Confirmation Modal State
-  const [confirmingClaim, setConfirmingClaim] = useState<{
-    todo: ITodo
-    start: string
-    end: string
-  } | null>(null)
-
-  // Day Off Dates
-  const [dayOffStart, setDayOffStart] = useState('')
-  const [dayOffEnd, setDayOffEnd] = useState('')
+  // Coordinate custom states hook
+  const state = useTeamCalendarState()
 
   const phHolidays = useMemo(() => {
-    return getPhilippineHolidays(currentDate.getFullYear())
-  }, [currentDate])
+    return getPhilippineHolidays(state.currentDate.getFullYear())
+  }, [state.currentDate])
 
-  // Sync engineer name input directly into localStorage
-  const handleNameChange = (val: string) => {
-    setEngineerName(val)
-    localStorage.setItem('kmti_engineer_name', val)
-  }
-
-  // --- Fetch date range derived from current grid ---
+  // Fetch range helper
   const fetchRange = useMemo(() => {
-    const start = new Date(currentDate)
-    const end = new Date(currentDate)
+    const start = new Date(state.currentDate)
+    const end = new Date(state.currentDate)
 
-    if (viewMode === 'month') {
-      const dow = currentDate.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
-      start.setDate(currentDate.getDate() - dow - 21) // Go back 3 weeks from Sunday of current week
+    if (state.viewMode === 'month') {
+      const dow = state.currentDate.getDay()
+      start.setDate(state.currentDate.getDate() - dow - 21)
       end.setTime(start.getTime())
-      end.setDate(start.getDate() + 41) // 6 full weeks (42 days)
-    } else if (viewMode === 'week') {
-      const dow = currentDate.getDay()
-      start.setDate(currentDate.getDate() - dow) // Sunday of current week
+      end.setDate(start.getDate() + 41)
+    } else if (state.viewMode === 'week') {
+      const dow = state.currentDate.getDay()
+      start.setDate(state.currentDate.getDate() - dow)
       end.setTime(start.getTime())
-      end.setDate(start.getDate() + 6) // Sunday to Saturday (7 days)
-    } else if (viewMode === 'timeline') {
-      end.setDate(currentDate.getDate() + 13) // Rolling 14 days
+      end.setDate(start.getDate() + 6)
+    } else if (state.viewMode === 'timeline') {
+      end.setDate(state.currentDate.getDate() + 13)
     } else {
-      // Agenda: 14 calendar days from currentDate
-      end.setDate(currentDate.getDate() + 13)
+      end.setDate(state.currentDate.getDate() + 13)
     }
 
     return {
       start: formatLocalDate(start),
       end: formatLocalDate(end)
     }
-  }, [currentDate, viewMode])
+  }, [state.currentDate, state.viewMode])
 
-  // --- API Load Data ---
-  const isFirstLoad = useRef(true)
-  
+  // API loadData callback
   const loadData = useCallback(async () => {
-    if (isFirstLoad.current) {
-      setIsLoading(true)
-    }
-    
     try {
       const gridRes = await teamCalendarApi.getGrid(fetchRange.start, fetchRange.end)
       if (gridRes.success) {
-        setEvents(gridRes.events)
+        state.setEvents(gridRes.events)
       }
 
       const todoRes = await teamCalendarApi.getTodos()
       if (todoRes.success) {
-        setBacklog(todoRes.todos)
+        state.setBacklog(todoRes.todos)
       }
 
       if (isAdminOrIT) {
         const pendingRes = await teamCalendarApi.getPendingApprovals()
         if (pendingRes.success) {
-          setPendingApprovals(pendingRes.pending)
+          state.setPendingApprovals(pendingRes.pending)
         }
       }
     } catch (err: any) {
       console.error(err)
       notify('Failed to load team calendar data.', 'error')
     } finally {
-      setIsLoading(false)
-      isFirstLoad.current = false
+      state.setIsLoading(false)
     }
-  }, [fetchRange, notify, isAdminOrIT])
+  }, [fetchRange, notify, isAdminOrIT, state.setEvents, state.setBacklog, state.setPendingApprovals, state.setIsLoading])
+
+  // Socket sync
+  const loadDataRef = useRef(loadData)
+  useEffect(() => {
+    loadDataRef.current = loadData
+  }, [loadData])
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
     const socket = io(API_URL, { path: '/socket.io' })
 
     socket.on('calendar_updated', () => {
-      loadData()
+      loadDataRef.current()
     })
 
     return () => {
       socket.disconnect()
     }
-  }, [loadData])
+  }, [])
 
   useEffect(() => {
     loadData()
   }, [loadData])
 
+  // Get active users on load
   useEffect(() => {
     if (isAdminOrIT) {
       teamCalendarApi.getActiveUsers()
         .then(res => {
           if (res.success) {
-            setActiveUsers(res.users)
+            state.setActiveUsers(res.users)
           }
         })
         .catch(err => console.error("Error loading active users:", err))
     }
-  }, [isAdminOrIT])
+  }, [isAdminOrIT, state.setActiveUsers])
 
-  // --- Actions ---
+  // Coordinate action handler hook
+  const actions = useTeamCalendarActions(
+    {
+      user,
+      isAdminOrIT,
+      engineerName: state.engineerName,
+      newTodoTitle: state.newTodoTitle,
+      setNewTodoTitle: state.setNewTodoTitle,
+      newTodoDesc: state.newTodoDesc,
+      setNewTodoDesc: state.setNewTodoDesc,
+      newTodoPriority: state.newTodoPriority,
+      setNewTodoPriority: state.setNewTodoPriority,
+      dayOffLeaveType: state.dayOffLeaveType,
+      setDayOffLeaveType: state.setDayOffLeaveType,
+      setIsAddingTodo: state.setIsAddingTodo,
+      setIsAddingDayOff: state.setIsAddingDayOff,
+      setIsAddingCompanyEvent: state.setIsAddingCompanyEvent,
+      companyEventTitle: state.companyEventTitle,
+      setCompanyEventTitle: state.setCompanyEventTitle,
+      companyEventCategory: state.companyEventCategory,
+      setCompanyEventCategory: state.setCompanyEventCategory,
+      companyEventStart: state.companyEventStart,
+      setCompanyEventStart: state.setCompanyEventStart,
+      companyEventEnd: state.companyEventEnd,
+      setCompanyEventEnd: state.setCompanyEventEnd,
+      assigningTask: state.assigningTask,
+      setAssigningTask: state.setAssigningTask,
+      assignUserId: state.assignUserId,
+      setAssignUserId: state.setAssignUserId,
+      assignEngineerName: state.assignEngineerName,
+      setAssignEngineerName: state.setAssignEngineerName,
+      assignStartDate: state.assignStartDate,
+      setAssignStartDate: state.setAssignStartDate,
+      assignEndDate: state.assignEndDate,
+      setAssignEndDate: state.setAssignEndDate,
+      assignSelectedTodoId: state.assignSelectedTodoId,
+      setAssignSelectedTodoId: state.setAssignSelectedTodoId,
+      confirmingClaim: state.confirmingClaim,
+      setConfirmingClaim: state.setConfirmingClaim,
+      dayOffStart: state.dayOffStart,
+      setDayOffStart: state.setDayOffStart,
+      dayOffEnd: state.dayOffEnd,
+      setDayOffEnd: state.setDayOffEnd,
+      setSelectedEvent: state.setSelectedEvent,
+      notify,
+      confirm
+    },
+    loadData
+  )
 
-  const handleCreateTodo = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTodoTitle.trim()) return
-
-    try {
-      const res = await teamCalendarApi.createTodo(newTodoTitle, newTodoDesc, newTodoPriority)
-      if (res.success) {
-        notify('Task added to backlog pool.', 'success')
-        setNewTodoTitle('')
-        setNewTodoDesc('')
-        setNewTodoPriority('Normal')
-        setIsAddingTodo(false)
-        loadData()
-      }
-    } catch (err: any) {
-      notify(err.response?.data?.detail || 'Failed to create task.', 'error')
-    }
-  }
-
-  const handleDeleteTodo = async (todoId: number, title: string) => {
-    confirm(
-      `Permanently delete "${title}" from history? This cannot be undone.`,
-      async () => {
-        try {
-          const res = await teamCalendarApi.deleteTodo(todoId)
-          if (res.success) {
-            notify('Task record permanently deleted.', 'success')
-            loadData()
-          }
-        } catch (err: any) {
-          notify(err.response?.data?.detail || 'Failed to delete task.', 'error')
-        }
-      },
-      undefined,
-      'danger',
-      'Delete Task Record'
-    )
-  }
-
-  const handleCompleteTodo = async (todoId: number, title: string) => {
-    confirm(`Mark "${title}" as Completed?`, async () => {
-      try {
-        const res = await teamCalendarApi.completeTodo(todoId)
-        if (res.success) {
-          notify('Task marked as completed!', 'success')
-          loadData()
-        }
-      } catch (err: any) {
-        notify(err.response?.data?.detail || 'Failed to complete task.', 'error')
-      }
-    })
-  }
-
-  const handleRequestDayOffSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!dayOffStart || !dayOffEnd) return
-
-    try {
-      const res = await teamCalendarApi.requestDayOff(
-        dayOffStart,
-        dayOffEnd,
-        dayOffLeaveType,
-        undefined, // user_id will default to server's authenticated token
-        engineerName || undefined
-      )
-      if (res.success) {
-        if (isAdminOrIT) {
-          notify('Absence scheduled and locked successfully!', 'success')
-        } else {
-          notify('Absence request submitted to Admin for approval.', 'success')
-        }
-        setDayOffStart('')
-        setDayOffEnd('')
-        setDayOffLeaveType('Vacation')
-        setIsAddingDayOff(false)
-        loadData()
-      }
-    } catch (err: any) {
-      notify(err.response?.data?.detail || 'Failed to request day off.', 'error')
-    }
-  }
-
-  const handleCreateCompanyEventSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!companyEventTitle.trim() || !companyEventStart || !companyEventEnd) return
-
-    try {
-      const res = await teamCalendarApi.createCompanyEvent(
-        companyEventTitle.trim(),
-        companyEventCategory,
-        companyEventStart,
-        companyEventEnd
-      )
-      if (res.success) {
-        notify('Company Event scheduled successfully!', 'success')
-        setCompanyEventTitle('')
-        setCompanyEventCategory('Other')
-        setCompanyEventStart('')
-        setCompanyEventEnd('')
-        setIsAddingCompanyEvent(false)
-        loadData()
-      }
-    } catch (err: any) {
-      notify(err.response?.data?.detail || 'Failed to schedule company event.', 'error')
-    }
-  }
-
-  const handleAssignTaskSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!assigningTask || !assignUserId || !assignStartDate || !assignEndDate) return
-
-    const targetTaskId = assigningTask.id === -1 ? Number(assignSelectedTodoId) : assigningTask.id
-    if (!targetTaskId) {
-      notify('Please select a task to assign.', 'warning')
+  // Navigate Date
+  const navigateDate = (direction: 'prev' | 'next' | 'today') => {
+    const newDate = new Date(state.currentDate)
+    if (direction === 'today') {
+      state.setCurrentDate(new Date())
       return
     }
 
-    try {
-      const res = await teamCalendarApi.assignTask(
-        targetTaskId,
-        Number(assignUserId),
-        assignStartDate,
-        assignEndDate,
-        assignEngineerName || undefined
-      )
-      if (res.success) {
-        notify(`Task successfully assigned to ${assignEngineerName || 'engineer'}!`, 'success')
-        setAssigningTask(null)
-        setAssignUserId('')
-        setAssignEngineerName('')
-        setAssignStartDate('')
-        setAssignEndDate('')
-        setAssignSelectedTodoId('')
-        loadData()
-      }
-    } catch (err: any) {
-      notify(err.response?.data?.detail || 'Could not assign task.', 'error')
+    if (state.viewMode === 'month') {
+      if (direction === 'prev') newDate.setMonth(state.currentDate.getMonth() - 1)
+      else newDate.setMonth(state.currentDate.getMonth() + 1)
+    } else {
+      newDate.setDate(state.currentDate.getDate() + (direction === 'prev' ? -7 : 7))
+    }
+    state.setCurrentDate(newDate)
+  }
+
+  // Wheel calendar scroll
+  const handleCalendarWheel = (e: React.WheelEvent) => {
+    if (state.viewMode !== 'month') return
+
+    const now = Date.now()
+    if (now - state.lastScrollTime.current < 200) {
+      return
+    }
+
+    if (Math.abs(e.deltaY) < 15) {
+      return
+    }
+
+    const newDate = new Date(state.currentDate)
+    if (e.deltaY > 0) {
+      newDate.setDate(state.currentDate.getDate() + 7)
+      state.setCurrentDate(newDate)
+      state.lastScrollTime.current = now
+    } else if (e.deltaY < 0) {
+      newDate.setDate(state.currentDate.getDate() - 7)
+      state.setCurrentDate(newDate)
+      state.lastScrollTime.current = now
     }
   }
 
-  const handleConfirmClaimSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!confirmingClaim) return
-
-    try {
-      const res = await teamCalendarApi.claimTask(
-        confirmingClaim.todo.id,
-        confirmingClaim.start,
-        confirmingClaim.end,
-        undefined, // user_id defaults to token
-        engineerName || undefined
-      )
-      if (res.success) {
-        notify(`Task "${confirmingClaim.todo.title}" successfully self-claimed!`, 'success')
-        setConfirmingClaim(null)
-        loadData()
-      }
-    } catch (err: any) {
-      notify(err.response?.data?.detail || 'Could not claim task.', 'error')
-    }
-  }
-
-  const handleCancelEvent = async (event: ICalendarEvent) => {
-    const term = event.event_type === 'Task_Claim'
-      ? 'task claim'
-      : event.event_type === 'Company_Event'
-        ? 'company event'
-        : 'day off lockout'
-    confirm(`Cancel this ${term}?`, async () => {
-      try {
-        const res = await teamCalendarApi.deleteEvent(event.id)
-        if (res.success) {
-          notify(res.message, 'success')
-          setSelectedEvent(null)
-          loadData()
-        }
-      } catch (err: any) {
-        notify(err.response?.data?.detail || 'Failed to cancel event.', 'error')
-      }
-    })
-  }
-
-  const handleApproveEvent = async (eventId: number) => {
-    try {
-      const res = await teamCalendarApi.approveEvent(eventId)
-      if (res.success) {
-        notify('Absence request approved successfully!', 'success')
-        setSelectedEvent(null)
-        loadData()
-      }
-    } catch (err: any) {
-      notify(err.response?.data?.detail || 'Failed to approve event.', 'error')
-    }
-  }
-
-  // --- Click Grid Cell ---
   const handleCellClick = (day: Date, _dateStr: string) => {
-    setActivePopoverDate(day)
+    state.setActivePopoverDate(day)
   }
 
   const cancelClaimMode = () => {
-    setClaimingTask(null)
-    setClaimStartDate(null)
+    state.setClaimingTask(null)
+    state.setClaimStartDate(null)
   }
 
   // --- Calendar Date Grid List ---
@@ -401,85 +230,44 @@ export function useTeamCalendar() {
     return days
   }, [fetchRange])
 
-  const displayDate = useMemo(() => currentDate, [currentDate])
-
+  const displayDate = useMemo(() => state.currentDate, [state.currentDate])
   const monthName = displayDate.toLocaleString('default', { month: 'long' })
   const yearNum = displayDate.getFullYear()
 
-  const navigateDate = (direction: 'prev' | 'next' | 'today') => {
-    const newDate = new Date(currentDate)
-    if (direction === 'today') {
-      setCurrentDate(new Date())
-      return
-    }
-
-    if (viewMode === 'month') {
-      if (direction === 'prev') newDate.setMonth(currentDate.getMonth() - 1)
-      else newDate.setMonth(currentDate.getMonth() + 1)
-    } else {
-      newDate.setDate(currentDate.getDate() + (direction === 'prev' ? -7 : 7))
-    }
-    setCurrentDate(newDate)
-  }
-
-  const handleCalendarWheel = (e: React.WheelEvent) => {
-    if (viewMode !== 'month') return
-
-    const now = Date.now()
-    if (now - lastScrollTime.current < 200) {
-      return
-    }
-
-    if (Math.abs(e.deltaY) < 15) {
-      return
-    }
-
-    const newDate = new Date(currentDate)
-    if (e.deltaY > 0) {
-      newDate.setDate(currentDate.getDate() + 7)
-      setCurrentDate(newDate)
-      lastScrollTime.current = now
-    } else if (e.deltaY < 0) {
-      newDate.setDate(currentDate.getDate() - 7)
-      setCurrentDate(newDate)
-      lastScrollTime.current = now
-    }
-  }
-
   const visibleTaskTypes = useMemo(() => {
     const seen = new Set<TaskType>()
-    events.forEach(e => {
+    state.events.forEach(e => {
       if (e.event_type !== 'Task_Claim') return
       seen.add(inferTaskType(e.todo_title, e.todo_description))
     })
     return (Object.keys(TASK_TYPE_COLORS) as TaskType[]).filter(t => seen.has(t))
-  }, [events])
+  }, [state.events])
 
   const visibleTeams = useMemo(() => {
     const map = new Map<string, string>()
-    events.forEach(e => {
+    state.events.forEach(e => {
       if (!e.team || e.team.toLowerCase() === 'general') return
       if (!map.has(e.team)) map.set(e.team, getTeamColor(e.team))
     })
     return Array.from(map.entries()).map(([team, color]) => ({ team, color }))
-  }, [events])
+  }, [state.events])
 
   const agendaDays = useMemo(() => {
     const days: Date[] = []
-    const start = new Date(currentDate)
+    const start = new Date(state.currentDate)
     let checked = new Date(start)
     while (days.length < 14) {
       days.push(new Date(checked))
       checked.setDate(checked.getDate() + 1)
     }
     return days
-  }, [currentDate])
+  }, [state.currentDate])
 
   const filteredBacklogPending = useMemo(() => {
-    const list = backlog.filter(
+    const list = state.backlog.filter(
       t =>
         t.status === 'Pending' &&
-        t.title.toLowerCase().includes(searchTerm.toLowerCase())
+        t.title.toLowerCase().includes(state.searchTerm.toLowerCase())
     )
     const priorityWeights: Record<string, number> = { Critical: 4, High: 3, Normal: 2, Low: 1 }
     return list.sort((a, b) => {
@@ -490,101 +278,101 @@ export function useTeamCalendar() {
       const db = b.created_at ? new Date(b.created_at).getTime() : 0
       return db - da
     })
-  }, [backlog, searchTerm])
+  }, [state.backlog, state.searchTerm])
 
   const filteredBacklogClaimed = useMemo(() => {
-    return backlog.filter(
+    return state.backlog.filter(
       t =>
         t.status === 'Claimed' &&
-        t.title.toLowerCase().includes(searchTerm.toLowerCase())
+        t.title.toLowerCase().includes(state.searchTerm.toLowerCase())
     )
-  }, [backlog, searchTerm])
+  }, [state.backlog, state.searchTerm])
 
   const filteredBacklogCompleted = useMemo(() => {
-    return backlog.filter(
+    return state.backlog.filter(
       t =>
         t.status === 'Completed' &&
-        t.title.toLowerCase().includes(searchTerm.toLowerCase())
+        t.title.toLowerCase().includes(state.searchTerm.toLowerCase())
     )
-  }, [backlog, searchTerm])
+  }, [state.backlog, state.searchTerm])
 
   return {
     user,
     hasRole,
     isAdminOrIT,
-    isLoading,
-    viewMode,
-    setViewMode,
-    activeSidebarTab,
-    setActiveSidebarTab,
-    currentDate,
-    setCurrentDate,
-    events,
-    setEvents,
-    backlog,
-    setBacklog,
-    engineerName,
-    handleNameChange,
-    searchTerm,
-    setSearchTerm,
-    showClaims,
-    setShowClaims,
-    showAbsences,
-    setShowAbsences,
-    showSpans,
-    setShowSpans,
-    newTodoTitle,
-    setNewTodoTitle,
-    newTodoDesc,
-    setNewTodoDesc,
-    newTodoPriority,
-    setNewTodoPriority,
-    dayOffLeaveType,
-    setDayOffLeaveType,
-    isAddingTodo,
-    setIsAddingTodo,
-    isAddingDayOff,
-    setIsAddingDayOff,
-    isAddingCompanyEvent,
-    setIsAddingCompanyEvent,
-    companyEventTitle,
-    setCompanyEventTitle,
-    companyEventCategory,
-    setCompanyEventCategory,
-    companyEventStart,
-    setCompanyEventStart,
-    companyEventEnd,
-    setCompanyEventEnd,
-    activeUsers,
-    setActiveUsers,
-    assigningTask,
-    setAssigningTask,
-    assignUserId,
-    setAssignUserId,
-    assignEngineerName,
-    setAssignEngineerName,
-    assignStartDate,
-    setAssignStartDate,
-    assignEndDate,
-    setAssignEndDate,
-    assignSelectedTodoId,
-    setAssignSelectedTodoId,
-    pendingApprovals,
-    setPendingApprovals,
-    selectedEvent,
-    setSelectedEvent,
-    claimingTask,
-    setClaimingTask,
-    claimStartDate,
-    setClaimStartDate,
-    activePopoverDate,
-    setActivePopoverDate,
-    confirmingClaim,
-    setConfirmingClaim,
-    dayOffStart,
-    setDayOffStart,
-    dayOffEnd,
-    setDayOffEnd,
+    isLoading: state.isLoading,
+    viewMode: state.viewMode,
+    setViewMode: state.setViewMode,
+    activeSidebarTab: state.activeSidebarTab,
+    setActiveSidebarTab: state.setActiveSidebarTab,
+    currentDate: state.currentDate,
+    setCurrentDate: state.setCurrentDate,
+    events: state.events,
+    setEvents: state.setEvents,
+    backlog: state.backlog,
+    setBacklog: state.setBacklog,
+    engineerName: state.engineerName,
+    handleNameChange: state.handleNameChange,
+    searchTerm: state.searchTerm,
+    setSearchTerm: state.setSearchTerm,
+    showClaims: state.showClaims,
+    setShowClaims: state.setShowClaims,
+    showAbsences: state.showAbsences,
+    setShowAbsences: state.setShowAbsences,
+    showSpans: state.showSpans,
+    setShowSpans: state.setShowSpans,
+    newTodoTitle: state.newTodoTitle,
+    setNewTodoTitle: state.setNewTodoTitle,
+    newTodoDesc: state.newTodoDesc,
+    setNewTodoDesc: state.setNewTodoDesc,
+    newTodoPriority: state.newTodoPriority,
+    setNewTodoPriority: state.setNewTodoPriority,
+    dayOffLeaveType: state.dayOffLeaveType,
+    setDayOffLeaveType: state.setDayOffLeaveType,
+    isAddingTodo: state.isAddingTodo,
+    setIsAddingTodo: state.setIsAddingTodo,
+    isAddingDayOff: state.isAddingDayOff,
+    setIsAddingDayOff: state.setIsAddingDayOff,
+    isAddingCompanyEvent: state.isAddingCompanyEvent,
+    setIsAddingCompanyEvent: state.setIsAddingCompanyEvent,
+    companyEventTitle: state.companyEventTitle,
+    setCompanyEventTitle: state.setCompanyEventTitle,
+    companyEventCategory: state.companyEventCategory,
+    setCompanyEventCategory: state.setCompanyEventCategory,
+    companyEventStart: state.companyEventStart,
+    setCompanyEventStart: state.setCompanyEventStart,
+    companyEventEnd: state.companyEventEnd,
+    setCompanyEventEnd: state.setCompanyEventEnd,
+    activeUsers: state.activeUsers,
+    setActiveUsers: state.setActiveUsers,
+    assigningTask: state.assigningTask,
+    setAssigningTask: state.setAssigningTask,
+    assignUserId: state.assignUserId,
+    setAssignUserId: state.setAssignUserId,
+    assignEngineerName: state.assignEngineerName,
+    setAssignEngineerName: state.setAssignEngineerName,
+    assignStartDate: state.assignStartDate,
+    setAssignStartDate: state.setAssignStartDate,
+    assignEndDate: state.assignEndDate,
+    setAssignEndDate: state.setAssignEndDate,
+    assignSelectedTodoId: state.assignSelectedTodoId,
+    setAssignSelectedTodoId: state.setAssignSelectedTodoId,
+    pendingApprovals: state.pendingApprovals,
+    setPendingApprovals: state.setPendingApprovals,
+    selectedEvent: state.selectedEvent,
+    setSelectedEvent: state.setSelectedEvent,
+    claimingTask: state.claimingTask,
+    setClaimingTask: state.setClaimingTask,
+    claimStartDate: state.claimStartDate,
+    setClaimStartDate: state.setClaimStartDate,
+    activePopoverDate: state.activePopoverDate,
+    setActivePopoverDate: state.setActivePopoverDate,
+    confirmingClaim: state.confirmingClaim,
+    setConfirmingClaim: state.setConfirmingClaim,
+    dayOffStart: state.dayOffStart,
+    setDayOffStart: state.setDayOffStart,
+    dayOffEnd: state.dayOffEnd,
+    setDayOffEnd: state.setDayOffEnd,
     phHolidays,
     fetchRange,
     calendarDays,
@@ -598,15 +386,15 @@ export function useTeamCalendar() {
     filteredBacklogClaimed,
     filteredBacklogCompleted,
     loadData,
-    handleCreateTodo,
-    handleDeleteTodo,
-    handleCompleteTodo,
-    handleRequestDayOffSubmit,
-    handleCreateCompanyEventSubmit,
-    handleAssignTaskSubmit,
-    handleConfirmClaimSubmit,
-    handleCancelEvent,
-    handleApproveEvent,
+    handleCreateTodo: actions.handleCreateTodo,
+    handleDeleteTodo: actions.handleDeleteTodo,
+    handleCompleteTodo: actions.handleCompleteTodo,
+    handleRequestDayOffSubmit: actions.handleRequestDayOffSubmit,
+    handleCreateCompanyEventSubmit: actions.handleCreateCompanyEventSubmit,
+    handleAssignTaskSubmit: actions.handleAssignTaskSubmit,
+    handleConfirmClaimSubmit: actions.handleConfirmClaimSubmit,
+    handleCancelEvent: actions.handleCancelEvent,
+    handleApproveEvent: actions.handleApproveEvent,
     handleCellClick,
     cancelClaimMode,
     navigateDate,

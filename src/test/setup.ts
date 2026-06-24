@@ -34,4 +34,6 @@ window.electronAPI = {
   writeFile: vi.fn(),
   removeUpdateListeners: vi.fn(),
   removeWindowMaximizedListener: vi.fn(),
+  showOpenDialog: vi.fn(),
+  readFile: vi.fn(),
 }

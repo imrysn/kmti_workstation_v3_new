@@ -502,6 +502,7 @@ export const ttsApi = {
 
 // --- Work Schedule ---
 export const scheduleApi = {
+  getPermissions: () => api.get('/schedule/permissions').then(r => r.data),
   getJobs: () => api.get('/schedule/jobs').then(r => r.data),
   getComponents: (jobId: string) => api.get(`/schedule/jobs/${jobId}/components`).then(r => r.data),
   updateComponentStatus: (componentId: number, status: string, submittedDate?: string | null) =>
@@ -534,6 +535,7 @@ export const scheduleApi = {
     parts_2d?: string;
     status?: string;
     submitted_date?: string | null;
+    is_postponed?: boolean;
   }) => api.patch(`/schedule/components/${componentId}`, data).then(r => r.data)
 }
 

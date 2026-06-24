@@ -31,7 +31,9 @@ DEFAULT_FLAGS = {
     "heat_treatment_enabled": True,
     "calculator_enabled": True,
     "quotation_enabled": False,
+    "designers_enabled": True,
     "materials_enabled": True,
+    "work_schedule_enabled": True,
 
     # Per-Module Maintenance (Nominal/Locked)
     "purchased_parts_maintenance": False,
@@ -39,7 +41,9 @@ DEFAULT_FLAGS = {
     "heat_treatment_maintenance": False,
     "calculator_maintenance": False,
     "quotation_maintenance": False,
+    "designers_maintenance": False,
     "materials_maintenance": False,
+    "work_schedule_maintenance": False,
 }
 
 OVERRIDE_FILE = "status_override.json"

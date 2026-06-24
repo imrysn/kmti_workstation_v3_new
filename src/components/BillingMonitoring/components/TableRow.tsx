@@ -17,6 +17,7 @@ interface TableRowProps {
   setActiveCell: (cell: IActiveCell | null) => void
   editForm: Partial<IQuotation>
   setEditForm: (form: Partial<IQuotation>) => void
+  partialRowType?: string
 }
 
 export default function TableRow({

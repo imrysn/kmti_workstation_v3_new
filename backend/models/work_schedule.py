@@ -33,6 +33,7 @@ class WorkScheduleComponent(Base):
     
     status = Column(String(100), nullable=True, default="Pending/Not Started")
     submitted_date = Column(Date, nullable=True)
+    is_postponed = Column(Integer, nullable=False, default=0)
 
     job = relationship("WorkScheduleJob", back_populates="components")
 

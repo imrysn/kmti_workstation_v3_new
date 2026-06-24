@@ -90,30 +90,30 @@ export default function TeamCalendar() {
       if (selectedTeam) {
         if (e.team !== selectedTeam) return false
       }
-
       return true
     })
   }, [cal.events, selectedTaskType, selectedStatus, selectedTeam])
 
   return (
-    <div className="team-calendar-page page-container">
+    <div className={`team-calendar-page page-container ${activeTab === 'schedule' ? 'schedule-active' : ''}`}>
       {/* View Switcher */}
       <div className="calendar-schedule-toggle no-print" style={{
         display: 'flex',
         gap: '4px',
-        marginBottom: '15px',
-        background: 'rgba(255, 255, 255, 0.05)',
+        margin: '0 auto 15px auto',
+        background: 'var(--bg-surface)',
         padding: '4px',
         borderRadius: '8px',
         width: 'fit-content',
-        border: '1px solid rgba(255, 255, 255, 0.08)'
+        border: '1px solid var(--border)',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
       }}>
-        <button 
+        <button
           onClick={() => setActiveTab('calendar')}
           style={{
             background: activeTab === 'calendar' ? '#3b82f6' : 'transparent',
             border: 'none',
-            color: '#fff',
+            color: activeTab === 'calendar' ? '#fff' : 'var(--text-muted)',
             padding: '6px 14px',
             borderRadius: '6px',
             cursor: 'pointer',
@@ -122,14 +122,14 @@ export default function TeamCalendar() {
             transition: 'all 0.2s ease'
           }}
         >
-          Calendar View
+          Calendar
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('schedule')}
           style={{
             background: activeTab === 'schedule' ? '#3b82f6' : 'transparent',
             border: 'none',
-            color: '#fff',
+            color: activeTab === 'schedule' ? '#fff' : 'var(--text-muted)',
             padding: '6px 14px',
             borderRadius: '6px',
             cursor: 'pointer',

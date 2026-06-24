@@ -26,6 +26,7 @@ export interface FeatureFlags {
   quotation_enabled: boolean
   designers_enabled: boolean
   materials_enabled: boolean
+  work_schedule_enabled: boolean
 
   purchased_parts_maintenance: boolean
   character_search_maintenance: boolean
@@ -34,6 +35,7 @@ export interface FeatureFlags {
   quotation_maintenance: boolean
   designers_maintenance: boolean
   materials_maintenance: boolean
+  work_schedule_maintenance: boolean
 
   [key: string]: boolean
 }
@@ -56,6 +58,7 @@ const DEFAULT_FLAGS: FeatureFlags = {
   quotation_enabled: false,
   designers_enabled: true,
   materials_enabled: true,
+  work_schedule_enabled: true,
 
   purchased_parts_maintenance: false,
   character_search_maintenance: false,
@@ -64,6 +67,7 @@ const DEFAULT_FLAGS: FeatureFlags = {
   quotation_maintenance: false,
   designers_maintenance: false,
   materials_maintenance: false,
+  work_schedule_maintenance: false,
 }
 
 const FlagsContext = createContext<FlagsContextValue | null>(null)

@@ -104,6 +104,26 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate is_deleted column: {migrate_err}")
 
             try:
+                if conn.dialect.name == "sqlite":
+                    res = await conn.execute(text("PRAGMA table_info(work_schedule_components)"))
+                    cols = [row[1] for row in res.fetchall()]
+                    has_col = "is_postponed" in cols
+                else:
+                    res = await conn.execute(text("SHOW COLUMNS FROM work_schedule_components LIKE 'is_postponed'"))
+                    has_col = res.fetchone() is not None
+                
+                if not has_col:
+                    logger.info("  [MIGRATION] Adding 'is_postponed' column to 'work_schedule_components'...")
+                    if conn.dialect.name == "sqlite":
+                        await conn.execute(text("ALTER TABLE work_schedule_components ADD COLUMN is_postponed INTEGER NOT NULL DEFAULT 0"))
+                    else:
+                        await conn.execute(text("ALTER TABLE work_schedule_components ADD COLUMN is_postponed TINYINT(1) NOT NULL DEFAULT 0"))
+                    await conn.commit()
+                    logger.info("  [SUCCESS] 'is_postponed' column added successfully.")
+            except Exception as migrate_err:
+                logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate is_postponed column: {migrate_err}")
+
+            try:
                 # Use advisory locks to prevent concurrent worker processes deadlocking on DDL metadata locks
                 lock_res = await conn.execute(text("SELECT GET_LOCK('kmti_migration_lock', 10)"))
                 if lock_res.scalar() == 1:

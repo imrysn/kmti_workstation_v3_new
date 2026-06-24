@@ -1,15 +1,12 @@
 import os
 import re
 import datetime
-import unicodedata
+import asyncio
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-import openpyxl
-from io import BytesIO
 
 from db.database import get_db, get_fms_db
 from core.auth import get_current_user
@@ -17,6 +14,9 @@ from models.user import User, UserRole
 from models.fms import FmsUser
 from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment
 from socket_manager import sio
+
+from services.work_schedule_repository import WorkScheduleRepository
+from services.excel_schedule_service import ExcelScheduleService
 
 router = APIRouter()
 
@@ -40,7 +40,7 @@ class ComponentCreatePayload(BaseModel):
     parts_2d: Optional[str] = "-"
     status: Optional[str] = "Pending/Not Started"
     submitted_date: Optional[str] = None
-
+    is_postponed: Optional[bool] = False
 
 class ComponentUpdateAllPayload(BaseModel):
     unit_code: Optional[str] = None
@@ -50,7 +50,18 @@ class ComponentUpdateAllPayload(BaseModel):
     parts_2d: Optional[str] = None
     status: Optional[str] = None
     submitted_date: Optional[str] = None
+    is_postponed: Optional[bool] = None
 
+class TimelineUpdatePayload(BaseModel):
+    member_name: str
+    col_index: int
+    value: str
+
+class TimelineSpanPayload(BaseModel):
+    member_name: str
+    start_col: int
+    end_col: int
+    job_code: str
 
 # --- Permission Dependency ---
 
@@ -64,6 +75,7 @@ async def require_schedule_write(
     
     # Check FMS DB role
     try:
+        from sqlalchemy import select
         fms_res = await fms_db.execute(select(FmsUser).where(FmsUser.username == current_user.username))
         fms_user = fms_res.scalar_one_or_none()
         if fms_user and fms_user.role.upper() in ("TEAM LEADER", "LEADER", "ADMIN"):
@@ -94,18 +106,28 @@ def normalize_status(status_val):
 
 # --- Routing Endpoints ---
 
+@router.get("/permissions")
+async def get_permissions(
+    current_user = Depends(get_current_user),
+    fms_db: AsyncSession = Depends(get_fms_db)
+):
+    """
+    Check if the current user is authorized to edit the work schedule.
+    """
+    try:
+        await require_schedule_write(current_user, fms_db)
+        return {"success": True, "can_write": True}
+    except Exception:
+        return {"success": True, "can_write": False}
+
+
 @router.get("/jobs")
 async def get_jobs(db: AsyncSession = Depends(get_db)):
     """
     Get all schedule jobs with progress metrics.
     """
-    # Fetch all jobs
-    jobs_res = await db.execute(select(WorkScheduleJob))
-    jobs = jobs_res.scalars().all()
-    
-    # Fetch all components to calculate completion
-    comp_res = await db.execute(select(WorkScheduleComponent))
-    components = comp_res.scalars().all()
+    jobs = await WorkScheduleRepository.get_all_jobs(db)
+    components = await WorkScheduleRepository.get_all_components(db)
     
     # Group components by job_id
     comp_by_job = {}
@@ -117,9 +139,9 @@ async def get_jobs(db: AsyncSession = Depends(get_db)):
     res = []
     for j in jobs:
         comps = comp_by_job.get(j.job_id, [])
-        total = len(comps)
-        completed = sum(1 for c in comps if normalize_status(c.status) == "Completed")
-        checking = sum(1 for c in comps if normalize_status(c.status) == "For Checking")
+        total = sum(1 for c in comps if c.unit_code.upper().strip() != "POSTPONED")
+        completed = sum(1 for c in comps if normalize_status(c.status) == "Completed" and c.unit_code.upper().strip() != "POSTPONED")
+        checking = sum(1 for c in comps if normalize_status(c.status) == "For Checking" and c.unit_code.upper().strip() != "POSTPONED")
         progress = (completed / total * 100) if total > 0 else 0.0
         
         res.append({
@@ -129,10 +151,24 @@ async def get_jobs(db: AsyncSession = Depends(get_db)):
             "total_components": total,
             "completed_components": completed,
             "checking_components": checking,
-            "progress_percent": round(progress, 1)
+            "progress_percent": round(progress, 1),
+            "components": [
+                {
+                    "id": c.id,
+                    "job_id": c.job_id,
+                    "unit_code": c.unit_code,
+                    "assembly_3d": c.assembly_3d,
+                    "parts_3d": c.parts_3d,
+                    "assembly_2d": c.assembly_2d,
+                    "parts_2d": c.parts_2d,
+                    "status": c.status,
+                    "submitted_date": c.submitted_date.strftime("%Y-%m-%d") if c.submitted_date else None,
+                    "is_postponed": bool(c.is_postponed)
+                }
+                for c in comps
+            ]
         })
         
-    # Sort by progress (ascending or descending) or alphabetically by job ID
     res.sort(key=lambda x: x["job_id"])
     return {"success": True, "jobs": res}
 
@@ -142,11 +178,7 @@ async def get_components(job_id: str, db: AsyncSession = Depends(get_db)):
     """
     Get all components for a specific job.
     """
-    comp_res = await db.execute(
-        select(WorkScheduleComponent).where(WorkScheduleComponent.job_id == job_id)
-    )
-    components = comp_res.scalars().all()
-    
+    components = await WorkScheduleRepository.get_components_by_job(db, job_id)
     res = [
         {
             "id": c.id,
@@ -157,7 +189,8 @@ async def get_components(job_id: str, db: AsyncSession = Depends(get_db)):
             "assembly_2d": c.assembly_2d,
             "parts_2d": c.parts_2d,
             "status": c.status,
-            "submitted_date": c.submitted_date.strftime("%Y-%m-%d") if c.submitted_date else None
+            "submitted_date": c.submitted_date.strftime("%Y-%m-%d") if c.submitted_date else None,
+            "is_postponed": bool(c.is_postponed)
         }
         for c in components
     ]
@@ -174,7 +207,7 @@ async def update_component_status(
     """
     Update status and submitted date of a component.
     """
-    comp = await db.get(WorkScheduleComponent, component_id)
+    comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Component not found.")
         
@@ -209,18 +242,11 @@ async def create_job(
     """
     Create a new Job Group.
     """
-    # Check if job exists
-    res = await db.execute(select(WorkScheduleJob).where(WorkScheduleJob.job_id == payload.job_id))
-    if res.scalar_one_or_none():
+    existing_job = await WorkScheduleRepository.get_job_by_id(db, payload.job_id)
+    if existing_job:
         raise HTTPException(status_code=400, detail="Job ID already exists.")
         
-    new_job = WorkScheduleJob(
-        job_id=payload.job_id,
-        deadline=payload.deadline
-    )
-    db.add(new_job)
-    await db.commit()
-    await db.refresh(new_job)
+    new_job = await WorkScheduleRepository.create_job(db, payload.job_id, payload.deadline)
     await sio.emit('schedule_updated')
     return {"success": True, "job": {"id": new_job.id, "job_id": new_job.job_id, "deadline": new_job.deadline}}
 
@@ -235,8 +261,7 @@ async def create_component(
     """
     Create a new component unit in a job.
     """
-    job_res = await db.execute(select(WorkScheduleJob).where(WorkScheduleJob.job_id == job_id))
-    job = job_res.scalar_one_or_none()
+    job = await WorkScheduleRepository.get_job_by_id(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
         
@@ -247,7 +272,8 @@ async def create_component(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD.")
             
-    new_comp = WorkScheduleComponent(
+    new_comp = await WorkScheduleRepository.create_component(
+        db=db,
         job_id=job_id,
         unit_code=payload.unit_code,
         assembly_3d=payload.assembly_3d,
@@ -255,11 +281,9 @@ async def create_component(
         assembly_2d=payload.assembly_2d,
         parts_2d=payload.parts_2d,
         status=payload.status,
-        submitted_date=sub_date
+        submitted_date=sub_date,
+        is_postponed=1 if payload.is_postponed else 0
     )
-    db.add(new_comp)
-    await db.commit()
-    await db.refresh(new_comp)
     await sio.emit('schedule_updated')
     return {"success": True, "component": {"id": new_comp.id, "unit_code": new_comp.unit_code}}
 
@@ -273,13 +297,11 @@ async def delete_job(
     """
     Delete a Job Group and cascade delete all its components.
     """
-    job_res = await db.execute(select(WorkScheduleJob).where(WorkScheduleJob.job_id == job_id))
-    job = job_res.scalar_one_or_none()
+    job = await WorkScheduleRepository.get_job_by_id(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
         
-    await db.delete(job)
-    await db.commit()
+    await WorkScheduleRepository.delete_job(db, job)
     await sio.emit('schedule_updated')
     return {"success": True, "message": f"Job '{job_id}' deleted successfully."}
 
@@ -293,12 +315,11 @@ async def delete_component(
     """
     Delete a specific drawing component unit.
     """
-    comp = await db.get(WorkScheduleComponent, component_id)
+    comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Component not found.")
         
-    await db.delete(comp)
-    await db.commit()
+    await WorkScheduleRepository.delete_component(db, comp)
     await sio.emit('schedule_updated')
     return {"success": True, "message": "Component deleted successfully."}
 
@@ -313,7 +334,7 @@ async def patch_component(
     """
     Modify any details of a drawing component unit.
     """
-    comp = await db.get(WorkScheduleComponent, component_id)
+    comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Component not found.")
         
@@ -338,6 +359,9 @@ async def patch_component(
         else:
             comp.submitted_date = None
             
+    if payload.is_postponed is not None:
+        comp.is_postponed = 1 if payload.is_postponed else 0
+
     await db.commit()
     await sio.emit('schedule_updated')
     return {
@@ -347,7 +371,8 @@ async def patch_component(
             "id": comp.id,
             "unit_code": comp.unit_code,
             "status": comp.status,
-            "submitted_date": comp.submitted_date.strftime("%Y-%m-%d") if comp.submitted_date else None
+            "submitted_date": comp.submitted_date.strftime("%Y-%m-%d") if comp.submitted_date else None,
+            "is_postponed": bool(comp.is_postponed)
         }
     }
 
@@ -365,71 +390,12 @@ async def import_from_excel(
         raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
         
     try:
-        wb = openpyxl.load_workbook(EXCEL_FILE_PATH, data_only=True)
-        ws = wb['Schedule']
+        jobs_dict = await asyncio.to_thread(ExcelScheduleService.parse_excel_for_import, EXCEL_FILE_PATH)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to open Excel workbook: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to parse Excel workbook: {e}")
         
-    jobs_dict = {}
-    current_job = None
-    
-    for r in range(1, ws.max_row + 1):
-        val_a = ws.cell(row=r, column=1).value
-        val_a_str = str(val_a).strip() if val_a is not None else ""
-        
-        if "Job Status" in val_a_str:
-            # Parse Job ID
-            m = re.match(r"(\d+)\s+Job\s+Status", val_a_str, re.IGNORECASE)
-            job_id = m.group(1) if m else val_a_str.replace("Job Status", "").strip()
-            
-            # Deadline in col B
-            deadline_val = ws.cell(row=r, column=2).value
-            deadline_str = str(deadline_val).strip() if deadline_val is not None else ""
-            
-            current_job = {
-                "deadline": deadline_str,
-                "components": []
-            }
-            jobs_dict[job_id] = current_job
-            
-        elif current_job:
-            if val_a_str == "" or val_a_str == "Machine/Unit Code" or val_a_str == "Legend:":
-                continue
-                
-            unit_code = val_a_str
-            assembly_3d = str(ws.cell(row=r, column=2).value or "").strip()
-            parts_3d = str(ws.cell(row=r, column=5).value or "").strip()
-            assembly_2d = str(ws.cell(row=r, column=7).value or "").strip()
-            parts_2d = str(ws.cell(row=r, column=10).value or "").strip()
-            status_val = str(ws.cell(row=r, column=12).value or "").strip()
-            submitted_val = ws.cell(row=r, column=16).value
-            
-            sub_date = None
-            if submitted_val:
-                if isinstance(submitted_val, (datetime.datetime, datetime.date)):
-                    sub_date = submitted_val.date() if isinstance(submitted_val, datetime.datetime) else submitted_val
-                else:
-                    try:
-                        # parse standard YYYY-MM-DD
-                        sub_date = datetime.datetime.strptime(str(submitted_val).split()[0], "%Y-%m-%d").date()
-                    except:
-                        pass
-                        
-            current_job["components"].append({
-                "unit_code": unit_code,
-                "assembly_3d": assembly_3d if assembly_3d else "-",
-                "parts_3d": parts_3d if parts_3d else "-",
-                "assembly_2d": assembly_2d if assembly_2d else "-",
-                "parts_2d": parts_2d if parts_2d else "-",
-                "status": status_val if status_val else "Pending/Not Started",
-                "submitted_date": sub_date
-            })
-            
-    # Clear and insert into DB
     try:
-        await db.execute(delete(WorkScheduleComponent))
-        await db.execute(delete(WorkScheduleJob))
-        await db.commit()
+        await WorkScheduleRepository.clear_all_components_and_jobs(db)
         
         for jid, job_info in jobs_dict.items():
             db_job = WorkScheduleJob(job_id=jid, deadline=job_info["deadline"])
@@ -471,213 +437,21 @@ async def export_to_excel(
     if not os.path.exists(EXCEL_FILE_PATH):
         raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
         
+    db_components = await WorkScheduleRepository.get_all_components(db)
+    db_jobs = await WorkScheduleRepository.get_all_jobs(db)
+    db_assignments = await WorkScheduleRepository.get_all_assignments(db)
+    
     try:
-        # Load without data_only=True to preserve formulas and formatting intact!
-        wb = openpyxl.load_workbook(EXCEL_FILE_PATH, data_only=False)
-        ws = wb['Schedule']
+        output = await asyncio.to_thread(
+            ExcelScheduleService.generate_excel_export,
+            EXCEL_FILE_PATH,
+            db_components,
+            db_jobs,
+            db_assignments
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load master Excel template: {e}")
-
-    # Fetch all database components
-    comp_res = await db.execute(select(WorkScheduleComponent))
-    db_components = comp_res.scalars().all()
-    
-    # Fetch all database jobs to track which ones need appending
-    jobs_res = await db.execute(select(WorkScheduleJob))
-    db_jobs = jobs_res.scalars().all()
-    
-    # Index components by (job_id, unit_code) in lowercase for mapping
-    db_map = {}
-    for c in db_components:
-        key = (str(c.job_id).strip().lower(), str(c.unit_code).strip().lower())
-        db_map[key] = c
-
-    # Scan the worksheet in-place and update values
-    current_job_id = None
-    seen_jobs = set()
-    
-    for r in range(1, ws.max_row + 1):
-        val_a = ws.cell(row=r, column=1).value
-        val_a_str = str(val_a).strip() if val_a is not None else ""
+        raise HTTPException(status_code=500, detail=f"Failed to generate Excel export: {e}")
         
-        # Check if row is a job header
-        if "Job Status" in val_a_str:
-            # Parse Job ID
-            m = re.match(r"(\d+)\s+Job\s+Status", val_a_str, re.IGNORECASE)
-            current_job_id = m.group(1) if m else val_a_str.replace("Job Status", "").strip()
-            seen_jobs.add(current_job_id.strip().lower())
-            
-        elif current_job_id:
-            # Check if this row represents a component
-            if val_a_str == "" or val_a_str == "Machine/Unit Code" or val_a_str == "Legend:":
-                continue
-                
-            unit_code = val_a_str
-            key = (str(current_job_id).strip().lower(), str(unit_code).strip().lower())
-            
-            if key in db_map:
-                db_comp = db_map[key]
-                # Update Status (Column L, index 12)
-                ws.cell(row=r, column=12, value=db_comp.status)
-                # Update Submitted Date (Column P, index 16)
-                if db_comp.submitted_date:
-                    ws.cell(row=r, column=16, value=db_comp.submitted_date.strftime("%Y-%m-%d"))
-                else:
-                    ws.cell(row=r, column=16, value=None)
-
-    # Find reference template rows dynamically from existing sheet contents
-    ref_header_row = None
-    ref_comp_row = None
-    
-    for r in range(1, ws.max_row + 1):
-        val_a = ws.cell(row=r, column=1).value
-        val_a_str = str(val_a).strip() if val_a is not None else ""
-        if "Job Status" in val_a_str:
-            ref_header_row = r
-        status_val = ws.cell(row=r, column=12).value
-        if status_val and str(status_val).strip().lower() in ("pending/not started", "complete", "for checking"):
-            ref_comp_row = r
-            
-    if not ref_header_row:
-        ref_header_row = 1212
-    if not ref_comp_row:
-        ref_comp_row = 1216
-
-    # Helper function to copy styles cell-by-cell
-    from copy import copy
-    def copy_cell_style(src_cell, dst_cell):
-        if src_cell.has_style:
-            dst_cell.font = copy(src_cell.font)
-            dst_cell.border = copy(src_cell.border)
-            dst_cell.fill = copy(src_cell.fill)
-            dst_cell.alignment = copy(src_cell.alignment)
-            dst_cell.number_format = src_cell.number_format
-
-    # Find the actual last populated row of the sheet (avoiding empty styled rows)
-    last_used_row = 1
-    for r in range(ws.max_row, 0, -1):
-        if any(ws.cell(row=r, column=c).value is not None for c in range(1, 20)):
-            last_used_row = r
-            break
-            
-    next_row = last_used_row + 1
-
-    # Append any jobs/components added in database but not present in the Excel template
-    for j in db_jobs:
-        j_key = j.job_id.strip().lower()
-        if j_key not in seen_jobs:
-            # Append empty separator row
-            next_row += 1
-            
-            # Append Job Header row (e.g. 6969 Job Status)
-            for c in range(1, 20):
-                copy_cell_style(ws.cell(row=ref_header_row, column=c), ws.cell(row=next_row, column=c))
-            ws.cell(row=next_row, column=1, value=f"{j.job_id} Job Status")
-            ws.cell(row=next_row, column=2, value=f"Deadline: {j.deadline}" if j.deadline else "Deadline:")
-            if ws.row_dimensions[ref_header_row].height:
-                ws.row_dimensions[next_row].height = ws.row_dimensions[ref_header_row].height
-            next_row += 1
-            
-            # Append Subheader 1 (e.g. Machine/Unit Code, 3D, 2D, Status, Submitted Date)
-            for c in range(1, 20):
-                copy_cell_style(ws.cell(row=ref_header_row + 1, column=c), ws.cell(row=next_row, column=c))
-            ws.cell(row=next_row, column=1, value="Machine/Unit Code")
-            ws.cell(row=next_row, column=2, value="3D")
-            ws.cell(row=next_row, column=7, value="2D")
-            ws.cell(row=next_row, column=12, value="Status")
-            ws.cell(row=next_row, column=16, value="Submitted Date")
-            if ws.row_dimensions[ref_header_row + 1].height:
-                ws.row_dimensions[next_row].height = ws.row_dimensions[ref_header_row + 1].height
-            
-            # Merge Subheader 1 cells
-            ws.merge_cells(start_row=next_row, start_column=1, end_row=next_row + 1, end_column=1)
-            ws.merge_cells(start_row=next_row, start_column=2, end_row=next_row, end_column=6)
-            ws.merge_cells(start_row=next_row, start_column=7, end_row=next_row, end_column=11)
-            ws.merge_cells(start_row=next_row, start_column=12, end_row=next_row + 1, end_column=15)
-            ws.merge_cells(start_row=next_row, start_column=16, end_row=next_row, end_column=19)
-            next_row += 1
-            
-            # Append Subheader 2 (e.g. Assembly, Parts, Assembly, Parts)
-            for c in range(1, 20):
-                copy_cell_style(ws.cell(row=ref_header_row + 2, column=c), ws.cell(row=next_row, column=c))
-            ws.cell(row=next_row, column=2, value="Assembly")
-            ws.cell(row=next_row, column=5, value="Parts")
-            ws.cell(row=next_row, column=7, value="Assembly")
-            ws.cell(row=next_row, column=10, value="Parts")
-            ws.cell(row=next_row, column=16, value="Date")
-            if ws.row_dimensions[ref_header_row + 2].height:
-                ws.row_dimensions[next_row].height = ws.row_dimensions[ref_header_row + 2].height
-                
-            # Merge Subheader 2 cells
-            ws.merge_cells(start_row=next_row, start_column=2, end_row=next_row, end_column=4)
-            ws.merge_cells(start_row=next_row, start_column=5, end_row=next_row, end_column=6)
-            ws.merge_cells(start_row=next_row, start_column=7, end_row=next_row, end_column=9)
-            ws.merge_cells(start_row=next_row, start_column=10, end_row=next_row, end_column=11)
-            ws.merge_cells(start_row=next_row, start_column=16, end_row=next_row, end_column=19)
-            next_row += 1
-            
-            # Append component rows for this job
-            j_comps = [c for c in db_components if str(c.job_id).strip().lower() == j_key]
-            for c_item in j_comps:
-                for c in range(1, 20):
-                    copy_cell_style(ws.cell(row=ref_comp_row, column=c), ws.cell(row=next_row, column=c))
-                
-                ws.cell(row=next_row, column=1, value=c_item.unit_code)
-                ws.cell(row=next_row, column=2, value=c_item.assembly_3d)
-                ws.cell(row=next_row, column=5, value=c_item.parts_3d)
-                ws.cell(row=next_row, column=7, value=c_item.assembly_2d)
-                ws.cell(row=next_row, column=10, value=c_item.parts_2d)
-                ws.cell(row=next_row, column=12, value=c_item.status)
-                if c_item.submitted_date:
-                    ws.cell(row=next_row, column=16, value=c_item.submitted_date.strftime("%Y-%m-%d"))
-                else:
-                    ws.cell(row=next_row, column=16, value=None)
-                    
-                if ws.row_dimensions[ref_comp_row].height:
-                    ws.row_dimensions[next_row].height = ws.row_dimensions[ref_comp_row].height
-                    
-                # Merge component cells
-                ws.merge_cells(start_row=next_row, start_column=2, end_row=next_row, end_column=4)
-                ws.merge_cells(start_row=next_row, start_column=5, end_row=next_row, end_column=6)
-                ws.merge_cells(start_row=next_row, start_column=7, end_row=next_row, end_column=9)
-                ws.merge_cells(start_row=next_row, start_column=10, end_row=next_row, end_column=11)
-                ws.merge_cells(start_row=next_row, start_column=12, end_row=next_row, end_column=15)
-                ws.merge_cells(start_row=next_row, start_column=16, end_row=next_row, end_column=19)
-                next_row += 1
-
-
-    # 2. Fetch and write all database Gantt timeline assignments (System-first)
-    assign_res = await db.execute(select(WorkScheduleAssignment))
-    db_assignments = assign_res.scalars().all()
-    
-    # Map member name -> row number in the spreadsheet (Rows 5 to 10)
-    member_rows = {}
-    for r in range(5, 11):
-        name_val = ws.cell(row=r, column=8).value
-        if name_val:
-            norm_name = unicodedata.normalize('NFC', str(name_val).strip().lower())
-            member_rows[norm_name] = r
-            
-    # Write assignments to the cells
-    for a in db_assignments:
-        member_key = unicodedata.normalize('NFC', a.member_name.strip().lower())
-        if member_key in member_rows:
-            target_row = member_rows[member_key]
-            ws.cell(row=target_row, column=a.col_index, value=a.value if a.value else None)
-        
-    # Overwrite the server Excel file to keep it synced (fail-safe if locked/open)
-    try:
-        wb.save(EXCEL_FILE_PATH)
-    except Exception as e:
-        import logging
-        logger = logging.getLogger("uvicorn.error")
-        logger.warning(f"Could not overwrite source file {EXCEL_FILE_PATH} (spreadsheet may be open by user): {e}")
-        
-    # Stream back as response
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
-    
     headers = {
         'Content-Disposition': 'attachment; filename="KMTI Work Schedule Monitoring 2026.06.19.xlsx"'
     }
@@ -688,13 +462,6 @@ async def export_to_excel(
     )
 
 
-
-class TimelineUpdatePayload(BaseModel):
-    member_name: str
-    col_index: int
-    value: str
-
-
 @router.get("/timeline")
 async def get_timeline(db: AsyncSession = Depends(get_db)):
     """
@@ -703,74 +470,17 @@ async def get_timeline(db: AsyncSession = Depends(get_db)):
     if not os.path.exists(EXCEL_FILE_PATH):
         raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
         
+    db_assignments = await WorkScheduleRepository.get_all_assignments(db)
+    
     try:
-        # Load with data_only=True to get final computed string values
-        wb = openpyxl.load_workbook(EXCEL_FILE_PATH, data_only=True)
-        ws = wb['Schedule']
+        res = await ExcelScheduleService.parse_timeline(EXCEL_FILE_PATH, db_assignments)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load spreadsheet: {e}")
         
-    # Get members (Rows 5 to 10)
-    members = []
-    for r in range(5, 11):
-        name_val = ws.cell(row=r, column=8).value
-        if name_val:
-            members.append({
-                "row": r,
-                "name": str(name_val).strip()
-            })
-            
-    # Find the last column that has a day number in row 4 (day headers)
-    max_gantt_col = 20
-    for c in range(ws.max_column, 19, -1):
-        if ws.cell(row=4, column=c).value is not None:
-            max_gantt_col = c
-            break
-            
-    # Load database assignments
-    db_res = await db.execute(select(WorkScheduleAssignment))
-    db_assignments = db_res.scalars().all()
-    db_map = {}
-    for a in db_assignments:
-        db_map[(a.member_name.strip().lower(), a.col_index)] = a.value
-        
-    timeline_days = []
-    
-    # Capture columns from 20 to max_gantt_col
-    for c in range(20, max_gantt_col + 1):
-        day_num = ws.cell(row=4, column=c).value
-        day_week = ws.cell(row=3, column=c).value
-        
-        # Backtrack to find month
-        month_name = ""
-        for col_idx in range(c, 19, -1):
-            m_val = ws.cell(row=2, column=col_idx).value
-            if m_val:
-                month_name = str(m_val).strip()
-                break
-                
-        # Get assignments for each member on this column
-        assignments = {}
-        for m in members:
-            key = (m["name"].strip().lower(), c)
-            if key in db_map:
-                assignments[m["name"]] = db_map[key] if db_map[key] is not None else ""
-            else:
-                cell_val = ws.cell(row=m["row"], column=c).value
-                assignments[m["name"]] = str(cell_val).strip() if cell_val is not None else ""
-            
-        timeline_days.append({
-            "col_index": c,
-            "month": month_name,
-            "day": day_num,
-            "weekday": day_week,
-            "assignments": assignments
-        })
-        
     return {
         "success": True,
-        "members": [m["name"] for m in members],
-        "timeline": timeline_days
+        "members": res["members"],
+        "timeline": res["timeline"]
     }
 
 
@@ -783,36 +493,11 @@ async def update_timeline_cell(
     """
     Update a single Gantt chart cell in the database.
     """
-    if not os.path.exists(EXCEL_FILE_PATH):
-        raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
-        
-    try:
-        wb = openpyxl.load_workbook(EXCEL_FILE_PATH, read_only=True)
-        ws = wb['Schedule']
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load spreadsheet: {e}")
-        
-    # Find the row for this member
-    target_row = None
-    for r in range(5, 11):
-        name_val = ws.cell(row=r, column=8).value
-        if name_val:
-            normalized_name_val = unicodedata.normalize('NFC', str(name_val).strip().lower())
-            normalized_payload_name = unicodedata.normalize('NFC', payload.member_name.strip().lower())
-            if normalized_name_val == normalized_payload_name:
-                target_row = r
-                break
-            
+    target_row = await ExcelScheduleService.get_target_row_for_member(EXCEL_FILE_PATH, payload.member_name)
     if not target_row:
         raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found in Excel legend.")
         
-    # Find existing assignment in database or create new one
-    stmt = select(WorkScheduleAssignment).where(
-        WorkScheduleAssignment.member_name == payload.member_name,
-        WorkScheduleAssignment.col_index == payload.col_index
-    )
-    res = await db.execute(stmt)
-    assignment = res.scalar_one_or_none()
+    assignment = await WorkScheduleRepository.get_assignment(db, payload.member_name, payload.col_index)
     
     if assignment:
         assignment.value = payload.value if payload.value else None
@@ -829,13 +514,6 @@ async def update_timeline_cell(
     return {"success": True, "message": "Timeline cell updated in database."}
 
 
-class TimelineSpanPayload(BaseModel):
-    member_name: str
-    start_col: int
-    end_col: int
-    job_code: str
-
-
 @router.post("/timeline/span")
 async def update_timeline_span(
     payload: TimelineSpanPayload,
@@ -845,40 +523,15 @@ async def update_timeline_span(
     """
     Update a range of Gantt chart cells representing a duration span in the database.
     """
-    if not os.path.exists(EXCEL_FILE_PATH):
-        raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
-        
-    try:
-        wb = openpyxl.load_workbook(EXCEL_FILE_PATH, read_only=True)
-        ws = wb['Schedule']
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load spreadsheet: {e}")
-        
-    # Find the row for this member
-    target_row = None
-    for r in range(5, 11):
-        name_val = ws.cell(row=r, column=8).value
-        if name_val:
-            normalized_name_val = unicodedata.normalize('NFC', str(name_val).strip().lower())
-            normalized_payload_name = unicodedata.normalize('NFC', payload.member_name.strip().lower())
-            if normalized_name_val == normalized_payload_name:
-                target_row = r
-                break
-            
+    target_row = await ExcelScheduleService.get_target_row_for_member(EXCEL_FILE_PATH, payload.member_name)
     if not target_row:
         raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found in Excel legend.")
         
     start = min(payload.start_col, payload.end_col)
     end = max(payload.start_col, payload.end_col)
     
-    # Query existing database assignments in the range
-    stmt = select(WorkScheduleAssignment).where(
-        WorkScheduleAssignment.member_name == payload.member_name,
-        WorkScheduleAssignment.col_index >= start,
-        WorkScheduleAssignment.col_index <= end
-    )
-    res = await db.execute(stmt)
-    existing_assignments = {a.col_index: a for a in res.scalars().all()}
+    existing_list = await WorkScheduleRepository.get_assignments_in_range(db, payload.member_name, start, end)
+    existing_assignments = {a.col_index: a for a in existing_list}
     
     center = (start + end) // 2
     for c in range(start, end + 1):
@@ -903,5 +556,3 @@ async def update_timeline_span(
     await db.commit()
     await sio.emit('schedule_updated')
     return {"success": True, "message": "Timeline span updated in database."}
-
-
