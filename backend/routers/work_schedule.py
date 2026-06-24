@@ -32,6 +32,10 @@ class JobCreatePayload(BaseModel):
     job_id: str
     deadline: Optional[str] = None
 
+class JobUpdatePayload(BaseModel):
+    job_id: Optional[str] = None
+    deadline: Optional[str] = None
+
 class ComponentCreatePayload(BaseModel):
     unit_code: str
     assembly_3d: Optional[str] = "-"
@@ -311,6 +315,76 @@ async def delete_job(
     await WorkScheduleRepository.delete_job(db, job)
     await sio.emit('schedule_updated')
     return {"success": True, "message": f"Job '{job_id}' deleted successfully."}
+
+
+@router.patch("/jobs/{job_id}")
+async def patch_job(
+    job_id: str,
+    payload: JobUpdatePayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Modify job details (e.g. job_id, deadline) and cascade updates.
+    """
+    job = await WorkScheduleRepository.get_job_by_id(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+        
+    old_job_id = job.job_id
+    new_job_id = payload.job_id
+    
+    if new_job_id and new_job_id != old_job_id:
+        # Check if new job_id already exists
+        exists = await WorkScheduleRepository.get_job_by_id(db, new_job_id)
+        if exists:
+            raise HTTPException(status_code=400, detail="Job ID already exists.")
+            
+        dialect = db.bind.dialect.name
+        if dialect == "mysql":
+            await db.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+        elif dialect == "sqlite":
+            await db.execute(text("PRAGMA foreign_keys = OFF"))
+            
+        try:
+            # Update components referencing old_job_id
+            await db.execute(
+                text("UPDATE work_schedule_components SET job_id = :new_id WHERE job_id = :old_id"),
+                {"new_id": new_job_id, "old_id": old_job_id}
+            )
+            # Update assignments matching old_job_id
+            await db.execute(
+                text("UPDATE work_schedule_assignments SET value = :new_id WHERE value = :old_id"),
+                {"new_id": new_job_id, "old_id": old_job_id}
+            )
+            # Update job itself
+            job.job_id = new_job_id
+            if payload.deadline is not None:
+                job.deadline = payload.deadline
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise e
+        finally:
+            if dialect == "mysql":
+                await db.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+            elif dialect == "sqlite":
+                await db.execute(text("PRAGMA foreign_keys = ON"))
+    else:
+        if payload.deadline is not None:
+            job.deadline = payload.deadline
+        await db.commit()
+        
+    await sio.emit('schedule_updated')
+    return {
+        "success": True,
+        "message": f"Job updated successfully.",
+        "job": {
+            "id": job.id,
+            "job_id": job.job_id,
+            "deadline": job.deadline
+        }
+    }
 
 
 @router.delete("/components/{component_id}")

@@ -28,7 +28,6 @@ export default function AddJobModal() {
     setIsAddingJob,
     newJobId,
     setNewJobId,
-    newJobDeadline,
     setNewJobDeadline,
     loadJobs
   } = useWorkScheduleContext()
@@ -177,7 +176,7 @@ export default function AddJobModal() {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h4 className="schedule-modal-title" style={{ fontSize: '15px', margin: 0 }}>
-            Add Drawing Components
+            Add Row
           </h4>
           <button
             type="button"

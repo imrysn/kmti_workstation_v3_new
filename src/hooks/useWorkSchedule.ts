@@ -163,6 +163,7 @@ export function useWorkSchedule() {
   const [isLoadingTimeline, setIsLoadingTimeline] = useState(false)
   const [editingTimelineCell, setEditingTimelineCell] = useState<{ member: string; colIndex: number; value: string } | null>(null)
   const [isSavingTimelineCell, setIsSavingTimelineCell] = useState(false)
+  const [editingJob, setEditingJob] = useState<IJob | null>(null)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
   const [isAddingEmployee, setIsAddingEmployee] = useState(false)
   const [renamingEmployee, setRenamingEmployee] = useState<string | null>(null)
@@ -1095,6 +1096,8 @@ export function useWorkSchedule() {
     sortBy,
     setSortBy,
     statusFilter,
-    setStatusFilter
+    setStatusFilter,
+    editingJob,
+    setEditingJob
   }
 }

@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import type { ITimelineDay } from '../../../hooks/useWorkSchedule'
 import { useWorkScheduleContext } from '../context/WorkScheduleContext'
-import { useModal } from '../../ModalContext'
 import { scheduleApi } from '../../../services/api'
 import TimelineCell from './TimelineCell'
 
@@ -33,11 +32,9 @@ export default function TimelineGrid({
   handleMouseUpCell
 }: TimelineGridProps) {
 
-  const { notify } = useModal()
   const {
     canWrite,
     loadTimeline,
-    handleRenameEmployee,
     handleDeleteEmployee,
     setRenamingEmployee
   } = useWorkScheduleContext()
@@ -114,12 +111,47 @@ export default function TimelineGrid({
   }
 
   if (isLoadingTimeline) {
+    // ── Timeline Skeleton ───────────────────────────────────────────
+    const COLS = 18
+    const ROWS = 5
     return (
-      <div className="schedule-loading-spinner" style={{ height: '120px' }}>
-        <svg className="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-          <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8" />
-        </svg>
-        <span>Loading calendar grid...</span>
+      <div className="sk-timeline-wrapper">
+        {/* Month header row */}
+        <div className="sk-timeline-header">
+          <div className="skeleton-cell sk-timeline-label" style={{ height: '12px', opacity: 0.5 }} />
+          {[0, 1, 2].map((m) => (
+            <div
+              key={m}
+              className="skeleton-cell"
+              style={{ flex: m === 1 ? 2 : 1, height: '12px', opacity: 0.35, borderRadius: '4px' }}
+            />
+          ))}
+        </div>
+        {/* Day header row */}
+        <div className="sk-timeline-row" style={{ padding: '6px 12px' }}>
+          <div className="skeleton-cell sk-timeline-label" style={{ height: '11px', opacity: 0.4 }} />
+          {Array.from({ length: COLS }).map((_, i) => (
+            <div key={i} className="skeleton-cell sk-timeline-cell" style={{ height: '20px', opacity: 0.25 }} />
+          ))}
+        </div>
+        {/* Member rows */}
+        {Array.from({ length: ROWS }).map((_, row) => (
+          <div key={row} className="sk-timeline-row">
+            {/* Member name */}
+            <div
+              className="skeleton-cell sk-timeline-label"
+              style={{ width: `${70 + (row * 13) % 40}px` }}
+            />
+            {/* Timeline cells */}
+            {Array.from({ length: COLS }).map((_, col) => (
+              <div
+                key={col}
+                className="skeleton-cell sk-timeline-cell"
+                style={{ opacity: 0.18 + ((row + col) % 3) * 0.06 }}
+              />
+            ))}
+          </div>
+        ))}
       </div>
     )
   }

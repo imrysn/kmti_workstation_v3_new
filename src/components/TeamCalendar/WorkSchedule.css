@@ -1,3 +1,68 @@
+/* ── Skeleton layouts — animation delegated to .skeleton-cell (TeamCalendar.css) ── */
+
+/* Timeline skeleton */
+.sk-timeline-wrapper {
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.sk-timeline-header {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.02);
+}
+
+.sk-timeline-row {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  align-items: center;
+}
+
+.sk-timeline-label {
+  width: 110px;
+  height: 14px;
+  flex-shrink: 0;
+  min-height: unset;    /* override .skeleton-cell min-height */
+}
+
+.sk-timeline-cell {
+  flex: 1;
+  height: 28px;
+  min-height: unset;
+}
+
+/* Job card skeleton */
+.sk-job-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  break-inside: avoid;
+}
+
+.sk-card-title   { height: 18px; width: 55%; margin-bottom: 10px; min-height: unset; }
+.sk-card-meta    { height: 12px; width: 80%; margin-bottom: 16px; min-height: unset; }
+.sk-card-divider { height: 1px;  width: 100%; margin-bottom: 14px; min-height: unset; opacity: 0.4; }
+
+.sk-table-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.sk-table-row .sk-col-main  { height: 13px; flex: 2;      min-height: unset; }
+.sk-table-row .sk-col-sm    { height: 13px; flex: 1;      min-height: unset; }
+.sk-table-row .sk-col-badge { height: 22px; width: 90px;  min-height: unset; border-radius: 20px; }
+
+
+
 /* Page Container Override for Work Schedule tab */
 .team-calendar-page.schedule-active {
   height: auto !important;

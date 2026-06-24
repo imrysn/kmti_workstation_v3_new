@@ -103,7 +103,7 @@ export default function AddComponentModal() {
   return (
     <div className="schedule-modal-overlay">
       <form className="schedule-modal-card" onSubmit={handleSubmit} style={{ maxWidth: '1050px', width: '95%' }}>
-        <h3 className="schedule-modal-title">Add Component Drawings to Job {selectedJob.job_id}</h3>
+        <h3 className="schedule-modal-title">Add row to Job {selectedJob.job_id}</h3>
 
         {errorMsg && (
           <div style={{

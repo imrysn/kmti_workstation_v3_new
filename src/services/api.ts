@@ -509,6 +509,8 @@ export const scheduleApi = {
     api.post(`/schedule/components/${componentId}/status`, { status, submitted_date: submittedDate }).then(r => r.data),
   createJob: (jobId: string, deadline?: string | null) =>
     api.post('/schedule/jobs', { job_id: jobId, deadline }).then(r => r.data),
+  updateJob: (jobId: string, data: { job_id?: string; deadline?: string | null }) =>
+    api.patch(`/schedule/jobs/${jobId}`, data).then(r => r.data),
   createComponent: (jobId: string, data: {
     unit_code: string;
     assembly_3d?: string;

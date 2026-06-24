@@ -15,7 +15,8 @@ function JobCard({ j }: { j: IJob }) {
     handleDeleteJob,
     openEditModal,
     handleDeleteComponent,
-    getStatusClass
+    getStatusClass,
+    setEditingJob
   } = useWorkScheduleContext()
 
   const { normalComps, postponedComps, sentinels } = useMemo(() => {
@@ -114,6 +115,19 @@ function JobCard({ j }: { j: IJob }) {
           )}
           {canWrite && (
             <button
+              className="btn-schedule-action"
+              style={{ padding: '6px 8px', borderRadius: '6px' }}
+              title="Edit Job"
+              onClick={() => setEditingJob(j)}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+          )}
+          {canWrite && (
+            <button
               className="btn-schedule-action danger"
               style={{ padding: '6px 8px', borderRadius: '6px' }}
               title="Delete this Job Group"
@@ -167,7 +181,7 @@ function JobCard({ j }: { j: IJob }) {
   )
 }
 
-function WorkScheduleContent() {
+function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
   const { alert } = useModal()
   const {
     flags,
@@ -194,8 +208,6 @@ function WorkScheduleContent() {
     handleMouseDown,
     handleMouseEnter,
     handleMouseUpCell,
-    handleAddEmployee,
-    setIsAddingEmployee,
     sortBy,
     setSortBy,
     statusFilter,
@@ -204,6 +216,26 @@ function WorkScheduleContent() {
 
   const [visibleCount, setVisibleCount] = useState(10)
   const loaderRef = useRef<HTMLDivElement | null>(null)
+
+  // Scroll to today whenever the tab becomes visible and timeline data is ready.
+  // We can't rely on the mount-time scroll because WorkSchedule is always mounted
+  // (display:none when hidden), so scrollIntoView on a hidden element is a no-op.
+  useEffect(() => {
+    if (!isVisible || timelineDays.length === 0) return
+    // requestAnimationFrame ensures display:block has been applied before we scroll
+    const raf = requestAnimationFrame(() => {
+      const el = timelineScrollRef.current
+      if (!el) return
+      const todayCell = el.querySelector('.cell-today')
+      if (todayCell) {
+        todayCell.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'center' })
+      } else {
+        // Today is not in the current year view — jump to end
+        el.scrollLeft = el.scrollWidth
+      }
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [isVisible, timelineDays])
 
   useEffect(() => {
     setVisibleCount(10)
@@ -420,12 +452,37 @@ function WorkScheduleContent() {
         </div>
         <div className="jobs-cards-scroll-wrapper" style={{ columnCount: 2, columnGap: '20px', display: 'block' }}>
           {isLoadingJobs ? (
-            <div className="schedule-loading-spinner" style={{ height: '200px' }}>
-              <svg className="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8" />
-              </svg>
-              <span>Loading jobs...</span>
-            </div>
+            // ── Job Cards Skeleton ──────────────────────────────────
+            <>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="sk-job-card">
+                  {/* Card header */}
+                  <div className="skeleton-cell sk-card-title" style={{ width: i % 2 === 0 ? '50%' : '62%' }} />
+                  <div className="skeleton-cell sk-card-meta" style={{ width: i % 2 === 0 ? '78%' : '68%' }} />
+                  <div className="skeleton-cell sk-card-divider" />
+                  {/* Table header row */}
+                  <div className="sk-table-row" style={{ marginBottom: '14px' }}>
+                    <div className="skeleton-cell sk-col-main" style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-badge" style={{ height: '11px', opacity: 0.5 }} />
+                  </div>
+                  {/* Data rows */}
+                  {[0, 1, 2].map((r) => (
+                    <div key={r} className="sk-table-row">
+                      <div className="skeleton-cell sk-col-main" style={{ width: r === 1 ? '30%' : undefined }} />
+                      <div className="skeleton-cell sk-col-sm" />
+                      <div className="skeleton-cell sk-col-sm" />
+                      <div className="skeleton-cell sk-col-sm" />
+                      <div className="skeleton-cell sk-col-sm" />
+                      <div className="skeleton-cell sk-col-badge" />
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </>
           ) : filteredJobs.length === 0 ? (
             <div className="no-schedule-selected" style={{ height: '200px' }}>
               <h3>No Jobs Found</h3>
@@ -449,10 +506,10 @@ function WorkScheduleContent() {
   )
 }
 
-export default function WorkSchedule() {
+export default function WorkSchedule({ isVisible }: { isVisible: boolean }) {
   return (
     <WorkScheduleProvider>
-      <WorkScheduleContent />
+      <WorkScheduleContent isVisible={isVisible} />
     </WorkScheduleProvider>
   )
 }

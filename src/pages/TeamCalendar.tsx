@@ -126,7 +126,7 @@ export default function TeamCalendar() {
       {/* Keep both views always mounted — only toggle CSS visibility.
            This avoids a full remount + API refetch on every tab switch. */}
       <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }}>
-        <WorkSchedule />
+        <WorkSchedule isVisible={activeTab === 'schedule'} />
       </div>
 
       <div style={{ display: activeTab === 'calendar' ? 'contents' : 'none' }}>
