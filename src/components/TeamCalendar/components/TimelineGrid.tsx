@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import type { ITimelineDay } from '../../../hooks/useWorkSchedule'
 import { useWorkScheduleContext } from '../context/WorkScheduleContext'
+import { useModal } from '../../ModalContext'
 import { scheduleApi } from '../../../services/api'
 import TimelineCell from './TimelineCell'
 
@@ -32,8 +33,32 @@ export default function TimelineGrid({
   handleMouseUpCell
 }: TimelineGridProps) {
 
-  const { canWrite, loadTimeline } = useWorkScheduleContext()
+  const { notify } = useModal()
+  const {
+    canWrite,
+    loadTimeline,
+    handleRenameEmployee,
+    handleDeleteEmployee,
+    setRenamingEmployee
+  } = useWorkScheduleContext()
   const [activePopoverDay, setActivePopoverDay] = useState<ITimelineDay | null>(null)
+
+  React.useEffect(() => {
+    const el = timelineScrollRef.current
+    if (!el) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault()
+        el.scrollLeft += e.deltaY
+      }
+    }
+
+    el.addEventListener('wheel', handleWheel, { passive: false })
+    return () => {
+      el.removeEventListener('wheel', handleWheel)
+    }
+  }, [timelineScrollRef])
 
   const handleHeaderClick = (day: ITimelineDay) => {
     if (!canWrite) return
@@ -144,7 +169,65 @@ export default function TimelineGrid({
         <tbody>
           {timelineMembers.map((member) => (
             <tr key={member}>
-              <td className="timeline-member-col">{member}</td>
+              <td className="timeline-member-col">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '6px' }}>
+                    {member}
+                  </span>
+                  {canWrite && (
+                    <div className="member-row-actions" style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setRenamingEmployee(member)
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-secondary, rgba(255,255,255,0.6))',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title={`Rename ${member}`}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeleteEmployee(member)
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--danger, #ef4444)',
+                          cursor: 'pointer',
+                          padding: '2px 4px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title={`Remove ${member}`}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </td>
               {timelineDays.map((d, index) => {
                 const assignment = d.assignments[member] || ''
                 const dayStatus = d.assignments['__day_status__'] || ''

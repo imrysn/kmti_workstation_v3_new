@@ -88,6 +88,9 @@ export function useWorkSchedule() {
   const [editingTimelineCell, setEditingTimelineCell] = useState<{ member: string; colIndex: number; value: string } | null>(null)
   const [isSavingTimelineCell, setIsSavingTimelineCell] = useState(false)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
+  const [isAddingEmployee, setIsAddingEmployee] = useState(false)
+  const [renamingEmployee, setRenamingEmployee] = useState<string | null>(null)
+  const [employeeInputName, setEmployeeInputName] = useState('')
 
   // Compute filtered timelineDays based on chosen year
   const timelineDays = useMemo(() => {
@@ -684,6 +687,113 @@ export function useWorkSchedule() {
     }
   }
 
+  const handleAddEmployee = async (name: string) => {
+    const rollbackMembers = [...timelineMembers]
+    const rollbackDays = [...allTimelineDays]
+
+    // Optimistic Update
+    setTimelineMembers(prev => [...prev, name])
+    setAllTimelineDays(prevDays =>
+      prevDays.map(day => ({
+        ...day,
+        assignments: {
+          ...day.assignments,
+          [name]: ''
+        }
+      }))
+    )
+
+    try {
+      const res = await scheduleApi.createMember(name)
+      if (res.success) {
+        loadTimeline(true)
+      } else {
+        throw new Error(res.message || "Failed to add employee")
+      }
+    } catch (err: any) {
+      setTimelineMembers(rollbackMembers)
+      setAllTimelineDays(rollbackDays)
+      const errMsg = err.response?.data?.error || err.message
+      alert(`Failed to add employee: ${errMsg}`)
+    }
+  }
+
+  const handleRenameEmployee = async (oldName: string, newName: string) => {
+    const rollbackMembers = [...timelineMembers]
+    const rollbackDays = [...allTimelineDays]
+
+    // Optimistic Update
+    setTimelineMembers(prev => prev.map(m => m === oldName ? newName : m))
+    setAllTimelineDays(prevDays =>
+      prevDays.map(day => {
+        const updatedAss = { ...day.assignments }
+        if (oldName in updatedAss) {
+          updatedAss[newName] = updatedAss[oldName]
+          delete updatedAss[oldName]
+        }
+        return {
+          ...day,
+          assignments: updatedAss
+        }
+      })
+    )
+
+    try {
+      const res = await scheduleApi.renameMember(oldName, newName)
+      if (res.success) {
+        loadTimeline(true)
+      } else {
+        throw new Error(res.message || "Failed to rename employee")
+      }
+    } catch (err: any) {
+      setTimelineMembers(rollbackMembers)
+      setAllTimelineDays(rollbackDays)
+      const errMsg = err.response?.data?.error || err.message
+      alert(`Failed to rename employee: ${errMsg}`)
+    }
+  }
+
+  const handleDeleteEmployee = async (name: string) => {
+    confirm(
+      `Are you sure you want to remove employee '${name}' and all their assignments? This cannot be undone.`,
+      async () => {
+        const rollbackMembers = [...timelineMembers]
+        const rollbackDays = [...allTimelineDays]
+
+        // Optimistic Update
+        setTimelineMembers(prev => prev.filter(m => m !== name))
+        setAllTimelineDays(prevDays =>
+          prevDays.map(day => {
+            const updatedAss = { ...day.assignments }
+            delete updatedAss[name]
+            return {
+              ...day,
+              assignments: updatedAss
+            }
+          })
+        )
+
+        try {
+          const res = await scheduleApi.deleteMember(name)
+          if (res.success) {
+            loadTimeline(true)
+          } else {
+            throw new Error(res.message || "Failed to delete employee")
+          }
+        } catch (err: any) {
+          setTimelineMembers(rollbackMembers)
+          setAllTimelineDays(rollbackDays)
+          const errMsg = err.response?.data?.error || err.message
+          alert(`Failed to delete employee: ${errMsg}`)
+        }
+      },
+      undefined,
+      'danger',
+      'Remove Employee',
+      'Remove'
+    )
+  }
+
   return {
     flags,
     isAdminOrIT,
@@ -777,6 +887,15 @@ export function useWorkSchedule() {
     handleMouseUpCell,
     getSpanDatesText,
     handleSaveTimelineSpan,
-    handleClearTimelineSpan
+    handleClearTimelineSpan,
+    handleAddEmployee,
+    handleRenameEmployee,
+    handleDeleteEmployee,
+    isAddingEmployee,
+    setIsAddingEmployee,
+    renamingEmployee,
+    setRenamingEmployee,
+    employeeInputName,
+    setEmployeeInputName
   }
 }

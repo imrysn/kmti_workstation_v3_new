@@ -2,7 +2,7 @@ from typing import List, Optional
 import datetime
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment
+from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember
 
 class WorkScheduleRepository:
     @staticmethod
@@ -110,3 +110,71 @@ class WorkScheduleRepository:
         await db.execute(delete(WorkScheduleComponent))
         await db.execute(delete(WorkScheduleJob))
         await db.commit()
+
+    @staticmethod
+    async def get_all_members(db: AsyncSession) -> List[WorkScheduleMember]:
+        stmt = select(WorkScheduleMember).order_by(WorkScheduleMember.display_order.asc(), WorkScheduleMember.id.asc())
+        res = await db.execute(stmt)
+        return list(res.scalars().all())
+
+    @staticmethod
+    async def create_member(db: AsyncSession, name: str) -> WorkScheduleMember:
+        # Check if already exists
+        stmt = select(WorkScheduleMember).where(WorkScheduleMember.name == name)
+        res = await db.execute(stmt)
+        existing = res.scalar_one_or_none()
+        if existing:
+            return existing
+            
+        # Get max display order
+        stmt = select(WorkScheduleMember)
+        res = await db.execute(stmt)
+        all_m = res.scalars().all()
+        next_order = max((m.display_order for m in all_m), default=0) + 1
+
+        new_member = WorkScheduleMember(name=name, display_order=next_order)
+        db.add(new_member)
+        await db.commit()
+        await db.refresh(new_member)
+        return new_member
+
+    @staticmethod
+    async def rename_member(db: AsyncSession, old_name: str, new_name: str) -> Optional[WorkScheduleMember]:
+        stmt = select(WorkScheduleMember).where(WorkScheduleMember.name == old_name)
+        res = await db.execute(stmt)
+        member = res.scalar_one_or_none()
+        if not member:
+            return None
+        
+        member.name = new_name
+        
+        # Also update assignments associated with this member name
+        from sqlalchemy import update
+        await db.execute(
+            update(WorkScheduleAssignment)
+            .where(WorkScheduleAssignment.member_name == old_name)
+            .values(member_name=new_name)
+        )
+        
+        await db.commit()
+        await db.refresh(member)
+        return member
+
+    @staticmethod
+    async def delete_member(db: AsyncSession, name: str) -> bool:
+        stmt = select(WorkScheduleMember).where(WorkScheduleMember.name == name)
+        res = await db.execute(stmt)
+        member = res.scalar_one_or_none()
+        if not member:
+            return False
+            
+        await db.delete(member)
+        
+        # Also delete assignments associated with this member name
+        await db.execute(
+            delete(WorkScheduleAssignment)
+            .where(WorkScheduleAssignment.member_name == name)
+        )
+        
+        await db.commit()
+        return True

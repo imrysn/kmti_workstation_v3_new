@@ -536,7 +536,11 @@ export const scheduleApi = {
     status?: string;
     submitted_date?: string | null;
     is_postponed?: boolean;
-  }) => api.patch(`/schedule/components/${componentId}`, data).then(r => r.data)
+  }) => api.patch(`/schedule/components/${componentId}`, data).then(r => r.data),
+  getMembers: () => api.get('/schedule/members').then(r => r.data),
+  createMember: (name: string) => api.post('/schedule/members', { name }).then(r => r.data),
+  renameMember: (oldName: string, newName: string) => api.put('/schedule/members', { old_name: oldName, new_name: newName }).then(r => r.data),
+  deleteMember: (name: string) => api.delete(`/schedule/members/${encodeURIComponent(name)}`).then(r => r.data)
 }
 
 

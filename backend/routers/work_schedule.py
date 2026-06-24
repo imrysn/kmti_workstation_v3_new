@@ -12,7 +12,7 @@ from db.database import get_db, get_fms_db
 from core.auth import get_current_user
 from models.user import User, UserRole
 from models.fms import FmsUser
-from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment
+from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember
 from socket_manager import sio
 
 from services.work_schedule_repository import WorkScheduleRepository
@@ -62,6 +62,13 @@ class TimelineSpanPayload(BaseModel):
     start_col: int
     end_col: int
     job_code: str
+
+class MemberCreatePayload(BaseModel):
+    name: str
+
+class MemberRenamePayload(BaseModel):
+    old_name: str
+    new_name: str
 
 # --- Permission Dependency ---
 
@@ -396,6 +403,9 @@ async def import_from_excel(
         
     try:
         await WorkScheduleRepository.clear_all_components_and_jobs(db)
+        # Clear members table during import so it gets re-seeded from the imported layout
+        await db.execute(delete(WorkScheduleMember))
+        await db.commit()
         
         for jid, job_info in jobs_dict.items():
             db_job = WorkScheduleJob(job_id=jid, deadline=job_info["deadline"])
@@ -441,13 +451,23 @@ async def export_to_excel(
     db_jobs = await WorkScheduleRepository.get_all_jobs(db)
     db_assignments = await WorkScheduleRepository.get_all_assignments(db)
     
+    # Load or seed members list
+    db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    if not db_members_obj:
+        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, EXCEL_FILE_PATH)
+        for m in layout["members"]:
+            await WorkScheduleRepository.create_member(db, m)
+        db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    db_members = [m.name for m in db_members_obj]
+    
     try:
         output = await asyncio.to_thread(
             ExcelScheduleService.generate_excel_export,
             EXCEL_FILE_PATH,
             db_components,
             db_jobs,
-            db_assignments
+            db_assignments,
+            db_members
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate Excel export: {e}")
@@ -465,15 +485,23 @@ async def export_to_excel(
 @router.get("/timeline")
 async def get_timeline(db: AsyncSession = Depends(get_db)):
     """
-    Parses the Gantt chart timeline from rows 5-10, columns 20 onwards of the Excel sheet.
+    Parses the Gantt chart timeline columns 20 onwards of the Excel sheet.
     """
     if not os.path.exists(EXCEL_FILE_PATH):
         raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
         
+    db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    if not db_members_obj:
+        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, EXCEL_FILE_PATH)
+        for m in layout["members"]:
+            await WorkScheduleRepository.create_member(db, m)
+        db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    db_members = [m.name for m in db_members_obj]
+    
     db_assignments = await WorkScheduleRepository.get_all_assignments(db)
     
     try:
-        res = await ExcelScheduleService.parse_timeline(EXCEL_FILE_PATH, db_assignments)
+        res = await ExcelScheduleService.parse_timeline(EXCEL_FILE_PATH, db_assignments, db_members)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load spreadsheet: {e}")
         
@@ -493,9 +521,12 @@ async def update_timeline_cell(
     """
     Update a single Gantt chart cell in the database.
     """
+    # Check if member exists in Excel legend OR database
     target_row = await ExcelScheduleService.get_target_row_for_member(EXCEL_FILE_PATH, payload.member_name)
     if not target_row:
-        raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found in Excel legend.")
+        all_members = await WorkScheduleRepository.get_all_members(db)
+        if not any(m.name.strip().lower() == payload.member_name.strip().lower() for m in all_members):
+            raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found.")
         
     assignment = await WorkScheduleRepository.get_assignment(db, payload.member_name, payload.col_index)
     
@@ -523,9 +554,12 @@ async def update_timeline_span(
     """
     Update a range of Gantt chart cells representing a duration span in the database.
     """
+    # Check if member exists in Excel legend OR database
     target_row = await ExcelScheduleService.get_target_row_for_member(EXCEL_FILE_PATH, payload.member_name)
     if not target_row:
-        raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found in Excel legend.")
+        all_members = await WorkScheduleRepository.get_all_members(db)
+        if not any(m.name.strip().lower() == payload.member_name.strip().lower() for m in all_members):
+            raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found.")
         
     start = min(payload.start_col, payload.end_col)
     end = max(payload.start_col, payload.end_col)
@@ -556,3 +590,84 @@ async def update_timeline_span(
     await db.commit()
     await sio.emit('schedule_updated')
     return {"success": True, "message": "Timeline span updated in database."}
+
+
+# --- Employee/Member CRUD Endpoints ---
+
+@router.get("/members")
+async def get_members(db: AsyncSession = Depends(get_db)):
+    """
+    Get all active employees/members from the database.
+    """
+    members = await WorkScheduleRepository.get_all_members(db)
+    return {
+        "success": True,
+        "members": [{"id": m.id, "name": m.name, "display_order": m.display_order} for m in members]
+    }
+
+
+@router.post("/members")
+async def create_member(
+    payload: MemberCreatePayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Add a new employee/member to the timeline calendar.
+    """
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Employee name cannot be empty.")
+        
+    # Check duplicate
+    from sqlalchemy import select
+    res = await db.execute(select(WorkScheduleMember).where(WorkScheduleMember.name == name))
+    if res.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=f"Employee '{name}' already exists.")
+        
+    member = await WorkScheduleRepository.create_member(db, name)
+    ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
+    await sio.emit('schedule_updated')
+    return {"success": True, "member": {"id": member.id, "name": member.name}}
+
+
+@router.put("/members")
+async def rename_member(
+    payload: MemberRenamePayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Rename an employee/member and automatically migrate their schedule assignments.
+    """
+    old_name = payload.old_name.strip()
+    new_name = payload.new_name.strip()
+    if not old_name or not new_name:
+        raise HTTPException(status_code=400, detail="Names cannot be empty.")
+        
+    member = await WorkScheduleRepository.rename_member(db, old_name, new_name)
+    if not member:
+        raise HTTPException(status_code=404, detail=f"Employee '{old_name}' not found.")
+        
+    ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
+    await sio.emit('schedule_updated')
+    return {"success": True, "member": {"id": member.id, "name": member.name}}
+
+
+@router.delete("/members/{name}")
+async def delete_member(
+    name: str,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Delete an employee/member and remove all their schedule assignments.
+    """
+    name = name.strip()
+    success = await WorkScheduleRepository.delete_member(db, name)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Employee '{name}' not found.")
+        
+    ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
+    await sio.emit('schedule_updated')
+    return {"success": True, "message": f"Employee '{name}' removed successfully."}

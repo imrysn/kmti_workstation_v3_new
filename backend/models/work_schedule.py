@@ -53,3 +53,14 @@ class WorkScheduleAssignment(Base):
         UniqueConstraint('member_name', 'col_index', name='uix_member_col'),
     )
 
+
+class WorkScheduleMember(Base):
+    """
+    Represents an employee/member whose schedule is managed in the timeline.
+    """
+    __tablename__ = "work_schedule_members"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(255), unique=True, index=True, nullable=False)
+    display_order = Column(Integer, default=0, nullable=False)
+

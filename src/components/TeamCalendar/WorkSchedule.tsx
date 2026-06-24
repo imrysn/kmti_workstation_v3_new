@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { WorkScheduleProvider, useWorkScheduleContext, formatPercentDisplay } from './context/WorkScheduleContext'
 import TimelineGrid from './components/TimelineGrid'
 import ScheduleModals from './components/ScheduleModals'
+import { useModal } from '../ModalContext'
 import type { IJob, IComponent } from '../../hooks/useWorkSchedule'
 import './WorkSchedule.css'
 
@@ -167,6 +168,7 @@ function JobCard({ j }: { j: IJob }) {
 }
 
 function WorkScheduleContent() {
+  const { alert } = useModal()
   const {
     flags,
     isAdminOrIT,
@@ -191,7 +193,9 @@ function WorkScheduleContent() {
     isToday,
     handleMouseDown,
     handleMouseEnter,
-    handleMouseUpCell
+    handleMouseUpCell,
+    handleAddEmployee,
+    setIsAddingEmployee
   } = useWorkScheduleContext()
 
   const [visibleCount, setVisibleCount] = useState(10)
@@ -264,6 +268,22 @@ function WorkScheduleContent() {
                   </option>
                 ))}
               </select>
+            )}
+            {canWrite && (
+              <button
+                className="btn-schedule-action primary"
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginLeft: '8px'
+                }}
+                onClick={() => alert('This feature is still in development.', 'System Notification')}
+              >
+                + Add Employee
+              </button>
             )}
           </div>
 

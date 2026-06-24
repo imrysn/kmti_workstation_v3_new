@@ -3,6 +3,7 @@ import AddComponentModal from './modals/AddComponentModal'
 import EditComponentModal from './modals/EditComponentModal'
 import TimelineCellModal from './modals/TimelineCellModal'
 import TimelineSpanModal from './modals/TimelineSpanModal'
+import EmployeeModal from './modals/EmployeeModal'
 
 export default function ScheduleModals() {
   return (
@@ -12,6 +13,7 @@ export default function ScheduleModals() {
       <EditComponentModal />
       <TimelineCellModal />
       <TimelineSpanModal />
+      <EmployeeModal />
     </>
   )
 }

@@ -20,7 +20,7 @@ export default function TimelineSpanModal() {
         <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>
           Selected range: <strong>{getSpanDatesText()}</strong>
         </p>
-        
+
         <div className="schedule-form-group">
           <label>Job Code / ID</label>
           <input
@@ -62,7 +62,7 @@ export default function TimelineSpanModal() {
             className="btn-schedule-action primary"
             disabled={isSavingTimelineSpan}
           >
-            {isSavingTimelineSpan ? 'Saving...' : 'Add Arrow Span'}
+            {isSavingTimelineSpan ? 'Saving...' : 'Add Job Duration'}
           </button>
         </div>
       </form>

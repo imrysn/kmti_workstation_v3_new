@@ -239,7 +239,7 @@ class ExcelScheduleService:
         }
 
     @classmethod
-    async def parse_timeline(cls, excel_path: str, db_assignments: List[Any]) -> Dict[str, Any]:
+    async def parse_timeline(cls, excel_path: str, db_assignments: List[Any], db_members: List[str] = None) -> Dict[str, Any]:
         # Load and parse layout structure only if not cached
         if cls._cached_layout is None:
             async with cls._lock:
@@ -251,10 +251,12 @@ class ExcelScheduleService:
         for a in db_assignments:
             db_map[(a.member_name.strip().lower(), a.col_index)] = a.value
             
+        members_to_use = db_members if db_members is not None else cls._cached_layout["members"]
+            
         timeline_days = []
         for d in cls._cached_layout["days"]:
             assignments = {}
-            for member_name in cls._cached_layout["members"]:
+            for member_name in members_to_use:
                 key = (member_name.strip().lower(), d["col_index"])
                 if key in db_map:
                     assignments[member_name] = db_map[key] if db_map[key] is not None else ""
@@ -278,7 +280,7 @@ class ExcelScheduleService:
             })
             
         return {
-            "members": cls._cached_layout["members"],
+            "members": members_to_use,
             "timeline": timeline_days
         }
 
@@ -287,7 +289,8 @@ class ExcelScheduleService:
         excel_path: str,
         db_components: List[Any],
         db_jobs: List[Any],
-        db_assignments: List[Any]
+        db_assignments: List[Any],
+        db_members: List[str] = None
     ) -> BytesIO:
         # Load template from cached bytes (avoids repeated disk reads of the large xlsx)
         if ExcelScheduleService._cached_template_bytes is None:
@@ -295,12 +298,16 @@ class ExcelScheduleService:
                 ExcelScheduleService._cached_template_bytes = f.read()
         wb = openpyxl.load_workbook(BytesIO(ExcelScheduleService._cached_template_bytes), data_only=False)
         ws = wb['Schedule']
-        
-        db_map = {}
-        for c in db_components:
-            key = (str(c.job_id).strip().lower(), str(c.unit_code).strip().lower())
-            db_map[key] = c
 
+        # Determine the members list (default to template if db_members is None/empty)
+        template_members = []
+        for r in range(5, 11):
+            name_val = ws.cell(row=r, column=8).value
+            if name_val:
+                template_members.append(str(name_val).strip())
+                
+        members_to_use = db_members if db_members else template_members
+        
         # ── Helper functions defined early so they're available throughout ──────
         def copy_cell_style(src_cell, dst_cell):
             if src_cell.has_style:
@@ -309,6 +316,64 @@ class ExcelScheduleService:
                 dst_cell.fill = copy(src_cell.fill)
                 dst_cell.alignment = copy(src_cell.alignment)
                 dst_cell.number_format = src_cell.number_format
+
+        # Dynamic row adjustment for members
+        def shift_merged_cells_manually(ws, insert_row, amount):
+            merged_ranges = list(ws.merged_cells.ranges)
+            ws.merged_cells.ranges.clear()
+            for r in merged_ranges:
+                if r.min_row >= insert_row:
+                    r.shift(row_shift=amount, col_shift=0)
+                    ws.merged_cells.add(r)
+                elif r.max_row >= insert_row:
+                    r.max_row += amount
+                    ws.merged_cells.add(r)
+                else:
+                    ws.merged_cells.add(r)
+
+        def shift_row_dimensions_manually(ws, insert_row, amount):
+            dims = {}
+            for r, dim in list(ws.row_dimensions.items()):
+                if r >= insert_row:
+                    dims[r + amount] = dim.height
+                    del ws.row_dimensions[r]
+                else:
+                    dims[r] = dim.height
+            for r, h in dims.items():
+                if h is not None:
+                    ws.row_dimensions[r].height = h
+
+        N = len(members_to_use)
+        if N > 6:
+            diff = N - 6
+            ws.insert_rows(11, diff)
+            shift_merged_cells_manually(ws, 11, diff)
+            shift_row_dimensions_manually(ws, 11, diff)
+            # Copy layout style of row 5 to the newly inserted rows
+            for r in range(11, 11 + diff):
+                ws.row_dimensions[r].height = ws.row_dimensions[5].height
+                for c in range(1, ws.max_column + 1):
+                    copy_cell_style(ws.cell(row=5, column=c), ws.cell(row=r, column=c))
+                    
+        # Write member names and build member_rows mapping
+        member_rows = {}
+        for idx, name in enumerate(members_to_use):
+            r = 5 + idx
+            ws.cell(row=r, column=8, value=name)
+            norm_name = unicodedata.normalize('NFC', name.strip().lower())
+            member_rows[norm_name] = r
+            
+        # If we have fewer than 6 members, clear the extra template rows
+        if N < 6:
+            for r in range(5 + N, 11):
+                ws.cell(row=r, column=8, value=None)
+                for c in range(20, ws.max_column + 1):
+                    ws.cell(row=r, column=c, value=None)
+
+        db_map = {}
+        for c in db_components:
+            key = (str(c.job_id).strip().lower(), str(c.unit_code).strip().lower())
+            db_map[key] = c
 
         # Status fill colors: Completed=orange/gold, For Checking=green, else no fill
         _FILL_COMPLETED = openpyxl.styles.PatternFill(fill_type='solid', fgColor='FFC000')  # orange/gold
@@ -503,12 +568,7 @@ class ExcelScheduleService:
                             )
                     next_row += 1
 
-        member_rows = {}
-        for r in range(5, 11):
-            name_val = ws.cell(row=r, column=8).value
-            if name_val:
-                norm_name = unicodedata.normalize('NFC', str(name_val).strip().lower())
-                member_rows[norm_name] = r
+        # member_rows has already been dynamically constructed at the beginning of this function
                 
         # Find the last column that has a day number in row 4 (Timeline range)
         max_gantt_col = 20
@@ -594,6 +654,7 @@ class ExcelScheduleService:
                 ws.cell(row=r, column=c, value=None)
 
         # Write database assignments and column statuses
+        # 1. Day statuses first
         for a in db_assignments:
             m_name_lower = a.member_name.strip().lower()
             if m_name_lower == '__day_status__':
@@ -602,11 +663,71 @@ class ExcelScheduleService:
                     fill = _DAY_STATUS_FILLS[status_key]
                     for r in range(3, 11):
                         ws.cell(row=r, column=a.col_index).fill = fill
-            else:
-                member_key = unicodedata.normalize('NFC', a.member_name.strip().lower())
-                if member_key in member_rows:
-                    target_row = member_rows[member_key]
-                    ws.cell(row=target_row, column=a.col_index, value=a.value if a.value else None)
+
+        # 2. Member assignments grouped by member
+        member_assignments = {}
+        for a in db_assignments:
+            m_name_lower = a.member_name.strip().lower()
+            if m_name_lower == '__day_status__' or not a.value:
+                continue
+            member_key = unicodedata.normalize('NFC', a.member_name.strip().lower())
+            if member_key in member_rows:
+                if member_key not in member_assignments:
+                    member_assignments[member_key] = []
+                member_assignments[member_key].append(a)
+
+        # Style objects for arrow components and text
+        _FONT_RED = openpyxl.styles.Font(name='Arial Unicode MS', size=9, color='FFFF0000', bold=True)
+        _FONT_BLUE = openpyxl.styles.Font(name='Arial Unicode MS', size=9, color='FF0070C0', bold=True)
+        _ALIGN_CENTER = openpyxl.styles.Alignment(horizontal='center', vertical='center')
+
+        for member_key, ass_list in member_assignments.items():
+            target_row = member_rows[member_key]
+            
+            # Sort by col_index
+            ass_list.sort(key=lambda x: x.col_index)
+            
+            # Group into contiguous blocks where gap is <= 1
+            blocks = []
+            if ass_list:
+                current_block = [ass_list[0]]
+                for next_ass in ass_list[1:]:
+                    if next_ass.col_index - current_block[-1].col_index <= 1:
+                        current_block.append(next_ass)
+                    else:
+                        blocks.append(current_block)
+                        current_block = [next_ass]
+                blocks.append(current_block)
+                
+            # Process and style each block
+            for block in blocks:
+                if len(block) == 1:
+                    a = block[0]
+                    cell = ws.cell(row=target_row, column=a.col_index)
+                    cell.value = a.value
+                    cell.font = _FONT_RED
+                    cell.alignment = _ALIGN_CENTER
+                else:
+                    # Find the job code assignment in this block
+                    job_ass = None
+                    for a in block:
+                        if a.value not in ('-->', '->', '---'):
+                            job_ass = a
+                            break
+                            
+                    last_a = block[-1]
+                    for a in block:
+                        cell = ws.cell(row=target_row, column=a.col_index)
+                        if a.col_index == last_a.col_index:
+                            cell.value = '->'
+                            cell.font = _FONT_BLUE
+                        elif job_ass and a.col_index == job_ass.col_index:
+                            cell.value = job_ass.value
+                            cell.font = _FONT_RED
+                        else:
+                            cell.value = '---'
+                            cell.font = _FONT_BLUE
+                        cell.alignment = _ALIGN_CENTER
             
         output = BytesIO()
         wb.save(output)
