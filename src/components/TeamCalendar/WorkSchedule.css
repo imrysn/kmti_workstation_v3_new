@@ -80,7 +80,7 @@
   color: var(--accent);
   font-weight: 700 !important;
   font-size: 13px;
-  text-align: left !important;
+  text-align: center !important;
   padding-left: 15px !important;
 }
 
@@ -430,6 +430,15 @@
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-primary);
+}
+
+.components-table th:not(:first-child),
+.components-table td:not(:first-child) {
+  text-align: center;
+}
+
+.components-table td:last-child > div {
+  justify-content: center;
 }
 
 .components-table tr:hover td {

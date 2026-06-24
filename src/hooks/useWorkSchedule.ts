@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { scheduleApi } from '../services/api'
 import { useFlags } from '../context/FlagsContext'
 import { useAuth } from '../context/AuthContext'
@@ -53,6 +53,7 @@ export interface ITimelineDay {
   month: string
   day: number
   weekday: string
+  year?: number
   assignments: Record<string, string>
 }
 
@@ -80,11 +81,21 @@ export function useWorkSchedule() {
 
   // Timeline State
   const [timelineMembers, setTimelineMembers] = useState<string[]>(cachedTimelineMembers)
-  const [timelineDays, setTimelineDays] = useState<ITimelineDay[]>(cachedTimelineDays)
+  const [allTimelineDays, setAllTimelineDays] = useState<ITimelineDay[]>(cachedTimelineDays)
+  const [displayYear, setDisplayYear] = useState<number>(new Date().getFullYear())
+  const [availableYears, setAvailableYears] = useState<number[]>([new Date().getFullYear()])
   const [isLoadingTimeline, setIsLoadingTimeline] = useState(false)
   const [editingTimelineCell, setEditingTimelineCell] = useState<{ member: string; colIndex: number; value: string } | null>(null)
   const [isSavingTimelineCell, setIsSavingTimelineCell] = useState(false)
   const timelineScrollRef = useRef<HTMLDivElement>(null)
+
+  // Compute filtered timelineDays based on chosen year
+  const timelineDays = useMemo(() => {
+    return allTimelineDays.filter((d: any) => {
+      // Filter to only display the chosen display year
+      return !d.year || d.year === displayYear
+    })
+  }, [allTimelineDays, displayYear])
 
   // Drag and Drop State
   const [dragStartCell, setDragStartCell] = useState<{ member: string; colIndex: number } | null>(null)
@@ -194,8 +205,9 @@ export function useWorkSchedule() {
         const correctedTimeline = res.timeline.map((d: any) => {
           const mIdx = monthNames.indexOf(d.month.toLowerCase())
           if (mIdx !== -1) {
-            // Calculate actual weekday for 2026
-            const date = new Date(2026, mIdx, d.day)
+            // Calculate actual weekday for the parsed year
+            const year = d.year || 2026
+            const date = new Date(year, mIdx, d.day)
             const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
             return {
               ...d,
@@ -210,17 +222,22 @@ export function useWorkSchedule() {
         const sevenDaysAgo = new Date(today)
         sevenDaysAgo.setDate(today.getDate() - 7)
 
-        const filteredTimeline = correctedTimeline.filter((d: any) => {
-          const mIdx = monthNames.indexOf(d.month.toLowerCase())
-          if (mIdx !== -1) {
-            const dayDate = new Date(2026, mIdx, d.day)
-            return dayDate >= sevenDaysAgo
+        // Find which year to display dynamically.
+        // Prefer the current calendar year if present in the spreadsheet layout, otherwise default to the maximum year available in the sheet.
+        const todayYear = today.getFullYear()
+        const yearsInTimeline = Array.from(new Set(correctedTimeline.map((d: any) => d.year).filter(Boolean))) as number[]
+        yearsInTimeline.sort((a, b) => a - b)
+        if (yearsInTimeline.length > 0) {
+          setAvailableYears(yearsInTimeline)
+          if (yearsInTimeline.includes(todayYear)) {
+            setDisplayYear(todayYear)
+          } else {
+            setDisplayYear(Math.max(...yearsInTimeline))
           }
-          return true
-        })
+        }
 
-        setTimelineDays(filteredTimeline)
-        cachedTimelineDays = filteredTimeline
+        setAllTimelineDays(correctedTimeline)
+        cachedTimelineDays = correctedTimeline
 
         // Scroll timeline to today or end after load
         if (!silent) {
@@ -445,10 +462,10 @@ export function useWorkSchedule() {
 
     setIsSavingTimelineCell(true)
     // Save previous state for rollback
-    const rollbackTimelineDays = [...timelineDays]
+    const rollbackAllTimelineDays = [...allTimelineDays]
 
     // Optimistically update local state
-    setTimelineDays(prevDays =>
+    setAllTimelineDays(prevDays =>
       prevDays.map(day => {
         if (day.col_index === editingTimelineCell.colIndex) {
           return {
@@ -475,7 +492,7 @@ export function useWorkSchedule() {
       loadTimeline(true)
     } catch (err: any) {
       // Rollback on failure
-      setTimelineDays(rollbackTimelineDays)
+      setAllTimelineDays(rollbackAllTimelineDays)
       const errMsg = err.response?.data?.error || err.message
       alert(`Failed to update timeline: ${errMsg}`)
     } finally {
@@ -506,10 +523,12 @@ export function useWorkSchedule() {
     ]
     const todayMonthName = monthNames[today.getMonth()]
     const todayDayNum = today.getDate()
+    const todayYear = today.getFullYear()
 
     return (
       dayObj.month.toLowerCase() === todayMonthName &&
-      dayObj.day === todayDayNum
+      dayObj.day === todayDayNum &&
+      (dayObj.year === undefined || dayObj.year === todayYear)
     )
   }
 
@@ -571,14 +590,14 @@ export function useWorkSchedule() {
     if (!addingTimelineSpan || !addingTimelineSpan.jobCode.trim()) return
 
     setIsSavingTimelineSpan(true)
-    const rollbackTimelineDays = [...timelineDays]
+    const rollbackAllTimelineDays = [...allTimelineDays]
     const spanToSave = addingTimelineSpan
     const start = Math.min(spanToSave.startCol, spanToSave.endCol)
     const end = Math.max(spanToSave.startCol, spanToSave.endCol)
     const center = Math.floor((start + end) / 2)
 
     // Optimistically update local state
-    setTimelineDays(prevDays =>
+    setAllTimelineDays(prevDays =>
       prevDays.map(day => {
         if (day.col_index >= start && day.col_index <= end) {
           const val = day.col_index === center ? spanToSave.jobCode.trim() : '-->'
@@ -609,7 +628,7 @@ export function useWorkSchedule() {
         throw new Error(res.message || "Failed to update span")
       }
     } catch (err: any) {
-      setTimelineDays(rollbackTimelineDays)
+      setAllTimelineDays(rollbackAllTimelineDays)
       const errMsg = err.response?.data?.error || err.response?.data?.detail || err.message
       alert(`Failed to save duration arrow: ${errMsg}`)
     } finally {
@@ -621,13 +640,13 @@ export function useWorkSchedule() {
     if (!addingTimelineSpan) return
 
     setIsSavingTimelineSpan(true)
-    const rollbackTimelineDays = [...timelineDays]
+    const rollbackAllTimelineDays = [...allTimelineDays]
     const spanToClear = addingTimelineSpan
     const start = Math.min(spanToClear.startCol, spanToClear.endCol)
     const end = Math.max(spanToClear.startCol, spanToClear.endCol)
 
     // Optimistically update local state
-    setTimelineDays(prevDays =>
+    setAllTimelineDays(prevDays =>
       prevDays.map(day => {
         if (day.col_index >= start && day.col_index <= end) {
           return {
@@ -657,7 +676,7 @@ export function useWorkSchedule() {
         throw new Error(res.message || "Failed to clear span")
       }
     } catch (err: any) {
-      setTimelineDays(rollbackTimelineDays)
+      setAllTimelineDays(rollbackAllTimelineDays)
       const errMsg = err.response?.data?.error || err.response?.data?.detail || err.message
       alert(`Failed to clear range: ${errMsg}`)
     } finally {
@@ -682,6 +701,9 @@ export function useWorkSchedule() {
     isExporting,
     timelineMembers,
     timelineDays,
+    displayYear,
+    setDisplayYear,
+    availableYears,
     isLoadingTimeline,
     editingTimelineCell,
     setEditingTimelineCell,

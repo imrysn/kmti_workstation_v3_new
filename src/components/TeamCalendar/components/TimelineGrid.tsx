@@ -82,7 +82,7 @@ export default function TimelineGrid({
 
     return (
       <tr>
-        <th className="timeline-member-col" style={{ background: '#1e1e24' }}>Gantt Calendar Timeline</th>
+        <th className="timeline-member-col" style={{ background: '#1e1e24' }}>Month</th>
         {headers}
       </tr>
     )
@@ -92,7 +92,7 @@ export default function TimelineGrid({
     return (
       <div className="schedule-loading-spinner" style={{ height: '120px' }}>
         <svg className="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-          <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8"/>
+          <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8" />
         </svg>
         <span>Loading calendar grid...</span>
       </div>
@@ -110,8 +110,8 @@ export default function TimelineGrid({
               const dayStatus = d.assignments['__day_status__'] || ''
               const statusClass = dayStatus ? `col-status-${dayStatus.toLowerCase()}` : ''
               return (
-                <th 
-                  key={index} 
+                <th
+                  key={index}
                   className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''} ${statusClass}`}
                   onClick={() => handleHeaderClick(d)}
                   style={canWrite ? { cursor: 'pointer' } : undefined}
@@ -123,14 +123,14 @@ export default function TimelineGrid({
             })}
           </tr>
           <tr>
-            <th className="timeline-member-col" style={{ borderBottom: '2px solid rgba(255,255,255,0.2)' }}>Day</th>
+            <th className="timeline-member-col" style={{ borderBottom: '2px solid rgba(255,255,255,0.2)' }}></th>
             {timelineDays.map((d, index) => {
               const dayStatus = d.assignments['__day_status__'] || ''
               const statusClass = dayStatus ? `col-status-${dayStatus.toLowerCase()}` : ''
               return (
-                <th 
-                  key={index} 
-                  className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''} ${statusClass}`} 
+                <th
+                  key={index}
+                  className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''} ${statusClass}`}
                   style={{ borderBottom: '2px solid rgba(255,255,255,0.2)', cursor: canWrite ? 'pointer' : undefined }}
                   onClick={() => handleHeaderClick(d)}
                   title={canWrite ? 'Click to set day status' : undefined}
@@ -202,20 +202,20 @@ export default function TimelineGrid({
 
       {/* Day Status Selection Popover/Modal */}
       {activePopoverDay && (
-        <div 
-          className="schedule-modal-overlay" 
+        <div
+          className="schedule-modal-overlay"
           onClick={() => setActivePopoverDay(null)}
           style={{ zIndex: 9999 }}
         >
-          <div 
-            className="schedule-modal-card" 
+          <div
+            className="schedule-modal-card"
             onClick={(e) => e.stopPropagation()}
             style={{ width: '320px', gap: '12px', padding: '20px' }}
           >
             <h3 className="schedule-modal-title" style={{ fontSize: '15px' }}>
               Set status for {activePopoverDay.month} {activePopoverDay.day}
             </h3>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
               <button
                 type="button"
@@ -266,7 +266,7 @@ export default function TimelineGrid({
                 🌸 Holiday / Day Off
               </button>
             </div>
-            
+
             <button
               type="button"
               className="btn-schedule-action"

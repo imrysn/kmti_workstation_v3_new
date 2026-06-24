@@ -8,6 +8,37 @@ from io import BytesIO
 import openpyxl
 from copy import copy
 
+def determine_year(month_str, day_num, weekday_str) -> int:
+    try:
+        day_val = int(day_num)
+    except (ValueError, TypeError):
+        return 2026
+
+    wd_map = {
+        'mon': 0, 'tue': 1, 'wed': 2, 'thu': 3, 'fri': 4, 'sat': 5, 'sun': 6
+    }
+    wd_target = wd_map.get(str(weekday_str).strip().lower()[:3])
+    if wd_target is None:
+        return 2026
+
+    month_map = {
+        'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+        'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+    }
+    m_idx = month_map.get(str(month_str).strip().lower())
+    if not m_idx:
+        return 2026
+
+    current_year = datetime.date.today().year
+    for y in range(current_year - 3, current_year + 4):
+        try:
+            dt = datetime.date(y, m_idx, day_val)
+            if dt.weekday() == wd_target:
+                return y
+        except ValueError:
+            continue
+    return 2026
+
 class ExcelScheduleService:
     # Static cache to store the layout structure of the timeline (members and columns)
     # This avoids reloading the heavy Excel workbook on every timeline read.
@@ -133,14 +164,74 @@ class ExcelScheduleService:
                 cell_val = ws.cell(row=m["row"], column=c).value
                 default_assignments[m["name"]] = str(cell_val).strip() if cell_val is not None else ""
 
+            # Check cell color in row 4 (day number) to extract default status from template
+            day_cell = ws.cell(row=4, column=c)
+            default_status = ""
+            if day_cell.fill and day_cell.fill.fill_type == "solid" and day_cell.fill.fgColor:
+                rgb_val = str(day_cell.fill.fgColor.rgb).upper()
+                if "FF0000" in rgb_val:
+                    default_status = "Deadline"
+                elif "FFC000" in rgb_val:
+                    default_status = "Delivered"
+                elif "00B0F0" in rgb_val:
+                    default_status = "3D"
+                elif "FFFF00" in rgb_val:
+                    default_status = "2D"
+                elif "EB3FC6" in rgb_val:
+                    default_status = "Holiday"
+
             raw_days.append({
                 "col_index": c,
                 "month": month_name,
                 "day": day_num,
                 "weekday": day_week,
-                "default_assignments": default_assignments
+                "year": determine_year(month_name, day_num, day_week),
+                "default_assignments": default_assignments,
+                "default_day_status": default_status
             })
             
+        # Programmatically extend the timeline to the end of the year for the last parsed year (e.g. 2026)
+        if raw_days:
+            last_day_obj = raw_days[-1]
+            last_year = last_day_obj["year"]
+            last_month_name = last_day_obj["month"].lower()
+            last_day_num = last_day_obj["day"]
+            
+            month_map = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+                'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+            }
+            month_names_list = [
+                'January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'
+            ]
+            
+            last_m_idx = month_map.get(last_month_name)
+            if last_m_idx and (last_m_idx < 12 or last_day_num < 31):
+                start_date = datetime.date(last_year, last_m_idx, int(last_day_num)) + datetime.timedelta(days=1)
+                end_date = datetime.date(last_year, 12, 31)
+                
+                curr_date = start_date
+                curr_col = last_day_obj["col_index"] + 1
+                
+                while curr_date <= end_date:
+                    m_name = month_names_list[curr_date.month - 1]
+                    wd_name = curr_date.strftime("%a")
+                    
+                    default_assignments = {m["name"]: "" for m in members}
+                    
+                    raw_days.append({
+                        "col_index": curr_col,
+                        "month": m_name,
+                        "day": curr_date.day,
+                        "weekday": wd_name,
+                        "year": last_year,
+                        "default_assignments": default_assignments,
+                        "default_day_status": ""
+                    })
+                    curr_date += datetime.timedelta(days=1)
+                    curr_col += 1
+
         return {
             "members": [m["name"] for m in members],
             "member_rows": {unicodedata.normalize('NFC', m["name"].strip().lower()): m["row"] for m in members},
@@ -170,11 +261,19 @@ class ExcelScheduleService:
                 else:
                     assignments[member_name] = d["default_assignments"].get(member_name, "")
                     
+            # Explicitly load __day_status__ assignment
+            status_key = ('__day_status__', d["col_index"])
+            if status_key in db_map:
+                assignments['__day_status__'] = db_map[status_key] if db_map[status_key] is not None else ""
+            else:
+                assignments['__day_status__'] = d.get("default_day_status", "")
+
             timeline_days.append({
                 "col_index": d["col_index"],
                 "month": d["month"],
                 "day": d["day"],
                 "weekday": d["weekday"],
+                "year": d["year"],
                 "assignments": assignments
             })
             
@@ -411,11 +510,103 @@ class ExcelScheduleService:
                 norm_name = unicodedata.normalize('NFC', str(name_val).strip().lower())
                 member_rows[norm_name] = r
                 
+        # Find the last column that has a day number in row 4 (Timeline range)
+        max_gantt_col = 20
+        for c in range(ws.max_column, 19, -1):
+            if ws.cell(row=4, column=c).value is not None:
+                max_gantt_col = c
+                break
+
+        # Dynamically append columns in Excel if assignments exceed max_gantt_col
+        max_col_to_write = max(max_gantt_col, max((a.col_index for a in db_assignments if a.col_index is not None), default=0))
+        if max_col_to_write > max_gantt_col:
+            # Parse ref date details
+            ref_day_num = ws.cell(row=4, column=max_gantt_col).value
+            ref_day_week = ws.cell(row=3, column=max_gantt_col).value
+            ref_month_name = ""
+            for col_idx in range(max_gantt_col, 19, -1):
+                m_val = ws.cell(row=2, column=col_idx).value
+                if m_val:
+                    ref_month_name = str(m_val).strip()
+                    break
+            ref_year = determine_year(ref_month_name, ref_day_num, ref_day_week)
+            month_map = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+                'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+            }
+            ref_m_idx = month_map.get(ref_month_name.lower(), 6)
+            ref_date = datetime.date(ref_year, ref_m_idx, int(ref_day_num))
+            
+            for c in range(max_gantt_col + 1, max_col_to_write + 1):
+                c_let = openpyxl.utils.get_column_letter(c)
+                ref_let = openpyxl.utils.get_column_letter(max_gantt_col)
+                ws.column_dimensions[c_let].width = ws.column_dimensions[ref_let].width
+                
+                days_diff = c - max_gantt_col
+                dt = ref_date + datetime.timedelta(days=days_diff)
+                
+                # Copy styles & write values
+                copy_cell_style(ws.cell(row=2, column=max_gantt_col), ws.cell(row=2, column=c))
+                if dt.day == 1 or c == max_gantt_col + 1:
+                    ws.cell(row=2, column=c, value=dt.strftime("%B"))
+                else:
+                    ws.cell(row=2, column=c, value=None)
+                    
+                copy_cell_style(ws.cell(row=3, column=max_gantt_col), ws.cell(row=3, column=c))
+                ws.cell(row=3, column=c, value=dt.strftime("%a"))
+                
+                copy_cell_style(ws.cell(row=4, column=max_gantt_col), ws.cell(row=4, column=c))
+                ws.cell(row=4, column=c, value=dt.day)
+                
+                for r in range(5, 11):
+                    copy_cell_style(ws.cell(row=r, column=max_gantt_col), ws.cell(row=r, column=c))
+
+        # Define fills for day status columns (FFFF0000=Deadline, FFFFC000=Delivered, FF00B0F0=3D, FFFFFF00=2D, FFEB3FC6=Holiday)
+        _DAY_STATUS_FILLS = {
+            'deadline': openpyxl.styles.PatternFill(fill_type='solid', fgColor='FFFF0000'),
+            'delivered': openpyxl.styles.PatternFill(fill_type='solid', fgColor='FFFFC000'),
+            '3d': openpyxl.styles.PatternFill(fill_type='solid', fgColor='FF00B0F0'),
+            '2d': openpyxl.styles.PatternFill(fill_type='solid', fgColor='FFFFFF00'),
+            'holiday': openpyxl.styles.PatternFill(fill_type='solid', fgColor='FFEB3FC6'),
+        }
+
+        # Pre-clear all timeline colors & values before writing DB state
+        # Restores default weekend highlights (theme=6 tint=0.6 for Sat, theme=9 tint=0.6 for Sun) or clears fill
+        for c in range(20, max_col_to_write + 1):
+            day_val = str(ws.cell(row=3, column=c).value or '').strip().lower()
+            if 'sat' in day_val:
+                default_fill = openpyxl.styles.PatternFill(
+                    fill_type='solid',
+                    fgColor=openpyxl.styles.colors.Color(theme=6, tint=0.5999938962981048)
+                )
+            elif 'sun' in day_val:
+                default_fill = openpyxl.styles.PatternFill(
+                    fill_type='solid',
+                    fgColor=openpyxl.styles.colors.Color(theme=9, tint=0.5999938962981048)
+                )
+            else:
+                default_fill = openpyxl.styles.PatternFill(fill_type=None)
+            
+            for r in range(3, 11):
+                ws.cell(row=r, column=c).fill = default_fill
+
+            for r in range(5, 11):
+                ws.cell(row=r, column=c, value=None)
+
+        # Write database assignments and column statuses
         for a in db_assignments:
-            member_key = unicodedata.normalize('NFC', a.member_name.strip().lower())
-            if member_key in member_rows:
-                target_row = member_rows[member_key]
-                ws.cell(row=target_row, column=a.col_index, value=a.value if a.value else None)
+            m_name_lower = a.member_name.strip().lower()
+            if m_name_lower == '__day_status__':
+                status_key = (a.value or '').strip().lower()
+                if status_key in _DAY_STATUS_FILLS:
+                    fill = _DAY_STATUS_FILLS[status_key]
+                    for r in range(3, 11):
+                        ws.cell(row=r, column=a.col_index).fill = fill
+            else:
+                member_key = unicodedata.normalize('NFC', a.member_name.strip().lower())
+                if member_key in member_rows:
+                    target_row = member_rows[member_key]
+                    ws.cell(row=target_row, column=a.col_index, value=a.value if a.value else None)
             
         output = BytesIO()
         wb.save(output)
