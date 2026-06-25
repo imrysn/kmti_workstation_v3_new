@@ -33,6 +33,9 @@ import spreadsheetv2 from '../assets/updates/spreadsheetv2.png'
 import soav2 from '../assets/updates/soav2.png'
 import recPipeImg from '../assets/updates/rec_pipe.png'
 import quotationCustomerImg from '../assets/updates/quotation_customer.png'
+import wsMonitoringImg from '../assets/updates/ws_monitoring.png'
+import machineNamesImg from '../assets/updates/machine_names.png'
+import systemUpdaterImg from '../assets/updates/system_updater.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
@@ -40,16 +43,27 @@ export const CHANGELOG: VersionChangelog[] = [
     date: 'June 25, 2026',
     entries: [
       {
-        type: 'improvement',
-        text: 'System Updater — Redesigned the update mechanism to run version checking via GitHub releases and delegate installation to the local network NAS, resolving file lock errors.'
+        type: 'new',
+        text: 'Work Schedule Monitoring — Integrated and digitalized the manual Excel formats and manual scheduling processes directly into the workstation application.',
+        image: wsMonitoringImg
       },
       {
         type: 'new',
-        text: 'Interactive Stepper & Snooze — Added an interactive 2-step setup stepper timeline in the iOS-themed update overlay, along with a 5-minute snooze reminder timer.'
+        text: 'Machine Names in Drafting Notes — Added a dedicated Machine Names input tab under the Drafting Notes page.',
+        image: machineNamesImg
+      },
+      {
+        type: 'improvement',
+        text: 'KEMCO Quotation Upgrades — Fixed secondary paging offsets and other layout calculation anomalies.'
+      },
+      {
+        type: 'improvement',
+        text: 'System Updater — Refactored the update engine to query GitHub Releases for updates while delegating setup installation to the local network NAS, resolving file lock errors.',
+        image: systemUpdaterImg
       },
       {
         type: 'fix',
-        text: 'TitleBar Update Listener — Resolved a runtime crash (api.onUpdateProgress is not a function) when checking for update events.'
+        text: 'General Fixes & Optimizations — Resolved toggle button alignment issues, calendar remounting overhead during page changes, and added postponed task headers.'
       }
     ]
   },

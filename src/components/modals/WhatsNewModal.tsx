@@ -18,6 +18,7 @@ export default function WhatsNewModal() {
   const [dontShowAgain, setDontShowAgain] = useState(false)
   const [activeSlides, setActiveSlides] = useState<Record<string, number>>({})
   const [isHovering, setIsHovering] = useState(false)
+  const [countdown, setCountdown] = useState(10)
   const navigate = useNavigate()
   const { hasRole } = useAuth()
 
@@ -28,8 +29,8 @@ export default function WhatsNewModal() {
     const dismissed = localStorage.getItem(STORAGE_KEY)
     const dismissedVersion = localStorage.getItem(VERSION_KEY)
 
-    // Global Trigger
-    ; (window as any).showWhatsNew = () => setVisible(true)
+      // Global Trigger
+      ; (window as any).showWhatsNew = () => setVisible(true)
 
     // Show if user has NOT ticked "Do not show again" for THIS version
     const shouldShow = !(dismissed === 'true' && dismissedVersion === currentVersion)
@@ -49,12 +50,29 @@ export default function WhatsNewModal() {
 
   useEffect(() => {
     if (!visible) return
+
+    setCountdown(10)
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [visible])
+
+  useEffect(() => {
+    if (!visible) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose()
+      if (e.key === 'Escape' && countdown === 0) handleClose()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [visible, dontShowAgain])
+  }, [visible, dontShowAgain, countdown])
 
   // Scroll-driven entrance animations
   useEffect(() => {
@@ -184,7 +202,7 @@ export default function WhatsNewModal() {
         </p>
 
         {slides.length > 0 && (
-          <div 
+          <div
             className="wnm-slideshow-container"
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
@@ -192,8 +210,8 @@ export default function WhatsNewModal() {
           >
             <div className="wnm-slideshow-track">
               {slides.map((slide, sIdx) => (
-                <div 
-                  key={sIdx} 
+                <div
+                  key={sIdx}
                   className={`wnm-slide ${activeSlide === sIdx ? 'active' : ''}`}
                   style={{ display: activeSlide === sIdx ? 'block' : 'none' }}
                 >
@@ -209,9 +227,9 @@ export default function WhatsNewModal() {
                       </div>
                     )}
                     <div className="wnm-slide-nav-overlay">
-                      <button 
+                      <button
                         type="button"
-                        className="wnm-slide-nav-btn prev" 
+                        className="wnm-slide-nav-btn prev"
                         onClick={() => {
                           const nextIdx = (activeSlide - 1 + slides.length) % slides.length
                           setActiveSlides(prev => ({ ...prev, [release.version]: nextIdx }))
@@ -220,9 +238,9 @@ export default function WhatsNewModal() {
                       >
                         ‹
                       </button>
-                      <button 
+                      <button
                         type="button"
-                        className="wnm-slide-nav-btn next" 
+                        className="wnm-slide-nav-btn next"
                         onClick={() => {
                           const nextIdx = (activeSlide + 1) % slides.length
                           setActiveSlides(prev => ({ ...prev, [release.version]: nextIdx }))
@@ -239,7 +257,7 @@ export default function WhatsNewModal() {
                         {BADGE_LABEL[slide.type] ?? slide.type}
                       </span>
                       {slide.action && (!slide.action.roles || hasRole(...slide.action.roles as any)) && (
-                        <button 
+                        <button
                           type="button"
                           className="wnm-try-now-btn"
                           onClick={() => {
@@ -305,7 +323,7 @@ export default function WhatsNewModal() {
   if (!latest) return null
 
   return (
-    <div className="wnm-overlay" onClick={handleClose}>
+    <div className="wnm-overlay">
       <div className="wnm-modal" onClick={(e) => e.stopPropagation()}>
 
         {/* Header */}
@@ -323,14 +341,6 @@ export default function WhatsNewModal() {
               <h2 className="wnm-title">What's New</h2>
               <p className="wnm-subtitle">Here's what changed in the latest update</p>
             </div>
-
-            <button className="wnm-close-btn" onClick={handleClose} title="Close">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="1" y1="1" x2="13" y2="13" />
-                <line x1="13" y1="1" x2="1" y2="13" />
-              </svg>
-            </button>
           </div>
 
           <div className="wnm-version-badge">
@@ -359,8 +369,8 @@ export default function WhatsNewModal() {
             <span className="wnm-checkbox-text">Don't show again</span>
           </label>
 
-          <button className="wnm-got-it-btn" onClick={handleClose}>
-            Got it
+          <button className="wnm-got-it-btn" onClick={handleClose} disabled={countdown > 0} style={{ opacity: countdown > 0 ? 0.6 : 1, cursor: countdown > 0 ? 'not-allowed' : 'pointer' }}>
+            {countdown > 0 ? `Got it (${countdown}s)` : 'Got it'}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
