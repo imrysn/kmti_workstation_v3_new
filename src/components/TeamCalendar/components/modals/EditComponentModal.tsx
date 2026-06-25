@@ -69,10 +69,10 @@ export default function EditComponentModal() {
           </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: '13px', color: editCompPostponed ? 'var(--warning, #f59e0b)' : 'var(--text-primary)' }}>
-              {editCompPostponed ? '⏸ Marked as POSTPONED' : 'Mark as Postponed'}
+              {editCompPostponed ? 'Marked as POSTPONED' : 'Mark as Postponed'}
             </div>
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.6, marginTop: '1px' }}>
-              Postponed components appear under the POSTPONED section header
+              Postponed rows appear under the POSTPONED section header below.
             </div>
           </div>
         </div>

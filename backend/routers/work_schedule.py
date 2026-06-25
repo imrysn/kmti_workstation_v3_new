@@ -223,6 +223,9 @@ async def update_component_status(
         raise HTTPException(status_code=404, detail="Component not found.")
         
     comp.status = payload.status
+    if comp.status in ("For Checking", "Completed") and comp.is_postponed:
+        comp.is_postponed = 0
+        
     if payload.submitted_date:
         try:
             comp.submitted_date = datetime.datetime.strptime(payload.submitted_date, "%Y-%m-%d").date()
@@ -239,7 +242,8 @@ async def update_component_status(
         "component": {
             "id": comp.id,
             "status": comp.status,
-            "submitted_date": comp.submitted_date.strftime("%Y-%m-%d") if comp.submitted_date else None
+            "submitted_date": comp.submitted_date.strftime("%Y-%m-%d") if comp.submitted_date else None,
+            "is_postponed": bool(comp.is_postponed)
         }
     }
 
@@ -442,6 +446,9 @@ async def patch_component(
             
     if payload.is_postponed is not None:
         comp.is_postponed = 1 if payload.is_postponed else 0
+    elif payload.status is not None:
+        if payload.status in ("For Checking", "Completed"):
+            comp.is_postponed = 0
 
     await db.commit()
     await sio.emit('schedule_updated')

@@ -228,9 +228,9 @@ export function useWorkSchedule() {
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false)
 
   // Load jobs list
-  const loadJobs = async () => {
+  const loadJobs = async (force = false) => {
     const now = Date.now()
-    const isFresh = cachedJobs.length > 0 && (now - cachedJobsAt) < CACHE_TTL_MS
+    const isFresh = !force && cachedJobs.length > 0 && (now - cachedJobsAt) < CACHE_TTL_MS
     if (isFresh) {
       // Cache is still warm — hydrate from cache immediately, skip network call
       setJobs(cachedJobs)
@@ -241,7 +241,7 @@ export function useWorkSchedule() {
       }
       return
     }
-    if (cachedJobs.length === 0) {
+    if (cachedJobs.length === 0 || force) {
       setIsLoadingJobs(true)
     }
     isFetchingJobs = true
@@ -521,7 +521,7 @@ export function useWorkSchedule() {
         setIsAddingJob(false)
         setNewJobId('')
         setNewJobDeadline('')
-        loadJobs()
+        loadJobs(true)
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message
@@ -541,7 +541,7 @@ export function useWorkSchedule() {
           if (selectedJob?.job_id === jobId) {
             setSelectedJob(null)
           }
-          loadJobs()
+          loadJobs(true)
         } catch (err: any) {
           const errMsg = err.response?.data?.error || err.message
           alert(`Failed to delete Job: ${errMsg}`)
@@ -579,7 +579,7 @@ export function useWorkSchedule() {
       setNewCompStatus('Pending/Not Started')
       setNewCompDate('')
       loadComponents(selectedJob.job_id)
-      loadJobs()
+      loadJobs(true)
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message
       alert(`Failed to add component: ${errMsg}`)
@@ -594,6 +594,58 @@ export function useWorkSchedule() {
     if (!editingComponent) return
 
     setIsSubmittingEdit(true)
+    
+    // Save previous state for rollback
+    const rollbackComponents = [...components]
+    const rollbackJobs = [...jobs]
+    
+    // Construct updated component
+    const updatedComp: IComponent = {
+      ...editingComponent,
+      unit_code: editCompCode,
+      assembly_3d: formatPercentInput(editComp3DAssem),
+      parts_3d: formatPercentInput(editComp3DParts),
+      assembly_2d: formatPercentInput(editComp2DAssem),
+      parts_2d: formatPercentInput(editComp2DParts),
+      status: editCompStatus,
+      submitted_date: editCompDate || null,
+      is_postponed: editCompPostponed
+    }
+
+    // Optimistically update components state
+    setComponents(prev => prev.map(c => c.id === editingComponent.id ? updatedComp : c))
+    
+    // Optimistically update jobs state so the JobCard changes immediately
+    setJobs(prevJobs => prevJobs.map(job => {
+      if (job.job_id === editingComponent.job_id) {
+        const updatedComps = (job.components || []).map(c => 
+          c.id === editingComponent.id ? updatedComp : c
+        )
+        
+        // Re-calculate stats
+        const total = updatedComps.filter(c => c.unit_code.toUpperCase().trim() !== "POSTPONED").length
+        const completed = updatedComps.filter(c => {
+          const s = (c.status || '').trim().toLowerCase()
+          return (s === 'completed' || s === 'complete') && c.unit_code.toUpperCase().trim() !== "POSTPONED"
+        }).length
+        const checking = updatedComps.filter(c => {
+          const s = (c.status || '').trim().toLowerCase()
+          return s.includes('checking') && c.unit_code.toUpperCase().trim() !== "POSTPONED"
+        }).length
+        const progress = total > 0 ? (completed / total * 100) : 0.0
+
+        return {
+          ...job,
+          components: updatedComps,
+          total_components: total,
+          completed_components: completed,
+          checking_components: checking,
+          progress_percent: parseFloat(progress.toFixed(1))
+        }
+      }
+      return job
+    }))
+
     try {
       await scheduleApi.updateComponent(editingComponent.id, {
         unit_code: editCompCode,
@@ -609,8 +661,11 @@ export function useWorkSchedule() {
       if (selectedJob) {
         loadComponents(selectedJob.job_id)
       }
-      loadJobs()
+      loadJobs(true)
     } catch (err: any) {
+      // Rollback on failure
+      setComponents(rollbackComponents)
+      setJobs(rollbackJobs)
       const errMsg = err.response?.data?.error || err.message
       alert(`Failed to update component: ${errMsg}`)
     } finally {
@@ -623,13 +678,49 @@ export function useWorkSchedule() {
     confirm(
       `Are you sure you want to delete drawing component '${comp.unit_code}'?`,
       async () => {
+        const rollbackComponents = [...components]
+        const rollbackJobs = [...jobs]
+        
+        // Optimistically update components state
+        setComponents(prev => prev.filter(c => c.id !== comp.id))
+        
+        // Optimistically update jobs state
+        setJobs(prevJobs => prevJobs.map(job => {
+          if (job.job_id === comp.job_id) {
+            const updatedComps = (job.components || []).filter(c => c.id !== comp.id)
+            const total = updatedComps.filter(c => c.unit_code.toUpperCase().trim() !== "POSTPONED").length
+            const completed = updatedComps.filter(c => {
+              const s = (c.status || '').trim().toLowerCase()
+              return (s === 'completed' || s === 'complete') && c.unit_code.toUpperCase().trim() !== "POSTPONED"
+            }).length
+            const checking = updatedComps.filter(c => {
+              const s = (c.status || '').trim().toLowerCase()
+              return s.includes('checking') && c.unit_code.toUpperCase().trim() !== "POSTPONED"
+            }).length
+            const progress = total > 0 ? (completed / total * 100) : 0.0
+
+            return {
+              ...job,
+              components: updatedComps,
+              total_components: total,
+              completed_components: completed,
+              checking_components: checking,
+              progress_percent: parseFloat(progress.toFixed(1))
+            }
+          }
+          return job
+        }))
+
         try {
           await scheduleApi.deleteComponent(comp.id)
           if (selectedJob) {
             loadComponents(selectedJob.job_id)
           }
-          loadJobs()
+          loadJobs(true)
         } catch (err: any) {
+          // Rollback on failure
+          setComponents(rollbackComponents)
+          setJobs(rollbackJobs)
           const errMsg = err.response?.data?.error || err.message
           alert(`Failed to delete component: ${errMsg}`)
         }

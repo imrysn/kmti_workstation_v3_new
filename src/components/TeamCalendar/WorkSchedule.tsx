@@ -68,7 +68,7 @@ function JobCard({ j }: { j: IJob }) {
             <button
               className="btn-schedule-action danger"
               style={{ padding: '6px 8px', borderRadius: '6px' }}
-              title="Delete drawing component"
+              title="Delete row"
               onClick={() => { setSelectedJob(j); handleDeleteComponent(c) }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -130,7 +130,7 @@ function JobCard({ j }: { j: IJob }) {
             <button
               className="btn-schedule-action danger"
               style={{ padding: '6px 8px', borderRadius: '6px' }}
-              title="Delete this Job Group"
+              title="Delete this Job"
               onClick={() => handleDeleteJob(j.job_id)}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -463,10 +463,10 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
                   {/* Table header row */}
                   <div className="sk-table-row" style={{ marginBottom: '14px' }}>
                     <div className="skeleton-cell sk-col-main" style={{ height: '11px', opacity: 0.5 }} />
-                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
-                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
-                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
-                    <div className="skeleton-cell sk-col-sm"   style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm" style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm" style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm" style={{ height: '11px', opacity: 0.5 }} />
+                    <div className="skeleton-cell sk-col-sm" style={{ height: '11px', opacity: 0.5 }} />
                     <div className="skeleton-cell sk-col-badge" style={{ height: '11px', opacity: 0.5 }} />
                   </div>
                   {/* Data rows */}

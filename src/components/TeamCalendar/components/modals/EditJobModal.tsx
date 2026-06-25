@@ -55,7 +55,7 @@ export default function EditJobModal() {
       })
       if (res.success) {
         setEditingJob(null)
-        loadJobs()
+        loadJobs(true)
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message
