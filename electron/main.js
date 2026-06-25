@@ -10,7 +10,6 @@ let autoUpdater
 try {
   autoUpdater = require('electron-updater').autoUpdater
   autoUpdater.autoDownload = false
-  autoUpdater.autoInstallOnAppQuit = true
 
   // --- Auto Updater Events ---
   autoUpdater.on('update-available', (info) => {
@@ -18,12 +17,6 @@ try {
   })
   autoUpdater.on('update-not-available', (info) => {
     mainWindow?.webContents.send('update-not-available', info)
-  })
-  autoUpdater.on('download-progress', (progress) => {
-    mainWindow?.webContents.send('update-download-progress', progress)
-  })
-  autoUpdater.on('update-downloaded', (info) => {
-    mainWindow?.webContents.send('update-downloaded', info)
   })
   autoUpdater.on('error', (err) => {
     mainWindow?.webContents.send('update-error', err.message || 'Update error')
@@ -413,18 +406,6 @@ if (!gotTheLock) {
   ipcMain.handle('check-for-update', async () => {
     if (!autoUpdater) return { error: 'Updater not available' }
     return await autoUpdater.checkForUpdates()
-  })
-  ipcMain.handle('download-update', async () => {
-    if (!autoUpdater) return { error: 'Updater not available' }
-    return await autoUpdater.downloadUpdate()
-  })
-  ipcMain.handle('install-and-restart', () => {
-    if (!autoUpdater) return
-    // Ensure all local child processes are dead before starting the installer
-    // to prevent "File in Use" prompts on server.exe
-    killBackend()
-    // isSilent: false (shows a simple progress bar), isForceRunAfter: true (ensures restart)
-    autoUpdater.quitAndInstall(false, true)
   })
 
   createWindow()

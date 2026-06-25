@@ -36,6 +36,24 @@ import quotationCustomerImg from '../assets/updates/quotation_customer.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.5',
+    date: 'June 25, 2026',
+    entries: [
+      {
+        type: 'improvement',
+        text: 'System Updater — Redesigned the update mechanism to run version checking via GitHub releases and delegate installation to the local network NAS, resolving file lock errors.'
+      },
+      {
+        type: 'new',
+        text: 'Interactive Stepper & Snooze — Added an interactive 2-step setup stepper timeline in the iOS-themed update overlay, along with a 5-minute snooze reminder timer.'
+      },
+      {
+        type: 'fix',
+        text: 'TitleBar Update Listener — Resolved a runtime crash (api.onUpdateProgress is not a function) when checking for update events.'
+      }
+    ]
+  },
+  {
     version: '3.8.4',
     date: 'June 17, 2026',
     entries: [

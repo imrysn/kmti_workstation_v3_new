@@ -22,12 +22,8 @@ export interface KMTIElectronAPI {
 
   // --- Auto Updater ---
   checkForUpdate: () => Promise<any>;
-  downloadUpdate: () => Promise<any>;
-  installAndRestart: () => void;
   onUpdateAvailable: (cb: (info: any) => void) => void;
   onUpdateNotAvailable: (cb: (info: any) => void) => void;
-  onUpdateDownloaded: (cb: (info: any) => void) => void;
-  onUpdateProgress: (cb: (progress: any) => void) => void;
   onUpdateError: (cb: (msg: string) => void) => void;
   removeUpdateListeners: () => void;
   removeWindowMaximizedListener: () => void;

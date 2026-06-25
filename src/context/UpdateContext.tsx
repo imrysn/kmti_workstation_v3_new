@@ -1,15 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef } from 'react'
 
-export type UpdateStatus = 'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'error'
+export type UpdateStatus = 'idle' | 'checking' | 'available' | 'error'
 
 interface UpdateContextValue {
   updateStatus: UpdateStatus
   updateInfo: any
-  downloadProgress: number
   updateError: string | null
   checkForUpdate: () => Promise<void>
-  downloadUpdate: () => Promise<void>
-  installAndRestart: () => void
   resetUpdateState: () => void
   simulateUpdate: (status: UpdateStatus) => void
 }
@@ -19,7 +16,6 @@ const UpdateContext = createContext<UpdateContextValue | null>(null)
 export function UpdateProvider({ children }: { children: ReactNode }) {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
   const [updateInfo, setUpdateInfo] = useState<any>(null)
-  const [downloadProgress, setDownloadProgress] = useState(0)
   const [updateError, setUpdateError] = useState<string | null>(null)
   
   // Use a ref to keep track of the current status without causing callback re-creations
@@ -41,16 +37,6 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       setUpdateStatus('idle')
     })
 
-    api.onUpdateProgress((progress: any) => {
-      setUpdateStatus('downloading')
-      setDownloadProgress(Math.round(progress.percent))
-    })
-
-    api.onUpdateDownloaded((info: any) => {
-      setUpdateStatus('ready')
-      setUpdateInfo(info)
-    })
-
     api.onUpdateError((err: string) => {
       setUpdateStatus('error')
       setUpdateError(err)
@@ -62,7 +48,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const checkForUpdate = useCallback(async () => {
-    if (statusRef.current === 'checking' || statusRef.current === 'downloading' || statusRef.current === 'ready') return
+    if (statusRef.current === 'checking') return
 
     // In dev, we skip the real check to avoid console spam, 
     // unless explicitly triggered (handled by the button calling simulate)
@@ -81,24 +67,9 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const downloadUpdate = useCallback(async () => {
-    setUpdateError(null)
-    try {
-      await window.electronAPI?.downloadUpdate()
-    } catch (err: any) {
-      setUpdateStatus('error')
-      setUpdateError(err.message || 'Failed to download update')
-    }
-  }, [])
-
-  const installAndRestart = useCallback(() => {
-    window.electronAPI?.installAndRestart()
-  }, [])
-
   const resetUpdateState = useCallback(() => {
     setUpdateStatus('idle')
     setUpdateInfo(null)
-    setDownloadProgress(0)
     setUpdateError(null)
   }, [])
 
@@ -108,7 +79,6 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       const version = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
       setUpdateInfo({ version: version, releaseDate: new Date().toISOString() })
     }
-    if (status === 'downloading') setDownloadProgress(45)
     if (status === 'error') setUpdateError('MOCK_ERROR: Connection timed out (Simulated)')
   }, [])
 
@@ -116,11 +86,8 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
     <UpdateContext.Provider value={{
       updateStatus,
       updateInfo,
-      downloadProgress,
       updateError,
       checkForUpdate,
-      downloadUpdate,
-      installAndRestart,
       resetUpdateState,
       simulateUpdate
     }}>

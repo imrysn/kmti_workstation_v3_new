@@ -100,10 +100,7 @@ export default function TitleBar() {
   const { user, logout, hasRole } = useAuth()
   const { theme, toggleTheme, themeLocked } = useTheme()
   const { confirm, notify } = useModal()
-  const [updateState, setUpdateState] = useState<
-    null | 'available' | 'downloading' | 'downloaded'
-  >(null)
-  const [downloadPercent, setDownloadPercent] = useState(0)
+  const [updateState, setUpdateState] = useState<null | 'available'>(null)
   const [updateVersion, setUpdateVersion] = useState('')
   const [isMaximized, setIsMaximized] = useState(false)
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0)
@@ -184,16 +181,6 @@ export default function TitleBar() {
       setUpdateState('available')
     })
 
-    api.onUpdateProgress((progress: any) => {
-      setDownloadPercent(Math.round(progress.percent))
-      setUpdateState('downloading')
-    })
-
-    api.onUpdateDownloaded((info: any) => {
-      setUpdateVersion(info.version)
-      setUpdateState('downloaded')
-    })
-
     api.onUpdateError((msg: string) => {
       notify(`Update error: ${msg}`, 'error')
       setUpdateState(null)
@@ -208,17 +195,9 @@ export default function TitleBar() {
   const handleUpdateClick = () => {
     if (updateState === 'available') {
       confirm(
-        `Version ${updateVersion} is available. Download and install now?`,
+        `Version ${updateVersion} is available. Open the NAS folder to run the installer manually?`,
         () => {
-          ; (window as any).electronAPI?.downloadUpdate()
-          setUpdateState('downloading')
-        }
-      )
-    } else if (updateState === 'downloaded') {
-      confirm(
-        `Version ${updateVersion} is ready. Restart the app now to apply?`,
-        () => {
-          ; (window as any).electronAPI?.installAndRestart()
+          ;(window as any).electronAPI?.openFolder('\\\\KMTI-NAS\\Shared\\Public\\APP DEVELOPMENT\\KMTI Workstation')
         }
       )
     }
@@ -307,20 +286,14 @@ export default function TitleBar() {
               <div className="titlebar-nav-dropdown">
 
                 {/* Update badge row */}
-                {hasRole('admin', 'it') && updateState && updateState !== 'downloading' && (
+                {hasRole('admin', 'it') && updateState === 'available' && (
                   <button
                     className="nav-dropdown-item update-row"
                     onClick={() => { handleUpdateClick(); setIsMenuOpen(false) }}
                   >
                     <span className="pulse" style={{ flexShrink: 0 }} />
-                    <span>{updateState === 'downloaded' ? `v${updateVersion} — Restart to Update` : `v${updateVersion} Available`}</span>
+                    <span>v{updateVersion} Available</span>
                   </button>
-                )}
-                {hasRole('admin', 'it') && updateState === 'downloading' && (
-                  <div className="nav-dropdown-item" style={{ opacity: 0.6, cursor: 'default' }}>
-                    <span style={{ fontSize: 13 }}>↓</span>
-                    <span>Downloading... {downloadPercent}%</span>
-                  </div>
                 )}
 
                 {/* Admin links */}

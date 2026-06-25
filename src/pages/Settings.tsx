@@ -23,7 +23,6 @@ export default function Settings() {
   const { 
     updateStatus, 
     updateInfo, 
-    downloadProgress, 
     updateError,
     checkForUpdate,
     simulateUpdate,
@@ -116,34 +115,18 @@ export default function Settings() {
             </span>
             {updateStatus === 'checking' && <span className="badge-update checking">Checking...</span>}
             {updateStatus === 'available' && <span className="badge-update ready">Update Found</span>}
-            {updateStatus === 'downloading' && <span className="badge-update downloading">Downloading</span>}
-            {updateStatus === 'ready' && <span className="badge-update ready">Ready to Install</span>}
             {updateStatus === 'error' && <span className="badge-update error">Update Error</span>}
           </div>
 
           <div className="sett-info-text">
             {updateStatus === 'idle' && "Your workstation is running the latest production build."}
             {updateStatus === 'checking' && "Searching our servers for a newer version..."}
-            {updateStatus === 'available' && `Version ${updateInfo?.version} is available. It includes new features and security fixes.`}
-            {updateStatus === 'downloading' && "Downloading essential files. Please stay connected."}
-            {updateStatus === 'ready' && "All files are ready. Click 'Install & Restart' to upgrade."}
+            {updateStatus === 'available' && `Version ${updateInfo?.version} is available. Please run the installer from the NAS folder to upgrade.`}
             {updateStatus === 'error' && `Something went wrong: ${updateError || 'Connection lost'}`}
           </div>
 
-          {updateStatus === 'downloading' && (
-            <div className="update-progress-container">
-              <div className="update-progress-bar">
-                <div className="update-progress-fill" style={{ width: `${downloadProgress}%` }}></div>
-              </div>
-              <div className="update-progress-info">
-                <span>Downloading assets...</span>
-                <span>{downloadProgress}%</span>
-              </div>
-            </div>
-          )}
-
           <div className="sett-update-actions">
-            {(updateStatus === 'idle' || updateStatus === 'checking' || updateStatus === 'error' || updateStatus === 'available' || updateStatus === 'downloading' || updateStatus === 'ready') && (
+            {(updateStatus === 'idle' || updateStatus === 'checking' || updateStatus === 'error' || updateStatus === 'available') && (
               <div className="update-buttons-stack">
                 <div className="update-main-row">
                   <button className="btn-update-check" onClick={handleCheck} disabled={updateStatus === 'checking'}>

@@ -337,24 +337,33 @@ function AppContent() {
     }
   }, [user, token])
 
-  // Trigger update check once per day (Production only)
+  // Trigger update check once per hour (Production only)
   useEffect(() => {
-    if (user && import.meta.env.PROD) {
-      const LAST_CHECK_KEY = 'kmti_last_update_check'
+    if (!user || !import.meta.env.PROD) return
+
+    const LAST_CHECK_KEY = 'kmti_last_update_check'
+    const oneHour = 60 * 60 * 1000
+
+    const performCheck = () => {
       const now = Date.now()
       const lastCheck = localStorage.getItem(LAST_CHECK_KEY)
-      const oneDay = 24 * 60 * 60 * 1000
 
-      // If we haven't checked today, or if it's the first time
-      if (!lastCheck || (now - parseInt(lastCheck)) > oneDay) {
-        console.log('>>> [UPDATE] Performing daily update check...')
+      if (!lastCheck || (now - parseInt(lastCheck)) > oneHour) {
+        console.log('>>> [UPDATE] Performing hourly update check...')
         checkForUpdate()
         localStorage.setItem(LAST_CHECK_KEY, now.toString())
       } else {
-        const hoursLeft = Math.round((oneDay - (now - parseInt(lastCheck))) / (60 * 60 * 1000))
-        console.log(`>>> [UPDATE] Last check was recent. Next auto-check in ~${hoursLeft}h.`)
+        const minsLeft = Math.round((oneHour - (now - parseInt(lastCheck))) / (60 * 1000))
+        console.log(`>>> [UPDATE] Last check was recent. Next auto-check in ~${minsLeft}m.`)
       }
     }
+
+    // Run once on mount/login
+    performCheck()
+
+    // Set interval to check every 15 minutes if one hour has elapsed
+    const interval = setInterval(performCheck, 15 * 60 * 1000)
+    return () => clearInterval(interval)
   }, [user, checkForUpdate])
 
   // Register global 401 handler — shows Session Expired modal instead of silent logout
