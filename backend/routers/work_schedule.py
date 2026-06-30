@@ -89,7 +89,7 @@ async def require_schedule_write(
         from sqlalchemy import select
         fms_res = await fms_db.execute(select(FmsUser).where(FmsUser.username == current_user.username))
         fms_user = fms_res.scalar_one_or_none()
-        if fms_user and fms_user.role.upper() in ("TEAM LEADER", "LEADER", "ADMIN"):
+        if fms_user and fms_user.role.upper().replace("_", " ").strip() in ("TEAM LEADER", "LEADER", "ADMIN"):
             return current_user
     except Exception as e:
         import logging

@@ -35,6 +35,8 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
   const [sortField, setSortField] = useState<'quotationNo' | 'workstation' | 'modifiedAt'>('modifiedAt')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingName, setEditingName] = useState<string>('')
 
   const uniqueCustomers = useMemo(() => {
     const customers = new Set<string>()
@@ -201,6 +203,41 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
       isIT ? 'IT OVERRIDE' : 'Password Recovery',
       'Copy to Clipboard'
     )
+  }
+
+  const handleRenameStart = (e: React.MouseEvent, q: IQuotation) => {
+    e.stopPropagation()
+    setEditingId(q.id)
+    setEditingName(q.displayName || q.quotationNo)
+  }
+
+  const handleRenameSave = async (q: IQuotation) => {
+    const trimmed = editingName.trim()
+    if (!trimmed || trimmed === (q.displayName || q.quotationNo)) {
+      setEditingId(null)
+      return
+    }
+    try {
+      await quotationApi.updateBilling(q.id, { displayName: trimmed })
+      notify?.('Workspace name updated.', 'success')
+      // Optimistically update local list
+      setQuotations(prev => prev.map(item =>
+        item.id === q.id ? { ...item, displayName: trimmed } : item
+      ))
+    } catch {
+      notify?.('Failed to rename workspace.', 'error')
+    } finally {
+      setEditingId(null)
+    }
+  }
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent, q: IQuotation) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleRenameSave(q)
+    } else if (e.key === 'Escape') {
+      setEditingId(null)
+    }
   }
 
   // ── Helpers ─────────────────────────────────────────────────────
@@ -370,7 +407,33 @@ export default function QuotationLibraryModal({ onSelect, onClose }: Props) {
                     <td className="quotation-no-cell">
                       <div className="quot-main-info">
                         <div className="quot-no-row">
-                          <span className="quot-no-text" style={{ fontWeight: 'bold' }}>{q.displayName || q.quotationNo}</span>
+                          {editingId === q.id ? (
+                            <input
+                              className="workspace-rename-input"
+                              value={editingName}
+                              autoFocus
+                              onChange={e => setEditingName(e.target.value)}
+                              onBlur={() => handleRenameSave(q)}
+                              onKeyDown={e => handleRenameKeyDown(e, q)}
+                              onClick={e => e.stopPropagation()}
+                            />
+                          ) : (
+                            <>
+                              <span className="quot-no-text" style={{ fontWeight: 'bold' }}>{q.displayName || q.quotationNo}</span>
+                              {view === 'active' && !hasRole('user') && (
+                                <button
+                                  className="btn-rename-workspace"
+                                  onClick={e => handleRenameStart(e, q)}
+                                  title="Rename workspace"
+                                >
+                                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+                              )}
+                            </>
+                          )}
                           {q.isActive && <span className="active-badge">Live</span>}
                           {q.hasPassword && (
                             <svg className="lock-icon" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">

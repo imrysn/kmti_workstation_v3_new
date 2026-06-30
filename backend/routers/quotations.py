@@ -896,6 +896,10 @@ async def update_billing_monitoring(
             quot.quotation_no = new_no
             if not quot.display_name or quot.display_name == quot.quotation_no:
                 quot.display_name = new_no
+    if "displayName" in payload:
+        new_display = (payload["displayName"] or "").strip()
+        if new_display:  # Never allow blank display name
+            quot.display_name = new_display
     if "grandTotal" in payload:
         try:
             quot.grand_total = float(payload["grandTotal"])

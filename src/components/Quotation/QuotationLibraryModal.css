@@ -500,3 +500,52 @@ body.void-theme .quot-library-header {
   transform: scale(1.1);
   filter: drop-shadow(0 0 4px var(--accent-subtle));
 }
+
+/* ── Workspace Rename ──────────────────────────────────────── */
+
+.btn-rename-workspace {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+
+/* Show pencil on row hover */
+.quot-library-table tr:hover .btn-rename-workspace {
+  opacity: 0.55;
+}
+
+.btn-rename-workspace:hover {
+  opacity: 1 !important;
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.workspace-rename-input {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 1.00rem;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  background: var(--bg-surface);
+  border: 1.5px solid var(--accent);
+  border-radius: 6px;
+  padding: 3px 8px;
+  outline: none;
+  min-width: 120px;
+  max-width: 260px;
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+  transition: box-shadow 0.15s ease;
+}
+
+.workspace-rename-input:focus {
+  box-shadow: 0 0 0 4px var(--accent-subtle);
+}
