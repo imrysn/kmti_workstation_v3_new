@@ -359,12 +359,13 @@ const PrintPreviewModal = memo(({
       }
       .ppm-header, .ppm-footer-bar, .ppm-backdrop, .ppm-sidebar,
       .ppm-page-break-indicator { display: none !important; }
-      .ppm-container, .ppm-body, .ppm-scroll-area {
+      .ppm-container, .ppm-body, .ppm-scroll-area, .ppm-body-content {
         position: static !important; display: block !important;
         width: 210mm !important; height: auto !important;
         overflow: visible !important; background: white !important;
         padding: 0 !important; margin: 0 !important;
         box-shadow: none !important; border: none !important;
+        gap: 0 !important;
       }
       .ppm-a4-scaler, .ppm-a4-scaler > div {
         position: static !important; display: block !important;
@@ -379,19 +380,25 @@ const PrintPreviewModal = memo(({
         padding: 0 !important; margin: 0 !important;
         overflow: visible !important; background: white !important;
       }
+      .preview-content > div {
+        display: block !important; height: auto !important;
+        width: 210mm !important; margin: 0 !important;
+        padding: 0 !important; overflow: visible !important;
+      }
       .quotation-visual-exact {
         display: flex !important; flex-direction: column !important;
         width: 210mm !important; height: 297mm !important;
         min-height: 297mm !important; max-height: 297mm !important;
         overflow: hidden !important; box-sizing: border-box !important;
         padding: 8mm !important; background: white !important;
-        page-break-after: always !important; break-after: page !important;
-        margin: 0 !important;
-        position: relative !important;
+        page-break-after: auto !important; break-after: auto !important;
+        page-break-inside: avoid !important; break-inside: avoid !important;
+        margin: 0 !important; position: relative !important;
       }
       .quotation-visual-exact.compressed { padding: 5mm !important; }
-      .quotation-visual-exact:last-of-type {
-        page-break-after: avoid !important; break-after: avoid !important;
+      /* Force new page BEFORE continuation pages only — never after the last page */
+      .quotation-visual-exact.page-break {
+        page-break-before: always !important; break-before: page !important;
       }
       .quotation-visual-exact * { color: #000 !important; }
       .quotation-visual-exact .text-red { color: red !important; }
@@ -790,14 +797,13 @@ const PrintPreviewModal = memo(({
                             onTaskOverride={handleTaskOverride}
                             showAdmin={showAdmin}
                             fillerRowCount={(() => {
-                              // Strictly ensure exactly 10 rows total (or 14 for billing):
-                              // Tasks + Admin + Nothing Follow + Fillers = finalLimit
                               const isKemco = layoutVariant === 'kemco'
+                              // Special Quotation: no filler rows — table ends naturally at NOTHING FOLLOW
+                              if (!isKemco && printMode === 'quotation') return 0
+                              // Billing: pad to finalLimit
                               const overheadCount = (!isKemco && showAdmin) ? 1 : 0
                               const nothingFollowCount = isKemco ? 0 : 1
                               const totalSoFar = page.tasks.length + overheadCount + nothingFollowCount
-
-                              // Return exactly how many fillers are needed to hit the limit
                               return Math.max(0, finalLimit - totalSoFar)
                             })()}
                             isCompressed={layoutVariant === 'kemco' && page.tasks.length > 10}
