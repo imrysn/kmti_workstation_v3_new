@@ -196,7 +196,7 @@
 .ppm-container .preview-content .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
   position: absolute;
   right: 8mm;
-  top: 185px;
+  top: 195px;
   width: 70mm;
   max-width: 70mm;
   height: auto;
@@ -244,7 +244,11 @@
   }
 
   .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
-    top: 155px !important;
+    top: 180px !important;
+  }
+
+  .quotation-visual-exact:has(.billing-header) .contact-section-visual {
+    min-height: 110px !important;
   }
 
   .quotation-visual-exact:has(.billing-header) .q-bottom-content {

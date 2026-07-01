@@ -437,6 +437,75 @@ const PrintPreviewModal = memo(({
         flex-direction: column !important; width: 100% !important;
         gap: 5px !important;
       }
+      /* ── Billing header: explicit print/PDF layout ── */
+      .quotation-visual-exact:has(.billing-header) .billing-header {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+        position: relative !important;
+        min-height: 90px !important;
+        margin-bottom: 8px !important;
+        width: 100% !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .billing-header .logo-visual {
+        position: absolute !important;
+        left: 0 !important;
+        top: 5px !important;
+        width: 90px !important;
+        height: 90px !important;
+        flex-shrink: 0 !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .billing-header .logo-visual img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .billing-header .billing-center-block {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        width: 100% !important;
+        max-width: 58% !important;
+        margin: 0 auto !important;
+        padding-top: 4px !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .billing-header .billing-company-name {
+        font-size: 20px !important;
+        font-weight: bold !important;
+        white-space: nowrap !important;
+        margin-bottom: 4px !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .billing-header .billing-address-line {
+        font-size: 10.5px !important;
+        line-height: 1.4 !important;
+        text-align: center !important;
+        font-weight: normal !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .billing-header .billing-title {
+        font-size: 18px !important;
+        margin-top: 8px !important;
+        font-weight: bold !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .billing-header .right-details-visual {
+        display: none !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .contact-section-visual {
+        min-height: 110px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-end !important;
+      }
+      .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
+        position: absolute !important;
+        right: 8mm !important;
+        top: 180px !important;
+        width: 70mm !important;
+        max-width: 70mm !important;
+        height: auto !important;
+        display: block !important;
+      }
     }
   `
 
