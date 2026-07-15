@@ -97,8 +97,16 @@ def safe_json_loads(val: Optional[str]) -> dict:
 # ─── Socket.IO Event Handlers ──────────────────────────────────────────────────
 
 @sio.event
-async def connect(sid: str, environ: dict):
+async def connect(sid: str, environ: dict, auth=None):
     print(f"[Socket] Client connected: {sid}")
+    # If the client sends auth: { username }, place them in a personal room for targeted notifications
+    if isinstance(auth, dict):
+        username = auth.get('username')
+        if username:
+            from socket_manager import _sid_to_user
+            _sid_to_user[sid] = username
+            await sio.enter_room(sid, f'user:{username}')
+            print(f"[Socket] {username} joined room user:{username}")
 
 
 @sio.event

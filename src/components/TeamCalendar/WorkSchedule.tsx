@@ -1,45 +1,41 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Navigate } from 'react-router-dom'
 import { WorkScheduleProvider, useWorkScheduleContext, formatPercentDisplay } from './context/WorkScheduleContext'
 import TimelineGrid from './components/TimelineGrid'
 import ScheduleModals from './components/ScheduleModals'
-import { useModal } from '../ModalContext'
+import NotificationPanel from './components/modals/NotificationPanel'
 import type { IJob, IComponent } from '../../hooks/useWorkSchedule'
 import './WorkSchedule.css'
 
-function JobCard({ j }: { j: IJob }) {
-  const {
-    canWrite,
-    setSelectedJob,
-    setIsAddingComponent,
-    handleDeleteJob,
-    openEditModal,
-    handleDeleteComponent,
-    getStatusClass,
-    setEditingJob
-  } = useWorkScheduleContext()
+const Bell = ({ size = 24 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+  </svg>
+)
 
-  const { normalComps, postponedComps, sentinels } = useMemo(() => {
-    const allComps = j.components || []
-    return {
-      sentinels: allComps.filter(c => c.unit_code.toUpperCase().trim() === 'POSTPONED'),
-      normalComps: allComps.filter(c => c.unit_code.toUpperCase().trim() !== 'POSTPONED' && !c.is_postponed),
-      postponedComps: allComps.filter(c => c.unit_code.toUpperCase().trim() !== 'POSTPONED' && c.is_postponed)
-    }
-  }, [j.components])
+// ── Standalone percent renderer ────────────────────────────────────────
+function renderPercent(val: string) {
+  const display = formatPercentDisplay(val)
+  const isRed = display === '100%'
+  return (
+    <span style={isRed ? { color: 'var(--danger, #ef4444)', fontWeight: 'bold' } : undefined}>
+      {display}
+    </span>
+  )
+}
 
-  const renderPercent = (val: string) => {
-    const display = formatPercentDisplay(val)
-    const isRed = display === '100%'
-    return (
-      <span style={isRed ? { color: 'var(--danger, #ef4444)', fontWeight: 'bold' } : undefined}>
-        {display}
-      </span>
-    )
-  }
+// ── ComponentRow — memoized, isolated row for a single drawing component
+interface ComponentRowProps {
+  c: IComponent
+  j: IJob
+  tinted?: boolean
+}
 
-  const renderRow = (c: IComponent, tinted = false) => (
-    <tr key={c.id} style={tinted ? { background: 'rgba(245,158,11,0.06)' } : undefined}>
+const ComponentRow = React.memo(function ComponentRow({ c, j, tinted = false }: ComponentRowProps) {
+  const { canWrite, getStatusClass, setSelectedJob, openEditModal, handleDeleteComponent } = useWorkScheduleContext()
+  return (
+    <tr style={tinted ? { background: 'rgba(245,158,11,0.06)' } : undefined}>
       <td><strong>{c.unit_code}</strong></td>
       <td>{renderPercent(c.assembly_3d)}</td>
       <td>{renderPercent(c.parts_3d)}</td>
@@ -81,14 +77,49 @@ function JobCard({ j }: { j: IJob }) {
       )}
     </tr>
   )
+})
+
+function JobCard({ j }: { j: IJob }) {
+  const {
+    canWrite,
+    setSelectedJob,
+    setIsAddingComponent,
+    handleDeleteJob,
+    setEditingJob
+  } = useWorkScheduleContext()
+
+  const { normalComps, postponedComps, sentinels } = useMemo(() => {
+    const allComps = j.components || []
+    return {
+      sentinels: allComps.filter(c => c.unit_code.toUpperCase().trim() === 'POSTPONED'),
+      normalComps: allComps.filter(c => c.unit_code.toUpperCase().trim() !== 'POSTPONED' && !c.is_postponed),
+      postponedComps: allComps.filter(c => c.unit_code.toUpperCase().trim() !== 'POSTPONED' && c.is_postponed)
+    }
+  }, [j.components])
+
+  // Fix #2: single constant drives all colSpan values — add a column, update once
+  const COL_COUNT = canWrite ? 8 : 7
 
   const postponedDivider = (key: string) => (
     <tr key={key} style={{ background: 'rgba(245,158,11,0.1)', fontWeight: 'bold' }}>
-      <td colSpan={canWrite ? 8 : 7} style={{ padding: '10px 16px', color: 'var(--warning, #f59e0b)', fontSize: '13px', letterSpacing: '1px', textTransform: 'uppercase' }}>
+      <td colSpan={COL_COUNT} style={{ padding: '10px 16px', color: 'var(--warning, #f59e0b)', fontSize: '13px', letterSpacing: '1px', textTransform: 'uppercase' }}>
         <strong>&bull; POSTPONED</strong>
       </td>
     </tr>
   )
+
+  const renderDeadline = (dl: string | null) => {
+    if (!dl) return 'Not Specified'
+    if (dl.startsWith('ASAP')) {
+      return (
+        <>
+          <span style={{ color: '#ef4444', fontWeight: 'bold' }}>ASAP</span>
+          {dl.substring(4)}
+        </>
+      )
+    }
+    return dl
+  }
 
   return (
     <div className="schedule-main-panel" style={{ height: 'auto', flexShrink: 0, breakInside: 'avoid', marginBottom: '20px' }}>
@@ -97,7 +128,7 @@ function JobCard({ j }: { j: IJob }) {
         <div className="active-job-details">
           <h2>{j.job_id} Job Status</h2>
           <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Deadline: {j.deadline || 'Not Specified'} &bull; Completion: {j.progress_percent}% ({j.completed_components}/{j.total_components} Units)
+            Deadline: {renderDeadline(j.deadline)} &bull; Completion: {j.progress_percent}% ({j.completed_components}/{j.total_components} Units)
           </p>
         </div>
         <div className="action-buttons-group">
@@ -160,16 +191,16 @@ function JobCard({ j }: { j: IJob }) {
             </tr>
           </thead>
           <tbody>
-            {normalComps.map(c => renderRow(c))}
+            {normalComps.map(c => <ComponentRow key={c.id} c={c} j={j} />)}
             {/* Render DB sentinel rows if present (legacy), otherwise auto-insert divider */}
             {sentinels.length > 0
               ? sentinels.map(c => postponedDivider(`sentinel-${c.id}`))
               : postponedComps.length > 0 && postponedDivider('auto-divider')
             }
-            {postponedComps.map(c => renderRow(c, true))}
+            {postponedComps.map(c => <ComponentRow key={c.id} c={c} j={j} tinted />)}
             {(!j.components || j.components.length === 0) && (
               <tr>
-                <td colSpan={canWrite ? 8 : 7} style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.4)' }}>
+                <td colSpan={COL_COUNT} style={{ textAlign: 'center', padding: '20px', color: 'rgba(255,255,255,0.4)' }}>
                   No component drawings monitored for this job.
                 </td>
               </tr>
@@ -182,7 +213,6 @@ function JobCard({ j }: { j: IJob }) {
 }
 
 function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
-  const { alert } = useModal()
   const {
     flags,
     isAdminOrIT,
@@ -190,7 +220,6 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
     searchQuery,
     setSearchQuery,
     isLoadingJobs,
-    isExporting,
     timelineMembers,
     timelineDays,
     displayYear,
@@ -202,7 +231,6 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
     dragHoverCol,
     setIsAddingJob,
     filteredJobs,
-    handleExport,
     getDayClass,
     isToday,
     handleMouseDown,
@@ -211,7 +239,10 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
     sortBy,
     setSortBy,
     statusFilter,
-    setStatusFilter
+    setStatusFilter,
+    setIsExportModalOpen,
+    unreadCount,
+    setIsNotificationPanelOpen
   } = useWorkScheduleContext()
 
   const [visibleCount, setVisibleCount] = useState(10)
@@ -235,16 +266,21 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
       }
     })
     return () => cancelAnimationFrame(raf)
-  }, [isVisible, timelineDays])
+  // Fix #7: depend on length, not the array reference, so a re-render that
+  // returns a new array with identical data doesn't re-fire the scroll.
+  }, [isVisible, timelineDays.length])
 
   useEffect(() => {
     setVisibleCount(10)
   }, [searchQuery])
 
+  // Fix #5: functional updater removes stale-closure deps; empty dep array
+  // keeps the same observer alive for the component's lifetime instead of
+  // tearing it down and re-creating it on every load-more click.
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && filteredJobs.length > visibleCount) {
+        if (entries[0].isIntersecting) {
           setVisibleCount((prev) => prev + 10)
         }
       },
@@ -261,7 +297,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
         observer.unobserve(currentLoader)
       }
     }
-  }, [filteredJobs.length, visibleCount])
+  }, [])
 
   if ((!flags.work_schedule_enabled || flags.work_schedule_maintenance) && !isAdminOrIT) {
     return <Navigate to="/closed" replace />
@@ -306,17 +342,20 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
               </select>
             )}
             {canWrite && (
+              // Fix #6: button disabled until feature is implemented
               <button
                 className="btn-schedule-action primary"
+                disabled
+                title="Feature coming soon"
                 style={{
                   padding: '4px 12px',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  cursor: 'pointer',
-                  marginLeft: '8px'
+                  cursor: 'not-allowed',
+                  marginLeft: '8px',
+                  opacity: 0.5
                 }}
-                onClick={() => alert('This feature is still in development.', 'System Notification')}
               >
                 + Add Employee
               </button>
@@ -374,7 +413,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
         {/* Top filter and actions bar */}
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div className="search-input-wrapper" style={{ width: '300px' }}>
+            <div className="search-input-wrapper" style={{ width: '300px', position: 'relative' }}>
               <svg className="search-icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
@@ -383,11 +422,37 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
                 placeholder="Search Jobs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                style={{ paddingRight: searchQuery ? '32px' : undefined }}
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Clear search"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              )}
             </div>
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'name-asc' | 'name-desc' | 'deadline-asc' | 'deadline-desc' | 'status')}
               className="year-selector"
               style={{
                 background: 'var(--bg-secondary)',
@@ -402,6 +467,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
                 height: '38px'
               }}
             >
+              <option value="newest">Sort by: Newest First</option>
               <option value="name-asc">Sort by: Name (A-Z)</option>
               <option value="name-desc">Sort by: Name (Z-A)</option>
               <option value="deadline-asc">Sort by: Deadline (Soonest)</option>
@@ -410,7 +476,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
             </select>
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'completed' | 'checking' | 'pending' | 'excluded')}
               className="year-selector"
               style={{
                 background: 'var(--bg-secondary)',
@@ -432,13 +498,20 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
               <option value="excluded">Status: Excluded/NA</option>
             </select>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button
+              className={`notification-bell-btn${unreadCount > 0 ? ' has-unread' : ''}`}
+              onClick={() => setIsNotificationPanelOpen(true)}
+              title="Notifications"
+            >
+              <span className="bell-icon"><Bell size={20} /></span>
+              {unreadCount > 0 && <span className="notification-dot" />}
+            </button>
             <button
               className="btn-schedule-action"
-              onClick={handleExport}
-              disabled={isExporting}
+              onClick={() => setIsExportModalOpen(true)}
             >
-              {isExporting ? 'Exporting...' : 'Export Excel'}
+              Export Excel
             </button>
             {canWrite && (
               <button
@@ -450,6 +523,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
             )}
           </div>
         </div>
+        {/* Newspaper column layout */}
         <div className="jobs-cards-scroll-wrapper" style={{ columnCount: 2, columnGap: '20px', display: 'block' }}>
           {isLoadingJobs ? (
             // ── Job Cards Skeleton ──────────────────────────────────
@@ -502,6 +576,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
       </div>
 
       <ScheduleModals />
+      <NotificationPanel />
     </div>
   )
 }

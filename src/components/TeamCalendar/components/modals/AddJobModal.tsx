@@ -37,6 +37,7 @@ export default function AddJobModal() {
   ])
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [isAsap, setIsAsap] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -78,13 +79,20 @@ export default function AddJobModal() {
         parts_2d: formatPercentInput(comp.parts_2d)
       }))
 
-    let combinedDeadline = ''
+    let datePart = ''
     if (startDate && endDate) {
-      combinedDeadline = `${startDate} - ${endDate}`
+      datePart = `${startDate} - ${endDate}`
     } else if (startDate) {
-      combinedDeadline = startDate
+      datePart = startDate
     } else if (endDate) {
-      combinedDeadline = endDate
+      datePart = endDate
+    }
+
+    let combinedDeadline = ''
+    if (isAsap) {
+      combinedDeadline = datePart ? `ASAP (${datePart})` : 'ASAP'
+    } else {
+      combinedDeadline = datePart
     }
 
     setErrorMsg(null)
@@ -103,9 +111,10 @@ export default function AddJobModal() {
         setNewJobDeadline('')
         setStartDate('')
         setEndDate('')
+        setIsAsap(false)
         setComponentsList([createDefaultRow()])
         setErrorMsg(null)
-        loadJobs()
+        loadJobs(true)
       }
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message
@@ -162,7 +171,18 @@ export default function AddJobModal() {
               />
             </div>
             <div className="schedule-form-group">
-              <label>Deadline (End Date)</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label>Deadline (End Date)</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: 'bold', color: '#ef4444' }}>
+                  <input
+                    type="checkbox"
+                    checked={isAsap}
+                    onChange={(e) => setIsAsap(e.target.checked)}
+                    style={{ accentColor: '#ef4444' }}
+                  />
+                  ASAP
+                </label>
+              </div>
               <input
                 type="date"
                 value={endDate}

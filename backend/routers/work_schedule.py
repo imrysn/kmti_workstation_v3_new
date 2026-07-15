@@ -12,15 +12,24 @@ from db.database import get_db, get_fms_db
 from core.auth import get_current_user
 from models.user import User, UserRole
 from models.fms import FmsUser
-from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember
-from socket_manager import sio
+from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember, WorkScheduleNotification
+from sqlalchemy import select, delete
+from socket_manager import sio, emit_to_user
 
 from services.work_schedule_repository import WorkScheduleRepository
 from services.excel_schedule_service import ExcelScheduleService
 
 router = APIRouter()
 
-EXCEL_FILE_PATH = r"d:\RAYSAN\KMTI Data Management\Systems\kmti_workstation_v3_new\backend\data\KMTI Work Schedule Monitoring 2026.06.19.xlsx"
+def get_excel_file_path() -> str:
+    data_dir = r"d:\RAYSAN\KMTI Data Management\Systems\kmti_workstation_v3_new\backend\data"
+    for f in os.listdir(data_dir):
+        if f.startswith("KMTI Work Schedule Monitoring") and f.endswith(".xlsx") and not f.startswith("~"):
+            return os.path.join(data_dir, f)
+    # Fallback to the default name if none found
+    return os.path.join(data_dir, "KMTI Work Schedule Monitoring 2026.06.19.xlsx")
+
+EXCEL_FILE_PATH = get_excel_file_path()
 
 # --- Request/Response Pydantic Models ---
 
@@ -31,6 +40,10 @@ class ComponentUpdatePayload(BaseModel):
 class JobCreatePayload(BaseModel):
     job_id: str
     deadline: Optional[str] = None
+
+class ExportPayload(BaseModel):
+    job_ids: List[str]
+    target_months: List[str]
 
 class JobUpdatePayload(BaseModel):
     job_id: Optional[str] = None
@@ -69,6 +82,11 @@ class TimelineSpanPayload(BaseModel):
 
 class MemberCreatePayload(BaseModel):
     name: str
+
+class ManualNotificationPayload(BaseModel):
+    member_name: str
+    job_id: str
+    message: str
 
 class MemberRenamePayload(BaseModel):
     old_name: str
@@ -222,6 +240,7 @@ async def update_component_status(
     if not comp:
         raise HTTPException(status_code=404, detail="Component not found.")
         
+    old_status = comp.status
     comp.status = payload.status
     if comp.status in ("For Checking", "Completed") and comp.is_postponed:
         comp.is_postponed = 0
@@ -234,8 +253,29 @@ async def update_component_status(
     else:
         comp.submitted_date = None
         
+    # Notify assigned members if status changed and user is a leader/admin (or just notify anyone but self)
+    if old_status != payload.status:
+        # Find members assigned to this job
+        res_assign = await db.execute(select(WorkScheduleAssignment.member_name).where(WorkScheduleAssignment.value == comp.job_id))
+        members = set(res_assign.scalars().all())
+        for member in members:
+            if member != user.username:
+                notif = WorkScheduleNotification(
+                    member_name=member,
+                    job_id=comp.job_id,
+                    component_id=comp.id,
+                    message=f"Status for Job {comp.job_id} ({comp.unit_code}) was updated to '{payload.status}' by {user.username}."
+                )
+                db.add(notif)
+
     await db.commit()
     await sio.emit('schedule_updated')
+    
+    if old_status != payload.status and members:
+        # Emit a socket event specifically for this notification
+        for member in members:
+            if member != user.username:
+                await sio.emit('work_schedule_notification', {'member_name': member})
     return {
         "success": True, 
         "message": f"Component '{comp.unit_code}' updated successfully.",
@@ -247,6 +287,100 @@ async def update_component_status(
         }
     }
 
+# --- Notification Endpoints ---
+
+@router.get("/notifications")
+async def get_notifications(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Fetch unread/recent notifications for the current user."""
+    res = await db.execute(
+        select(WorkScheduleNotification)
+        .where(WorkScheduleNotification.member_name == current_user.username)
+        .order_by(WorkScheduleNotification.created_at.desc())
+        .limit(50)
+    )
+    notifs = res.scalars().all()
+    return {
+        "success": True,
+        "notifications": [
+            {
+                "id": n.id,
+                "job_id": n.job_id,
+                "component_id": n.component_id,
+                "message": n.message,
+                "is_read": n.is_read,
+                "created_at": n.created_at.isoformat()
+            } for n in notifs
+        ]
+    }
+
+@router.post("/notifications/read")
+async def mark_notifications_read(
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Mark all notifications as read for the current user."""
+    res = await db.execute(
+        select(WorkScheduleNotification)
+        .where(WorkScheduleNotification.member_name == current_user.username)
+        .where(WorkScheduleNotification.is_read == False)
+    )
+    for n in res.scalars().all():
+        n.is_read = True
+    await db.commit()
+    return {"success": True}
+
+@router.post("/notifications/manual")
+async def send_manual_notification(
+    payload: ManualNotificationPayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """Send a manual notification to a member."""
+    notif = WorkScheduleNotification(
+        member_name=payload.member_name,
+        job_id=payload.job_id,
+        component_id=None,
+        message=payload.message
+    )
+    db.add(notif)
+    await db.commit()
+    
+    # Emit socket event ONLY to the target member's room
+    await emit_to_user(payload.member_name, 'work_schedule_notification', {'member_name': payload.member_name})
+    
+    return {"success": True}
+
+@router.delete("/notifications/{notif_id}")
+async def delete_notification(
+    notif_id: int, 
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a specific notification."""
+    res = await db.execute(
+        select(WorkScheduleNotification)
+        .where(WorkScheduleNotification.id == notif_id)
+        .where(WorkScheduleNotification.member_name == current_user.username)
+    )
+    notif = res.scalar_one_or_none()
+    if notif:
+        await db.delete(notif)
+        await db.commit()
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Notification not found")
+
+@router.delete("/notifications")
+async def delete_all_notifications(
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Delete all notifications for the user."""
+    await db.execute(
+        delete(WorkScheduleNotification)
+        .where(WorkScheduleNotification.member_name == current_user.username)
+    )
+    await db.commit()
+    return {"success": True}
 
 @router.post("/jobs")
 async def create_job(
@@ -474,11 +608,11 @@ async def import_from_excel(
     Seed/Import work schedule data from the local Excel spreadsheet.
     DANGER: Clears existing work schedule tables.
     """
-    if not os.path.exists(EXCEL_FILE_PATH):
+    if not os.path.exists(get_excel_file_path()):
         raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
         
     try:
-        jobs_dict = await asyncio.to_thread(ExcelScheduleService.parse_excel_for_import, EXCEL_FILE_PATH)
+        jobs_dict = await asyncio.to_thread(ExcelScheduleService.parse_excel_for_import, get_excel_file_path())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse Excel workbook: {e}")
         
@@ -515,8 +649,9 @@ async def import_from_excel(
         raise HTTPException(status_code=500, detail=f"Database import transaction failed: {e}")
 
 
-@router.get("/export")
+@router.post("/export")
 async def export_to_excel(
+    payload: ExportPayload,
     db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
@@ -525,7 +660,7 @@ async def export_to_excel(
     master file in-place, preserving the original layout, formatting, formulas, and Gantt charts.
     Streams the Excel file to the client for download.
     """
-    if not os.path.exists(EXCEL_FILE_PATH):
+    if not os.path.exists(get_excel_file_path()):
         raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
         
     db_components = await WorkScheduleRepository.get_all_components(db)
@@ -535,26 +670,33 @@ async def export_to_excel(
     # Load or seed members list
     db_members_obj = await WorkScheduleRepository.get_all_members(db)
     if not db_members_obj:
-        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, EXCEL_FILE_PATH)
+        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, get_excel_file_path())
         for m in layout["members"]:
             await WorkScheduleRepository.create_member(db, m)
         db_members_obj = await WorkScheduleRepository.get_all_members(db)
     db_members = [m.name for m in db_members_obj]
     
+    # Filter jobs to only include requested jobs
+    requested_ids_lower = {jid.strip().lower() for jid in payload.job_ids}
+    filtered_jobs = [j for j in db_jobs if str(j.job_id).strip().lower() in requested_ids_lower]
+
     try:
         output = await asyncio.to_thread(
             ExcelScheduleService.generate_excel_export,
-            EXCEL_FILE_PATH,
+            get_excel_file_path(),
             db_components,
-            db_jobs,
+            filtered_jobs,
             db_assignments,
-            db_members
+            db_members,
+            payload.target_months,
+            payload.job_ids
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate Excel export: {e}")
         
+    current_excel_path = get_excel_file_path()
     headers = {
-        'Content-Disposition': 'attachment; filename="KMTI Work Schedule Monitoring 2026.06.19.xlsx"'
+        'Content-Disposition': f'attachment; filename="{os.path.basename(current_excel_path)}"'
     }
     return StreamingResponse(
         output,
@@ -568,12 +710,12 @@ async def get_timeline(db: AsyncSession = Depends(get_db)):
     """
     Parses the Gantt chart timeline columns 20 onwards of the Excel sheet.
     """
-    if not os.path.exists(EXCEL_FILE_PATH):
+    if not os.path.exists(get_excel_file_path()):
         raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
         
     db_members_obj = await WorkScheduleRepository.get_all_members(db)
     if not db_members_obj:
-        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, EXCEL_FILE_PATH)
+        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, get_excel_file_path())
         for m in layout["members"]:
             await WorkScheduleRepository.create_member(db, m)
         db_members_obj = await WorkScheduleRepository.get_all_members(db)
@@ -582,7 +724,7 @@ async def get_timeline(db: AsyncSession = Depends(get_db)):
     db_assignments = await WorkScheduleRepository.get_all_assignments(db)
     
     try:
-        res = await ExcelScheduleService.parse_timeline(EXCEL_FILE_PATH, db_assignments, db_members)
+        res = await ExcelScheduleService.parse_timeline(get_excel_file_path(), db_assignments, db_members)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load spreadsheet: {e}")
         
@@ -603,7 +745,7 @@ async def update_timeline_cell(
     Update a single Gantt chart cell in the database.
     """
     # Check if member exists in Excel legend OR database
-    target_row = await ExcelScheduleService.get_target_row_for_member(EXCEL_FILE_PATH, payload.member_name)
+    target_row = await ExcelScheduleService.get_target_row_for_member(get_excel_file_path(), payload.member_name)
     if not target_row:
         all_members = await WorkScheduleRepository.get_all_members(db)
         if not any(m.name.strip().lower() == payload.member_name.strip().lower() for m in all_members):
@@ -636,7 +778,7 @@ async def update_timeline_span(
     Update a range of Gantt chart cells representing a duration span in the database.
     """
     # Check if member exists in Excel legend OR database
-    target_row = await ExcelScheduleService.get_target_row_for_member(EXCEL_FILE_PATH, payload.member_name)
+    target_row = await ExcelScheduleService.get_target_row_for_member(get_excel_file_path(), payload.member_name)
     if not target_row:
         all_members = await WorkScheduleRepository.get_all_members(db)
         if not any(m.name.strip().lower() == payload.member_name.strip().lower() for m in all_members):

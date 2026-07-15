@@ -502,6 +502,12 @@ export const ttsApi = {
 
 // --- Work Schedule ---
 export const scheduleApi = {
+  getNotifications: () => api.get('/schedule/notifications').then(r => r.data),
+  markNotificationsRead: () => api.post('/schedule/notifications/read').then(r => r.data),
+  deleteNotification: (id: number) => api.delete(`/schedule/notifications/${id}`).then(r => r.data),
+  deleteAllNotifications: () => api.delete('/schedule/notifications').then(r => r.data),
+  sendManualNotification: (memberName: string, jobId: string, message: string) => 
+    api.post('/schedule/notifications/manual', { member_name: memberName, job_id: jobId, message }).then(r => r.data),
   getPermissions: () => api.get('/schedule/permissions').then(r => r.data),
   getJobs: () => api.get('/schedule/jobs').then(r => r.data),
   getComponents: (jobId: string) => api.get(`/schedule/jobs/${jobId}/components`).then(r => r.data),
@@ -521,7 +527,7 @@ export const scheduleApi = {
     submitted_date?: string | null;
   }) => api.post(`/schedule/jobs/${jobId}/components`, data).then(r => r.data),
   importFromExcel: () => api.post('/schedule/import').then(r => r.data),
-  exportToExcel: () => api.get('/schedule/export', { responseType: 'blob' }).then(r => r.data),
+  exportToExcel: (job_ids: string[], target_months: string[]) => api.post('/schedule/export', { job_ids, target_months }, { responseType: 'blob' }).then(r => r.data),
   getTimeline: () => api.get('/schedule/timeline').then(r => r.data),
   updateTimeline: (memberName: string, colIndex: number, value: string) => 
     api.post('/schedule/timeline', { member_name: memberName, col_index: colIndex, value }).then(r => r.data),
@@ -542,7 +548,8 @@ export const scheduleApi = {
   getMembers: () => api.get('/schedule/members').then(r => r.data),
   createMember: (name: string) => api.post('/schedule/members', { name }).then(r => r.data),
   renameMember: (oldName: string, newName: string) => api.put('/schedule/members', { old_name: oldName, new_name: newName }).then(r => r.data),
-  deleteMember: (name: string) => api.delete(`/schedule/members/${encodeURIComponent(name)}`).then(r => r.data)
+  deleteMember: (name: string) => api.delete(`/schedule/members/${encodeURIComponent(name)}`).then(r => r.data),
+  getActiveUsers: () => api.get('/auth/users').then(r => r.data as Array<{ id: number; username: string; role: string; is_active: boolean }>),
 }
 
 

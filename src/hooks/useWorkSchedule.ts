@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { scheduleApi } from '../services/api'
+import { io } from 'socket.io-client'
+import { scheduleApi, SERVER_BASE } from '../services/api'
 import { useFlags } from '../context/FlagsContext'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../components/ModalContext'
@@ -46,6 +47,15 @@ export interface IComponent {
   status: string
   submitted_date: string | null
   is_postponed?: boolean
+}
+
+export interface INotification {
+  id: number
+  job_id: string
+  component_id: number
+  message: string
+  is_read: boolean
+  created_at: string
 }
 
 export interface ITimelineDay {
@@ -142,8 +152,8 @@ export async function prefetchWorkScheduleData() {
 
 export function useWorkSchedule() {
   const { flags } = useFlags()
-  const { hasRole } = useAuth()
-  const { confirm } = useModal()
+  const { hasRole, user } = useAuth()
+  const { confirm, alert } = useModal()
   const isAdminOrIT = hasRole('admin', 'it')
 
   const [canWrite, setCanWrite] = useState(isAdminOrIT)
@@ -154,6 +164,124 @@ export function useWorkSchedule() {
   const [isLoadingJobs, setIsLoadingJobs] = useState(false)
   const [isLoadingComponents, setIsLoadingComponents] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false)
+  
+  // Notification State
+  const [notifications, setNotifications] = useState<INotification[]>([])
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
+  
+  const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications])
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await scheduleApi.getNotifications()
+      if (res.success) setNotifications(res.notifications)
+    } catch (err) {
+      console.warn('Failed to fetch notifications', err)
+    }
+  }, [])
+
+  const markNotificationsRead = async () => {
+    try {
+      await scheduleApi.markNotificationsRead()
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
+    } catch (err) {
+      console.warn('Failed to mark notifications read', err)
+    }
+  }
+
+  const deleteNotification = async (id: number) => {
+    try {
+      await scheduleApi.deleteNotification(id)
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    } catch (err) {
+      console.warn('Failed to delete notification', err)
+    }
+  }
+
+  const deleteAllNotifications = async () => {
+    try {
+      await scheduleApi.deleteAllNotifications()
+      setNotifications([])
+    } catch (err) {
+      console.warn('Failed to delete all notifications', err)
+    }
+  }
+
+  // Socket Listener for Notifications
+  useEffect(() => {
+    fetchNotifications()
+
+    const socket = io(SERVER_BASE, {
+      path: '/socket.io',
+      transports: ['polling', 'websocket'],
+      auth: { username: user?.username ?? '' }
+    })
+
+    socket.on('work_schedule_notification', (_data: { member_name: string }) => {
+      // Refresh notifications when we receive an event
+      fetchNotifications()
+      
+      // Browser push notification
+      if (Notification.permission === 'granted') {
+        new Notification('KMTI Work Schedule', { body: 'You have a new work status update!' })
+      } else if (Notification.permission !== 'denied') {
+        Notification.requestPermission()
+      }
+
+      const isElectron = !!(window as any).electronAPI?.flashWindow
+
+      if (isElectron) {
+        // --- Electron: use native BrowserWindow.flashFrame() ---
+        ;(window as any).electronAPI.flashWindow(true)
+
+        const stopFlash = () => {
+          ;(window as any).electronAPI.flashWindow(false)
+          window.removeEventListener('focus', stopFlash)
+        }
+        window.addEventListener('focus', stopFlash)
+      } else {
+        // --- Browser fallback: flash the tab title ---
+        const originalTitle = document.title
+        let flashInterval: ReturnType<typeof setInterval> | null = null
+        let isFlashing = false
+
+        const startFlashing = () => {
+          if (flashInterval) return
+          isFlashing = true
+          flashInterval = setInterval(() => {
+            document.title = isFlashing ? '🔔 NEW NOTIFICATION!' : originalTitle
+            isFlashing = !isFlashing
+          }, 700)
+        }
+
+        const stopFlashing = () => {
+          if (flashInterval) {
+            clearInterval(flashInterval)
+            flashInterval = null
+          }
+          document.title = originalTitle
+          window.removeEventListener('focus', stopFlashing)
+        }
+
+        if (!document.hasFocus()) {
+          startFlashing()
+        } else {
+          const onBlur = () => {
+            startFlashing()
+            window.removeEventListener('blur', onBlur)
+          }
+          window.addEventListener('blur', onBlur)
+        }
+
+        window.addEventListener('focus', stopFlashing)
+      }
+    })
+
+    return () => {
+      socket.disconnect()
+    }
+  }, [fetchNotifications])
 
   // Timeline State
   const [timelineMembers, setTimelineMembers] = useState<string[]>(cachedTimelineMembers)
@@ -168,7 +296,7 @@ export function useWorkSchedule() {
   const [isAddingEmployee, setIsAddingEmployee] = useState(false)
   const [renamingEmployee, setRenamingEmployee] = useState<string | null>(null)
   const [employeeInputName, setEmployeeInputName] = useState('')
-  const [sortBy, setSortBy] = useState<'name-asc' | 'name-desc' | 'deadline-asc' | 'deadline-desc' | 'status'>('name-asc')
+  const [sortBy, setSortBy] = useState<'newest' | 'name-asc' | 'name-desc' | 'deadline-asc' | 'deadline-desc' | 'status'>('newest')
   const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'checking' | 'pending' | 'excluded'>('all')
 
   // Compute filtered timelineDays based on chosen year
@@ -482,18 +610,20 @@ export function useWorkSchedule() {
       result.sort((a, b) => getJobStatusScore(a) - getJobStatusScore(b))
     } else if (sortBy === 'name-desc') {
       result.sort((a, b) => b.job_id.localeCompare(a.job_id))
-    } else {
-      // Default: name-asc
+    } else if (sortBy === 'name-asc') {
       result.sort((a, b) => a.job_id.localeCompare(b.job_id))
+    } else {
+      // Default: newest
+      result.sort((a, b) => b.id - a.id)
     }
     return result
   }, [jobs, searchQuery, sortBy, statusFilter])
 
   // Handle excel export
-  const handleExport = async () => {
+  const handleExport = async (jobIds: string[], targetMonths: string[]) => {
     setIsExporting(true)
     try {
-      const data = await scheduleApi.exportToExcel()
+      const data = await scheduleApi.exportToExcel(jobIds, targetMonths)
       const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -501,9 +631,11 @@ export function useWorkSchedule() {
       a.download = 'KMTI Work Schedule Monitoring.xlsx'
       a.click()
       window.URL.revokeObjectURL(url)
-    } catch (err) {
+      setIsExportModalOpen(false)
+    } catch (err: any) {
       console.error('Export failed:', err)
-      alert('Failed to export schedule to Excel.')
+      const errMsg = err.response?.data?.detail || err.message || 'Unknown error'
+      alert(`Failed to export schedule to Excel:\n\n${errMsg}`, 'Export Error', 'warning')
     } finally {
       setIsExporting(false)
     }
@@ -1096,6 +1228,8 @@ export function useWorkSchedule() {
     isLoadingJobs,
     isLoadingComponents,
     isExporting,
+    isExportModalOpen,
+    setIsExportModalOpen,
     timelineMembers,
     timelineDays,
     displayYear,
@@ -1189,6 +1323,13 @@ export function useWorkSchedule() {
     statusFilter,
     setStatusFilter,
     editingJob,
-    setEditingJob
+    setEditingJob,
+    notifications,
+    unreadCount,
+    isNotificationPanelOpen,
+    setIsNotificationPanelOpen,
+    markNotificationsRead,
+    deleteNotification,
+    deleteAllNotifications
   }
 }

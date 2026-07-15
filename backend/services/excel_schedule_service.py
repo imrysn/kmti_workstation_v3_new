@@ -6,6 +6,7 @@ import asyncio
 from typing import Dict, List, Any, Optional, Tuple
 from io import BytesIO
 import openpyxl
+import openpyxl.utils
 from copy import copy
 
 def determine_year(month_str, day_num, weekday_str) -> int:
@@ -290,7 +291,9 @@ class ExcelScheduleService:
         db_components: List[Any],
         db_jobs: List[Any],
         db_assignments: List[Any],
-        db_members: List[str] = None
+        db_members: List[str],
+        target_months: List[str] = None,
+        selected_job_ids: List[str] = None
     ) -> BytesIO:
         # Load template from cached bytes (avoids repeated disk reads of the large xlsx)
         if ExcelScheduleService._cached_template_bytes is None:
@@ -418,6 +421,12 @@ class ExcelScheduleService:
         ref_header_row = None   # last "Job Status" row seen  → used as template
         ref_comp_row   = None   # a component row with a known status → style ref
         last_used_row  = 1      # last row with any value in cols A-S
+        hide_current_job = False
+        
+        # Precompute selected job ids for fast lookup
+        selected_ids_set = None
+        if selected_job_ids is not None:
+            selected_ids_set = {str(jid).strip().lower() for jid in selected_job_ids}
 
         for r in range(1, ws.max_row + 1):
             val_a     = ws.cell(row=r, column=1).value
@@ -429,11 +438,28 @@ class ExcelScheduleService:
             ):
                 last_used_row = r
 
+            # Check if this row is a spacer row above a job header by peeking ahead
+            # (Optional: to hide spacer rows if the job below it is hidden)
+            # For simplicity, we just hide from the header downwards.
+
             if "Job Status" in val_a_str:
                 m = re.match(r"(\d+)\s+Job\s+Status", val_a_str, re.IGNORECASE)
                 current_job_id = m.group(1) if m else val_a_str.replace("Job Status", "").strip()
                 seen_jobs.add(current_job_id.strip().lower())
                 ref_header_row = r   # keep updating → ends up as last header row
+                
+                if selected_ids_set is not None:
+                    if current_job_id.strip().lower() not in selected_ids_set:
+                        hide_current_job = True
+                        # Also hide the 2 spacer rows above it
+                        if r > 2:
+                            ws.row_dimensions[r - 1].hidden = True
+                            ws.row_dimensions[r - 2].hidden = True
+                    else:
+                        hide_current_job = False
+
+            if hide_current_job:
+                ws.row_dimensions[r].hidden = True
 
             elif current_job_id:
                 if val_a_str in ("", "Machine/Unit Code", "Legend:"):
@@ -457,52 +483,85 @@ class ExcelScheduleService:
                         str(status_here).strip().lower() in ("pending/not started", "complete", "for checking"):
                     ref_comp_row = r
 
-        if not ref_header_row:
-            ref_header_row = 1212
-        if not ref_comp_row:
-            ref_comp_row   = 1216
+        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
+        _fill_header = PatternFill(fill_type='solid', fgColor='DCE6F1')
+        _fill_sub = PatternFill(fill_type='solid', fgColor='F2F2F2')
+        _fill_spacer = PatternFill(fill_type='solid', fgColor='B7DEE8')
+        _border_thin = Border(left=Side(style='thin', color='000000'), 
+                              right=Side(style='thin', color='000000'), 
+                              top=Side(style='thin', color='000000'), 
+                              bottom=Side(style='thin', color='000000'))
+        _border_bottom_medium = Border(left=Side(style='thin', color='000000'), 
+                                       right=Side(style='thin', color='000000'), 
+                                       top=Side(style='thin', color='000000'), 
+                                       bottom=Side(style='medium', color='000000'))
+        _font_bold = Font(name='Arial Unicode MS', bold=True)
+        _font_norm = Font(name='Arial Unicode MS', bold=False)
+        _align_center = Alignment(horizontal='center', vertical='center')
+        
+        def _apply_prog_style(cell, fill=None, font=_font_norm, border=_border_thin, align=_align_center):
+            if fill:
+                cell.fill = fill
+            cell.font = font
+            cell.border = border
+            cell.alignment = align
+
+        # Find the last column that has a day number in row 4 (Timeline range)
+        max_gantt_col = 20
+        for c in range(ws.max_column, 19, -1):
+            if ws.cell(row=4, column=c).value is not None:
+                max_gantt_col = c
+                break
+
+        # Clean up any dangling merged cells from rows that were deleted from the template
+        for m_range in list(ws.merged_cells.ranges):
+            if m_range.min_row > last_used_row:
+                ws.merged_cells.ranges.remove(m_range)
 
         next_row = last_used_row + 1
+
+        # If this is a completely clean template (next_row == 11), 
+        # add 2 white global spacer rows first!
+        if next_row == 11:
+            for spacer_offset in range(2):
+                for c in range(1, 20):
+                    ws.cell(row=next_row, column=c, value=None)
+                    ws.cell(row=next_row, column=c).fill = openpyxl.styles.PatternFill(fill_type=None)
+                ws.merge_cells(start_row=next_row, start_column=1, end_row=next_row, end_column=19)
+                next_row += 1
 
         for j in db_jobs:
             j_key = j.job_id.strip().lower()
             if j_key not in seen_jobs:
-                ref_spacer_row = ref_header_row - 2  # rows just above first job header in template
+                # Add 2 spacer rows
                 for spacer_offset in range(2):
                     for c in range(1, 20):
-                        src = ws.cell(row=ref_spacer_row, column=c)
-                        dst = ws.cell(row=next_row, column=c)
-                        dst.value = None
-                        if src.has_style:
-                            dst.fill = copy(src.fill)
-                            dst.border = copy(src.border)
-                    # Merge spacer row across all columns (A:S)
+                        ws.cell(row=next_row, column=c).fill = _fill_spacer
+                        ws.cell(row=next_row, column=c, value=None)
                     ws.merge_cells(start_row=next_row, start_column=1, end_row=next_row, end_column=19)
-                    if ws.row_dimensions[ref_spacer_row].height:
-                        ws.row_dimensions[next_row].height = ws.row_dimensions[ref_spacer_row].height
                     next_row += 1
                 
+                # Header row 1
                 for c in range(1, 20):
-                    copy_cell_style(ws.cell(row=ref_header_row, column=c), ws.cell(row=next_row, column=c))
+                    _apply_prog_style(ws.cell(row=next_row, column=c), fill=None, font=_font_bold)
                 ws.cell(row=next_row, column=1, value=f"{j.job_id} Job Status")
                 
                 raw_deadline = str(j.deadline).strip() if j.deadline else ""
                 formatted_deadline = re.sub(r"(\d{4})-(\d{2})-(\d{2})", r"\1/\2/\3", raw_deadline)
-                ws.cell(row=next_row, column=2, value=f"Deadline: {formatted_deadline}" if formatted_deadline else "Deadline:")
-                
-                if ws.row_dimensions[ref_header_row].height:
-                    ws.row_dimensions[next_row].height = ws.row_dimensions[ref_header_row].height
+                clean_deadline = re.sub(r'(?i)^Deadline:\s*', '', formatted_deadline)
+                ws.cell(row=next_row, column=2, value=f"Deadline: {clean_deadline}" if clean_deadline else "Deadline:")
+                ws.merge_cells(start_row=next_row, start_column=2, end_row=next_row, end_column=19)
+                ws.cell(row=next_row, column=2).alignment = openpyxl.styles.Alignment(horizontal='left', vertical='center')
                 next_row += 1
                 
+                # Header row 2
                 for c in range(1, 20):
-                    copy_cell_style(ws.cell(row=ref_header_row + 1, column=c), ws.cell(row=next_row, column=c))
+                    _apply_prog_style(ws.cell(row=next_row, column=c), fill=None, font=_font_bold)
                 ws.cell(row=next_row, column=1, value="Machine/Unit Code")
                 ws.cell(row=next_row, column=2, value="3D")
                 ws.cell(row=next_row, column=7, value="2D")
                 ws.cell(row=next_row, column=12, value="Status")
                 ws.cell(row=next_row, column=16, value="Submitted Date")
-                if ws.row_dimensions[ref_header_row + 1].height:
-                    ws.row_dimensions[next_row].height = ws.row_dimensions[ref_header_row + 1].height
                 
                 ws.merge_cells(start_row=next_row, start_column=1, end_row=next_row + 1, end_column=1)
                 ws.merge_cells(start_row=next_row, start_column=2, end_row=next_row, end_column=6)
@@ -511,15 +570,14 @@ class ExcelScheduleService:
                 ws.merge_cells(start_row=next_row, start_column=16, end_row=next_row, end_column=19)
                 next_row += 1
                 
+                # Header row 3
                 for c in range(1, 20):
-                    copy_cell_style(ws.cell(row=ref_header_row + 2, column=c), ws.cell(row=next_row, column=c))
+                    _apply_prog_style(ws.cell(row=next_row, column=c), fill=None, font=_font_bold)
                 ws.cell(row=next_row, column=2, value="Assembly")
                 ws.cell(row=next_row, column=5, value="Parts")
                 ws.cell(row=next_row, column=7, value="Assembly")
                 ws.cell(row=next_row, column=10, value="Parts")
                 ws.cell(row=next_row, column=16, value="Date")
-                if ws.row_dimensions[ref_header_row + 2].height:
-                    ws.row_dimensions[next_row].height = ws.row_dimensions[ref_header_row + 2].height
                     
                 ws.merge_cells(start_row=next_row, start_column=2, end_row=next_row, end_column=4)
                 ws.merge_cells(start_row=next_row, start_column=5, end_row=next_row, end_column=6)
@@ -530,8 +588,10 @@ class ExcelScheduleService:
                 
                 j_comps = [c_item for c_item in db_components if str(c_item.job_id).strip().lower() == j_key]
                 for c_item in j_comps:
+                    is_last = (c_item == j_comps[-1])
                     for c in range(1, 20):
-                        copy_cell_style(ws.cell(row=ref_comp_row, column=c), ws.cell(row=next_row, column=c))
+                        border_to_use = _border_bottom_medium if is_last else _border_thin
+                        _apply_prog_style(ws.cell(row=next_row, column=c), fill=None, font=_font_norm, border=border_to_use)
                     
                     ws.cell(row=next_row, column=1, value=c_item.unit_code)
                     ws.cell(row=next_row, column=2, value=fmt_pct(c_item.assembly_3d))
@@ -545,38 +605,17 @@ class ExcelScheduleService:
                     else:
                         ws.cell(row=next_row, column=16, value=None)
                         
-                    if ws.row_dimensions[ref_comp_row].height:
-                        ws.row_dimensions[next_row].height = ws.row_dimensions[ref_comp_row].height
-                        
                     ws.merge_cells(start_row=next_row, start_column=2, end_row=next_row, end_column=4)
                     ws.merge_cells(start_row=next_row, start_column=5, end_row=next_row, end_column=6)
                     ws.merge_cells(start_row=next_row, start_column=7, end_row=next_row, end_column=9)
                     ws.merge_cells(start_row=next_row, start_column=10, end_row=next_row, end_column=11)
                     ws.merge_cells(start_row=next_row, start_column=12, end_row=next_row, end_column=15)
                     ws.merge_cells(start_row=next_row, start_column=16, end_row=next_row, end_column=19)
-
-                    if c_item == j_comps[-1]:
-                        from openpyxl.styles import Border, Side
-                        medium_side = Side(style='medium', color='000000')
-                        for c in range(1, 20):
-                            cell = ws.cell(row=next_row, column=c)
-                            cell.border = Border(
-                                left=cell.border.left,
-                                right=cell.border.right,
-                                top=cell.border.top,
-                                bottom=medium_side
-                            )
+                    
                     next_row += 1
 
         # member_rows has already been dynamically constructed at the beginning of this function
                 
-        # Find the last column that has a day number in row 4 (Timeline range)
-        max_gantt_col = 20
-        for c in range(ws.max_column, 19, -1):
-            if ws.cell(row=4, column=c).value is not None:
-                max_gantt_col = c
-                break
-
         # Dynamically append columns in Excel if assignments exceed max_gantt_col
         max_col_to_write = max(max_gantt_col, max((a.col_index for a in db_assignments if a.col_index is not None), default=0))
         if max_col_to_write > max_gantt_col:
@@ -701,35 +740,66 @@ class ExcelScheduleService:
                 
             # Process and style each block
             for block in blocks:
-                if len(block) == 1:
-                    a = block[0]
-                    cell = ws.cell(row=target_row, column=a.col_index)
-                    cell.value = a.value
-                    cell.font = _FONT_RED
-                    cell.alignment = _ALIGN_CENTER
+                # Find the job code assignment in this block
+                job_ass = None
+                for a in block:
+                    if a.value not in ('-->', '->', '---'):
+                        job_ass = a
+                        break
+                
+                if not job_ass:
+                    continue
+                    
+                start_col = block[0].col_index
+                end_col = block[-1].col_index
+                
+                # If it's a multi-day block, append the arrow to the job code
+                if end_col > start_col:
+                    display_text = f"{job_ass.value} ➔"
                 else:
-                    # Find the job code assignment in this block
-                    job_ass = None
-                    for a in block:
-                        if a.value not in ('-->', '->', '---'):
-                            job_ass = a
-                            break
-                            
-                    last_a = block[-1]
-                    for a in block:
-                        cell = ws.cell(row=target_row, column=a.col_index)
-                        if a.col_index == last_a.col_index:
-                            cell.value = '->'
-                            cell.font = _FONT_BLUE
-                        elif job_ass and a.col_index == job_ass.col_index:
-                            cell.value = job_ass.value
-                            cell.font = _FONT_RED
-                        else:
-                            cell.value = '---'
-                            cell.font = _FONT_BLUE
-                        cell.alignment = _ALIGN_CENTER
+                    display_text = str(job_ass.value)
+                    
+                # Write the value to the first cell
+                first_cell = ws.cell(row=target_row, column=start_col)
+                first_cell.value = display_text
+                
+                # Merge the cells if it spans multiple days
+                if end_col > start_col:
+                    ws.merge_cells(start_row=target_row, start_column=start_col, end_row=target_row, end_column=end_col)
+                    
+                # Apply styling to all cells in the block so borders remain intact
+                for a in block:
+                    cell = ws.cell(row=target_row, column=a.col_index)
+                    cell.font = _FONT_BLUE
+                    cell.alignment = _ALIGN_CENTER
             
-        output = BytesIO()
-        wb.save(output)
-        output.seek(0)
-        return output
+        # ─────────────────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────────
+        # Filter Columns by Target Months (and Unhide Default Groups)
+        # ─────────────────────────────────────────────────────────────────────────
+        # Force-unhide all columns in the template first, so no days are missing
+        for c in range(20, max_col_to_write + 1):
+            col_letter = openpyxl.utils.get_column_letter(c)
+            ws.column_dimensions[col_letter].hidden = False
+            ws.column_dimensions[col_letter].outline_level = 0
+            ws.column_dimensions[col_letter].width = 3.50
+            
+        if target_months:
+            target_months_lower = {m.strip().lower() for m in target_months}
+            for c in range(20, max_col_to_write + 1):
+                # find month name for this column by backtracking
+                m_val = None
+                for col_idx in range(c, 19, -1):
+                    val = ws.cell(row=2, column=col_idx).value
+                    if val:
+                        m_val = str(val).strip().lower()
+                        break
+                
+                if m_val and m_val not in target_months_lower:
+                    col_letter = openpyxl.utils.get_column_letter(c)
+                    ws.column_dimensions[col_letter].hidden = True
+
+        out = BytesIO()
+        wb.save(out)
+        out.seek(0)
+        return out
