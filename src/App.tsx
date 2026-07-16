@@ -34,6 +34,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { UpdateProvider, useUpdate } from './context/UpdateContext'
 import { FlagsProvider, useFlags, FeatureFlags } from './context/FlagsContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { NotificationProvider } from './context/NotificationContext'
 import { useHeartbeat } from './hooks/useHeartbeat'
 import { useSocketSync } from './hooks/useSocketSync'
 import MandatoryUpdateOverlay from './components/MandatoryUpdateOverlay'
@@ -388,12 +389,14 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <UpdateProvider>
-            <ModalProvider>
-              <HashRouter>
-                <AppContent />
-                <AnniversaryOverlay />
-              </HashRouter>
-            </ModalProvider>
+            <NotificationProvider>
+              <ModalProvider>
+                <HashRouter>
+                  <AppContent />
+                  <AnniversaryOverlay />
+                </HashRouter>
+              </ModalProvider>
+            </NotificationProvider>
           </UpdateProvider>
         </AuthProvider>
       </ThemeProvider>

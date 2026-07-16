@@ -440,6 +440,12 @@
   transition: all 0.2s ease;
 }
 
+.btn-schedule-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .btn-schedule-action:hover {
   background: var(--bg-surface-hover);
 }
@@ -465,66 +471,6 @@
   color: #fff;
 }
 
-/* Notification Bell */
-.notification-bell-btn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  color: var(--text-primary);
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-.notification-bell-btn:hover {
-  background: var(--bg-secondary);
-}
-
-/* Unread dot */
-.notification-dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 10px;
-  height: 10px;
-  background-color: #ef4444;
-  border-radius: 50%;
-  border: 2px solid var(--bg-primary);
-}
-
-/* Pulse ring that expands outward from the dot */
-.notification-dot::after {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background-color: #ef4444;
-  animation: notif-pulse 1.8s ease-out infinite;
-  opacity: 0;
-}
-
-@keyframes notif-pulse {
-  0%   { transform: scale(0.8); opacity: 0.7; }
-  70%  { transform: scale(2.2); opacity: 0; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
-/* Bell shake when there are unread notifications */
-.notification-bell-btn.has-unread .bell-icon {
-  animation: bell-shake 4s ease-in-out infinite;
-  transform-origin: top center;
-}
-
-@keyframes bell-shake {
-  0%, 85%, 100% { transform: rotate(0deg); }
-  88%           { transform: rotate(12deg); }
-  92%           { transform: rotate(-10deg); }
-  95%           { transform: rotate(8deg); }
-  98%           { transform: rotate(-5deg); }
-}
 
 /* Components Table */
 .components-table-container {

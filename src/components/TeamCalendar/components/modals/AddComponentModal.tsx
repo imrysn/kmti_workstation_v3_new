@@ -91,7 +91,7 @@ export default function AddComponentModal() {
       setComponentsList([createDefaultRow()])
       setErrorMsg(null)
       loadComponents(selectedJob.job_id)
-      loadJobs()
+      loadJobs(true)
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message
       setErrorMsg(`Failed to add components: ${errMsg}`)

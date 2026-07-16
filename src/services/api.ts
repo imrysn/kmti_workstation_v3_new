@@ -504,6 +504,7 @@ export const ttsApi = {
 export const scheduleApi = {
   getNotifications: () => api.get('/schedule/notifications').then(r => r.data),
   markNotificationsRead: () => api.post('/schedule/notifications/read').then(r => r.data),
+  markNotificationRead: (id: number) => api.post(`/schedule/notifications/${id}/read`).then(r => r.data),
   deleteNotification: (id: number) => api.delete(`/schedule/notifications/${id}`).then(r => r.data),
   deleteAllNotifications: () => api.delete('/schedule/notifications').then(r => r.data),
   sendManualNotification: (memberName: string, jobId: string, message: string) => 
@@ -549,7 +550,7 @@ export const scheduleApi = {
   createMember: (name: string) => api.post('/schedule/members', { name }).then(r => r.data),
   renameMember: (oldName: string, newName: string) => api.put('/schedule/members', { old_name: oldName, new_name: newName }).then(r => r.data),
   deleteMember: (name: string) => api.delete(`/schedule/members/${encodeURIComponent(name)}`).then(r => r.data),
-  getActiveUsers: () => api.get('/auth/users').then(r => r.data as Array<{ id: number; username: string; role: string; is_active: boolean }>),
+  getActiveUsers: () => api.get('/auth/users').then(r => r.data as Array<{ id: number; username: string; fullName?: string; role: string; is_active: boolean }>),
 }
 
 

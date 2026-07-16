@@ -35,6 +35,8 @@ def _map_fms_role(fms_role: str) -> str:
     role_upper = (fms_role or "").strip().upper()
     if role_upper == "ADMIN":
         return "admin"
+    if role_upper in ["TEAM LEADER", "TEAM_LEADER"]:
+        return "team_leader"
     return "user"
 
 
@@ -147,7 +149,7 @@ async def get_me(current_user=Depends(get_current_user)):
 @router.get("/users")
 async def list_users(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
+    current_user: User = Depends(require_role([UserRole.admin, UserRole.it, UserRole.team_leader])),
 ):
     """Returns all workstation users. Restricted to Admin and IT roles.
 
@@ -179,6 +181,8 @@ async def list_users(
             "username": u.username,
             "role": u.role.value if hasattr(u.role, "value") else u.role,
             "is_active": u.is_active,
+            "display_name": u.display_name,
+            "fullName": u.display_name, # Map display_name to fullName for frontend compatibility
             "created_at": u.created_at,
         }
         for u in users

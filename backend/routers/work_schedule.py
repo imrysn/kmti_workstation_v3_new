@@ -116,8 +116,51 @@ async def require_schedule_write(
 
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="Access denied. Only Admins and Team Leaders can edit the schedule."
+        detail="Access denied. You are not allowed to edit this job unless it's assigned to you."
     )
+
+async def has_component_edit_permission(db: AsyncSession, fms_db: AsyncSession, user, job_id: str) -> bool:
+    role_str = user.role.value if hasattr(user.role, "value") else user.role
+    if role_str in ("admin", "it", "team_leader"):
+        return True
+    
+    # Check FMS DB role
+    try:
+        from sqlalchemy import select
+        fms_res = await fms_db.execute(select(FmsUser).where(FmsUser.username == user.username))
+        fms_user = fms_res.scalar_one_or_none()
+        if fms_user and fms_user.role.upper().replace("_", " ").strip() in ("TEAM LEADER", "LEADER", "ADMIN"):
+            return True
+    except:
+        pass
+
+    # Check assignment on timeline
+    from sqlalchemy import select
+    from models.work_schedule import WorkScheduleAssignment
+    res = await db.execute(select(WorkScheduleAssignment.member_name).where(WorkScheduleAssignment.value == job_id))
+    assigned_members = res.scalars().all()
+
+    user_names = [user.username.lower()]
+    if getattr(user, "display_name", None) and user.display_name:
+        user_names.append(user.display_name.lower())
+
+    for member_str in assigned_members:
+        member_lower = member_str.lower()
+        for name in user_names:
+            if name in member_lower:
+                return True
+                
+    # Check if they were pinged about this job
+    from models.work_schedule import WorkScheduleNotification
+    ping_res = await db.execute(
+        select(WorkScheduleNotification.id)
+        .where(WorkScheduleNotification.job_id == job_id)
+        .where(WorkScheduleNotification.member_name == user.username)
+    )
+    if ping_res.scalar_one_or_none():
+        return True
+                
+    return False
 
 # --- Helper functions ---
 
@@ -231,7 +274,8 @@ async def update_component_status(
     component_id: int,
     payload: ComponentUpdatePayload,
     db: AsyncSession = Depends(get_db),
-    user = Depends(require_schedule_write)
+    fms_db: AsyncSession = Depends(get_fms_db),
+    user = Depends(get_current_user)
 ):
     """
     Update status and submitted date of a component.
@@ -239,6 +283,9 @@ async def update_component_status(
     comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Component not found.")
+        
+    if not await has_component_edit_permission(db, fms_db, user, comp.job_id):
+        raise HTTPException(status_code=403, detail="Access denied. You are not assigned to this job.")
         
     old_status = comp.status
     comp.status = payload.status
@@ -329,6 +376,25 @@ async def mark_notifications_read(
     await db.commit()
     return {"success": True}
 
+@router.post("/notifications/{notif_id}/read")
+async def mark_single_notification_read(
+    notif_id: int,
+    db: AsyncSession = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Mark a specific notification as read."""
+    res = await db.execute(
+        select(WorkScheduleNotification)
+        .where(WorkScheduleNotification.id == notif_id)
+        .where(WorkScheduleNotification.member_name == current_user.username)
+    )
+    notif = res.scalar_one_or_none()
+    if notif:
+        notif.is_read = True
+        await db.commit()
+        return {"success": True}
+    raise HTTPException(status_code=404, detail="Notification not found")
+
 @router.post("/notifications/manual")
 async def send_manual_notification(
     payload: ManualNotificationPayload,
@@ -336,11 +402,21 @@ async def send_manual_notification(
     user = Depends(require_schedule_write)
 ):
     """Send a manual notification to a member."""
+    # Serialize the notification details as JSON to avoid DB schema changes
+    import json
+    
+    sender_name = getattr(user, 'fullName', None) or getattr(user, 'display_name', None) or user.username
+    msg_data = {
+        "type": "ping",
+        "sender": sender_name,
+        "text": payload.message
+    }
+
     notif = WorkScheduleNotification(
         member_name=payload.member_name,
         job_id=payload.job_id,
         component_id=None,
-        message=payload.message
+        message=json.dumps(msg_data)
     )
     db.add(notif)
     await db.commit()
@@ -405,7 +481,8 @@ async def create_component(
     job_id: str,
     payload: ComponentCreatePayload,
     db: AsyncSession = Depends(get_db),
-    user = Depends(require_schedule_write)
+    fms_db: AsyncSession = Depends(get_fms_db),
+    user = Depends(get_current_user)
 ):
     """
     Create a new component unit in a job.
@@ -413,6 +490,9 @@ async def create_component(
     job = await WorkScheduleRepository.get_job_by_id(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found.")
+
+    if not await has_component_edit_permission(db, fms_db, user, job_id):
+        raise HTTPException(status_code=403, detail="Access denied. You are not assigned to this job.")
         
     sub_date = None
     if payload.submitted_date:
@@ -548,7 +628,8 @@ async def patch_component(
     component_id: int,
     payload: ComponentUpdateAllPayload,
     db: AsyncSession = Depends(get_db),
-    user = Depends(require_schedule_write)
+    fms_db: AsyncSession = Depends(get_fms_db),
+    user = Depends(get_current_user)
 ):
     """
     Modify any details of a drawing component unit.
@@ -556,6 +637,9 @@ async def patch_component(
     comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
     if not comp:
         raise HTTPException(status_code=404, detail="Component not found.")
+        
+    if not await has_component_edit_permission(db, fms_db, user, comp.job_id):
+        raise HTTPException(status_code=403, detail="Access denied. You are not assigned to this job.")
         
     if payload.unit_code is not None:
         comp.unit_code = payload.unit_code

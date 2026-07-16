@@ -1,18 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { WorkScheduleProvider, useWorkScheduleContext, formatPercentDisplay } from './context/WorkScheduleContext'
 import TimelineGrid from './components/TimelineGrid'
 import ScheduleModals from './components/ScheduleModals'
-import NotificationPanel from './components/modals/NotificationPanel'
+import PingMemberModal from './components/modals/PingMemberModal'
 import type { IJob, IComponent } from '../../hooks/useWorkSchedule'
 import './WorkSchedule.css'
 
-const Bell = ({ size = 24 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-  </svg>
-)
 
 // ── Standalone percent renderer ────────────────────────────────────────
 function renderPercent(val: string) {
@@ -47,20 +41,20 @@ const ComponentRow = React.memo(function ComponentRow({ c, j, tinted = false }: 
         </span>
       </td>
       <td>{c.submitted_date || '-'}</td>
-      {canWrite && (
-        <td>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <button
-              className="btn-schedule-action"
-              style={{ padding: '6px 8px', borderRadius: '6px' }}
-              title="Edit drawing details"
-              onClick={() => { setSelectedJob(j); openEditModal(c) }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-            </button>
+      <td>
+        <div style={{ display: 'flex', gap: '5px' }}>
+          <button
+            className="btn-schedule-action"
+            style={{ padding: '6px 8px', borderRadius: '6px' }}
+            title="Edit drawing details"
+            onClick={() => { setSelectedJob(j); openEditModal(c) }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          {canWrite && (
             <button
               className="btn-schedule-action danger"
               style={{ padding: '6px 8px', borderRadius: '6px' }}
@@ -72,9 +66,9 @@ const ComponentRow = React.memo(function ComponentRow({ c, j, tinted = false }: 
                 <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
               </svg>
             </button>
-          </div>
-        </td>
-      )}
+          )}
+        </div>
+      </td>
     </tr>
   )
 })
@@ -98,7 +92,7 @@ function JobCard({ j }: { j: IJob }) {
   }, [j.components])
 
   // Fix #2: single constant drives all colSpan values — add a column, update once
-  const COL_COUNT = canWrite ? 8 : 7
+  const COL_COUNT = 8
 
   const postponedDivider = (key: string) => (
     <tr key={key} style={{ background: 'rgba(245,158,11,0.1)', fontWeight: 'bold' }}>
@@ -132,18 +126,16 @@ function JobCard({ j }: { j: IJob }) {
           </p>
         </div>
         <div className="action-buttons-group">
-          {canWrite && (
-            <button
-              className="btn-schedule-action primary"
-              style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px' }}
-              onClick={() => {
-                setSelectedJob(j)
-                setIsAddingComponent(true)
-              }}
-            >
-              + Add
-            </button>
-          )}
+          <button
+            className="btn-schedule-action primary"
+            style={{ padding: '6px 12px', fontSize: '12px', borderRadius: '6px' }}
+            onClick={() => {
+              setSelectedJob(j)
+              setIsAddingComponent(true)
+            }}
+          >
+            + Add
+          </button>
           {canWrite && (
             <button
               className="btn-schedule-action"
@@ -187,7 +179,7 @@ function JobCard({ j }: { j: IJob }) {
               <th>2D Parts</th>
               <th>Status</th>
               <th>Submitted Date</th>
-              {canWrite && <th>Action</th>}
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -241,12 +233,21 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
     statusFilter,
     setStatusFilter,
     setIsExportModalOpen,
-    unreadCount,
-    setIsNotificationPanelOpen
   } = useWorkScheduleContext()
+
+  const [isPingOpen, setIsPingOpen] = useState(false)
+  const location = useLocation()
 
   const [visibleCount, setVisibleCount] = useState(10)
   const loaderRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (location.state && (location.state as any).searchJob) {
+      setSearchQuery((location.state as any).searchJob)
+      // Clear the state so it doesn't trigger on every reload
+      window.history.replaceState({}, document.title)
+    }
+  }, [location.state, setSearchQuery])
 
   // Scroll to today whenever the tab becomes visible and timeline data is ready.
   // We can't rely on the mount-time scroll because WorkSchedule is always mounted
@@ -266,8 +267,8 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
       }
     })
     return () => cancelAnimationFrame(raf)
-  // Fix #7: depend on length, not the array reference, so a re-render that
-  // returns a new array with identical data doesn't re-fire the scroll.
+    // Fix #7: depend on length, not the array reference, so a re-render that
+    // returns a new array with identical data doesn't re-fire the scroll.
   }, [isVisible, timelineDays.length])
 
   useEffect(() => {
@@ -499,14 +500,20 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
             </select>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button
-              className={`notification-bell-btn${unreadCount > 0 ? ' has-unread' : ''}`}
-              onClick={() => setIsNotificationPanelOpen(true)}
-              title="Notifications"
-            >
-              <span className="bell-icon"><Bell size={20} /></span>
-              {unreadCount > 0 && <span className="notification-dot" />}
-            </button>
+            {canWrite && (
+              <button
+                className="btn-schedule-action"
+                onClick={() => setIsPingOpen(true)}
+                title="Notify a team member about their job status"
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                Notify Member
+              </button>
+            )}
             <button
               className="btn-schedule-action"
               onClick={() => setIsExportModalOpen(true)}
@@ -576,7 +583,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
       </div>
 
       <ScheduleModals />
-      <NotificationPanel />
+      <PingMemberModal isOpen={isPingOpen} onClose={() => setIsPingOpen(false)} />
     </div>
   )
 }

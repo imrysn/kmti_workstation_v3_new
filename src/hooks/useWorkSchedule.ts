@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { io } from 'socket.io-client'
-import { scheduleApi, SERVER_BASE } from '../services/api'
+import { scheduleApi } from '../services/api'
 import { useFlags } from '../context/FlagsContext'
 import { useAuth } from '../context/AuthContext'
 import { useModal } from '../components/ModalContext'
@@ -49,14 +48,6 @@ export interface IComponent {
   is_postponed?: boolean
 }
 
-export interface INotification {
-  id: number
-  job_id: string
-  component_id: number
-  message: string
-  is_read: boolean
-  created_at: string
-}
 
 export interface ITimelineDay {
   col_index: number
@@ -154,7 +145,7 @@ export function useWorkSchedule() {
   const { flags } = useFlags()
   const { hasRole, user } = useAuth()
   const { confirm, alert } = useModal()
-  const isAdminOrIT = hasRole('admin', 'it')
+  const isAdminOrIT = hasRole('admin', 'it', 'team_leader')
 
   const [canWrite, setCanWrite] = useState(isAdminOrIT)
   const [jobs, setJobs] = useState<IJob[]>(cachedJobs)
@@ -166,123 +157,6 @@ export function useWorkSchedule() {
   const [isExporting, setIsExporting] = useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
   
-  // Notification State
-  const [notifications, setNotifications] = useState<INotification[]>([])
-  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
-  
-  const unreadCount = useMemo(() => notifications.filter(n => !n.is_read).length, [notifications])
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await scheduleApi.getNotifications()
-      if (res.success) setNotifications(res.notifications)
-    } catch (err) {
-      console.warn('Failed to fetch notifications', err)
-    }
-  }, [])
-
-  const markNotificationsRead = async () => {
-    try {
-      await scheduleApi.markNotificationsRead()
-      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
-    } catch (err) {
-      console.warn('Failed to mark notifications read', err)
-    }
-  }
-
-  const deleteNotification = async (id: number) => {
-    try {
-      await scheduleApi.deleteNotification(id)
-      setNotifications(prev => prev.filter(n => n.id !== id))
-    } catch (err) {
-      console.warn('Failed to delete notification', err)
-    }
-  }
-
-  const deleteAllNotifications = async () => {
-    try {
-      await scheduleApi.deleteAllNotifications()
-      setNotifications([])
-    } catch (err) {
-      console.warn('Failed to delete all notifications', err)
-    }
-  }
-
-  // Socket Listener for Notifications
-  useEffect(() => {
-    fetchNotifications()
-
-    const socket = io(SERVER_BASE, {
-      path: '/socket.io',
-      transports: ['polling', 'websocket'],
-      auth: { username: user?.username ?? '' }
-    })
-
-    socket.on('work_schedule_notification', (_data: { member_name: string }) => {
-      // Refresh notifications when we receive an event
-      fetchNotifications()
-      
-      // Browser push notification
-      if (Notification.permission === 'granted') {
-        new Notification('KMTI Work Schedule', { body: 'You have a new work status update!' })
-      } else if (Notification.permission !== 'denied') {
-        Notification.requestPermission()
-      }
-
-      const isElectron = !!(window as any).electronAPI?.flashWindow
-
-      if (isElectron) {
-        // --- Electron: use native BrowserWindow.flashFrame() ---
-        ;(window as any).electronAPI.flashWindow(true)
-
-        const stopFlash = () => {
-          ;(window as any).electronAPI.flashWindow(false)
-          window.removeEventListener('focus', stopFlash)
-        }
-        window.addEventListener('focus', stopFlash)
-      } else {
-        // --- Browser fallback: flash the tab title ---
-        const originalTitle = document.title
-        let flashInterval: ReturnType<typeof setInterval> | null = null
-        let isFlashing = false
-
-        const startFlashing = () => {
-          if (flashInterval) return
-          isFlashing = true
-          flashInterval = setInterval(() => {
-            document.title = isFlashing ? '🔔 NEW NOTIFICATION!' : originalTitle
-            isFlashing = !isFlashing
-          }, 700)
-        }
-
-        const stopFlashing = () => {
-          if (flashInterval) {
-            clearInterval(flashInterval)
-            flashInterval = null
-          }
-          document.title = originalTitle
-          window.removeEventListener('focus', stopFlashing)
-        }
-
-        if (!document.hasFocus()) {
-          startFlashing()
-        } else {
-          const onBlur = () => {
-            startFlashing()
-            window.removeEventListener('blur', onBlur)
-          }
-          window.addEventListener('blur', onBlur)
-        }
-
-        window.addEventListener('focus', stopFlashing)
-      }
-    })
-
-    return () => {
-      socket.disconnect()
-    }
-  }, [fetchNotifications])
-
   // Timeline State
   const [timelineMembers, setTimelineMembers] = useState<string[]>(cachedTimelineMembers)
   const [allTimelineDays, setAllTimelineDays] = useState<ITimelineDay[]>(cachedTimelineDays)
@@ -563,11 +437,18 @@ export function useWorkSchedule() {
     const result = [...jobs].filter(j => {
       // 1. Search Query filter
       if (query) {
-        const matchesJobId = j.job_id.toLowerCase().includes(query)
-        const matchesCompCode = j.components?.some(c => 
-          c.unit_code.toLowerCase().includes(query)
-        )
-        if (!matchesJobId && !matchesCompCode) return false
+        const queryParts = query.split(',').map(q => q.trim()).filter(Boolean)
+        
+        // Ensure the job matches at least one of the query parts
+        const matchesAnyPart = queryParts.some(q => {
+          const matchesJobId = j.job_id.toLowerCase().includes(q)
+          const matchesCompCode = j.components?.some(c => 
+            c.unit_code.toLowerCase().includes(q)
+          )
+          return matchesJobId || matchesCompCode
+        })
+        
+        if (!matchesAnyPart) return false
       }
 
       // 2. Status Filter
@@ -1324,12 +1205,5 @@ export function useWorkSchedule() {
     setStatusFilter,
     editingJob,
     setEditingJob,
-    notifications,
-    unreadCount,
-    isNotificationPanelOpen,
-    setIsNotificationPanelOpen,
-    markNotificationsRead,
-    deleteNotification,
-    deleteAllNotifications
   }
 }

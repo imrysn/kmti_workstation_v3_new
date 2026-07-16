@@ -290,7 +290,8 @@
     padding: 0 18px;
   }
   /* Role badge takes precious space at min width — hide it */
-  .titlebar-user-info {
+  .titlebar-user-info,
+  .titlebar-notif-btn {
     display: none;
   }
   /* Update badge text is too wide at min width */

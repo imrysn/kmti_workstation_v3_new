@@ -3,6 +3,8 @@ import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useModal } from './ModalContext'
+import { useNotifications } from '../context/NotificationContext'
+import NotificationPopup from './NotificationPopup'
 import logo from '../assets/kmti_logo.png'
 import { teamCalendarApi } from '../services/teamCalendarService'
 import './TitleBar.css'
@@ -107,7 +109,9 @@ export default function TitleBar() {
   const [isOnlineOpen, setIsOnlineOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isServerOnline, setIsServerOnline] = useState(true)
+  const [isNotifOpen, setIsNotifOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const { unreadCount } = useNotifications()
 
   useEffect(() => {
     const handleServerStatus = (e: Event) => {
@@ -255,10 +259,31 @@ export default function TitleBar() {
 
       <div className="titlebar-controls">
         {user && (
-          <div className="titlebar-user-info">
-            <span className="user-role">{user.role}</span>
-          </div>
+          <>
+            {/* Notification Bell */}
+            <div className="titlebar-notif-wrapper">
+              <button
+                className={`titlebar-notif-btn${unreadCount > 0 ? ' has-unread' : ''}`}
+                onClick={() => setIsNotifOpen(v => !v)}
+                title="Notifications"
+              >
+                <span className="bell-icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                  </svg>
+                </span>
+                {unreadCount > 0 && <span className="titlebar-notif-dot" />}
+              </button>
+              {isNotifOpen && <NotificationPopup onClose={() => setIsNotifOpen(false)} />}
+            </div>
+
+            <div className="titlebar-user-info">
+              <span className="user-role">{user.role}</span>
+            </div>
+          </>
         )}
+
 
         {/* ── Burger: collapses utility icons at min window width (1024px) ── */}
         {user && (
@@ -284,6 +309,29 @@ export default function TitleBar() {
 
             {isMenuOpen && (
               <div className="titlebar-nav-dropdown">
+
+                {/* Notifications in Burger */}
+                <button
+                  className="nav-dropdown-item"
+                  onClick={() => {
+                    setIsMenuOpen(false)
+                    setIsNotifOpen(true)
+                  }}
+                >
+                  <span style={{ position: 'relative', display: 'flex' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    {unreadCount > 0 && <span className="titlebar-notif-dot" style={{ top: -2, right: -4 }} />}
+                  </span>
+                  <span>Notifications</span>
+                  {unreadCount > 0 && (
+                    <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: '10px', padding: '0 6px', borderRadius: '10px', fontWeight: 600 }}>
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
 
                 {/* Update badge row */}
                 {hasRole('admin', 'it') && updateState === 'available' && (
