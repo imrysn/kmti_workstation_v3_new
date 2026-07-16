@@ -6,6 +6,8 @@ from models.telemetry import WorkstationStatus
 from datetime import datetime, timedelta, date as date_type
 import json
 import logging
+import asyncio
+from sqlalchemy import delete
 
 logger = logging.getLogger("kmti_backend.telemetry")
 
@@ -123,6 +125,23 @@ async def load_all_telemetry() -> None:
             logger.info(f"  [SUCCESS] Restored telemetry counters for {restored} workstation(s).")
     except Exception as e:
         logger.warning(f"  [WARNING] Failed to restore telemetry counters: {e}")
+        
+    # Start the 24-hour cleanup loop for records older than 90 days
+    asyncio.create_task(_cleanup_telemetry_loop())
+
+async def _cleanup_telemetry_loop():
+    """Background task that runs every 24 hours to purge >90 day old records."""
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                ninety_days_ago = datetime.now() - timedelta(days=90)
+                result = await db.execute(delete(WorkstationStatus).where(WorkstationStatus.last_ping < ninety_days_ago))
+                await db.commit()
+                if result.rowcount > 0:
+                    logger.info(f"  [CLEANUP] Purged {result.rowcount} telemetry records older than 90 days.")
+        except Exception as e:
+            logger.warning(f"  [CLEANUP] Failed to purge telemetry records: {e}")
+        await asyncio.sleep(86400) # 24 hours
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -432,16 +451,19 @@ async def heartbeat(
 
 
 @router.get("/status")
-async def get_all_status(db: AsyncSession = Depends(get_db)):
-    """Retrieve list of all workstations seen in the last 5 minutes."""
-    five_mins_ago = datetime.now() - timedelta(minutes=5)
+async def get_all_status(include_offline: bool = False, db: AsyncSession = Depends(get_db)):
+    """Retrieve list of workstations. If include_offline is True, returns last 30 days, else last 5 minutes."""
+    cutoff = datetime.now() - timedelta(days=30) if include_offline else datetime.now() - timedelta(minutes=5)
+    
     result = await db.execute(
         select(WorkstationStatus)
-        .where(WorkstationStatus.last_ping >= five_mins_ago)
+        .where(WorkstationStatus.last_ping >= cutoff)
         .order_by(WorkstationStatus.last_ping.desc())
     )
     statuses = result.scalars().all()
-    active_names = [s.computer_name for s in statuses if s.computer_name]
+    # active_names is computed against a strict 5 min window for streaks
+    five_mins_ago = datetime.now() - timedelta(minutes=5)
+    active_names = [s.computer_name for s in statuses if s.computer_name and s.last_ping and s.last_ping >= five_mins_ago]
 
     return {
         "data": [

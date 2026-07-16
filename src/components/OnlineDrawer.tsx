@@ -130,11 +130,12 @@ function WorkstationCard({
   const isMinimized = ws.active_module?.startsWith('💤')
   const cleanModule = stripEmoji(isMinimized ? ws.active_module.replace('💤', '').trim() : (ws.active_module || ''))
   const isOutdated = ws.version && ws.version !== appVersion
+  const isOffline = status === 'status-offline'
 
   return (
-    <div className={`online-user-card ${status}`}>
+    <div className={`online-user-card ${status} ${isOffline ? 'offline-card' : ''}`}>
       <div className="avatar-container" ref={avatarRef}>
-        <div className="user-avatar">
+        <div className="user-avatar" style={isOffline ? { filter: 'grayscale(1)', opacity: 0.8 } : undefined}>
           {renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin)}
         </div>
         <span className={`status-badge-dot ${status}`} title={getStatusLabel(status)}></span>
@@ -181,9 +182,9 @@ function WorkstationCard({
         </div>
 
         <div className="user-detail-row">
-          <span className="active-module" title={cleanModule || 'Idle'}>
-            {isMinimized && <span className="minimized-label">💤 </span>}
-            {cleanModule || 'Idle'}
+          <span className={`active-module ${isOffline ? 'offline-text' : ''}`} title={cleanModule || 'Offline'}>
+            {isOffline ? 'Last seen: ' : ''}
+            {isOffline && cleanModule === 'offline' ? 'Logged Out' : (cleanModule || 'Idle')}
           </span>
           {/* Only show the pc-name if it differs from the displayed name — avoids showing
               e.g. "Raysan" twice when the computer name matches the display name. */}
@@ -210,11 +211,12 @@ function WorkstationCard({
       </div>
 
       {/* Wave Interaction Button */}
-      {!isMe && (
+      {!isMe && !isOffline && (
         <button
           className={`wave-action-btn ${isWaving ? 'waving-sent' : ''}`}
           onClick={() => onSendWave(ws.computer_name || ws.ip_address)}
           title={`Send Wave to ${ws.computer_name || 'Workstation'}`}
+          aria-label={`Send Wave to ${ws.computer_name || 'Workstation'}`}
           disabled={isWaving}
         >
           👋
@@ -226,9 +228,34 @@ function WorkstationCard({
 
 // ─── OnlineDrawer ─────────────────────────────────────────────────────────────
 
+const playEasterEggChime = () => {
+  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+  if (AudioContextClass) {
+    const ctx = new AudioContextClass();
+    const now = ctx.currentTime;
+    const playNote = (freq: number, start: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.05, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + duration);
+    };
+    playNote(523.25, now, 0.1);
+    playNote(659.25, now + 0.05, 0.1);
+    playNote(783.99, now + 0.1, 0.1);
+    playNote(1046.50, now + 0.15, 0.3);
+  }
+};
+
 export default function OnlineDrawer() {
   const { user, hasRole } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'online' | 'offline'>('online')
   const [searchQuery, setSearchQuery] = useState('')
   const [workstations, setWorkstations] = useState<WorkstationStatus[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -246,7 +273,7 @@ export default function OnlineDrawer() {
   const [titleClicks, setTitleClicks] = useState(0)
 
   // Wave/Ping states
-  const [toasts, setToasts] = useState<{ id: string; sender: string }[]>([])
+  const [toasts, setToasts] = useState<{ id: string; sender: string; type?: 'wave' | 'login' }[]>([])
   const [isWaving, setIsWaving] = useState<Record<string, boolean>>({}) // click throttling
 
   // Achievement unlock modal
@@ -259,7 +286,18 @@ export default function OnlineDrawer() {
   // Track previously seen achievements for THIS workstation (to detect new unlocks)
   const prevAchievementsRef = useRef<Record<string, boolean>>({})
 
+  const prevPingsRef = useRef<Record<string, { ping: string; module: string }>>({})
+  const isInitialFetchRef = useRef(true)
+
   const drawerRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // Focus search when drawer opens
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => searchInputRef.current?.focus({ preventScroll: true }), 300)
+    }
+  }, [isOpen])
 
   // Fetch local hostname/workstation name on mount
   useEffect(() => {
@@ -320,14 +358,16 @@ export default function OnlineDrawer() {
   }, [isOpen])
 
   // Fetch daily shift highlight stats for admin monitoring
-  const fetchStats = async () => {
+  const fetchStats = async (signal?: AbortSignal) => {
     try {
-      const res = await telemetryApi.getStats()
+      const res = await telemetryApi.getStats({ signal })
       if (res.data?.success) {
         setStats(res.data)
       }
-    } catch (err) {
-      console.error('[ONLINE DRAWER] Failed to fetch shift statistics:', err)
+    } catch (err: any) {
+      if (err.name !== 'CanceledError' && err.message !== 'canceled') {
+        console.error('[ONLINE DRAWER] Failed to fetch shift statistics:', err)
+      }
     }
   }
 
@@ -352,36 +392,88 @@ export default function OnlineDrawer() {
   }, [myComputerName, user?.username])
 
   // Fetch workstations telemetry
-  const fetchWorkstations = async () => {
+  const fetchWorkstations = async (signal?: AbortSignal) => {
     setIsLoading(true)
     try {
-      const res = await telemetryApi.getStatuses()
+      const res = await telemetryApi.getStatuses({ signal, params: { include_offline: true } })
       if (res.data?.data) {
-        setWorkstations(res.data.data)
-        detectNewAchievements(res.data.data)
+        const newWorkstations: WorkstationStatus[] = res.data.data
+        setWorkstations(newWorkstations)
+        detectNewAchievements(newWorkstations)
+
+        // Handle Toast Logic
+        const nowMs = Date.now()
+        const newPingsMap: Record<string, { ping: string; module: string }> = {}
+        const fiveMins = 5 * 60 * 1000
+
+        newWorkstations.forEach(ws => {
+          const compName = ws.computer_name || ws.ip_address
+          if (ws.last_ping) {
+            newPingsMap[compName] = { ping: ws.last_ping, module: ws.active_module || '' }
+
+            if (!isInitialFetchRef.current) {
+              const prevState = prevPingsRef.current[compName]
+              if (prevState) {
+                const prevPingMs = new Date(prevState.ping).getTime()
+                const newPingMs = new Date(ws.last_ping).getTime()
+
+                const wasGenuinelyOffline = (nowMs - prevPingMs >= fiveMins) || (prevState.module === 'offline')
+                const isNowOnline = (nowMs - newPingMs < fiveMins) && (ws.active_module !== 'offline')
+
+                if (wasGenuinelyOffline && isNowOnline) {
+                  const toastId = Math.random().toString()
+                  const name = ws.display_name || getDisplayName(ws.current_user || '') || ws.current_user || compName
+                  setToasts(prev => [...prev, { id: toastId, sender: name, type: 'login' }])
+
+                  setTimeout(() => {
+                    setToasts(prev => prev.filter(t => t.id !== toastId))
+                  }, 4500)
+                }
+              }
+            }
+          }
+        })
+
+        prevPingsRef.current = newPingsMap
+        if (isInitialFetchRef.current) {
+          isInitialFetchRef.current = false
+        }
       }
-    } catch (err) {
-      console.error('[ONLINE DRAWER] Failed to fetch telemetry statuses:', err)
+    } catch (err: any) {
+      if (err.name !== 'CanceledError' && err.message !== 'canceled') {
+        console.error('[ONLINE DRAWER] Failed to fetch telemetry statuses:', err)
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
   useEffect(() => {
-    if (isOpen) {
-      fetchWorkstations()
-      fetchStats()
-      const interval = setInterval(() => {
-        fetchWorkstations()
-        fetchStats()
-      }, 15000)
-      return () => clearInterval(interval)
+    const controller = new AbortController()
+    fetchWorkstations(controller.signal)
+    fetchStats(controller.signal)
+
+    const interval = setInterval(() => {
+      fetchWorkstations(controller.signal)
+      fetchStats(controller.signal)
+    }, 15000)
+
+    return () => {
+      clearInterval(interval)
+      controller.abort()
     }
-  }, [isOpen])
+  }, [])
 
   // Handle click outside to close
   useEffect(() => {
     if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+        window.dispatchEvent(new CustomEvent('kmti:online-drawer-status', { detail: { open: false } }))
+      }
+    }
 
     const handleClickOutside = (e: MouseEvent) => {
       // Don't close if clicking on the titlebar buttons (which might toggle the drawer)
@@ -405,7 +497,11 @@ export default function OnlineDrawer() {
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isOpen])
 
   // Utility helpers
@@ -420,18 +516,26 @@ export default function OnlineDrawer() {
   }
 
   const getStatusClass = (lastPing: string | undefined | null, activeModule?: string) => {
-    if (activeModule?.startsWith('💤')) return 'status-minimized';
-    if (!lastPing) return 'status-away';
+    if (!lastPing || activeModule === 'offline') return 'status-offline';
     const diffSeconds = (new Date().getTime() - new Date(lastPing).getTime()) / 1000;
-    if (diffSeconds < 90) return 'status-active';
-    if (diffSeconds < 180) return 'status-idle';
-    return 'status-away';
+
+    if (diffSeconds >= 300) return 'status-offline'; // >= 5 mins
+
+    return 'status-active';
   }
 
   // Filter and sort workstations: Active users first, alphabetically by username or PC name
   const filteredWorkstations = useMemo(() => {
+    const fiveMinsAgo = Date.now() - (5 * 60 * 1000)
+
     return workstations
       .filter(ws => {
+        const pingTime = ws.last_ping ? new Date(ws.last_ping).getTime() : 0
+        const isOnline = pingTime >= fiveMinsAgo && ws.active_module !== 'offline'
+
+        if (activeTab === 'online' && !isOnline) return false
+        if (activeTab === 'offline' && isOnline) return false
+
         const term = searchQuery.toLowerCase()
         const u = (ws.current_user || 'Guest').toLowerCase()
         const comp = (ws.computer_name || ws.ip_address).toLowerCase()
@@ -439,15 +543,20 @@ export default function OnlineDrawer() {
         return u.includes(term) || comp.includes(term) || mod.includes(term)
       })
       .sort((a, b) => {
+        if (activeTab === 'offline') {
+          // Sort offline by most recently seen (descending)
+          const tA = a.last_ping ? new Date(a.last_ping).getTime() : 0
+          const tB = b.last_ping ? new Date(b.last_ping).getTime() : 0
+          return tB - tA
+        }
+
         const statusA = getStatusClass(a.last_ping, a.active_module)
         const statusB = getStatusClass(b.last_ping, b.active_module)
 
-        // Rank by status: Active > Minimized > Idle > Away
+        // Rank by status: Active > Offline
         const rank: Record<string, number> = {
-          'status-active': 4,
-          'status-minimized': 3,
-          'status-idle': 2,
-          'status-away': 1
+          'status-active': 2,
+          'status-offline': 1
         }
 
         const rankA = rank[statusA] || 0
@@ -461,7 +570,7 @@ export default function OnlineDrawer() {
         const nameB = b.current_user || 'Guest'
         return nameA.localeCompare(nameB)
       })
-  }, [workstations, searchQuery])
+  }, [workstations, searchQuery, activeTab])
 
   // Strip leading emoji / non-ASCII symbols from module name strings
   const stripEmoji = (str: string) =>
@@ -493,178 +602,187 @@ export default function OnlineDrawer() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'status-active': return 'Active'
-      case 'status-minimized': return 'Minimized'
-      case 'status-idle': return 'Idle'
-      case 'status-away':
-      default:
-        return 'Offline'
+      case 'status-offline': return 'Offline'
+      default: return 'Unknown'
     }
   }
 
-  if (!isOpen) return null
-
   return (
     <>
-    <div className="online-drawer-wrapper" ref={drawerRef}>
-      {/* Received Waves Floating Toasts Overlay */}
-      <div className="received-waves-toasts-container">
+      {/* Received Waves Floating Toasts Overlay — rendered unconditionally (independent
+          of isOpen) so login/wave toasts still fire while the drawer is closed. The
+          drawer itself now also stays mounted at all times (see isOpen && wrapper
+          below) so polling/prevPingsRef never resets on close. This container is
+          position:fixed in CSS, so it doesn't need to live inside the drawer wrapper. */}
+      <div className={`received-waves-toasts-container${isOpen ? ' drawer-open' : ''}`} aria-live="polite">
         {toasts.map(toast => (
           <div key={toast.id} className="wave-received-toast">
-            <div className="wave-toast-hand">👋</div>
+            {toast.type === 'login' ? (
+              <div className="wave-toast-icon-login">🟢</div>
+            ) : (
+              <div className="wave-toast-hand">👋</div>
+            )}
             <div className="wave-toast-content">
-              <span className="wave-toast-sender">{toast.sender}</span> waved at you!
+              {toast.type === 'login' ? (
+                <><span className="wave-toast-sender">{toast.sender}</span> goes back online</>
+              ) : (
+                <><span className="wave-toast-sender">{toast.sender}</span> waved at you!</>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="online-drawer-header">
-        <div className="online-drawer-title-row">
-          <h3
-            onClick={() => {
-              const newClicks = titleClicks + 1;
-              setTitleClicks(newClicks);
-              if (newClicks === 5) {
-                telemetryApi.unlockAchievement(myComputerName, 'easter_egg_hunter')
-                  .then(() => {
-                    fetchWorkstations();
-                    // Play a quick cute unlock chime!
-                    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                    if (AudioContextClass) {
-                      const ctx = new AudioContextClass();
-                      const now = ctx.currentTime;
-                      const playNote = (freq: number, start: number, duration: number) => {
-                        const osc = ctx.createOscillator();
-                        const gain = ctx.createGain();
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(freq, start);
-                        gain.gain.setValueAtTime(0.05, start);
-                        gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
-                        osc.connect(gain);
-                        gain.connect(ctx.destination);
-                        osc.start(start);
-                        osc.stop(start + duration);
-                      };
-                      playNote(523.25, now, 0.1);
-                      playNote(659.25, now + 0.05, 0.1);
-                      playNote(783.99, now + 0.1, 0.1);
-                      playNote(1046.50, now + 0.15, 0.3);
-                    }
-                  });
-              }
-            }}
-            style={{ cursor: 'pointer', userSelect: 'none' }}
-            title="Click 5 times for a secret reward! 🤫"
-          >
-            Online Users
-          </h3>
-          <button
-            className="online-drawer-close-btn"
-            onClick={() => {
-              setIsOpen(false)
-              window.dispatchEvent(new CustomEvent('kmti:online-drawer-status', { detail: { open: false } }))
-            }}
-            title="Close Panel"
-          >
-            &times;
-          </button>
+      {isOpen && (
+      <div className="online-drawer-wrapper" ref={drawerRef}>
+        <div className="online-drawer-header">
+          <div className="online-drawer-title-row">
+            <h3
+              onClick={() => {
+                const newClicks = titleClicks + 1;
+                setTitleClicks(newClicks);
+                if (newClicks === 5) {
+                  telemetryApi.unlockAchievement(myComputerName, 'easter_egg_hunter')
+                    .then(() => {
+                      fetchWorkstations();
+                      // Play a quick cute unlock chime!
+                      playEasterEggChime();
+                    });
+                }
+              }}
+              style={{ cursor: 'pointer', userSelect: 'none' }}
+              title="Click 5 times for a secret reward! 🤫"
+            >
+              Online Users
+            </h3>
+            <button
+              className="online-drawer-close-btn"
+              onClick={() => {
+                setIsOpen(false)
+                window.dispatchEvent(new CustomEvent('kmti:online-drawer-status', { detail: { open: false } }))
+              }}
+              title="Close Panel"
+              aria-label="Close Online Users Panel"
+            >
+              &times;
+            </button>
+          </div>
+
+          {/* Tab Toggle */}
+          <div className="online-drawer-tabs">
+            <button
+              className={`drawer-tab ${activeTab === 'online' ? 'active' : ''}`}
+              onClick={() => setActiveTab('online')}
+            >
+              Online
+            </button>
+            <button
+              className={`drawer-tab ${activeTab === 'offline' ? 'active' : ''}`}
+              onClick={() => setActiveTab('offline')}
+            >
+              Offline
+            </button>
+          </div>
+
+          <div className="online-drawer-search-wrapper">
+            <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="text"
+              ref={searchInputRef}
+              className="online-drawer-search"
+              placeholder="Search active users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search active users"
+            />
+            {searchQuery && (
+              <button className="search-clear-btn" onClick={() => setSearchQuery('')}>&times;</button>
+            )}
+          </div>
         </div>
-        <div className="online-drawer-search-wrapper">
-          <svg className="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <input
-            type="text"
-            className="online-drawer-search"
-            placeholder="Search active users..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button className="search-clear-btn" onClick={() => setSearchQuery('')}>&times;</button>
+
+        <div className="online-drawer-body">
+          {isLoading && workstations.length === 0 ? (
+            <div className="online-drawer-loading">
+              <svg className="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8" />
+              </svg>
+              <span>Fetching status...</span>
+            </div>
+          ) : filteredWorkstations.length === 0 ? (
+            <div className="online-drawer-empty">
+              {searchQuery ? 'No matching users found.' : 'No active users seen recently.'}
+            </div>
+          ) : (
+            <div className="online-drawer-list">
+              {filteredWorkstations.map(ws => {
+                const status = getStatusClass(ws.last_ping, ws.active_module)
+                const isMe = ws.computer_name === myComputerName && myComputerName !== ''
+
+                return (
+                  <WorkstationCard
+                    key={`${ws.ip_address}_${isMe ? equippedSkinTrigger : 0}`}
+                    ws={ws}
+                    status={status}
+                    isMe={isMe}
+                    isWaving={!!isWaving[ws.computer_name || '']}
+                    myComputerName={myComputerName}
+                    appVersion={appVersion}
+                    onSendWave={handleSendWave}
+                    onEditAvatar={isMe ? () => setShowAvatarSelector(true) : undefined}
+                    formatRelative={formatRelative}
+                    getStatusLabel={getStatusLabel}
+                    stripEmoji={stripEmoji}
+                  />
+                )
+              })}
+            </div>
           )}
         </div>
-      </div>
 
-      <div className="online-drawer-body">
-        {isLoading && workstations.length === 0 ? (
-          <div className="online-drawer-loading">
-            <svg className="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-              <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="8" />
-            </svg>
-            <span>Fetching status...</span>
-          </div>
-        ) : filteredWorkstations.length === 0 ? (
-          <div className="online-drawer-empty">
-            {searchQuery ? 'No matching users found.' : 'No active users seen recently.'}
-          </div>
-        ) : (
-          <div className="online-drawer-list">
-            {filteredWorkstations.map(ws => {
-              const status = getStatusClass(ws.last_ping, ws.active_module)
-              const isMe = ws.computer_name === myComputerName && myComputerName !== ''
-
-              return (
-                <WorkstationCard
-                  key={`${ws.ip_address}_${isMe ? equippedSkinTrigger : 0}`}
-                  ws={ws}
-                  status={status}
-                  isMe={isMe}
-                  isWaving={!!isWaving[ws.computer_name || '']}
-                  myComputerName={myComputerName}
-                  appVersion={appVersion}
-                  onSendWave={handleSendWave}
-                  onEditAvatar={isMe ? () => setShowAvatarSelector(true) : undefined}
-                  formatRelative={formatRelative}
-                  getStatusLabel={getStatusLabel}
-                  stripEmoji={stripEmoji}
-                />
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="online-drawer-footer">
-        {hasRole('admin', 'it') && stats && (
-          <div className="shift-ticker-container">
-            <div className="shift-ticker-inner">
-              <span className="ticker-item">🔥 Peak Active Workstations Today: {stats.peak_users}</span>
-              <span className="ticker-item">👋 Wave Signals Transmitted: {stats.waves_exchanged}</span>
-              <span className="ticker-item">🏆 Friendly Wave Leader: {stats.wave_leader}</span>
-              <span className="ticker-item">⚙️ Active Workstation Focus: {stats.most_active_module}</span>
+        <div className="online-drawer-footer">
+          {hasRole('admin', 'it') && stats && (
+            <div className="shift-ticker-container">
+              <div className="shift-ticker-inner">
+                <span className="ticker-item">🔥 Peak Active Workstations Today: {stats.peak_users}</span>
+                <span className="ticker-item">👋 Wave Signals Transmitted: {stats.waves_exchanged}</span>
+                <span className="ticker-item">🏆 Friendly Wave Leader: {stats.wave_leader}</span>
+                <span className="ticker-item">⚙️ Active Workstation Focus: {stats.most_active_module}</span>
+              </div>
             </div>
+          )}
+          <div className="status-legend-bar">
+            <div className="legend-badge"><span className="legend-dot status-active"></span> Active</div>
+            <div className="legend-badge"><span className="legend-dot status-idle"></span> Idle</div>
+            <div className="legend-badge"><span className="legend-dot status-away"></span> Offline</div>
           </div>
-        )}
-        <div className="status-legend-bar">
-          <div className="legend-badge"><span className="legend-dot status-active"></span> Active</div>
-          <div className="legend-badge"><span className="legend-dot status-idle"></span> Idle</div>
-          <div className="legend-badge"><span className="legend-dot status-away"></span> Offline</div>
         </div>
       </div>
-    </div>
+      )}
 
-    {/* Achievement Unlock Modal — appears when a new achievement is detected for THIS workstation */}
-    <AchievementUnlockModal
-      achievement={pendingAchievement}
-      onClose={() => setPendingAchievement(null)}
-    />
-
-    {/* Avatar Picker Modal — opened via the pencil button on the user's own card */}
-    {showAvatarSelector && (
-      <AvatarPickerModal
-        computerName={myComputerName}
-        achievements={workstations.find(ws => ws.computer_name === myComputerName && myComputerName !== '')?.achievements}
-        equippedSkinFromServer={workstations.find(ws => ws.computer_name === myComputerName && myComputerName !== '')?.equipped_skin}
-        onClose={() => setShowAvatarSelector(false)}
-        onSaved={() => {
-          setEquippedSkinTrigger(prev => prev + 1)
-          // Immediately refresh so peers see the new skin without waiting for next poll
-          fetchWorkstations()
-        }}
+      {/* Achievement Unlock Modal — appears when a new achievement is detected for THIS workstation */}
+      <AchievementUnlockModal
+        achievement={pendingAchievement}
+        onClose={() => setPendingAchievement(null)}
       />
-    )}
+
+      {/* Avatar Picker Modal — opened via the pencil button on the user's own card */}
+      {showAvatarSelector && (
+        <AvatarPickerModal
+          computerName={myComputerName}
+          achievements={workstations.find(ws => ws.computer_name === myComputerName && myComputerName !== '')?.achievements}
+          equippedSkinFromServer={workstations.find(ws => ws.computer_name === myComputerName && myComputerName !== '')?.equipped_skin}
+          onClose={() => setShowAvatarSelector(false)}
+          onSaved={() => {
+            setEquippedSkinTrigger(prev => prev + 1)
+            // Immediately refresh so peers see the new skin without waiting for next poll
+            fetchWorkstations()
+          }}
+        />
+      )}
     </>
   )
 }

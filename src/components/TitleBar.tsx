@@ -279,7 +279,7 @@ export default function TitleBar() {
             </div>
 
             <div className="titlebar-user-info">
-              <span className="user-role">{user.role}</span>
+              <span className="user-role">{user.role.replace(/_/g, ' ')}</span>
             </div>
           </>
         )}

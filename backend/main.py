@@ -228,6 +228,21 @@ async def lifespan(app: FastAPI):
     # 4. Warm up TTS Engine (heavy ONNX load)
     from services.tts_engine import tts_engine
     asyncio.create_task(asyncio.to_thread(tts_engine.initialize_model))
+    
+    # 5. Background periodic telemetry cleanup (90 days retention)
+    async def periodic_telemetry_cleanup():
+        from sqlalchemy import text
+        while True:
+            try:
+                async with AsyncSessionLocal() as session:
+                    await session.execute(text("DELETE FROM kmti_workstation_status WHERE last_ping < NOW() - INTERVAL 90 DAY"))
+                    await session.commit()
+                logger.info("  [CLEANUP] Periodic telemetry sweep completed (removed records > 90 days).")
+            except Exception as e:
+                logger.error(f"  [CLEANUP ERROR] Telemetry sweep failed: {e}")
+            await asyncio.sleep(86400) # Run every 24 hours
+
+    asyncio.create_task(periodic_telemetry_cleanup())
 
     yield  # Application runs here
 

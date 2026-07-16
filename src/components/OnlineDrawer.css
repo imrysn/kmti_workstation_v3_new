@@ -151,6 +151,57 @@ body.void-theme .online-drawer-search:focus {
   color: var(--text-primary);
 }
 
+/* Tabs */
+.online-drawer-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  border-radius: 8px;
+}
+
+body.dark-theme .online-drawer-tabs {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.void-theme .online-drawer-tabs {
+  background: rgba(255, 0, 64, 0.05);
+}
+
+.drawer-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 6px 0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.drawer-tab:hover {
+  color: var(--text-primary);
+}
+
+.drawer-tab.active {
+  background: #fff;
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-theme .drawer-tab.active {
+  background: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+body.void-theme .drawer-tab.active {
+  background: #1a1a1d;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(255, 0, 64, 0.1);
+}
+
 /* Body / List */
 .online-drawer-body {
   flex: 1;
@@ -270,9 +321,12 @@ body.void-theme .status-badge-dot {
   background-color: #f59e0b;
 }
 
-.status-badge-dot.status-away {
-  background-color: #ef4444;
-  opacity: 0.6;
+.status-badge-dot.status-offline {
+  background-color: #9ca3af;
+}
+
+.offline-card {
+  opacity: 0.8;
 }
 
 /* Text Detail Rows */
@@ -298,6 +352,24 @@ body.void-theme .status-badge-dot {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.active-module {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.active-module.offline-text {
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .last-seen {
@@ -470,12 +542,17 @@ body.void-theme .wave-action-btn:hover {
 .received-waves-toasts-container {
   position: fixed;
   bottom: 20px;
-  right: 345px; /* offset outside the drawer wrapper */
+  right: 20px; /* default: bottom-right when drawer is closed */
   display: flex;
   flex-direction: column;
   gap: 8px;
   z-index: 3000;
   pointer-events: none;
+  transition: right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.received-waves-toasts-container.drawer-open {
+  right: 345px; /* offset outside the drawer wrapper when it's open */
 }
 
 .wave-received-toast {
@@ -521,6 +598,17 @@ body.void-theme .wave-received-toast {
 .wave-toast-sender {
   font-weight: 700;
   color: var(--accent);
+}
+
+.wave-toast-icon-login {
+  font-size: 16px;
+  animation: pulseLogin 2s infinite;
+}
+
+@keyframes pulseLogin {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
 }
 
 body.void-theme .wave-toast-sender {

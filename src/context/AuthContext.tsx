@@ -214,6 +214,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     setIsLoggingOut(true)
+    
+    // Send offline heartbeat before clearing user
+    if (user) {
+      try {
+        const body = new URLSearchParams()
+        body.append('module', 'offline')
+        body.append('user_name', user.username)
+        const compName = localStorage.getItem('kmti_workstation_name') || 'Unknown'
+        body.append('computer_name', compName)
+        await fetch(`${API_BASE}/telemetry/heartbeat`, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: body.toString() 
+        })
+      } catch(e) {}
+    }
+
     await new Promise(resolve => setTimeout(resolve, 320))
 
     ;(window as any).electronAPI?.logoutReset?.()

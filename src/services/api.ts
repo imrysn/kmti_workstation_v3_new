@@ -351,8 +351,8 @@ export const helpApi = {
 // --- Telemetry (Heartbeat) ---
 export const telemetryApi = {
   heartbeat: (formData: FormData) => api.post('/telemetry/heartbeat', formData),
-  getStatuses: () => api.get('/telemetry/status'),
-  getStats: () => api.get('/telemetry/stats'),
+  getStatuses: (config?: any) => api.get('/telemetry/status', config),
+  getStats: (config?: any) => api.get('/telemetry/stats', config),
   nudge: (computerName: string, latestVersion: string) => {
     const fd = new FormData();
     fd.append('computer_name', computerName);
