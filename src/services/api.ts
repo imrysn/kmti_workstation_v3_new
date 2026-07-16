@@ -318,6 +318,13 @@ export const settingsApi = {
   updateDisplayName: (displayName: string) => api.put('/settings/display-name', { displayName }),
 }
 
+// --- Content Moderation ---
+export const moderationApi = {
+  getBannedWords: () => api.get('/moderation/words'),
+  addBannedWord: (word: string) => api.post('/moderation/words', { word }),
+  removeBannedWord: (id: number) => api.delete(`/moderation/words/${id}`),
+}
+
 // --- Feature Flags ---
 export const flagsApi = {
   getAll: () => api.get<Record<string, boolean>>('/flags/'),
@@ -552,6 +559,34 @@ export const scheduleApi = {
   deleteMember: (name: string) => api.delete(`/schedule/members/${encodeURIComponent(name)}`).then(r => r.data),
   getActiveUsers: () => api.get('/auth/users').then(r => r.data as Array<{ id: number; username: string; fullName?: string; role: string; is_active: boolean }>),
 }
+
+export const chatApi = {
+  getHistory: (peer?: string, groupId?: number, limit: number = 50) =>
+    api.get<any[]>('/chat/history', { params: { peer, group_id: groupId, limit } }).then(r => r.data),
+  markRead: (peer?: string, groupId?: number) =>
+    api.post('/chat/read', null, { params: { peer, group_id: groupId } }).then(r => r.data),
+  upload: (formData: FormData) =>
+    api.post<any>('/chat/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }).then(r => r.data),
+  getUnreadCounts: () =>
+    api.get<Record<string, number>>('/chat/unread_counts').then(r => r.data),
+  createGroup: (name: string, members: string[]) =>
+    api.post<any>('/chat/groups', { name, members }).then(r => r.data),
+  getGroups: () =>
+    api.get<any[]>('/chat/groups').then(r => r.data),
+  editGroup: (groupId: number, name: string, members: string[]) =>
+    api.put<any>(`/chat/groups/${groupId}`, { name, members }).then(r => r.data),
+  getThreads: () =>
+    api.get<any[]>('/chat/threads').then(r => r.data),
+  getUsers: () =>
+    api.get<any[]>('/chat/users').then(r => r.data),
+  deleteDm: (peer: string) =>
+    api.delete<any>(`/chat/threads/dm/${peer}`).then(r => r.data),
+  deleteGroup: (groupId: number) =>
+    api.delete<any>(`/chat/threads/group/${groupId}`).then(r => r.data),
+}
+
 
 
 // --- Production Resiliency Interceptor ---

@@ -27,7 +27,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs, custom_dictionaries, clients, project_incharges, machines
+from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs, custom_dictionaries, clients, project_incharges, machines, chat, moderation
 from routers import team_calendar as team_calendar_router
 import time
 import logging
@@ -40,7 +40,7 @@ from core.config import IS_FROZEN, BASE_DIR, LOG_DIR
 
 from db.database import engine, Base, fms_engine, AsyncSessionLocal
 from sqlalchemy import text
-from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model, activity_log as activity_log_model, custom_dictionary as custom_dictionary_model, work_schedule as work_schedule_model # Ensure models are registered for metadata
+from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model, activity_log as activity_log_model, custom_dictionary as custom_dictionary_model, work_schedule as work_schedule_model, chat as chat_model, moderation as moderation_model # Ensure models are registered for metadata
 import team_calendar.infrastructure.models # Ensure team calendar models are registered for metadata
 try:
     from core.nas_indexer import indexer
@@ -92,6 +92,19 @@ async def lifespan(app: FastAPI):
                     logger.info("  [SUCCESS] 'telemetry_data' column added successfully.")
             except Exception as migrate_err:
                 logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate telemetry_data column: {migrate_err}")
+
+            try:
+                res = await conn.execute(text("SHOW COLUMNS FROM kmti_chat_messages LIKE 'group_id'"))
+                if not res.fetchone():
+                    logger.info("  [MIGRATION] Adding 'group_id' column to 'kmti_chat_messages'...")
+                    if conn.dialect.name == "sqlite":
+                        await conn.execute(text("ALTER TABLE kmti_chat_messages ADD COLUMN group_id INTEGER DEFAULT NULL"))
+                    else:
+                        await conn.execute(text("ALTER TABLE kmti_chat_messages ADD COLUMN group_id INT DEFAULT NULL"))
+                    await conn.commit()
+                    logger.info("  [SUCCESS] 'group_id' column added successfully.")
+            except Exception as migrate_err:
+                logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate group_id column: {migrate_err}")
 
             try:
                 res = await conn.execute(text("SHOW COLUMNS FROM quotations LIKE 'is_deleted'"))
@@ -235,11 +248,19 @@ async def lifespan(app: FastAPI):
         while True:
             try:
                 async with AsyncSessionLocal() as session:
+                    # 90 days retention for telemetry pings
                     await session.execute(text("DELETE FROM kmti_workstation_status WHERE last_ping < NOW() - INTERVAL 90 DAY"))
+                    
+                    # 30 days retention for chat messages
+                    if session.bind.dialect.name == "sqlite":
+                        await session.execute(text("DELETE FROM kmti_chat_messages WHERE datetime(created_at) < datetime('now', '-30 days')"))
+                    else:
+                        await session.execute(text("DELETE FROM kmti_chat_messages WHERE created_at < NOW() - INTERVAL 30 DAY"))
+                        
                     await session.commit()
-                logger.info("  [CLEANUP] Periodic telemetry sweep completed (removed records > 90 days).")
+                logger.info("  [CLEANUP] Periodic telemetry and 30-day chat message sweep completed.")
             except Exception as e:
-                logger.error(f"  [CLEANUP ERROR] Telemetry sweep failed: {e}")
+                logger.error(f"  [CLEANUP ERROR] Periodic sweep failed: {e}")
             await asyncio.sleep(86400) # Run every 24 hours
 
     asyncio.create_task(periodic_telemetry_cleanup())
@@ -304,6 +325,8 @@ app.include_router(project_incharges.router, prefix="/api/project-incharges", ta
 app.include_router(machines.router, prefix="/api/machines", tags=["Machine Names"])
 from routers import work_schedule
 app.include_router(work_schedule.router, prefix="/api/schedule", tags=["Work Schedule"])
+app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
+app.include_router(moderation.router, prefix="/api/moderation", tags=["Content Moderation"])
 
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.
@@ -326,6 +349,13 @@ if os.path.exists(FEEDBACK_DIR):
     app.mount("/storage/feedback", StaticFiles(directory=FEEDBACK_DIR), name="feedback")
 else:
     logger.warning(f"Feedback storage directory not found: {FEEDBACK_DIR}. Screenshot serving disabled.")
+
+# Static serving for Chat Attachments
+CHAT_DIR = r"\\KMTI-NAS\Shared\data\storage\chat"
+if not os.path.exists(CHAT_DIR):
+    CHAT_DIR = os.path.join(os.path.dirname(__file__), "storage", "chat")
+    os.makedirs(CHAT_DIR, exist_ok=True)
+app.mount("/storage/chat", StaticFiles(directory=CHAT_DIR), name="chat_attachments")
 
 @app.get("/health")
 def health_check():

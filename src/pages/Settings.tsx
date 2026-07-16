@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { settingsApi, SERVER_BASE } from '../services/api'
+import { settingsApi, moderationApi, SERVER_BASE } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import type { IAppSettings } from '../types'
 import { StatusIcon } from '../components/FileIcons'
@@ -12,6 +12,13 @@ const DEFAULT: IAppSettings = {
   localPath: '', actPath: '', autoDel: false
 }
 
+// Partially censor words for UI display so offensive words aren't displayed in plaintext in the settings panel
+const maskWord = (word: string) => {
+  if (!word) return ''
+  if (word.length <= 2) return '*'.repeat(word.length)
+  return word[0] + '*'.repeat(word.length - 2) + word[word.length - 1]
+}
+
 export default function Settings() {
   const [settings, setSettings] = useState<IAppSettings>(DEFAULT)
   const [saved, setSaved] = useState(false)
@@ -19,6 +26,11 @@ export default function Settings() {
   const [testResult, setTestResult] = useState<'ok' | 'error' | null>(null)
   const [clearing, setClearing] = useState(false)
   const [cleared, setCleared] = useState(false)
+
+  // Chat Content Moderation State
+  const [bannedWords, setBannedWords] = useState<{ id: number; word: string }[]>([])
+  const [newBannedWord, setNewBannedWord] = useState('')
+  const [loadingWords, setLoadingWords] = useState(false)
 
   const { 
     updateStatus, 
@@ -36,6 +48,64 @@ export default function Settings() {
   useEffect(() => {
     settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res.data }))
   }, [])
+
+  useEffect(() => {
+    if (hasRole('admin', 'it', 'team_leader')) {
+      loadBannedWords()
+    }
+  }, [user])
+
+  const loadBannedWords = async () => {
+    setLoadingWords(true)
+    try {
+      const res = await moderationApi.getBannedWords()
+      setBannedWords(res.data || [])
+    } catch (err) {
+      console.error('Failed to load banned words:', err)
+    } finally {
+      setLoadingWords(false)
+    }
+  }
+
+  const handleAddBannedWord = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const word = newBannedWord.trim().toLowerCase()
+    if (!word) return
+
+    // Client-side duplicate check
+    const isAlreadyBanned = bannedWords.some(bw => bw.word.toLowerCase() === word)
+    if (isAlreadyBanned) {
+      alert(`The word "${maskWord(word)}" is already in your banned words list.`, "Duplicate Word")
+      return
+    }
+
+    try {
+      await moderationApi.addBannedWord(word)
+      setNewBannedWord('')
+      loadBannedWords()
+      notify('Banned word added successfully', 'success')
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || 'Failed to add word'
+      alert(`Unable to add word: ${errMsg}`, 'Moderation Alert')
+    }
+  }
+
+  const handleRemoveBannedWord = async (id: number) => {
+    confirm(
+      "Are you sure you want to remove this word from the banned list?",
+      async () => {
+        try {
+          await moderationApi.removeBannedWord(id)
+          loadBannedWords()
+          notify('Banned word removed successfully', 'success')
+        } catch (err) {
+          alert('Failed to remove word', 'Error')
+        }
+      },
+      undefined,
+      'danger'
+    )
+  }
 
   const handleCheck = async () => {
     try {
@@ -210,6 +280,75 @@ export default function Settings() {
             </div>
           </div>
         </>
+      )}
+      {hasRole('admin', 'it', 'team_leader') && (
+        <div className="card sett-card">
+          <h2 className="sett-section-title">Chat Content Moderation</h2>
+          <div className="sett-info-text">
+            Add words that will be automatically censored with asterisks (<code>****</code>) in all chat channels.
+          </div>
+          
+          <form onSubmit={handleAddBannedWord} style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+            <input
+              className="input"
+              value={newBannedWord}
+              onChange={e => setNewBannedWord(e.target.value)}
+              placeholder="Enter foul word..."
+              disabled={loadingWords}
+              style={{ flex: 1 }}
+            />
+            <button type="submit" className="btn btn-primary" disabled={loadingWords || !newBannedWord.trim()}>
+              Add Word
+            </button>
+          </form>
+
+          <div style={{ marginTop: 16 }}>
+            <label className="form-label">Current Banned Words ({bannedWords.length})</label>
+            {loadingWords ? (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading...</div>
+            ) : bannedWords.length === 0 ? (
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No words banned yet.</div>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: 8 }}>
+                {bannedWords.map(w => (
+                  <div 
+                    key={w.id} 
+                    style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: '6px', 
+                      background: 'rgba(239, 68, 68, 0.1)', 
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      color: '#ef4444', 
+                      padding: '4px 10px', 
+                      borderRadius: '16px',
+                      fontSize: '13px',
+                      fontWeight: 600
+                    }}
+                  >
+                    <span>{maskWord(w.word)}</span>
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveBannedWord(w.id)}
+                      style={{ 
+                        border: 'none', 
+                        background: 'transparent', 
+                        color: '#ef4444', 
+                        cursor: 'pointer', 
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        padding: 0,
+                        lineHeight: 1
+                      }}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       <div className="card sett-card">

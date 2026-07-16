@@ -108,6 +108,21 @@ async def connect(sid: str, environ: dict, auth=None):
             await sio.enter_room(sid, f'user:{username}')
             print(f"[Socket] {username} joined room user:{username}")
 
+            # Join Group Rooms dynamically
+            try:
+                from db.database import AsyncSessionLocal
+                from models.chat import GroupMember
+                from sqlalchemy import select
+                async with AsyncSessionLocal() as db:
+                    stmt = select(GroupMember.group_id).where(GroupMember.username == username)
+                    res = await db.execute(stmt)
+                    group_ids = res.scalars().all()
+                    for g_id in group_ids:
+                        await sio.enter_room(sid, f"group:{g_id}")
+                        print(f"[Socket] {username} joined group room group:{g_id}")
+            except Exception as e:
+                print(f"[Socket Error] Failed to join group rooms for {username}: {e}")
+
 
 @sio.event
 async def join_doc(sid: str, data: dict):

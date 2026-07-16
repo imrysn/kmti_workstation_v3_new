@@ -19,6 +19,17 @@ export function useSocketSync() {
   const socketRef = useRef<Socket | null>(null)
 
   useEffect(() => {
+    const getUsername = () => {
+      try {
+        const saved = sessionStorage.getItem('kmti_user')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          return parsed?.username || null
+        }
+      } catch (e) {}
+      return null
+    }
+
     // Connect to global Socket.IO server with reconnect settings
     const socket = io(SERVER_BASE, {
       path: '/socket.io',
@@ -28,14 +39,24 @@ export function useSocketSync() {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000,
+      auth: {
+        username: getUsername()
+      }
     })
 
     socketRef.current = socket
+    ;(window as any).kmtiSocket = socket
 
     socket.on('connect', () => {
       console.log(`[SocketSync] Connected. ID: ${socket.id}`)
       setApiSocketId(socket.id || null)
       window.dispatchEvent(new CustomEvent('kmti:server-status', { detail: { online: true } }))
+      
+      const username = getUsername()
+      if (username) {
+        socket.emit('authenticate', { username })
+        console.log(`[SocketSync] Auto-authenticated socket for ${username}`)
+      }
     })
 
     socket.on('disconnect', (reason) => {
@@ -57,13 +78,22 @@ export function useSocketSync() {
       window.dispatchEvent(event)
     })
 
+    // Listen for incoming direct/global chat messages
+    socket.on('receive_chat_message', (message: any) => {
+      console.log(`[SocketSync] receive_chat_message received:`, message)
+      const event = new CustomEvent('kmti:receive_chat_message', { detail: message })
+      window.dispatchEvent(event)
+    })
+
     return () => {
       socket.off('connect')
       socket.off('disconnect')
       socket.off('connect_error')
       socket.off('db_mutation')
+      socket.off('receive_chat_message')
       socket.disconnect()
       socketRef.current = null
+      ;(window as any).kmtiSocket = null
       setApiSocketId(null)
     }
   }, [])

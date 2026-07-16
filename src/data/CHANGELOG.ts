@@ -39,6 +39,36 @@ import systemUpdaterImg from '../assets/updates/system_updater.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.6',
+    date: 'July 16, 2026',
+    entries: [
+      {
+        type: 'new',
+        text: 'Online tab features + Offline'
+      },
+      {
+        type: 'improvement',
+        text: 'Work Schedule addition features continuation'
+      },
+      {
+        type: 'new',
+        text: 'Work Schedule features - ASAP feature - Notify status for users - improved Excel Export feature - Job cards UI (back to newspaper layout)'
+      },
+      {
+        type: 'fix',
+        text: 'quotation table compression layout + customer client info fixed'
+      },
+      {
+        type: 'fix',
+        text: 'billing layout fixed'
+      },
+      {
+        type: 'improvement',
+        text: 'Edit function on Quotation Library Modal for Workspace name'
+      }
+    ]
+  },
+  {
     version: '3.8.5',
     date: 'June 25, 2026',
     entries: [
