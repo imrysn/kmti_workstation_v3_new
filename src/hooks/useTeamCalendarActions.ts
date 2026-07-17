@@ -5,60 +5,26 @@ interface StateProps {
   user: any
   isAdminOrIT: boolean
   engineerName: string
-  newTodoTitle: string
-  setNewTodoTitle: (val: string) => void
-  newTodoDesc: string
-  setNewTodoDesc: (val: string) => void
-  newTodoPriority: 'Low' | 'Normal' | 'High' | 'Critical'
-  setNewTodoPriority: (val: 'Low' | 'Normal' | 'High' | 'Critical') => void
-  dayOffLeaveType: string
-  setDayOffLeaveType: (val: string) => void
   setIsAddingTodo: (val: boolean) => void
   setIsAddingDayOff: (val: boolean) => void
   setIsAddingCompanyEvent: (val: boolean) => void
-  companyEventTitle: string
-  setCompanyEventTitle: (val: string) => void
-  companyEventCategory: 'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other'
-  setCompanyEventCategory: (val: 'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other') => void
-  companyEventStart: string
-  setCompanyEventStart: (val: string) => void
-  companyEventEnd: string
-  setCompanyEventEnd: (val: string) => void
   assigningTask: ITodo | null
   setAssigningTask: (val: ITodo | null) => void
-  assignUserId: string
-  setAssignUserId: (val: string) => void
-  assignEngineerName: string
-  setAssignEngineerName: (val: string) => void
-  assignStartDate: string
-  setAssignStartDate: (val: string) => void
-  assignEndDate: string
-  setAssignEndDate: (val: string) => void
-  assignSelectedTodoId: string
-  setAssignSelectedTodoId: (val: string) => void
   confirmingClaim: { todo: ITodo; start: string; end: string } | null
   setConfirmingClaim: (val: { todo: ITodo; start: string; end: string } | null) => void
-  dayOffStart: string
-  setDayOffStart: (val: string) => void
-  dayOffEnd: string
-  setDayOffEnd: (val: string) => void
   setSelectedEvent: (val: ICalendarEvent | null) => void
   notify: (msg: string, type?: 'success' | 'error' | 'warning') => void
   confirm: (message: string, onConfirm: () => void, onCancel?: () => void, type?: 'primary' | 'danger' | 'info', title?: string, confirmLabel?: string) => void
 }
 
 export function useTeamCalendarActions(state: StateProps, loadData: () => Promise<void>) {
-  const handleCreateTodo = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!state.newTodoTitle.trim()) return
+  const handleCreateTodo = async (title: string, desc: string, priority: 'Low' | 'Normal' | 'High' | 'Critical') => {
+    if (!title.trim()) return
 
     try {
-      const res = await teamCalendarApi.createTodo(state.newTodoTitle, state.newTodoDesc, state.newTodoPriority)
+      const res = await teamCalendarApi.createTodo(title, desc, priority)
       if (res.success) {
         state.notify('Task added to backlog pool.', 'success')
-        state.setNewTodoTitle('')
-        state.setNewTodoDesc('')
-        state.setNewTodoPriority('Normal')
         state.setIsAddingTodo(false)
         loadData()
       }
@@ -101,17 +67,16 @@ export function useTeamCalendarActions(state: StateProps, loadData: () => Promis
     })
   }
 
-  const handleRequestDayOffSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!state.dayOffStart || !state.dayOffEnd) return
+  const handleRequestDayOffSubmit = async (start: string, end: string, leaveType: string, engName: string) => {
+    if (!start || !end) return
 
     try {
       const res = await teamCalendarApi.requestDayOff(
-        state.dayOffStart,
-        state.dayOffEnd,
-        state.dayOffLeaveType,
+        start,
+        end,
+        leaveType,
         undefined,
-        state.engineerName || undefined
+        engName || undefined
       )
       if (res.success) {
         if (state.isAdminOrIT) {
@@ -119,9 +84,6 @@ export function useTeamCalendarActions(state: StateProps, loadData: () => Promis
         } else {
           state.notify('Absence request submitted to Admin for approval.', 'success')
         }
-        state.setDayOffStart('')
-        state.setDayOffEnd('')
-        state.setDayOffLeaveType('Vacation')
         state.setIsAddingDayOff(false)
         loadData()
       }
@@ -130,23 +92,18 @@ export function useTeamCalendarActions(state: StateProps, loadData: () => Promis
     }
   }
 
-  const handleCreateCompanyEventSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!state.companyEventTitle.trim() || !state.companyEventStart || !state.companyEventEnd) return
+  const handleCreateCompanyEventSubmit = async (title: string, category: 'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other', start: string, end: string) => {
+    if (!title.trim() || !start || !end) return
 
     try {
       const res = await teamCalendarApi.createCompanyEvent(
-        state.companyEventTitle.trim(),
-        state.companyEventCategory,
-        state.companyEventStart,
-        state.companyEventEnd
+        title.trim(),
+        category,
+        start,
+        end
       )
       if (res.success) {
         state.notify('Company Event scheduled successfully!', 'success')
-        state.setCompanyEventTitle('')
-        state.setCompanyEventCategory('Other')
-        state.setCompanyEventStart('')
-        state.setCompanyEventEnd('')
         state.setIsAddingCompanyEvent(false)
         loadData()
       }
@@ -155,32 +112,20 @@ export function useTeamCalendarActions(state: StateProps, loadData: () => Promis
     }
   }
 
-  const handleAssignTaskSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!state.assigningTask || !state.assignUserId || !state.assignStartDate || !state.assignEndDate) return
-
-    const targetTaskId = state.assigningTask.id === -1 ? Number(state.assignSelectedTodoId) : state.assigningTask.id
-    if (!targetTaskId) {
-      state.notify('Please select a task to assign.', 'warning')
-      return
-    }
+  const handleAssignTaskSubmit = async (taskId: number, userId: number, startDate: string, endDate: string, engName: string) => {
+    if (!taskId || !userId || !startDate || !endDate) return
 
     try {
       const res = await teamCalendarApi.assignTask(
-        targetTaskId,
-        Number(state.assignUserId),
-        state.assignStartDate,
-        state.assignEndDate,
-        state.assignEngineerName || undefined
+        taskId,
+        userId,
+        startDate,
+        endDate,
+        engName || undefined
       )
       if (res.success) {
-        state.notify(`Task successfully assigned to ${state.assignEngineerName || 'engineer'}!`, 'success')
+        state.notify(`Task successfully assigned to ${engName || 'engineer'}!`, 'success')
         state.setAssigningTask(null)
-        state.setAssignUserId('')
-        state.setAssignEngineerName('')
-        state.setAssignStartDate('')
-        state.setAssignEndDate('')
-        state.setAssignSelectedTodoId('')
         loadData()
       }
     } catch (err: any) {

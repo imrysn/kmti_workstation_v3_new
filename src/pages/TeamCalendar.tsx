@@ -30,6 +30,7 @@ export default function TeamCalendar() {
   const [selectedTaskType, setSelectedTaskType] = useState<TaskType | null>(null)
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
+  const [initialCompanyEventDate, setInitialCompanyEventDate] = useState<string>('')
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('kmti_calendar_sidebar_collapsed')
@@ -190,8 +191,6 @@ export default function TeamCalendar() {
                 yearNum={cal.yearNum}
                 navigateDate={cal.navigateDate}
                 setIsAddingDayOff={cal.setIsAddingDayOff}
-                setDayOffStart={cal.setDayOffStart}
-                setDayOffEnd={cal.setDayOffEnd}
               />
 
               <div className={`calendar-grid-container ${cal.viewMode !== 'timeline' ? 'custom-scrollbar' : ''}`} style={cal.viewMode === 'timeline' ? { overflow: 'hidden' } : {}}>
@@ -241,12 +240,10 @@ export default function TeamCalendar() {
       {/* ── DAY OFF / ABSENCE LOCK MODAL ───────────────────────────── */}
       {cal.isAddingDayOff && (
         <DayOffModal
-          engineerName={cal.engineerName}
+          initialEngineerName={cal.engineerName}
           handleNameChange={cal.handleNameChange}
-          dayOffStart={cal.dayOffStart}
-          setDayOffStart={cal.setDayOffStart}
-          dayOffEnd={cal.dayOffEnd}
-          setDayOffEnd={cal.setDayOffEnd}
+          initialStart={formatLocalDate(new Date())}
+          initialEnd={formatLocalDate(new Date())}
           handleRequestDayOffSubmit={cal.handleRequestDayOffSubmit}
           onClose={() => cal.setIsAddingDayOff(false)}
         />
@@ -255,14 +252,8 @@ export default function TeamCalendar() {
       {/* ── CREATE COMPANY EVENT MODAL ─────────────────────────────── */}
       {cal.isAddingCompanyEvent && (
         <CompanyEventModal
-          companyEventTitle={cal.companyEventTitle}
-          setCompanyEventTitle={cal.setCompanyEventTitle}
-          companyEventCategory={cal.companyEventCategory}
-          setCompanyEventCategory={cal.setCompanyEventCategory}
-          companyEventStart={cal.companyEventStart}
-          setCompanyEventStart={cal.setCompanyEventStart}
-          companyEventEnd={cal.companyEventEnd}
-          setCompanyEventEnd={cal.setCompanyEventEnd}
+          initialStart={initialCompanyEventDate}
+          initialEnd={initialCompanyEventDate}
           handleCreateCompanyEventSubmit={cal.handleCreateCompanyEventSubmit}
           onClose={() => cal.setIsAddingCompanyEvent(false)}
         />
@@ -291,11 +282,10 @@ export default function TeamCalendar() {
           showSpans={cal.showSpans}
           isAdminOrIT={cal.isAdminOrIT}
           setSelectedEvent={cal.setSelectedEvent}
-          setCompanyEventStart={cal.setCompanyEventStart}
-          setCompanyEventEnd={cal.setCompanyEventEnd}
-          setCompanyEventTitle={cal.setCompanyEventTitle}
-          setCompanyEventCategory={cal.setCompanyEventCategory}
-          setIsAddingCompanyEvent={cal.setIsAddingCompanyEvent}
+          onAddCompanyEvent={(dateStr) => {
+            setInitialCompanyEventDate(dateStr)
+            cal.setIsAddingCompanyEvent(true)
+          }}
           onClose={() => cal.setActivePopoverDate(null)}
         />
       )}

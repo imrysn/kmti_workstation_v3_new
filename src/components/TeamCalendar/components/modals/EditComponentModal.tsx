@@ -1,34 +1,61 @@
-import { useWorkScheduleContext } from '../../context/WorkScheduleContext'
+import { useState, useEffect } from 'react'
+import { useWorkScheduleContext, formatPercentDisplay, formatPercentInput } from '../../context/WorkScheduleContext'
 
 export default function EditComponentModal() {
   const {
     editingComponent,
     setEditingComponent,
-    editCompCode,
-    setEditCompCode,
-    editComp3DAssem,
-    setEditComp3DAssem,
-    editComp3DParts,
-    setEditComp3DParts,
-    editComp2DAssem,
-    setEditComp2DAssem,
-    editComp2DParts,
-    setEditComp2DParts,
-    editCompStatus,
-    setEditCompStatus,
-    editCompDate,
-    setEditCompDate,
-    editCompPostponed,
-    setEditCompPostponed,
-    isSubmittingEdit,
     handleEditComponentSubmit
   } = useWorkScheduleContext()
 
+  const [editCompCode, setEditCompCode] = useState('')
+  const [editComp3DAssem, setEditComp3DAssem] = useState('-')
+  const [editComp3DParts, setEditComp3DParts] = useState('-')
+  const [editComp2DAssem, setEditComp2DAssem] = useState('-')
+  const [editComp2DParts, setEditComp2DParts] = useState('-')
+  const [editCompStatus, setEditCompStatus] = useState('Pending/Not Started')
+  const [editCompDate, setEditCompDate] = useState('')
+  const [editCompPostponed, setEditCompPostponed] = useState(false)
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false)
+
+  useEffect(() => {
+    if (editingComponent) {
+      setEditCompCode(editingComponent.unit_code)
+      setEditComp3DAssem(formatPercentDisplay(editingComponent.assembly_3d))
+      setEditComp3DParts(formatPercentDisplay(editingComponent.parts_3d))
+      setEditComp2DAssem(formatPercentDisplay(editingComponent.assembly_2d))
+      setEditComp2DParts(formatPercentDisplay(editingComponent.parts_2d))
+      setEditCompStatus(editingComponent.status)
+      setEditCompDate(editingComponent.submitted_date || '')
+      setEditCompPostponed(!!editingComponent.is_postponed)
+    }
+  }, [editingComponent])
+
   if (!editingComponent) return null
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmittingEdit(true)
+    try {
+      await handleEditComponentSubmit({
+        ...editingComponent,
+        unit_code: editCompCode,
+        assembly_3d: formatPercentInput(editComp3DAssem),
+        parts_3d: formatPercentInput(editComp3DParts),
+        assembly_2d: formatPercentInput(editComp2DAssem),
+        parts_2d: formatPercentInput(editComp2DParts),
+        status: editCompStatus,
+        submitted_date: editCompDate || null,
+        is_postponed: editCompPostponed
+      })
+    } finally {
+      setIsSubmittingEdit(false)
+    }
+  }
 
   return (
     <div className="schedule-modal-overlay">
-      <form className="schedule-modal-card" onSubmit={handleEditComponentSubmit} style={{ maxWidth: '1050px', width: '95%' }}>
+      <form className="schedule-modal-card" onSubmit={onSubmit} style={{ maxWidth: '1050px', width: '95%' }}>
         <h3 className="schedule-modal-title">Edit Row</h3>
 
         {/* Postponed Toggle Banner */}

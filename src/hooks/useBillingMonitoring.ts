@@ -1,402 +1,53 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { quotationApi, designersApi, settingsApi } from '../services/api'
+import { useMemo } from 'react'
 import { useModal } from '../components/ModalContext'
-import type { IQuotation } from '../types'
+import { useBillingState, IActiveCell } from './billing/useBillingState'
+import { useBillingData } from './billing/useBillingData'
+import { useBillingComputations, IStatusStats, IStatusStat } from './billing/useBillingComputations'
+import { useBillingChart, useClientSalesData, IBillingChartPoint, IClientSalesPoint } from './billing/useBillingChart'
+import {
+  getPartialBillingPercentage,
+  normalizeClientName,
+  formatDateToSlash,
+  formatDateTimeToSlash,
+  formatCurrency,
+  getCompletedAmount,
+  getForBillingAmount,
+  getForecastAmount
+} from '../utils/billingUtils'
+import { useCallback, useEffect } from 'react'
 
-const getPartialBillingPercentage = (detail?: string | null): number => {
-  if (!detail) return 50
-  const match = detail.match(/(\d+)\s*%/)
-  if (match) {
-    const percent = parseInt(match[1])
-    if (percent > 0 && percent < 100) return percent
-  }
-  return 50
-}
-
-export const normalizeClientName = (name: string | null | undefined): string => {
-  if (!name) return 'Unknown Client'
-  const trimmed = name.trim()
-  if (!trimmed) return 'Unknown Client'
-  
-  const lower = trimmed.toLowerCase()
-  if (lower.includes('nextengineering') || lower.includes('next engineering')) {
-    return 'NEXT ENGINEERING Co., Ltd.'
-  }
-  if (lower.includes('maeno giken')) {
-    return 'MAENO GIKEN INC.'
-  }
-  if (lower.includes('kusakabe')) {
-    return 'Kusakabe Electric and Machinery Co., Ltd.'
-  }
-  if (lower.includes('agc ceramics') || lower === 'agcc') {
-    return 'AGC Ceramics Co., Ltd.'
-  }
-  return trimmed
-}
-
-export interface IBillingChartPoint {
-  name: string
-  completed: number
-  approvedActive: number
-  pending: number
-  cancelled: number
-  displayDate: string
-}
-
-export interface IClientSalesPoint {
-  name: string
-  sales: number
-}
-
-export interface IStatusStat {
-  count: number
-  total: number
-}
-
-export type IStatusStats = Record<string, IStatusStat>
-
-export interface IActiveCell {
-  id: number
-  field: string
+export type { IBillingChartPoint, IClientSalesPoint, IStatusStats, IStatusStat, IActiveCell }
+export {
+  getPartialBillingPercentage,
+  normalizeClientName,
+  formatDateToSlash,
+  formatDateTimeToSlash,
+  formatCurrency,
+  getCompletedAmount,
+  getForBillingAmount,
+  getForecastAmount
 }
 
 export function useBillingMonitoring() {
-  const [quotations, setQuotations] = useState<IQuotation[]>([])
-  const [designers, setDesigners] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [globalSettings, setGlobalSettings] = useState<any>(null)
-
-  // Load state from sessionStorage if exists
-  const savedState = useMemo(() => {
-    try {
-      const data = sessionStorage.getItem('kmti:billing-monitoring-state')
-      return data ? JSON.parse(data) : {}
-    } catch {
-      return {}
-    }
-  }, [])
-
-  // Filters State
-  const [search, setSearch] = useState(savedState.search ?? '')
-  const [selectedDesigner, setSelectedDesigner] = useState(savedState.selectedDesigner ?? '')
-  const [selectedQStatus, setSelectedQStatus] = useState(savedState.selectedQStatus ?? '')
-  const [selectedPStatus, setSelectedPStatus] = useState<string>(savedState.selectedPStatus ?? '')
-  const [selectedBillTo, setSelectedBillTo] = useState<string>(savedState.selectedBillTo ?? '')
-  const [selectedMonth, setSelectedMonth] = useState<string>(savedState.selectedMonth ?? '')
-  const [selectedBillingStatus, setSelectedBillingStatus] = useState<string>(savedState.selectedBillingStatus ?? '')
-
-  // Pagination State
-  const [currentPage, setCurrentPage] = useState(savedState.currentPage ?? 1)
-  const [itemsPerPage, setItemsPerPage] = useState(savedState.itemsPerPage ?? 50)
-
-  // Per-Cell Editing State
-  const [activeCell, setActiveCell] = useState<IActiveCell | null>(null)
-  const [editForm, setEditForm] = useState<Partial<IQuotation>>({})
-
-  // UI / Chart States
-  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>(savedState.timeframe ?? 'year')
-  const [showCompleted, setShowCompleted] = useState(savedState.showCompleted ?? true)
-  const [showApprovedActive, setShowApprovedActive] = useState(savedState.showApprovedActive ?? true)
-  const [showPending, setShowPending] = useState(savedState.showPending ?? true)
-  const [showCancelled, setShowCancelled] = useState(savedState.showCancelled ?? true)
-  const [chartView, setChartView] = useState<'total-sales' | 'client-sales'>(savedState.chartView ?? 'total-sales')
-  const [clientColors, setClientColors] = useState<Record<string, string>>({})
-  const [selectedYear, setSelectedYear] = useState<number | null>(savedState.selectedYear ?? null)
-  const [startMonth, setStartMonth] = useState<number>(savedState.startMonth ?? 0)
-  const [endMonth, setEndMonth] = useState<number>(savedState.endMonth ?? 11)
-  const [sortColumn, setSortColumn] = useState<string | null>(savedState.sortColumn ?? 'date')
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>(savedState.sortDirection ?? 'asc')
-  const [selectedAgingBucket, setSelectedAgingBucket] = useState<string | null>(savedState.selectedAgingBucket ?? null)
-
-  // Sync state to sessionStorage
-  useEffect(() => {
-    try {
-      const stateToSave = {
-        search,
-        selectedDesigner,
-        selectedQStatus,
-        selectedPStatus,
-        selectedBillTo,
-        selectedMonth,
-        selectedBillingStatus,
-        currentPage,
-        itemsPerPage,
-        timeframe,
-        showCompleted,
-        showApprovedActive,
-        showPending,
-        showCancelled,
-        chartView,
-        selectedYear,
-        startMonth,
-        endMonth,
-        sortColumn,
-        sortDirection,
-        selectedAgingBucket
-      }
-      sessionStorage.setItem('kmti:billing-monitoring-state', JSON.stringify(stateToSave))
-    } catch (e) {
-      console.warn('Failed to save billing monitoring state:', e)
-    }
-  }, [
-    search,
-    selectedDesigner,
-    selectedQStatus,
-    selectedPStatus,
-    selectedBillTo,
-    selectedMonth,
-    selectedBillingStatus,
-    currentPage,
-    itemsPerPage,
-    timeframe,
-    showCompleted,
-    showApprovedActive,
-    showPending,
-    showCancelled,
-    chartView,
-    selectedYear,
-    startMonth,
-    endMonth,
-    sortColumn,
-    sortDirection,
-    selectedAgingBucket
-  ])
-
-  const handleSort = (column: string) => {
-    if (sortColumn === column) {
-      if (sortDirection === 'desc') {
-        setSortColumn(null)
-      } else {
-        setSortDirection('desc')
-      }
-    } else {
-      setSortColumn(column)
-      setSortDirection('asc')
-    }
-  }
-
-  useEffect(() => {
-    if (chartView === 'client-sales') {
-      setTimeframe('year')
-    }
-  }, [chartView])
-
   const { notify } = useModal()
+  
+  // 1. UI State & Filters
+  const state = useBillingState()
 
-  // Date formatters (always yyyy/mm/dd)
-  const formatDateToSlash = useCallback((dateStr?: string | null) => {
-    if (!dateStr) return '-'
-    const base = dateStr.substring(0, 10).trim()
-    return base.replace(/[- ]/g, '/')
-  }, [])
+  // 2. Data Fetching & CRUD
+  const data = useBillingData(notify, state.resetFilters)
 
-  const formatDateTimeToSlash = useCallback((dateStr?: string | null) => {
-    if (!dateStr) return '-'
-    return dateStr.replace(/-/g, '/')
-  }, [])
-
-  // Currency Formatter
-  const formatCurrency = useCallback((val?: number) => {
-    if (val === undefined || val === null) return '¥0'
-    return new Intl.NumberFormat('ja-JP', {
-      style: 'currency',
-      currency: 'JPY',
-      maximumFractionDigits: 0
-    }).format(val)
-  }, [])
-
-  const getCompletedAmount = useCallback((q: IQuotation) => {
-    if (q.billingStatus === 'CANCELLED' || q.billingStatus === 'REVISED' || q.quotationStatus === 'CANCELLED') return 0
-    if (q.quotationStatus === 'Partial Billing') {
-      const pct = getPartialBillingPercentage(q.updateDetail)
-      return (q.grandTotal || 0) * (pct / 100)
-    }
-    if (q.billingStatus === 'PAID') return q.grandTotal || 0
-    return 0
-  }, [])
-
-  const getForBillingAmount = useCallback((q: IQuotation) => {
-    if (q.quotationStatus === 'Partial Billing') return 0
-    const status = q.quotationStatus || 'For Approval'
-    const billingStatus = q.billingStatus || ''
-    const amt = q.grandTotal || 0
-
-    if (billingStatus === 'FOR BILLING' || status === 'For Approval') {
-      return amt
-    }
-    return 0
-  }, [])
-
-  const getForecastAmount = useCallback((q: IQuotation) => {
-    if (q.billingStatus === 'PAID') return 0
-    const amt = q.grandTotal || 0
-    if (q.quotationStatus === 'Partial Billing') {
-      const pct = getPartialBillingPercentage(q.updateDetail)
-      return amt * ((100 - pct) / 100)
-    }
-    const billingStatus = q.billingStatus || ''
-    const status = q.quotationStatus || 'For Approval'
-    if (billingStatus === 'BILLED' || status === 'Approved' || status === 'Billing Completion') {
-      return amt
-    }
-    return 0
-  }, [])
-
-  // Load Data
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const qRes = await quotationApi.list({ limit: 1000 })
-      setQuotations(qRes.data.quotations || [])
-
-      const uniqueDesigners = new Set<string>()
-      qRes.data.quotations.forEach(q => {
-        if (q.designerName) uniqueDesigners.add(q.designerName)
-      })
-
-      try {
-        const dRes = await designersApi.list()
-        dRes.data.forEach((d: any) => {
-          if (d.englishName) uniqueDesigners.add(d.englishName)
-        })
-      } catch (err) {
-        console.warn('Could not fetch designers table, falling back to quotation records only.', err)
-      }
-
-      setDesigners(Array.from(uniqueDesigners).sort())
-
-      try {
-        const sRes = await settingsApi.get()
-        setGlobalSettings(sRes.data || {})
-      } catch (err) {
-        console.warn('Could not fetch global settings', err)
-      }
-    } catch (err) {
-      console.error(err)
-      notify('Failed to load quotations and billing monitoring records', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }, [notify])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, selectedAgingBucket])
-
-  // Filter Logic
-  const filteredQuotations = useMemo(() => {
-    let result = quotations.filter(q => {
-      const matchesSearch = !search || 
-        (q.quotationNo && q.quotationNo.toLowerCase().includes(search.toLowerCase())) ||
-        (q.clientName && q.clientName.toLowerCase().includes(search.toLowerCase())) ||
-        (q.customerIncharge && q.customerIncharge.toLowerCase().includes(search.toLowerCase())) ||
-        (q.designerName && q.designerName.toLowerCase().includes(search.toLowerCase()))
-
-      const matchesDesigner = !selectedDesigner || q.designerName === selectedDesigner
-      const matchesQStatus = !selectedQStatus || q.quotationStatus === selectedQStatus
-      const matchesPStatus = !selectedPStatus || q.projectStatus === selectedPStatus
-      const matchesBillTo = !selectedBillTo || normalizeClientName(q.billTo) === selectedBillTo
-      const matchesMonth = !selectedMonth || (q.date && new Date(q.date).getMonth().toString() === selectedMonth)
-      const matchesBillingStatus = !selectedBillingStatus || (q.billingStatus || '') === selectedBillingStatus
-
-      let matchesAging = true
-      if (selectedAgingBucket) {
-        const unpaidStatuses = ['Approved', 'Partial Billing', 'Billing Completion']
-        const qStatus = q.quotationStatus || 'For Approval'
-        const bStatus = q.billingStatus || ''
-        const isUnpaid = (unpaidStatuses.includes(qStatus) || bStatus === 'BILLED' || bStatus === 'FOR BILLING') && !q.datePaid && bStatus !== 'PAID'
-        
-        if (isUnpaid) {
-          const startStr = q.submittedToAdminAt || q.date || q.modifiedAt
-          if (startStr) {
-            const startDate = new Date(startStr)
-            if (!isNaN(startDate.getTime())) {
-              const diffTime = Math.max(0, Date.now() - startDate.getTime())
-              const ageDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
-              
-              if (selectedAgingBucket === '0-30') {
-                matchesAging = ageDays <= 30
-              } else if (selectedAgingBucket === '31-60') {
-                matchesAging = ageDays > 30 && ageDays <= 60
-              } else if (selectedAgingBucket === '61-90') {
-                matchesAging = ageDays > 60 && ageDays <= 90
-              } else if (selectedAgingBucket === '90+') {
-                matchesAging = ageDays > 90
-              } else if (selectedAgingBucket === 'all') {
-                matchesAging = ageDays > 30
-              }
-            } else {
-              matchesAging = false
-            }
-          } else {
-            matchesAging = false
-          }
-        } else {
-          matchesAging = false
-        }
-      }
-
-      return matchesSearch && matchesDesigner && matchesQStatus && matchesPStatus && matchesBillTo && matchesMonth && matchesBillingStatus && matchesAging
-    })
-
-    if (sortColumn) {
-      result = [...result].sort((a, b) => {
-        let valA: any = a[sortColumn as keyof IQuotation]
-        let valB: any = b[sortColumn as keyof IQuotation]
-
-        if (sortColumn === 'billTo') {
-          valA = a.billTo || ''
-          valB = b.billTo || ''
-        } else {
-          if (valA === null || valA === undefined) valA = ''
-          if (valB === null || valB === undefined) valB = ''
-        }
-
-        if (sortColumn === 'grandTotal') {
-          valA = Number(valA) || 0
-          valB = Number(valB) || 0
-        } else if (sortColumn === 'date' || sortColumn === 'datePaid' || sortColumn === 'submittedToAdminAt' || sortColumn === 'lastUpdatedAt') {
-          valA = valA ? new Date(valA).getTime() : 0
-          valB = valB ? new Date(valB).getTime() : 0
-        } else {
-          valA = String(valA).toLowerCase()
-          valB = String(valB).toLowerCase()
-        }
-
-        if (valA < valB) return sortDirection === 'asc' ? -1 : 1
-        if (valA > valB) return sortDirection === 'asc' ? 1 : -1
-        return 0
-      })
-    }
-
-    return result
-  }, [quotations, search, selectedDesigner, selectedQStatus, selectedPStatus, selectedBillTo, selectedMonth, selectedBillingStatus, selectedAgingBucket, sortColumn, sortDirection])
-
-  // Pagination Computations
-  const totalItems = filteredQuotations.length
-  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1
-  const paginatedQuotations = useMemo(() => {
-    return filteredQuotations.slice(
-      (currentPage - 1) * itemsPerPage,
-      currentPage * itemsPerPage
-    )
-  }, [filteredQuotations, currentPage, itemsPerPage])
-
-  // Reference date (centers timeline around latest quotation data so charts are never blank)
+  // 3. Derived State Computations
   const refDate = useMemo(() => {
-    if (quotations.length === 0) return new Date()
-    const dates = quotations.map(q => q.date ? new Date(q.date).getTime() : 0)
+    if (data.quotations.length === 0) return new Date()
+    const dates = data.quotations.map(q => q.date ? new Date(q.date).getTime() : 0)
     const maxTime = Math.max(...dates)
     return maxTime > 0 ? new Date(maxTime) : new Date()
-  }, [quotations])
+  }, [data.quotations])
 
   const uniqueYears = useMemo<number[]>(() => {
     const years = new Set<number>()
-    quotations.forEach(q => {
+    data.quotations.forEach(q => {
       if (q.date) {
         const y = new Date(q.date).getFullYear()
         if (!isNaN(y)) years.add(y)
@@ -406,453 +57,32 @@ export function useBillingMonitoring() {
       years.add(new Date().getFullYear())
     }
     return Array.from(years).sort((a, b) => b - a)
-  }, [quotations])
+  }, [data.quotations])
 
-  const activeYear = selectedYear ?? uniqueYears[0] ?? new Date().getFullYear()
+  const activeYear = state.selectedYear ?? uniqueYears[0] ?? new Date().getFullYear()
 
-  // Timeframe / Chart aggregate computations
-  const { chartData, clientChartData, invoicesCount, revenueSum, trendPercent, timeframeLabel } = useMemo(() => {
-    let endDate = new Date(refDate)
-    endDate.setHours(23, 59, 59, 999)
-    
-    let startDate = new Date(refDate)
-    let prevStartDate = new Date(refDate)
-    let prevEndDate = new Date(refDate)
-    let formatTick: (d: Date) => string = () => ''
-    let pointsCount = 0
-    let timeframeLabel = 'MOM'
-
-    if (timeframe === 'week') {
-      startDate.setDate(refDate.getDate() - 6)
-      startDate.setHours(0, 0, 0, 0)
-      
-      prevEndDate.setDate(startDate.getDate() - 1)
-      prevEndDate.setHours(23, 59, 59, 999)
-      prevStartDate.setDate(prevEndDate.getDate() - 6)
-      prevStartDate.setHours(0, 0, 0, 0)
-      
-      formatTick = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      pointsCount = 7
-      timeframeLabel = 'WOW'
-    } else if (timeframe === 'month') {
-      // Use the activeYear and startMonth to define a specific calendar month
-      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
-      endDate = new Date(activeYear, startMonth + 1, 0, 23, 59, 59, 999)
-      
-      prevStartDate = new Date(activeYear - 1, startMonth, 1, 0, 0, 0, 0)
-      prevEndDate = new Date(activeYear - 1, startMonth + 1, 0, 23, 59, 59, 999)
-      
-      formatTick = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-      // Number of days in that specific month
-      pointsCount = endDate.getDate()
-      timeframeLabel = 'MOM'
-    } else {
-      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
-      endDate = new Date(activeYear, endMonth + 1, 0, 23, 59, 59, 999)
-      
-      prevStartDate = new Date(activeYear - 1, startMonth, 1, 0, 0, 0, 0)
-      prevEndDate = new Date(activeYear - 1, endMonth + 1, 0, 23, 59, 59, 999)
-      
-      formatTick = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' })
-      
-      pointsCount = Math.max(1, endMonth - startMonth + 1)
-      timeframeLabel = 'YOY'
-    }
-
-    const currentQuotations = quotations.filter(q => {
-      if (!q.date) return false
-      const t = new Date(q.date).getTime()
-      return t >= startDate.getTime() && t <= endDate.getTime()
-    })
-
-    const prevQuotations = quotations.filter(q => {
-      if (!q.date) return false
-      const t = new Date(q.date).getTime()
-      return t >= prevStartDate.getTime() && t <= prevEndDate.getTime()
-    })
-
-    const currentRevenue = currentQuotations
-      .reduce((sum, q) => sum + getCompletedAmount(q), 0)
-    const prevRevenue = prevQuotations
-      .reduce((sum, q) => sum + getCompletedAmount(q), 0)
-
-    let trend = 0
-    if (prevRevenue > 0) {
-      trend = ((currentRevenue - prevRevenue) / prevRevenue) * 100
-    } else if (currentRevenue > 0) {
-      trend = 100
-    }
-
-    const points: IBillingChartPoint[] = []
-    const clientChartPoints: any[] = []
-    
-    const uniqueClients = Array.from(
-      new Set(
-        quotations
-          .filter(q => q.billingStatus === 'PAID' || q.billingStatus === 'BILLED' || ['Billing Completion', 'Approved', 'Partial Billing'].includes(q.quotationStatus || ''))
-          .map(q => normalizeClientName(q.billTo))
-      )
-    )
-    
-    if (timeframe === 'week' || timeframe === 'month') {
-      let tempDate = new Date(startDate)
-      
-      for (let i = 0; i < pointsCount; i++) {
-        const dayStart = new Date(tempDate)
-        dayStart.setHours(0, 0, 0, 0)
-        const dayEnd = new Date(tempDate)
-        dayEnd.setHours(23, 59, 59, 999)
-        
-        const dayQuots = currentQuotations.filter(q => {
-          if (!q.date) return false
-          const t = new Date(q.date).getTime()
-          return t >= dayStart.getTime() && t <= dayEnd.getTime()
-        })
-        
-        let dayCompleted = 0
-        let dayApprovedActive = 0
-
-        dayQuots.forEach(q => {
-          dayCompleted += getCompletedAmount(q)
-          dayApprovedActive += getForecastAmount(q)
-        })
-
-        const dayPending = dayQuots
-          .reduce((sum, q) => sum + getForBillingAmount(q), 0)
-
-        const dayCancelled = dayQuots
-          .filter(q => q.billingStatus === 'CANCELLED' || q.billingStatus === 'REVISED' || q.quotationStatus === 'CANCELLED')
-          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
-        
-        points.push({
-          name: formatTick(tempDate),
-          completed: dayCompleted,
-          approvedActive: dayApprovedActive,
-          pending: dayPending,
-          cancelled: dayCancelled,
-          displayDate: tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        })
-
-        // Client stacked absolute sales per day
-        const dayClientSales: Record<string, number> = {}
-        uniqueClients.forEach(c => {
-          dayClientSales[c] = 0
-        })
-        dayQuots.forEach(q => {
-          const client = normalizeClientName(q.billTo)
-          
-          if (getCompletedAmount(q) > 0) {
-            dayClientSales[client] = (dayClientSales[client] || 0) + getCompletedAmount(q)
-          }
-        })
-
-        clientChartPoints.push({
-          name: formatTick(tempDate),
-          displayDate: tempDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-          ...dayClientSales
-        })
-        
-        tempDate.setDate(tempDate.getDate() + 1)
-      }
-    } else {
-      let tempDate = new Date(startDate)
-      
-      for (let i = 0; i < pointsCount; i++) {
-        const mStart = new Date(tempDate.getFullYear(), tempDate.getMonth(), 1, 0, 0, 0, 0)
-        const mEnd = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 0, 23, 59, 59, 999)
-        
-        const mQuots = currentQuotations.filter(q => {
-          if (!q.date) return false
-          const t = new Date(q.date).getTime()
-          return t >= mStart.getTime() && t <= mEnd.getTime()
-        })
-        
-        let mCompleted = 0
-        let mApprovedActive = 0
-
-        mQuots.forEach(q => {
-          mCompleted += getCompletedAmount(q)
-          mApprovedActive += getForecastAmount(q)
-        })
-
-        const mPending = mQuots
-          .reduce((sum, q) => sum + getForBillingAmount(q), 0)
-
-        const mCancelled = mQuots
-          .filter(q => q.billingStatus === 'CANCELLED' || q.billingStatus === 'REVISED' || q.quotationStatus === 'CANCELLED')
-          .reduce((sum, q) => sum + (q.grandTotal || 0), 0)
-        
-        points.push({
-          name: formatTick(tempDate),
-          completed: mCompleted,
-          approvedActive: mApprovedActive,
-          pending: mPending,
-          cancelled: mCancelled,
-          displayDate: tempDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-        })
-
-        // Client stacked absolute sales per month
-        const mClientSales: Record<string, number> = {}
-        uniqueClients.forEach(c => {
-          mClientSales[c] = 0
-        })
-        mQuots.forEach(q => {
-          const client = normalizeClientName(q.billTo)
-          
-          if (getCompletedAmount(q) > 0) {
-            mClientSales[client] = (mClientSales[client] || 0) + getCompletedAmount(q)
-          }
-        })
-
-        clientChartPoints.push({
-          name: formatTick(tempDate),
-          displayDate: tempDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-          ...mClientSales
-        })
-        
-        tempDate.setMonth(tempDate.getMonth() + 1)
-      }
-    }
-
-    return {
-      chartData: points,
-      clientChartData: clientChartPoints,
-      invoicesCount: currentQuotations.length,
-      revenueSum: currentRevenue,
-      trendPercent: trend,
-      timeframeLabel
-    }
-  }, [quotations, timeframe, refDate, formatDateToSlash, activeYear, startMonth, endMonth])
-
-  // End month text label
   const currentEndMonth = useMemo(() => {
     return refDate.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
   }, [refDate])
 
-  // Single Field Save Handler
-  const handleSingleFieldSave = async (id: number, updates: Partial<IQuotation>) => {
-    const finalUpdates = { ...updates }
-    if (updates.quotationStatus === 'CANCELLED') {
-      finalUpdates.projectStatus = 'CANCELLED'
-      finalUpdates.updateDetail = 'CANCELLED'
-    }
+  const computations = useBillingComputations(data.quotations, state, refDate, activeYear)
 
-    // Save previous state for potential rollback
-    const previousQuotations = [...quotations]
+  // 4. Chart Derivations
+  const chart = useBillingChart(
+    data.quotations,
+    state.timeframe,
+    refDate,
+    activeYear,
+    state.startMonth,
+    state.endMonth
+  )
 
-    // Optimistically update local state immediately
-    setQuotations(prev =>
-      prev.map(q => {
-        if (q.id === id) {
-          return {
-            ...q,
-            ...finalUpdates,
-            lastUpdatedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
-          }
-        }
-        return q
-      })
-    )
-
-    try {
-      const res = await quotationApi.updateBilling(id, finalUpdates)
-      if (res.data?.success) {
-        notify('Saved successfully', 'success')
-        // Background list reload to keep in sync with actual database values (e.g. lastUpdatedAt, specific triggers)
-        quotationApi.list({ limit: 1000 }).then(qRes => {
-          setQuotations(qRes.data.quotations || [])
-        }).catch(err => {
-          console.warn('Background quotation list reload failed', err)
-        })
-      } else {
-        notify('Failed to save changes', 'error')
-        setQuotations(previousQuotations)
-      }
-    } catch (err: any) {
-      console.error(err)
-      notify(err.response?.data?.detail || 'Error saving changes', 'error')
-      setQuotations(previousQuotations)
-    }
-  }
-
-  const handleAddNewRow = async (initialData: Partial<IQuotation>) => {
-    try {
-      setLoading(true)
-      // Call create API with pre-filled/pre-generated properties
-      const today = new Date().toISOString().split('T')[0].replace(/-/g, '').slice(2)
-      const seq = Math.floor(Math.random() * 900 + 100).toString()
-      const quotNo = initialData.quotationNo || `KMTE-${today}-${seq}`
-      
-      const payload = {
-        quot_no: quotNo,
-        display_name: initialData.displayName || quotNo,
-        client_name: initialData.clientName || '',
-        designer_name: initialData.designerName || '',
-        grand_total: initialData.grandTotal || 0,
-        customer_incharge: initialData.customerIncharge || '',
-        quotation_status: initialData.quotationStatus || 'DRAFT',
-        project_status: initialData.projectStatus || 'On Going',
-        billing_status: initialData.billingStatus || null,
-        bill_to: initialData.billTo || '',
-        update_detail: initialData.updateDetail || '',
-        date: initialData.date || new Date().toISOString().split('T')[0]
-      }
-      
-      const res = await quotationApi.create(payload)
-      if (res.data?.success) {
-        notify('New row created successfully', 'success')
-        resetFilters()
-        await loadData()
-      } else {
-        notify('Failed to create new row', 'error')
-      }
-    } catch (err: any) {
-      console.error(err)
-      notify(err.response?.data?.detail || 'Error creating new row', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleDeleteRows = async (ids: number[]) => {
-    if (ids.length === 0) return
-    try {
-      setLoading(true)
-      let computerName = ''
-      try {
-        const info = await (window as any).electronAPI?.getWorkstationInfo?.()
-        computerName = info?.computerName || ''
-      } catch (e) {}
-      
-      for (const id of ids) {
-        await quotationApi.delete(id, undefined, false, computerName || undefined) // soft delete
-      }
-      notify(`Successfully deleted ${ids.length} item(s)`, 'success')
-      await loadData()
-    } catch (err: any) {
-      console.error(err)
-      notify(err.response?.data?.detail || 'Error deleting rows', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const resetFilters = () => {
-    setSearch('')
-    setSelectedDesigner('')
-    setSelectedQStatus('')
-    setSelectedPStatus('')
-    setSelectedBillTo('')
-    setSelectedMonth('')
-    setSelectedBillingStatus('')
-    setSelectedAgingBucket(null)
-  }
-
-  const saveGlobalSettings = async (updates: Record<string, any>) => {
-    try {
-      const currentRes = await settingsApi.get()
-      const merged = { ...currentRes.data, ...updates }
-      await settingsApi.save(merged)
-      setGlobalSettings(merged)
-      notify('Settings saved globally', 'success')
-    } catch (err) {
-      console.error(err)
-      notify('Failed to save settings globally', 'error')
-    }
-  }
-
-
-  const uniqueInchargeValues = useMemo(() => {
-    return Array.from(
-      new Set(quotations.map(q => q.designerName).filter(Boolean))
-    ).sort((a, b) => a!.toLowerCase().localeCompare(b!.toLowerCase())) as string[]
-  }, [quotations])
-
-  const statusStats = useMemo(() => {
-    const stats: IStatusStats = {
-      'Billing Completion': { count: 0, total: 0 },
-      'Partial Billing': { count: 0, total: 0 },
-      'Approved': { count: 0, total: 0 },
-      'For Approval': { count: 0, total: 0 },
-      'DRAFT': { count: 0, total: 0 },
-      'CANCELLED': { count: 0, total: 0 }
-    }
-
-    // Determine timeframe boundaries to calculate stats dynamically
-    let endDate = new Date(refDate)
-    endDate.setHours(23, 59, 59, 999)
-    let startDate = new Date(refDate)
-
-    if (timeframe === 'week') {
-      startDate.setDate(refDate.getDate() - 6)
-      startDate.setHours(0, 0, 0, 0)
-    } else if (timeframe === 'month') {
-      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
-      endDate = new Date(activeYear, startMonth + 1, 0, 23, 59, 59, 999)
-    } else {
-      startDate = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
-      endDate = new Date(activeYear, endMonth + 1, 0, 23, 59, 59, 999)
-    }
-
-    quotations.forEach(q => {
-      if (!q.date) return
-      const t = new Date(q.date).getTime()
-      if (t < startDate.getTime() || t > endDate.getTime()) return
-
-      const status = q.quotationStatus || 'For Approval'
-      const billingStatus = q.billingStatus || ''
-      const amt = q.grandTotal || 0
-      
-      if (billingStatus === 'PAID') {
-        stats['Billing Completion'].count++
-        stats['Billing Completion'].total += amt
-      } else if (status === 'Partial Billing') {
-        stats['Partial Billing'].count++
-        stats['Billing Completion'].total += getCompletedAmount(q)
-        stats['Approved'].total += getForecastAmount(q)
-        if (billingStatus === 'FOR BILLING') {
-          stats['For Approval'].count++
-          stats['For Approval'].total += getForBillingAmount(q)
-        }
-      } else if (billingStatus === 'BILLED' || status === 'Approved' || status === 'Billing Completion') {
-        stats['Approved'].count++
-        stats['Approved'].total += amt
-      } else if (billingStatus === 'FOR BILLING' || status === 'For Approval') {
-        stats['For Approval'].count++
-        stats['For Approval'].total += getForBillingAmount(q)
-      } else if (billingStatus === 'CANCELLED' || billingStatus === 'REVISED' || status === 'CANCELLED') {
-        stats['CANCELLED'].count++
-        stats['CANCELLED'].total += amt
-      } else {
-        if (stats[status]) {
-          stats[status].count++
-          stats[status].total += amt
-        }
-      }
-    })
-
-    return stats
-  }, [quotations, timeframe, refDate, activeYear, startMonth, endMonth])
-
-  const clientSalesData = useMemo<IClientSalesPoint[]>(() => {
-    const clientsMap: Record<string, number> = {}
-    
-    const yearStart = new Date(activeYear, startMonth, 1, 0, 0, 0, 0)
-    const yearEnd   = new Date(activeYear, endMonth + 1, 0, 23, 59, 59, 999)
-
-    quotations.forEach(q => {
-      if (!q.date) return
-      const t = new Date(q.date).getTime()
-      if (t < yearStart.getTime() || t > yearEnd.getTime()) return
-      const client = normalizeClientName(q.billTo)
-      
-      clientsMap[client] = (clientsMap[client] || 0) + getCompletedAmount(q)
-    })
-    
-    return Object.entries(clientsMap)
-      .map(([name, sales]) => ({ name, sales }))
-      .sort((a, b) => b.sales - a.sales)
-  }, [quotations, activeYear, startMonth, endMonth])
+  const clientSalesData = useClientSalesData(
+    data.quotations,
+    activeYear,
+    state.startMonth,
+    state.endMonth
+  )
 
   useEffect(() => {
     if (clientSalesData.length === 0) return
@@ -868,7 +98,7 @@ export function useBillingMonitoring() {
       '#14b8a6', // Teal
       '#a855f7'  // Purple
     ]
-    setClientColors(prev => {
+    state.setClientColors(prev => {
       let updated = false
       const nextColors = { ...prev }
       clientSalesData.forEach((pt, i) => {
@@ -879,94 +109,107 @@ export function useBillingMonitoring() {
       })
       return updated ? nextColors : prev
     })
-  }, [clientSalesData])
+  }, [clientSalesData, state.setClientColors])
 
   const updateClientColor = useCallback((clientName: string, color: string) => {
-    setClientColors(prev => ({
+    state.setClientColors(prev => ({
       ...prev,
       [clientName]: color
     }))
-  }, [])
+  }, [state.setClientColors])
 
-
+  // Combine and export everything just like the original God-Hook did
   return {
-    quotations,
-    designers,
-    loading,
-    search,
-    setSearch,
-    selectedDesigner,
-    setSelectedDesigner,
-    selectedQStatus,
-    setSelectedQStatus,
-    selectedPStatus,
-    setSelectedPStatus,
-    selectedBillTo,
-    setSelectedBillTo,
-    selectedMonth,
-    setSelectedMonth,
-    selectedBillingStatus,
-    setSelectedBillingStatus,
-    currentPage,
-    setCurrentPage,
-    itemsPerPage,
-    setItemsPerPage,
-    activeCell,
-    setActiveCell,
-    editForm,
-    setEditForm,
-    timeframe,
-    setTimeframe,
-    showCompleted,
-    setShowCompleted,
-    showApprovedActive,
-    setShowApprovedActive,
-    showPending,
-    setShowPending,
-    showCancelled,
-    setShowCancelled,
-    chartView,
-    setChartView,
-    clientColors,
-    clientSalesData,
-    clientChartData,
-    updateClientColor,
+    // API & Data
+    quotations: data.quotations,
+    setQuotations: data.setQuotations,
+    designers: data.designers,
+    loading: data.loading,
+    globalSettings: data.globalSettings,
+    loadData: data.loadData,
+    handleSingleFieldSave: data.handleSingleFieldSave,
+    handleAddNewRow: data.handleAddNewRow,
+    handleDeleteRows: data.handleDeleteRows,
+    saveGlobalSettings: data.saveGlobalSettings,
+    uniqueInchargeValues: computations.uniqueInchargeValues,
+
+    // State & Filters
+    search: state.search,
+    setSearch: state.setSearch,
+    selectedDesigner: state.selectedDesigner,
+    setSelectedDesigner: state.setSelectedDesigner,
+    selectedQStatus: state.selectedQStatus,
+    setSelectedQStatus: state.setSelectedQStatus,
+    selectedPStatus: state.selectedPStatus,
+    setSelectedPStatus: state.setSelectedPStatus,
+    selectedBillTo: state.selectedBillTo,
+    setSelectedBillTo: state.setSelectedBillTo,
+    selectedMonth: state.selectedMonth,
+    setSelectedMonth: state.setSelectedMonth,
+    selectedBillingStatus: state.selectedBillingStatus,
+    setSelectedBillingStatus: state.setSelectedBillingStatus,
+    currentPage: state.currentPage,
+    setCurrentPage: state.setCurrentPage,
+    itemsPerPage: state.itemsPerPage,
+    setItemsPerPage: state.setItemsPerPage,
+    activeCell: state.activeCell,
+    setActiveCell: state.setActiveCell,
+    editForm: state.editForm,
+    setEditForm: state.setEditForm,
+    timeframe: state.timeframe,
+    setTimeframe: state.setTimeframe,
+    showCompleted: state.showCompleted,
+    setShowCompleted: state.setShowCompleted,
+    showApprovedActive: state.showApprovedActive,
+    setShowApprovedActive: state.setShowApprovedActive,
+    showPending: state.showPending,
+    setShowPending: state.setShowPending,
+    showCancelled: state.showCancelled,
+    setShowCancelled: state.setShowCancelled,
+    chartView: state.chartView,
+    setChartView: state.setChartView,
+    clientColors: state.clientColors,
+    setClientColors: state.setClientColors,
+    selectedYear: state.selectedYear,
+    setSelectedYear: state.setSelectedYear,
+    startMonth: state.startMonth,
+    setStartMonth: state.setStartMonth,
+    endMonth: state.endMonth,
+    setEndMonth: state.setEndMonth,
+    sortColumn: state.sortColumn,
+    setSortColumn: state.setSortColumn,
+    sortDirection: state.sortDirection,
+    setSortDirection: state.setSortDirection,
+    selectedAgingBucket: state.selectedAgingBucket,
+    setSelectedAgingBucket: state.setSelectedAgingBucket,
+    handleSort: state.handleSort,
+    resetFilters: state.resetFilters,
+
+    // Computations & Charts
+    filteredQuotations: computations.filteredQuotations,
+    paginatedQuotations: computations.paginatedQuotations,
+    totalItems: computations.totalItems,
+    totalPages: computations.totalPages,
+    statusStats: computations.statusStats,
+    refDate,
     uniqueYears,
     activeYear,
-    setSelectedYear,
-    startMonth,
-    setStartMonth,
-    endMonth,
-    setEndMonth,
-    sortColumn,
-    sortDirection,
-    handleSort,
-    filteredQuotations,
-    totalItems,
-    totalPages,
-    paginatedQuotations,
-    uniqueInchargeValues,
-    statusStats,
-    chartData,
-    invoicesCount,
-    revenueSum,
-    trendPercent,
-    timeframeLabel,
     currentEndMonth,
+    chartData: chart.chartData,
+    clientChartData: chart.clientChartData,
+    clientSalesData,
+    updateClientColor,
+    invoicesCount: chart.invoicesCount,
+    revenueSum: chart.revenueSum,
+    trendPercent: chart.trendPercent,
+    timeframeLabel: chart.timeframeLabel,
+
+    // Expose helpers (some components might be using them directly from the hook return)
     formatDateToSlash,
     formatDateTimeToSlash,
     formatCurrency,
-    loadData,
-    handleSingleFieldSave,
-    handleAddNewRow,
-    handleDeleteRows,
-    resetFilters,
-    globalSettings,
-    saveGlobalSettings,
     getCompletedAmount,
-    getForecastAmount,
     getForBillingAmount,
-    selectedAgingBucket,
-    setSelectedAgingBucket
+    getForecastAmount
   }
 }

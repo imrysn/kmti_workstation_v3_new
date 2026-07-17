@@ -64,18 +64,3 @@ class WorkScheduleMember(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(255), unique=True, index=True, nullable=False)
     display_order = Column(Integer, default=0, nullable=False)
-
-
-class WorkScheduleNotification(Base):
-    """
-    Represents a notification sent to a user about their work schedule.
-    """
-    __tablename__ = "work_schedule_notifications"
-
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    member_name = Column(String(255), index=True, nullable=False)
-    job_id = Column(String(100), index=True, nullable=True)
-    component_id = Column(Integer, index=True, nullable=True)
-    message = Column(String(500), nullable=False)
-    is_read = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.now, nullable=False)

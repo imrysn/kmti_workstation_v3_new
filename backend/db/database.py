@@ -48,7 +48,7 @@ except KeyError as e:
                      "Please ensure your .env file exists and contains all required variables.")
     sys.exit(1)
 
-DATABASE_URL = f"mysql+aiomysql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}?charset=utf8"
+DATABASE_URL = f"mysql+aiomysql://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}?charset=utf8mb4"
 
 # Optimized for Production (20+ Users on Server PET130)
 # pool_size: 20 active connections

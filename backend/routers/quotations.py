@@ -33,7 +33,8 @@ from core.config import BASE_DIR
 from core.cache import cache_get, cache_set, cache_delete
 from core.activity_logger import log_activity
 
-from socket_manager import sio
+from socket_manager import sio, emit_to_user
+from models.notification import AppNotification
 
 # Tracks connected users per document room: { quotation_id -> { sid -> { name, color } } }
 # Room metadata is now persisted in the DB (is_active, password, display_name)
@@ -714,8 +715,36 @@ async def list_active_sessions(db: AsyncSession = Depends(get_db)):
     await cache_set("quot_sessions", "all", res_sessions)
     return res_sessions
 
+from pydantic import BaseModel, ConfigDict
+
+class QuotationCreatePayload(BaseModel):
+    # Lightweight workspace-first fields
+    quot_no: Optional[str] = None
+    display_name: Optional[str] = None
+    password: Optional[str] = None
+    workstation: Optional[str] = None
+    client_name: Optional[str] = None
+    designer_name: Optional[str] = None
+    grand_total: Optional[float] = None
+    customer_incharge: Optional[str] = None
+    quotation_status: Optional[str] = None
+    project_status: Optional[str] = None
+    billing_status: Optional[str] = None
+    bill_to: Optional[str] = None
+    update_detail: Optional[str] = None
+    date: Optional[str] = None
+    
+    # Full document save fields
+    quotationDetails: Optional[dict] = None
+    clientInfo: Optional[dict] = None
+    signatures: Optional[dict] = None
+
+    model_config = ConfigDict(extra="allow")
+
 @router.post("/")
-async def create_quotation(data: dict, request: Request, db: AsyncSession = Depends(get_db)):
+async def create_quotation(data: QuotationCreatePayload, request: Request, db: AsyncSession = Depends(get_db)):
+    # Convert Pydantic model to dict for internal compatibility
+    data = data.model_dump(exclude_unset=True)
     """Create a new quotation record in the database.
     
     Supports two modes:
@@ -931,7 +960,57 @@ async def update_billing_monitoring(
     if "customerIncharge" in payload:
         quot.customer_incharge = payload["customerIncharge"]
     if "quotationStatus" in payload:
-        quot.quotation_status = payload["quotationStatus"]
+        old_status = quot.quotation_status
+        new_status = payload["quotationStatus"]
+        quot.quotation_status = new_status
+        
+        # --- Notification Logic ---
+        if old_status != new_status:
+            # Notify the creator (designer/workstation)
+            creator_username = quot.designer_name or quot.workstation
+            
+            notifs = []
+            
+            # Message formatting
+            msg = f"Quotation '{quot.quotation_no}' status was updated to '{new_status}' by {current_user.username}."
+            
+            if creator_username and creator_username != current_user.username:
+                notifs.append(AppNotification(
+                    member_name=creator_username,
+                    reference_type='QUOTATION',
+                    reference_id=quot.quotation_no,
+                    title="Quotation Status Updated",
+                    message=msg,
+                    link="/quotation"
+                ))
+                
+            # If status is SUBMITTED, notify all admins
+            if new_status.upper() == "SUBMITTED":
+                stmt_admins = select(User.username).where(User.role == "admin")
+                res_admins = await db.execute(stmt_admins)
+                admin_usernames = res_admins.scalars().all()
+                
+                for admin in admin_usernames:
+                    if admin != current_user.username and admin != creator_username:
+                        notifs.append(AppNotification(
+                            member_name=admin,
+                            reference_type='QUOTATION',
+                            reference_id=quot.quotation_no,
+                            title="Quotation Submitted",
+                            message=msg,
+                            link="/quotation"
+                        ))
+            
+            if notifs:
+                db.add_all(notifs)
+                await db.commit() # Save to DB so it can be fetched
+                # Emit socket events to each recipient
+                for n in notifs:
+                    await emit_to_user(n.member_name, 'system_notification', {
+                        "title": n.title,
+                        "message": n.message
+                    })
+
     if "projectStatus" in payload:
         quot.project_status = payload["projectStatus"]
     if "submittedToAdminAt" in payload:

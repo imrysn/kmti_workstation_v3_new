@@ -16,7 +16,7 @@ import {
 } from 'react'
 import { API_BASE, settingsApi } from '../services/api'
 
-export type UserRole = 'user' | 'admin' | 'it'
+export type UserRole = 'user' | 'admin' | 'it' | 'team_leader'
 
 export interface AuthUser {
   id: number

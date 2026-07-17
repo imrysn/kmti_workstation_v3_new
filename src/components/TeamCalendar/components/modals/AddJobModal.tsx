@@ -26,11 +26,10 @@ export default function AddJobModal() {
   const {
     isAddingJob,
     setIsAddingJob,
-    newJobId,
-    setNewJobId,
-    setNewJobDeadline,
     loadJobs
   } = useWorkScheduleContext()
+
+  const [newJobId, setNewJobId] = useState('')
 
   const [componentsList, setComponentsList] = useState<ITempComponent[]>([
     createDefaultRow()
@@ -108,7 +107,6 @@ export default function AddJobModal() {
         // 3. Reset and close
         setIsAddingJob(false)
         setNewJobId('')
-        setNewJobDeadline('')
         setStartDate('')
         setEndDate('')
         setIsAsap(false)

@@ -31,8 +31,12 @@ export default function NotificationPopup({ onClose }: Props) {
     if (!n.is_read) {
       markNotificationRead(n.id)
     }
-    if (n.job_id) {
-      navigate('/team-calendar?tab=schedule', { state: { searchJob: n.job_id } })
+    if (n.link) {
+      navigate(n.link)
+      onClose()
+    } else if (n.reference_type === 'WORK_SCHEDULE' && n.reference_id) {
+      // Legacy fallback
+      navigate('/team-calendar?tab=schedule', { state: { searchJob: n.reference_id } })
       onClose()
     }
   }
@@ -98,7 +102,9 @@ export default function NotificationPopup({ onClose }: Props) {
 
             const isPing = parsedMsg?.type === 'ping'
             const senderName = parsedMsg?.sender
-            const msgText = parsedMsg?.text || n.message || `Status update for Job ${n.job_id}`
+            const msgText = parsedMsg?.text || n.message || `System Update`
+            
+            const titleText = n.title || (isPing ? `Ping from ${senderName}` : 'System Update')
 
             const isUnread = !n.is_read || initialUnreadIds.has(n.id)
 
@@ -112,7 +118,7 @@ export default function NotificationPopup({ onClose }: Props) {
                   <div className="notif-item-icon">
                     {isPing && senderName ? (
                       <div className="notif-avatar">
-                        {renderEquippedSkin(senderName)}
+                        {renderEquippedSkin(senderName, null, 'rookie')}
                       </div>
                     ) : (
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -124,11 +130,11 @@ export default function NotificationPopup({ onClose }: Props) {
                   <div className="notif-item-text">
                     <div className="notif-item-header">
                       <span className="notif-item-title">
-                        {isPing ? `Ping from ${senderName}` : 'System Update'}
+                        {titleText}
                       </span>
                       <span className="notif-item-time">{timeAgo(n.created_at)}</span>
                     </div>
-                    {n.job_id && <span className="notif-job-badge">Job: {n.job_id}</span>}
+                    {n.reference_id && <span className="notif-job-badge">{n.reference_id}</span>}
                     <p className="notif-item-msg">{msgText}</p>
                   </div>
                 </div>

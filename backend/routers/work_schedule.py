@@ -12,7 +12,8 @@ from db.database import get_db, get_fms_db
 from core.auth import get_current_user
 from models.user import User, UserRole
 from models.fms import FmsUser
-from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember, WorkScheduleNotification
+from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember
+from models.notification import AppNotification
 from sqlalchemy import select, delete
 from socket_manager import sio, emit_to_user
 
@@ -156,11 +157,11 @@ async def has_component_edit_permission(db: AsyncSession, fms_db: AsyncSession, 
                 return True
                 
     # Check if they were pinged about this job
-    from models.work_schedule import WorkScheduleNotification
+    from models.notification import AppNotification
     ping_res = await db.execute(
-        select(WorkScheduleNotification.id)
-        .where(WorkScheduleNotification.job_id == job_id)
-        .where(WorkScheduleNotification.member_name == user.username)
+        select(AppNotification.id)
+        .where(AppNotification.reference_id == job_id)
+        .where(AppNotification.member_name == user.username)
     )
     if ping_res.scalar_one_or_none():
         return True
@@ -312,11 +313,13 @@ async def update_component_status(
         members = set(res_assign.scalars().all())
         for member in members:
             if member != user.username:
-                notif = WorkScheduleNotification(
+                notif = AppNotification(
                     member_name=member,
-                    job_id=comp.job_id,
-                    component_id=comp.id,
-                    message=f"Status for Job {comp.job_id} ({comp.unit_code}) was updated to '{payload.status}' by {user.username}."
+                    reference_type='WORK_SCHEDULE',
+                    reference_id=comp.job_id,
+                    title="Schedule Update",
+                    message=f"Status for Job {comp.job_id} ({comp.unit_code}) was updated to '{payload.status}' by {user.username}.",
+                    link="/team-calendar?tab=schedule"
                 )
                 db.add(notif)
 
@@ -327,7 +330,7 @@ async def update_component_status(
         # Emit a socket event specifically for this notification
         for member in members:
             if member != user.username:
-                await sio.emit('work_schedule_notification', {'member_name': member})
+                await sio.emit('system_notification', {'member_name': member})
     return {
         "success": True, 
         "message": f"Component '{comp.unit_code}' updated successfully.",
@@ -340,65 +343,6 @@ async def update_component_status(
     }
 
 # --- Notification Endpoints ---
-
-@router.get("/notifications")
-async def get_notifications(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Fetch unread/recent notifications for the current user."""
-    res = await db.execute(
-        select(WorkScheduleNotification)
-        .where(WorkScheduleNotification.member_name == current_user.username)
-        .order_by(WorkScheduleNotification.created_at.desc())
-        .limit(50)
-    )
-    notifs = res.scalars().all()
-    return {
-        "success": True,
-        "notifications": [
-            {
-                "id": n.id,
-                "job_id": n.job_id,
-                "component_id": n.component_id,
-                "message": n.message,
-                "is_read": n.is_read,
-                "created_at": n.created_at.isoformat()
-            } for n in notifs
-        ]
-    }
-
-@router.post("/notifications/read")
-async def mark_notifications_read(
-    db: AsyncSession = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
-):
-    """Mark all notifications as read for the current user."""
-    res = await db.execute(
-        select(WorkScheduleNotification)
-        .where(WorkScheduleNotification.member_name == current_user.username)
-        .where(WorkScheduleNotification.is_read == False)
-    )
-    for n in res.scalars().all():
-        n.is_read = True
-    await db.commit()
-    return {"success": True}
-
-@router.post("/notifications/{notif_id}/read")
-async def mark_single_notification_read(
-    notif_id: int,
-    db: AsyncSession = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
-):
-    """Mark a specific notification as read."""
-    res = await db.execute(
-        select(WorkScheduleNotification)
-        .where(WorkScheduleNotification.id == notif_id)
-        .where(WorkScheduleNotification.member_name == current_user.username)
-    )
-    notif = res.scalar_one_or_none()
-    if notif:
-        notif.is_read = True
-        await db.commit()
-        return {"success": True}
-    raise HTTPException(status_code=404, detail="Notification not found")
 
 @router.post("/notifications/manual")
 async def send_manual_notification(
@@ -417,51 +361,23 @@ async def send_manual_notification(
         "text": payload.message
     }
 
-    notif = WorkScheduleNotification(
+    notif = AppNotification(
         member_name=payload.member_name,
-        job_id=payload.job_id,
-        component_id=None,
-        message=json.dumps(msg_data)
+        reference_type='WORK_SCHEDULE',
+        reference_id=payload.job_id,
+        title="Ping: Job Update Needed",
+        message=json.dumps(msg_data),
+        link="/team-calendar?tab=schedule"
     )
     db.add(notif)
     await db.commit()
     
     # Emit socket event ONLY to the target member's room
-    await emit_to_user(payload.member_name, 'work_schedule_notification', {'member_name': payload.member_name})
+    await emit_to_user(payload.member_name, 'system_notification', {'member_name': payload.member_name})
     
     return {"success": True}
 
-@router.delete("/notifications/{notif_id}")
-async def delete_notification(
-    notif_id: int, 
-    db: AsyncSession = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
-):
-    """Delete a specific notification."""
-    res = await db.execute(
-        select(WorkScheduleNotification)
-        .where(WorkScheduleNotification.id == notif_id)
-        .where(WorkScheduleNotification.member_name == current_user.username)
-    )
-    notif = res.scalar_one_or_none()
-    if notif:
-        await db.delete(notif)
-        await db.commit()
-        return {"success": True}
-    raise HTTPException(status_code=404, detail="Notification not found")
 
-@router.delete("/notifications")
-async def delete_all_notifications(
-    db: AsyncSession = Depends(get_db), 
-    current_user: User = Depends(get_current_user)
-):
-    """Delete all notifications for the user."""
-    await db.execute(
-        delete(WorkScheduleNotification)
-        .where(WorkScheduleNotification.member_name == current_user.username)
-    )
-    await db.commit()
-    return {"success": True}
 
 @router.post("/jobs")
 async def create_job(

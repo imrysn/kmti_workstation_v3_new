@@ -15,7 +15,7 @@ import {
 } from '../utils/teamCalendarUtils'
 
 export function useTeamCalendar() {
-  const { user, hasRole } = useAuth()
+  const { user, hasRole, token } = useAuth()
   const { notify, confirm } = useModal()
   const isAdminOrIT = hasRole('admin', 'it')
 
@@ -88,7 +88,10 @@ export function useTeamCalendar() {
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
-    const socket = io(API_URL, { path: '/socket.io' })
+    const socket = io(API_URL, { 
+      path: '/socket.io',
+      auth: { token }
+    })
 
     socket.on('calendar_updated', () => {
       loadDataRef.current()
@@ -97,7 +100,7 @@ export function useTeamCalendar() {
     return () => {
       socket.disconnect()
     }
-  }, [])
+  }, [token])
 
   useEffect(() => {
     loadData()
@@ -122,43 +125,13 @@ export function useTeamCalendar() {
       user,
       isAdminOrIT,
       engineerName: state.engineerName,
-      newTodoTitle: state.newTodoTitle,
-      setNewTodoTitle: state.setNewTodoTitle,
-      newTodoDesc: state.newTodoDesc,
-      setNewTodoDesc: state.setNewTodoDesc,
-      newTodoPriority: state.newTodoPriority,
-      setNewTodoPriority: state.setNewTodoPriority,
-      dayOffLeaveType: state.dayOffLeaveType,
-      setDayOffLeaveType: state.setDayOffLeaveType,
       setIsAddingTodo: state.setIsAddingTodo,
       setIsAddingDayOff: state.setIsAddingDayOff,
       setIsAddingCompanyEvent: state.setIsAddingCompanyEvent,
-      companyEventTitle: state.companyEventTitle,
-      setCompanyEventTitle: state.setCompanyEventTitle,
-      companyEventCategory: state.companyEventCategory,
-      setCompanyEventCategory: state.setCompanyEventCategory,
-      companyEventStart: state.companyEventStart,
-      setCompanyEventStart: state.setCompanyEventStart,
-      companyEventEnd: state.companyEventEnd,
-      setCompanyEventEnd: state.setCompanyEventEnd,
       assigningTask: state.assigningTask,
       setAssigningTask: state.setAssigningTask,
-      assignUserId: state.assignUserId,
-      setAssignUserId: state.setAssignUserId,
-      assignEngineerName: state.assignEngineerName,
-      setAssignEngineerName: state.setAssignEngineerName,
-      assignStartDate: state.assignStartDate,
-      setAssignStartDate: state.setAssignStartDate,
-      assignEndDate: state.assignEndDate,
-      setAssignEndDate: state.setAssignEndDate,
-      assignSelectedTodoId: state.assignSelectedTodoId,
-      setAssignSelectedTodoId: state.setAssignSelectedTodoId,
       confirmingClaim: state.confirmingClaim,
       setConfirmingClaim: state.setConfirmingClaim,
-      dayOffStart: state.dayOffStart,
-      setDayOffStart: state.setDayOffStart,
-      dayOffEnd: state.dayOffEnd,
-      setDayOffEnd: state.setDayOffEnd,
       setSelectedEvent: state.setSelectedEvent,
       notify,
       confirm
@@ -321,42 +294,16 @@ export function useTeamCalendar() {
     setShowAbsences: state.setShowAbsences,
     showSpans: state.showSpans,
     setShowSpans: state.setShowSpans,
-    newTodoTitle: state.newTodoTitle,
-    setNewTodoTitle: state.setNewTodoTitle,
-    newTodoDesc: state.newTodoDesc,
-    setNewTodoDesc: state.setNewTodoDesc,
-    newTodoPriority: state.newTodoPriority,
-    setNewTodoPriority: state.setNewTodoPriority,
-    dayOffLeaveType: state.dayOffLeaveType,
-    setDayOffLeaveType: state.setDayOffLeaveType,
     isAddingTodo: state.isAddingTodo,
     setIsAddingTodo: state.setIsAddingTodo,
     isAddingDayOff: state.isAddingDayOff,
     setIsAddingDayOff: state.setIsAddingDayOff,
     isAddingCompanyEvent: state.isAddingCompanyEvent,
     setIsAddingCompanyEvent: state.setIsAddingCompanyEvent,
-    companyEventTitle: state.companyEventTitle,
-    setCompanyEventTitle: state.setCompanyEventTitle,
-    companyEventCategory: state.companyEventCategory,
-    setCompanyEventCategory: state.setCompanyEventCategory,
-    companyEventStart: state.companyEventStart,
-    setCompanyEventStart: state.setCompanyEventStart,
-    companyEventEnd: state.companyEventEnd,
-    setCompanyEventEnd: state.setCompanyEventEnd,
     activeUsers: state.activeUsers,
     setActiveUsers: state.setActiveUsers,
     assigningTask: state.assigningTask,
     setAssigningTask: state.setAssigningTask,
-    assignUserId: state.assignUserId,
-    setAssignUserId: state.setAssignUserId,
-    assignEngineerName: state.assignEngineerName,
-    setAssignEngineerName: state.setAssignEngineerName,
-    assignStartDate: state.assignStartDate,
-    setAssignStartDate: state.setAssignStartDate,
-    assignEndDate: state.assignEndDate,
-    setAssignEndDate: state.setAssignEndDate,
-    assignSelectedTodoId: state.assignSelectedTodoId,
-    setAssignSelectedTodoId: state.setAssignSelectedTodoId,
     pendingApprovals: state.pendingApprovals,
     setPendingApprovals: state.setPendingApprovals,
     selectedEvent: state.selectedEvent,
@@ -369,10 +316,6 @@ export function useTeamCalendar() {
     setActivePopoverDate: state.setActivePopoverDate,
     confirmingClaim: state.confirmingClaim,
     setConfirmingClaim: state.setConfirmingClaim,
-    dayOffStart: state.dayOffStart,
-    setDayOffStart: state.setDayOffStart,
-    dayOffEnd: state.dayOffEnd,
-    setDayOffEnd: state.setDayOffEnd,
     phHolidays,
     fetchRange,
     calendarDays,

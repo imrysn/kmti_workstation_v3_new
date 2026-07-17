@@ -89,6 +89,10 @@ async def get_chat_history(
                 "attachment_path": msg.attachment_path,
                 "attachment_name": msg.attachment_name,
                 "is_read": msg.is_read,
+                "is_edited": msg.is_edited,
+                "is_deleted": msg.is_deleted,
+                "reply_to_id": msg.reply_to_id,
+                "reactions": msg.reactions,
                 "created_at": msg.created_at.isoformat() if msg.created_at else None
             }
             for msg in messages
@@ -119,6 +123,10 @@ async def mark_messages_read(
     )
     await db.execute(stmt)
     await db.commit()
+
+    if peer:
+        await sio.emit("chat_messages_read", {"reader": current_user.username, "sender": peer}, room=f"user:{peer}")
+
     return {"success": True}
 
 @router.get("/unread_counts")
@@ -492,6 +500,8 @@ async def handle_send_chat_message(sid: str, data: dict):
     attachment_path = data.get("attachment_path")
     attachment_name = data.get("attachment_name")
     
+    reply_to_id = data.get("reply_to_id")
+    
     if not group_id and not recipient:
         return
     if not content and not attachment_path:
@@ -510,7 +520,8 @@ async def handle_send_chat_message(sid: str, data: dict):
             content=censored_content,
             attachment_path=attachment_path,
             attachment_name=attachment_name,
-            is_read=False
+            is_read=False,
+            reply_to_id=reply_to_id
         )
         db.add(new_msg)
         await db.commit()
@@ -525,6 +536,10 @@ async def handle_send_chat_message(sid: str, data: dict):
             "attachment_path": new_msg.attachment_path,
             "attachment_name": new_msg.attachment_name,
             "is_read": new_msg.is_read,
+            "is_edited": new_msg.is_edited,
+            "is_deleted": new_msg.is_deleted,
+            "reply_to_id": new_msg.reply_to_id,
+            "reactions": new_msg.reactions,
             "created_at": new_msg.created_at.isoformat() if new_msg.created_at else None
         }
         
@@ -535,3 +550,114 @@ async def handle_send_chat_message(sid: str, data: dict):
     else:
         await sio.emit("receive_chat_message", msg_payload, room=f"user:{recipient}")
         await sio.emit("receive_chat_message", msg_payload, room=f"user:{sender}")
+
+@router.put("/messages/{msg_id}")
+async def edit_message(
+    msg_id: int,
+    content: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(ChatMessage).where(ChatMessage.id == msg_id))
+    msg = result.scalar_one_or_none()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if msg.sender != current_user.username:
+        raise HTTPException(status_code=403, detail="Cannot edit someone else's message")
+    
+    msg.content = content.strip()
+    msg.is_edited = True
+    await db.commit()
+    
+    # Broadcast mutation
+    from socket_manager import broadcast_mutation
+    await broadcast_mutation("chat_message", "edit", {"id": msg_id, "content": msg.content, "is_edited": True})
+    return {"success": True}
+
+@router.delete("/messages/{msg_id}")
+async def delete_message(
+    msg_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = await db.execute(select(ChatMessage).where(ChatMessage.id == msg_id))
+    msg = result.scalar_one_or_none()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    if msg.sender != current_user.username:
+        raise HTTPException(status_code=403, detail="Cannot delete someone else's message")
+    
+    msg.is_deleted = True
+    msg.content = "This message was deleted."
+    msg.attachment_path = None
+    msg.attachment_name = None
+    await db.commit()
+    
+    from socket_manager import broadcast_mutation
+    await broadcast_mutation("chat_message", "delete", {"id": msg_id})
+    return {"success": True}
+
+@router.post("/messages/{msg_id}/react")
+async def react_to_message(
+    msg_id: int,
+    emoji: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    import json
+    result = await db.execute(select(ChatMessage).where(ChatMessage.id == msg_id))
+    msg = result.scalar_one_or_none()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    reactions = json.loads(msg.reactions) if msg.reactions else {}
+    already_had_emoji = (emoji in reactions) and (current_user.username in reactions[emoji])
+    
+    # Remove user from all reaction lists
+    for k in list(reactions.keys()):
+        if current_user.username in reactions[k]:
+            reactions[k].remove(current_user.username)
+            if not reactions[k]:
+                del reactions[k]
+                
+    # If they did not already have this emoji, add it
+    if not already_had_emoji:
+        if emoji not in reactions:
+            reactions[emoji] = []
+        reactions[emoji].append(current_user.username)
+        
+    msg.reactions = json.dumps(reactions)
+    await db.commit()
+    
+    from socket_manager import broadcast_mutation
+    await broadcast_mutation("chat_message", "react", {"id": msg_id, "reactions": msg.reactions})
+    return {"success": True}
+
+@sio.on("user_typing")
+async def handle_user_typing(sid: str, data: dict):
+    from socket_manager import _sid_to_user
+    sender = _sid_to_user.get(sid)
+    if not sender: return
+    recipient = data.get("recipient")
+    group_id = data.get("group_id")
+    
+    payload = {"sender": sender, "recipient": recipient, "group_id": group_id}
+    if group_id is not None:
+        await sio.emit("user_typing", payload, room=f"group:{group_id}", skip_sid=sid)
+    elif recipient:
+        await sio.emit("user_typing", payload, room=f"user:{recipient}")
+
+@sio.on("user_stop_typing")
+async def handle_user_stop_typing(sid: str, data: dict):
+    from socket_manager import _sid_to_user
+    sender = _sid_to_user.get(sid)
+    if not sender: return
+    recipient = data.get("recipient")
+    group_id = data.get("group_id")
+    
+    payload = {"sender": sender, "recipient": recipient, "group_id": group_id}
+    if group_id is not None:
+        await sio.emit("user_stop_typing", payload, room=f"group:{group_id}", skip_sid=sid)
+    elif recipient:
+        await sio.emit("user_stop_typing", payload, room=f"user:{recipient}")
+

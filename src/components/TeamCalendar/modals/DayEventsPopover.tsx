@@ -12,11 +12,7 @@ interface DayEventsPopoverProps {
   showSpans: boolean
   isAdminOrIT: boolean
   setSelectedEvent: (event: ICalendarEvent | null) => void
-  setCompanyEventStart: (val: string) => void
-  setCompanyEventEnd: (val: string) => void
-  setCompanyEventTitle: (val: string) => void
-  setCompanyEventCategory: (val: any) => void
-  setIsAddingCompanyEvent: (val: boolean) => void
+  onAddCompanyEvent: (dateStr: string) => void
   onClose: () => void
 }
 
@@ -29,11 +25,7 @@ export default function DayEventsPopover({
   showSpans,
   isAdminOrIT,
   setSelectedEvent,
-  setCompanyEventStart,
-  setCompanyEventEnd,
-  setCompanyEventTitle,
-  setCompanyEventCategory,
-  setIsAddingCompanyEvent,
+  onAddCompanyEvent,
   onClose
 }: DayEventsPopoverProps) {
   useEffect(() => {
@@ -271,11 +263,7 @@ export default function DayEventsPopover({
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12.5px' }}
               onClick={() => {
                 const dateStr = formatLocalDate(activePopoverDate)
-                setCompanyEventStart(dateStr)
-                setCompanyEventEnd(dateStr)
-                setCompanyEventTitle('')
-                setCompanyEventCategory('Other')
-                setIsAddingCompanyEvent(true)
+                onAddCompanyEvent(dateStr)
                 onClose()
               }}
             >

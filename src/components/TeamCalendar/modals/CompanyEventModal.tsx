@@ -1,30 +1,27 @@
-import React, { useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 
 interface CompanyEventModalProps {
-  companyEventTitle: string
-  setCompanyEventTitle: (val: string) => void
-  companyEventCategory: 'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other'
-  setCompanyEventCategory: (val: any) => void
-  companyEventStart: string
-  setCompanyEventStart: (val: string) => void
-  companyEventEnd: string
-  setCompanyEventEnd: (val: string) => void
-  handleCreateCompanyEventSubmit: (e: React.FormEvent) => void
+  initialStart?: string
+  initialEnd?: string
+  handleCreateCompanyEventSubmit: (title: string, category: 'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other', start: string, end: string) => Promise<void> | void
   onClose: () => void
 }
 
 export default function CompanyEventModal({
-  companyEventTitle,
-  setCompanyEventTitle,
-  companyEventCategory,
-  setCompanyEventCategory,
-  companyEventStart,
-  setCompanyEventStart,
-  companyEventEnd,
-  setCompanyEventEnd,
+  initialStart = '',
+  initialEnd = '',
   handleCreateCompanyEventSubmit,
   onClose
 }: CompanyEventModalProps) {
+  const [companyEventTitle, setCompanyEventTitle] = useState('')
+  const [companyEventCategory, setCompanyEventCategory] = useState<'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other'>('Other')
+  const [companyEventStart, setCompanyEventStart] = useState(initialStart)
+  const [companyEventEnd, setCompanyEventEnd] = useState(initialEnd)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleCreateCompanyEventSubmit(companyEventTitle, companyEventCategory, companyEventStart, companyEventEnd);
+  }
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -40,7 +37,7 @@ export default function CompanyEventModal({
           <h3>Schedule Company Event</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
-        <form onSubmit={handleCreateCompanyEventSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Event Title</label>
             <input

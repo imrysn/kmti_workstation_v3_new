@@ -1,13 +1,15 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react'
 import { io } from 'socket.io-client'
-import { scheduleApi, SERVER_BASE } from '../services/api'
+import { notificationApi, SERVER_BASE } from '../services/api'
 import { useAuth } from './AuthContext'
 
 export interface INotification {
   id: number
-  job_id: string
-  component_id: number
+  reference_type: string
+  reference_id: string | null
+  title: string | null
   message: string
+  link: string | null
   is_read: boolean
   created_at: string
 }
@@ -33,7 +35,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const fetchNotifications = useCallback(async () => {
     if (!user) return
     try {
-      const res = await scheduleApi.getNotifications()
+      const res = await notificationApi.getNotifications()
       if (res.success) setNotifications(res.notifications)
     } catch (err) {
       console.warn('[NotificationContext] Failed to fetch notifications', err)
@@ -42,7 +44,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markNotificationsRead = async () => {
     try {
-      await scheduleApi.markNotificationsRead()
+      await notificationApi.markNotificationsRead()
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
     } catch (err) {
       console.warn('[NotificationContext] Failed to mark notifications read', err)
@@ -51,7 +53,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const markNotificationRead = async (id: number) => {
     try {
-      await scheduleApi.markNotificationRead(id)
+      await notificationApi.markNotificationRead(id)
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
     } catch (err) {
       console.warn('[NotificationContext] Failed to mark notification read', err)
@@ -60,7 +62,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const deleteNotification = async (id: number) => {
     try {
-      await scheduleApi.deleteNotification(id)
+      await notificationApi.deleteNotification(id)
       setNotifications(prev => prev.filter(n => n.id !== id))
     } catch (err) {
       console.warn('[NotificationContext] Failed to delete notification', err)
@@ -69,7 +71,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const deleteAllNotifications = async () => {
     try {
-      await scheduleApi.deleteAllNotifications()
+      await notificationApi.deleteAllNotifications()
       setNotifications([])
     } catch (err) {
       console.warn('[NotificationContext] Failed to delete all notifications', err)
@@ -80,6 +82,12 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user) return
 
+    // Expose for dev tools testing
+    ;(window as any).testNotifications = async () => {
+      console.log('Sending test notifications via API...')
+      await notificationApi.testNotifications()
+    }
+
     fetchNotifications()
 
     const socket = io(SERVER_BASE, {
@@ -88,12 +96,15 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       auth: { username: user.username ?? '' }
     })
 
-    socket.on('work_schedule_notification', () => {
+    socket.on('system_notification', (data) => {
+      console.log('[SYSTEM NOTIFICATION RECEIVED]', data)
       fetchNotifications()
 
       // Browser push notification
       if (Notification.permission === 'granted') {
-        new Notification('KMTI Work Schedule', { body: 'You have a new work status update!' })
+        const title = data?.title || 'System Update'
+        const body = data?.message || 'You have a new notification.'
+        new Notification(title, { body })
       } else if (Notification.permission !== 'denied') {
         Notification.requestPermission()
       }

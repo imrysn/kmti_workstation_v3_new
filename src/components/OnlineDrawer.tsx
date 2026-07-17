@@ -65,7 +65,7 @@ const playMessageChime = () => {
 };
 
 export default function OnlineDrawer() {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, token } = useAuth();
   const { confirm } = useModal();
   const drawerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -111,8 +111,6 @@ export default function OnlineDrawer() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupModalMode, setGroupModalMode] = useState<'create' | 'edit'>('create');
   const [selectedGroup, setSelectedGroup] = useState<any | null>(null);
-  const [groupFormName, setGroupFormName] = useState('');
-  const [groupFormMembers, setGroupFormMembers] = useState<string[]>([]);
 
   // Avatar picker
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
@@ -124,7 +122,7 @@ export default function OnlineDrawer() {
     if (!socket || !user?.username) return;
 
     const doAuth = () => {
-      socket.emit('authenticate', { username: user.username });
+      socket.emit('authenticate', { username: user.username, token });
     };
 
     if (socket.connected) {
@@ -135,7 +133,7 @@ export default function OnlineDrawer() {
     return () => {
       socket.off('connect', doAuth);
     };
-  }, [user]);
+  }, [user, token]);
 
   // Socket.io listeners for incoming chats/groups
   useEffect(() => {
@@ -262,32 +260,20 @@ export default function OnlineDrawer() {
   const handleOpenCreateGroup = () => {
     setGroupModalMode('create');
     setSelectedGroup(null);
-    setGroupFormName('');
-    setGroupFormMembers([]);
     setShowGroupModal(true);
   };
 
   const handleOpenEditGroup = (g: any) => {
     setGroupModalMode('edit');
     setSelectedGroup(g);
-    setGroupFormName(g.name);
-    setGroupFormMembers(g.members.filter((m: string) => m !== user?.username));
     setShowGroupModal(true);
   };
 
-  const toggleGroupMember = (username: string) => {
-    setGroupFormMembers(prev =>
-      prev.includes(username) ? prev.filter(m => m !== username) : [...prev, username]
-    );
-  };
-
-  const handleGroupFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!groupFormName.trim()) return;
+  const handleGroupFormSubmit = async (name: string, members: string[]) => {
     try {
       const { chatApi } = await import('../services/api');
       if (groupModalMode === 'create') {
-        const res = await chatApi.createGroup(groupFormName.trim(), groupFormMembers);
+        const res = await chatApi.createGroup(name, members);
         if (res.success) {
           fetchGroupsAndUsers();
           setShowGroupModal(false);
@@ -295,7 +281,7 @@ export default function OnlineDrawer() {
         }
       } else if (groupModalMode === 'edit' && selectedGroup) {
         const targetId = selectedGroup.group_id || selectedGroup.id;
-        const res = await chatApi.editGroup(targetId, groupFormName.trim(), groupFormMembers);
+        const res = await chatApi.editGroup(targetId, name, members);
         if (res.success) {
           fetchGroupsAndUsers();
           setShowGroupModal(false);
@@ -336,7 +322,31 @@ export default function OnlineDrawer() {
 
   const filteredWorkstations = useMemo(() => {
     const fiveMinsAgo = Date.now() - (5 * 60 * 1000);
-    return workstations
+    
+    // Deduplicate by current_user (fallback to computer_name or IP) to show only the latest session per user
+    const latestWsMap = new Map<string, typeof workstations[0]>();
+    workstations.forEach(ws => {
+      const rawKey = ws.current_user || ws.computer_name || ws.ip_address;
+      const key = rawKey.trim().toLowerCase();
+      const existing = latestWsMap.get(key);
+      const pingTime = ws.last_ping ? new Date(ws.last_ping).getTime() : 0;
+      const existingPingTime = existing?.last_ping ? new Date(existing.last_ping).getTime() : 0;
+      
+      // If we already have an ONLINE record for this user, and the new one is OFFLINE, keep the online one.
+      // Otherwise, pick the most recent ping.
+      const isExistingOnline = existingPingTime >= fiveMinsAgo && existing?.active_module !== 'offline';
+      const isNewOnline = pingTime >= fiveMinsAgo && ws.active_module !== 'offline';
+
+      if (!existing) {
+        latestWsMap.set(key, ws);
+      } else if (isNewOnline && !isExistingOnline) {
+        latestWsMap.set(key, ws);
+      } else if (isNewOnline === isExistingOnline && pingTime > existingPingTime) {
+        latestWsMap.set(key, ws);
+      }
+    });
+
+    return Array.from(latestWsMap.values())
       .filter(ws => {
         const pingTime = ws.last_ping ? new Date(ws.last_ping).getTime() : 0;
         const isOnline = pingTime >= fiveMinsAgo && ws.active_module !== 'offline';
@@ -639,10 +649,8 @@ export default function OnlineDrawer() {
       {showGroupModal && (
         <GroupManagerModal
           mode={groupModalMode}
-          groupName={groupFormName}
-          setGroupName={setGroupFormName}
-          members={groupFormMembers}
-          toggleMember={toggleGroupMember}
+          initialGroupName={groupModalMode === 'edit' && selectedGroup ? selectedGroup.name : ''}
+          initialMembers={groupModalMode === 'edit' && selectedGroup ? selectedGroup.members.filter((m: string) => m !== user?.username) : []}
           usersList={usersList}
           currentUsername={user?.username}
           onSubmit={handleGroupFormSubmit}

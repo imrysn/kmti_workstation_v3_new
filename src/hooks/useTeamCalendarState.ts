@@ -20,27 +20,14 @@ export function useTeamCalendarState() {
   const [showAbsences, setShowAbsences] = useState(true)
   const [showSpans, setShowSpans] = useState(false)
 
-  // Modals Form State
-  const [newTodoTitle, setNewTodoTitle] = useState('')
-  const [newTodoDesc, setNewTodoDesc] = useState('')
-  const [newTodoPriority, setNewTodoPriority] = useState<'Low' | 'Normal' | 'High' | 'Critical'>('Normal')
-  const [dayOffLeaveType, setDayOffLeaveType] = useState<string>('Vacation')
+  // Modals Visibility State
   const [isAddingTodo, setIsAddingTodo] = useState(false)
   const [isAddingDayOff, setIsAddingDayOff] = useState(false)
   const [isAddingCompanyEvent, setIsAddingCompanyEvent] = useState(false)
-  const [companyEventTitle, setCompanyEventTitle] = useState('')
-  const [companyEventCategory, setCompanyEventCategory] = useState<'Holiday' | 'Birthday' | 'Outing' | 'Meeting' | 'Other'>('Other')
-  const [companyEventStart, setCompanyEventStart] = useState('')
-  const [companyEventEnd, setCompanyEventEnd] = useState('')
 
   // Admin Assignment & Approvals State
   const [activeUsers, setActiveUsers] = useState<IActiveUser[]>([])
   const [assigningTask, setAssigningTask] = useState<ITodo | null>(null)
-  const [assignUserId, setAssignUserId] = useState('')
-  const [assignEngineerName, setAssignEngineerName] = useState('')
-  const [assignStartDate, setAssignStartDate] = useState('')
-  const [assignEndDate, setAssignEndDate] = useState('')
-  const [assignSelectedTodoId, setAssignSelectedTodoId] = useState('')
   const [pendingApprovals, setPendingApprovals] = useState<IPendingApproval[]>([])
 
   // Modals Selection State
@@ -58,10 +45,6 @@ export function useTeamCalendarState() {
     start: string
     end: string
   } | null>(null)
-
-  // Day Off Dates
-  const [dayOffStart, setDayOffStart] = useState('')
-  const [dayOffEnd, setDayOffEnd] = useState('')
 
   const handleNameChange = (val: string) => {
     setEngineerName(val)
@@ -91,42 +74,16 @@ export function useTeamCalendarState() {
     setShowAbsences,
     showSpans,
     setShowSpans,
-    newTodoTitle,
-    setNewTodoTitle,
-    newTodoDesc,
-    setNewTodoDesc,
-    newTodoPriority,
-    setNewTodoPriority,
-    dayOffLeaveType,
-    setDayOffLeaveType,
     isAddingTodo,
     setIsAddingTodo,
     isAddingDayOff,
     setIsAddingDayOff,
     isAddingCompanyEvent,
     setIsAddingCompanyEvent,
-    companyEventTitle,
-    setCompanyEventTitle,
-    companyEventCategory,
-    setCompanyEventCategory,
-    companyEventStart,
-    setCompanyEventStart,
-    companyEventEnd,
-    setCompanyEventEnd,
     activeUsers,
     setActiveUsers,
     assigningTask,
     setAssigningTask,
-    assignUserId,
-    setAssignUserId,
-    assignEngineerName,
-    setAssignEngineerName,
-    assignStartDate,
-    setAssignStartDate,
-    assignEndDate,
-    setAssignEndDate,
-    assignSelectedTodoId,
-    setAssignSelectedTodoId,
     pendingApprovals,
     setPendingApprovals,
     selectedEvent,
@@ -139,10 +96,6 @@ export function useTeamCalendarState() {
     setActivePopoverDate,
     lastScrollTime,
     confirmingClaim,
-    setConfirmingClaim,
-    dayOffStart,
-    setDayOffStart,
-    dayOffEnd,
-    setDayOffEnd
+    setConfirmingClaim
   }
 }

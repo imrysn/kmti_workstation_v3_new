@@ -509,11 +509,6 @@ export const ttsApi = {
 
 // --- Work Schedule ---
 export const scheduleApi = {
-  getNotifications: () => api.get('/schedule/notifications').then(r => r.data),
-  markNotificationsRead: () => api.post('/schedule/notifications/read').then(r => r.data),
-  markNotificationRead: (id: number) => api.post(`/schedule/notifications/${id}/read`).then(r => r.data),
-  deleteNotification: (id: number) => api.delete(`/schedule/notifications/${id}`).then(r => r.data),
-  deleteAllNotifications: () => api.delete('/schedule/notifications').then(r => r.data),
   sendManualNotification: (memberName: string, jobId: string, message: string) => 
     api.post('/schedule/notifications/manual', { member_name: memberName, job_id: jobId, message }).then(r => r.data),
   getPermissions: () => api.get('/schedule/permissions').then(r => r.data),
@@ -560,6 +555,15 @@ export const scheduleApi = {
   getActiveUsers: () => api.get('/auth/users').then(r => r.data as Array<{ id: number; username: string; fullName?: string; role: string; is_active: boolean }>),
 }
 
+export const notificationApi = {
+  getNotifications: () => api.get('/notifications').then(r => r.data),
+  markNotificationsRead: () => api.post('/notifications/read').then(r => r.data),
+  markNotificationRead: (id: number) => api.post(`/notifications/${id}/read`).then(r => r.data),
+  deleteNotification: (id: number) => api.delete(`/notifications/${id}`).then(r => r.data),
+  deleteAllNotifications: () => api.delete('/notifications').then(r => r.data),
+  testNotifications: () => api.post('/notifications/test').then(r => r.data),
+}
+
 export const chatApi = {
   getHistory: (peer?: string, groupId?: number, limit: number = 50) =>
     api.get<any[]>('/chat/history', { params: { peer, group_id: groupId, limit } }).then(r => r.data),
@@ -569,6 +573,18 @@ export const chatApi = {
     api.post<any>('/chat/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }).then(r => r.data),
+  editMessage: (msgId: number, content: string) => {
+    const fd = new FormData()
+    fd.append('content', content)
+    return api.put<any>(`/chat/messages/${msgId}`, fd).then(r => r.data)
+  },
+  deleteMessage: (msgId: number) =>
+    api.delete<any>(`/chat/messages/${msgId}`).then(r => r.data),
+  reactToMessage: (msgId: number, emoji: string) => {
+    const fd = new FormData()
+    fd.append('emoji', emoji)
+    return api.post<any>(`/chat/messages/${msgId}/react`, fd).then(r => r.data)
+  },
   getUnreadCounts: () =>
     api.get<Record<string, number>>('/chat/unread_counts').then(r => r.data),
   createGroup: (name: string, members: string[]) =>

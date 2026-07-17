@@ -40,7 +40,7 @@ from core.config import IS_FROZEN, BASE_DIR, LOG_DIR
 
 from db.database import engine, Base, fms_engine, AsyncSessionLocal
 from sqlalchemy import text
-from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model, activity_log as activity_log_model, custom_dictionary as custom_dictionary_model, work_schedule as work_schedule_model, chat as chat_model, moderation as moderation_model # Ensure models are registered for metadata
+from models import telemetry as telemetry_model, broadcast as broadcast_model, stopwatch as stopwatch_model, activity_log as activity_log_model, custom_dictionary as custom_dictionary_model, work_schedule as work_schedule_model, chat as chat_model, moderation as moderation_model, notification as notification_model # Ensure models are registered for metadata
 import team_calendar.infrastructure.models # Ensure team calendar models are registered for metadata
 try:
     from core.nas_indexer import indexer
@@ -327,6 +327,8 @@ from routers import work_schedule
 app.include_router(work_schedule.router, prefix="/api/schedule", tags=["Work Schedule"])
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(moderation.router, prefix="/api/moderation", tags=["Content Moderation"])
+from routers import notifications
+app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.

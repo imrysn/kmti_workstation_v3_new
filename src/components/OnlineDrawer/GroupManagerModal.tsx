@@ -1,32 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { getDisplayName } from '../../utils/nameUtils';
 
 export interface GroupManagerModalProps {
   mode: 'create' | 'edit';
-  groupName: string;
-  setGroupName: (val: string) => void;
-  members: string[];
-  toggleMember: (username: string) => void;
+  initialGroupName?: string;
+  initialMembers?: string[];
   usersList: any[];
   currentUsername?: string;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (name: string, members: string[]) => Promise<void> | void;
   onClose: () => void;
 }
 
 export function GroupManagerModal({
   mode,
-  groupName,
-  setGroupName,
-  members,
-  toggleMember,
+  initialGroupName = '',
+  initialMembers = [],
   usersList,
   currentUsername,
   onSubmit,
   onClose
 }: GroupManagerModalProps) {
+  const [groupName, setGroupName] = useState(initialGroupName);
+  const [members, setMembers] = useState<string[]>(initialMembers);
+
+  const toggleMember = (username: string) => {
+    setMembers(prev => prev.includes(username) ? prev.filter(m => m !== username) : [...prev, username]);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!groupName.trim()) return;
+    onSubmit(groupName.trim(), members);
+  };
+
   return (
     <div className="group-modal-backdrop">
-      <form className="group-modal-content" onSubmit={onSubmit}>
+      <form className="group-modal-content" onSubmit={handleSubmit}>
         <div className="group-modal-header">
           <h4>{mode === 'create' ? 'Create Group Chat' : 'Edit Group Members'}</h4>
           <button type="button" className="group-modal-close" onClick={onClose}>&times;</button>

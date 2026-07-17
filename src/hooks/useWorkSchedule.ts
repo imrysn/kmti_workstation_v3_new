@@ -143,7 +143,7 @@ export async function prefetchWorkScheduleData() {
 
 export function useWorkSchedule() {
   const { flags } = useFlags()
-  const { hasRole, user } = useAuth()
+  const { hasRole } = useAuth()
   const { confirm, alert } = useModal()
   const isAdminOrIT = hasRole('admin', 'it', 'team_leader')
 
@@ -204,30 +204,10 @@ export function useWorkSchedule() {
 
   // CRUD Modals State
   const [isAddingJob, setIsAddingJob] = useState(false)
-  const [newJobId, setNewJobId] = useState('')
-  const [newJobDeadline, setNewJobDeadline] = useState('')
-  const [isSubmittingJob, setIsSubmittingJob] = useState(false)
 
   const [isAddingComponent, setIsAddingComponent] = useState(false)
-  const [newCompCode, setNewCompCode] = useState('')
-  const [newComp3DAssem, setNewComp3DAssem] = useState('-')
-  const [newComp3DParts, setNewComp3DParts] = useState('-')
-  const [newComp2DAssem, setNewComp2DAssem] = useState('-')
-  const [newComp2DParts, setNewComp2DParts] = useState('-')
-  const [newCompStatus, setNewCompStatus] = useState('Pending/Not Started')
-  const [newCompDate, setNewCompDate] = useState('')
-  const [isSubmittingComp, setIsSubmittingComp] = useState(false)
 
   const [editingComponent, setEditingComponent] = useState<IComponent | null>(null)
-  const [editCompCode, setEditCompCode] = useState('')
-  const [editComp3DAssem, setEditComp3DAssem] = useState('-')
-  const [editComp3DParts, setEditComp3DParts] = useState('-')
-  const [editComp2DAssem, setEditComp2DAssem] = useState('-')
-  const [editComp2DParts, setEditComp2DParts] = useState('-')
-  const [editCompStatus, setEditCompStatus] = useState('Pending/Not Started')
-  const [editCompDate, setEditCompDate] = useState('')
-  const [editCompPostponed, setEditCompPostponed] = useState(false)
-  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false)
 
   // Load jobs list
   const loadJobs = async (force = false) => {
@@ -522,27 +502,8 @@ export function useWorkSchedule() {
     }
   }
 
-  // Add Job
-  const handleAddJobSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newJobId.trim()) return
-
-    setIsSubmittingJob(true)
-    try {
-      const res = await scheduleApi.createJob(newJobId, newJobDeadline || null)
-      if (res.success) {
-        setIsAddingJob(false)
-        setNewJobId('')
-        setNewJobDeadline('')
-        loadJobs(true)
-      }
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error || err.message
-      alert(`Failed to add Job: ${errMsg}`)
-    } finally {
-      setIsSubmittingJob(false)
-    }
-  }
+  // Add Job (No longer used directly by modal, keeping for reference or deleting since AddJobModal uses API directly)
+  // Actually, AddJobModal calls API directly and just calls loadJobs(). So we can delete handleAddJobSubmit from here.
 
   // Delete Job
   const handleDeleteJob = async (jobId: string) => {
@@ -567,64 +528,16 @@ export function useWorkSchedule() {
     )
   }
 
-  // Add Component Drawing
-  const handleAddComponentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedJob || !newCompCode.trim()) return
-
-    setIsSubmittingComp(true)
-    try {
-      await scheduleApi.createComponent(selectedJob.job_id, {
-        unit_code: newCompCode,
-        assembly_3d: formatPercentInput(newComp3DAssem),
-        parts_3d: formatPercentInput(newComp3DParts),
-        assembly_2d: formatPercentInput(newComp2DAssem),
-        parts_2d: formatPercentInput(newComp2DParts),
-        status: newCompStatus,
-        submitted_date: newCompDate || null
-      })
-      setIsAddingComponent(false)
-      setNewCompCode('')
-      setNewComp3DAssem('-')
-      setNewComp3DParts('-')
-      setNewComp2DAssem('-')
-      setNewComp2DParts('-')
-      setNewCompStatus('Pending/Not Started')
-      setNewCompDate('')
-      loadComponents(selectedJob.job_id)
-      loadJobs(true)
-    } catch (err: any) {
-      const errMsg = err.response?.data?.error || err.message
-      alert(`Failed to add component: ${errMsg}`)
-    } finally {
-      setIsSubmittingComp(false)
-    }
-  }
+  // Add Component Drawing (Removed, AddComponentModal uses API directly)
 
   // Edit Component Drawing
-  const handleEditComponentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleEditComponentSubmit = async (updatedComp: IComponent) => {
     if (!editingComponent) return
 
-    setIsSubmittingEdit(true)
-    
     // Save previous state for rollback
     const rollbackComponents = [...components]
     const rollbackJobs = [...jobs]
     
-    // Construct updated component
-    const updatedComp: IComponent = {
-      ...editingComponent,
-      unit_code: editCompCode,
-      assembly_3d: formatPercentInput(editComp3DAssem),
-      parts_3d: formatPercentInput(editComp3DParts),
-      assembly_2d: formatPercentInput(editComp2DAssem),
-      parts_2d: formatPercentInput(editComp2DParts),
-      status: editCompStatus,
-      submitted_date: editCompDate || null,
-      is_postponed: editCompPostponed
-    }
-
     // Optimistically update components state
     setComponents(prev => prev.map(c => c.id === editingComponent.id ? updatedComp : c))
     
@@ -661,14 +574,14 @@ export function useWorkSchedule() {
 
     try {
       await scheduleApi.updateComponent(editingComponent.id, {
-        unit_code: editCompCode,
-        assembly_3d: formatPercentInput(editComp3DAssem),
-        parts_3d: formatPercentInput(editComp3DParts),
-        assembly_2d: formatPercentInput(editComp2DAssem),
-        parts_2d: formatPercentInput(editComp2DParts),
-        status: editCompStatus,
-        submitted_date: editCompDate || null,
-        is_postponed: editCompPostponed
+        unit_code: updatedComp.unit_code,
+        assembly_3d: updatedComp.assembly_3d,
+        parts_3d: updatedComp.parts_3d,
+        assembly_2d: updatedComp.assembly_2d,
+        parts_2d: updatedComp.parts_2d,
+        status: updatedComp.status,
+        submitted_date: updatedComp.submitted_date || null,
+        is_postponed: updatedComp.is_postponed
       })
       setEditingComponent(null)
       if (selectedJob) {
@@ -681,8 +594,6 @@ export function useWorkSchedule() {
       setJobs(rollbackJobs)
       const errMsg = err.response?.data?.error || err.message
       alert(`Failed to update component: ${errMsg}`)
-    } finally {
-      setIsSubmittingEdit(false)
     }
   }
 
@@ -748,14 +659,6 @@ export function useWorkSchedule() {
   // Open edit modal
   const openEditModal = (comp: IComponent) => {
     setEditingComponent(comp)
-    setEditCompCode(comp.unit_code)
-    setEditComp3DAssem(formatPercentDisplay(comp.assembly_3d))
-    setEditComp3DParts(formatPercentDisplay(comp.parts_3d))
-    setEditComp2DAssem(formatPercentDisplay(comp.assembly_2d))
-    setEditComp2DParts(formatPercentDisplay(comp.parts_2d))
-    setEditCompStatus(comp.status)
-    setEditCompDate(comp.submitted_date || '')
-    setEditCompPostponed(!!comp.is_postponed)
   }
 
   // Save timeline cell changes
@@ -1128,55 +1031,16 @@ export function useWorkSchedule() {
     isSavingTimelineSpan,
     isAddingJob,
     setIsAddingJob,
-    newJobId,
-    setNewJobId,
-    newJobDeadline,
-    setNewJobDeadline,
-    isSubmittingJob,
     isAddingComponent,
     setIsAddingComponent,
-    newCompCode,
-    setNewCompCode,
-    newComp3DAssem,
-    setNewComp3DAssem,
-    newComp3DParts,
-    setNewComp3DParts,
-    newComp2DAssem,
-    setNewComp2DAssem,
-    newComp2DParts,
-    setNewComp2DParts,
-    newCompStatus,
-    setNewCompStatus,
-    newCompDate,
-    setNewCompDate,
-    isSubmittingComp,
     editingComponent,
     setEditingComponent,
-    editCompCode,
-    setEditCompCode,
-    editComp3DAssem,
-    setEditComp3DAssem,
-    editComp3DParts,
-    setEditComp3DParts,
-    editComp2DAssem,
-    setEditComp2DAssem,
-    editComp2DParts,
-    setEditComp2DParts,
-    editCompStatus,
-    setEditCompStatus,
-    editCompDate,
-    setEditCompDate,
-    editCompPostponed,
-    setEditCompPostponed,
-    isSubmittingEdit,
     loadJobs,
     loadComponents,
     loadTimeline,
     filteredJobs,
     handleExport,
-    handleAddJobSubmit,
     handleDeleteJob,
-    handleAddComponentSubmit,
     handleEditComponentSubmit,
     handleDeleteComponent,
     openEditModal,

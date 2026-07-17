@@ -19,8 +19,10 @@ export function useWorkstationTelemetry(user: any) {
   const [pendingAchievement, setPendingAchievement] = useState<AchievementInfo | null>(null);
 
   const prevAchievementsRef = useRef<Record<string, boolean>>({});
+  const alreadyPoppedRef = useRef<Record<string, boolean>>({});
   const prevPingsRef = useRef<Record<string, { ping: string; module: string }>>({});
   const isInitialFetchRef = useRef(true);
+  const lastFetchTimeRef = useRef<number>(Date.now());
 
   // Fetch local hostname/workstation name on mount
   useEffect(() => {
@@ -62,7 +64,9 @@ export function useWorkstationTelemetry(user: any) {
       user?.username,
       prevAchievementsRef.current
     );
-    if (result) {
+    
+    if (result && !alreadyPoppedRef.current[result.key]) {
+      alreadyPoppedRef.current[result.key] = true;
       setPendingAchievement({ key: result.key, ...result.info });
     }
 
@@ -74,7 +78,7 @@ export function useWorkstationTelemetry(user: any) {
     }
   }, [myComputerName, user?.username]);
 
-  const fetchStats = async (signal?: AbortSignal) => {
+  const fetchStats = useCallback(async (signal?: AbortSignal) => {
     try {
       const res = await telemetryApi.getStats({ signal });
       if (res.data?.success) {
@@ -85,9 +89,9 @@ export function useWorkstationTelemetry(user: any) {
         console.error('[ONLINE DRAWER] Failed to fetch shift statistics:', err);
       }
     }
-  };
+  }, []);
 
-  const fetchWorkstations = async (signal?: AbortSignal) => {
+  const fetchWorkstations = useCallback(async (signal?: AbortSignal) => {
     setIsLoading(true);
     try {
       const res = await telemetryApi.getStatuses({ signal, params: { include_offline: true } });
@@ -97,6 +101,10 @@ export function useWorkstationTelemetry(user: any) {
         detectNewAchievements(newWorkstations);
 
         const nowMs = Date.now();
+        const timeSinceLastFetch = nowMs - lastFetchTimeRef.current;
+        lastFetchTimeRef.current = nowMs;
+        const skipToasts = timeSinceLastFetch > 30000;
+
         const newPingsMap: Record<string, { ping: string; module: string }> = {};
         const fiveMins = 5 * 60 * 1000;
 
@@ -111,10 +119,10 @@ export function useWorkstationTelemetry(user: any) {
                 const prevPingMs = new Date(prevState.ping).getTime();
                 const newPingMs = new Date(ws.last_ping).getTime();
 
-                const wasGenuinelyOffline = (nowMs - prevPingMs >= fiveMins) || (prevState.module === 'offline');
+                const wasGenuinelyOffline = (newPingMs - prevPingMs >= fiveMins) || (prevState.module === 'offline');
                 const isNowOnline = (nowMs - newPingMs < fiveMins) && (ws.active_module !== 'offline');
 
-                if (wasGenuinelyOffline && isNowOnline) {
+                if (!skipToasts && wasGenuinelyOffline && isNowOnline) {
                   const toastId = Math.random().toString();
                   const name = ws.display_name || getDisplayName(ws.current_user || '') || ws.current_user || compName;
                   setToasts(prev => [...prev, { id: toastId, sender: name, type: 'login' }]);
@@ -140,7 +148,7 @@ export function useWorkstationTelemetry(user: any) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [detectNewAchievements]);
 
   useEffect(() => {
     const controller = new AbortController();

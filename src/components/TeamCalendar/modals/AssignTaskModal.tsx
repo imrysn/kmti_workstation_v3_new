@@ -1,41 +1,34 @@
-import React, { useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { ITodo, IActiveUser } from '../../../services/teamCalendarService'
 
 interface AssignTaskModalProps {
   assigningTask: ITodo
-  assignSelectedTodoId: string
-  setAssignSelectedTodoId: (val: string) => void
   backlog: ITodo[]
-  assignUserId: string
-  setAssignUserId: (val: string) => void
-  assignEngineerName: string
-  setAssignEngineerName: (val: string) => void
   activeUsers: IActiveUser[]
-  assignStartDate: string
-  setAssignStartDate: (val: string) => void
-  assignEndDate: string
-  setAssignEndDate: (val: string) => void
-  handleAssignTaskSubmit: (e: React.FormEvent) => void
+  handleAssignTaskSubmit: (taskId: number, userId: number, startDate: string, endDate: string, engName: string) => Promise<void> | void
   onClose: () => void
 }
 
 export default function AssignTaskModal({
   assigningTask,
-  assignSelectedTodoId,
-  setAssignSelectedTodoId,
   backlog,
-  assignUserId,
-  setAssignUserId,
-  assignEngineerName,
-  setAssignEngineerName,
   activeUsers,
-  assignStartDate,
-  setAssignStartDate,
-  assignEndDate,
-  setAssignEndDate,
   handleAssignTaskSubmit,
   onClose
 }: AssignTaskModalProps) {
+  const [assignSelectedTodoId, setAssignSelectedTodoId] = useState('')
+  const [assignUserId, setAssignUserId] = useState('')
+  const [assignEngineerName, setAssignEngineerName] = useState('')
+  const [assignStartDate, setAssignStartDate] = useState('')
+  const [assignEndDate, setAssignEndDate] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetTaskId = assigningTask.id === -1 ? Number(assignSelectedTodoId) : assigningTask.id;
+    if (!targetTaskId) return;
+    
+    handleAssignTaskSubmit(targetTaskId, Number(assignUserId), assignStartDate, assignEndDate, assignEngineerName);
+  }
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -51,7 +44,7 @@ export default function AssignTaskModal({
           <h3>Assign Task to Engineer</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
-        <form onSubmit={handleAssignTaskSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Task to Assign</label>
             {assigningTask.id === -1 ? (

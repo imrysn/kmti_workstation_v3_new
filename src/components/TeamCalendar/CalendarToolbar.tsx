@@ -1,5 +1,4 @@
 import { ChevronLeftIcon, ChevronRightIcon, LockIcon } from './Icons'
-import { formatLocalDate } from '../../utils/teamCalendarUtils'
 
 interface CalendarToolbarProps {
   viewMode: 'month' | 'week' | 'agenda' | 'timeline'
@@ -8,8 +7,6 @@ interface CalendarToolbarProps {
   yearNum: number
   navigateDate: (direction: 'prev' | 'next' | 'today') => void
   setIsAddingDayOff: (val: boolean) => void
-  setDayOffStart: (val: string) => void
-  setDayOffEnd: (val: string) => void
 }
 
 export default function CalendarToolbar({
@@ -18,9 +15,7 @@ export default function CalendarToolbar({
   monthName,
   yearNum,
   navigateDate,
-  setIsAddingDayOff,
-  setDayOffStart,
-  setDayOffEnd
+  setIsAddingDayOff
 }: CalendarToolbarProps) {
   return (
     <header className="calendar-toolbar">
@@ -96,11 +91,7 @@ export default function CalendarToolbar({
           </button>
         </div>
 
-        <button className="btn-absence-trigger" onClick={() => {
-          setDayOffStart(formatLocalDate(new Date()))
-          setDayOffEnd(formatLocalDate(new Date()))
-          setIsAddingDayOff(true)
-        }}>
+        <button className="btn-absence-trigger" onClick={() => setIsAddingDayOff(true)}>
           <span className="absence-btn-icon"><LockIcon /></span>
           <span>Request Leave</span>
         </button>

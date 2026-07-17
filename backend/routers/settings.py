@@ -16,6 +16,18 @@ import asyncio
 import json
 import os
 import shutil
+import logging
+
+logger = logging.getLogger(__name__)
+
+class SettingsUpdate(BaseModel):
+    dbSource: str = ""
+    dbName: str = ""
+    dbUsername: str = ""
+    dbPass: str = ""
+    localPath: str = ""
+    actPath: str = ""
+    autoDel: bool = False
 
 from models.user import User, UserRole
 from core.auth import get_current_user, require_role
@@ -60,20 +72,21 @@ async def get_settings(current_user = Depends(get_current_user)):
 
 @router.post("/")
 async def update_settings(
-    payload: dict,
-    current_user = Depends(get_current_user),
+    payload: SettingsUpdate,
+    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
     """Saves application settings."""
     current = await asyncio.to_thread(load_settings)
-    if payload.get("dbPass") in ["***", "********"]:
-        payload["dbPass"] = current.get("dbPass", "")
-    await asyncio.to_thread(save_settings, payload)
+    payload_dict = payload.model_dump()
+    if payload_dict.get("dbPass") in ["***", "********"]:
+        payload_dict["dbPass"] = current.get("dbPass", "")
+    await asyncio.to_thread(save_settings, payload_dict)
     return {"message": "Settings saved successfully"}
 
 
 @router.delete("/cache")
 async def clear_preview_cache(
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
 ):
     """Deletes all cached previews."""
     cache_dir = PREVIEW_CACHE_DIR
@@ -83,7 +96,8 @@ async def clear_preview_cache(
             os.makedirs(cache_dir, exist_ok=True)
             return {"message": "Cache cleared successfully"}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error clearing cache: {str(e)}")
+            logger.error(f"Error clearing preview cache: {e}")
+            raise HTTPException(status_code=500, detail="Failed to clear preview cache")
     return {"message": "Cache was already empty"}
 
 
@@ -96,7 +110,7 @@ async def update_app(
     if result["success"]:
         return {"message": "Update downloaded successfully. The app will reload and apply changes shortly.", "output": result["output"]}
     else:
-        return {"message": f"Update failed: {result['error']}"}, 500
+        raise HTTPException(status_code=500, detail=f"Update failed: {result['error']}")
 
 
 class DisplayNameUpdate(BaseModel):

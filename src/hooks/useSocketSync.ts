@@ -85,12 +85,27 @@ export function useSocketSync() {
       window.dispatchEvent(event)
     })
 
+    socket.on('user_typing', (payload: any) => {
+      window.dispatchEvent(new CustomEvent('kmti:user_typing', { detail: payload }))
+    })
+
+    socket.on('user_stop_typing', (payload: any) => {
+      window.dispatchEvent(new CustomEvent('kmti:user_stop_typing', { detail: payload }))
+    })
+
+    socket.on('chat_messages_read', (payload: any) => {
+      window.dispatchEvent(new CustomEvent('kmti:chat_messages_read', { detail: payload }))
+    })
+
     return () => {
       socket.off('connect')
       socket.off('disconnect')
       socket.off('connect_error')
       socket.off('db_mutation')
       socket.off('receive_chat_message')
+      socket.off('user_typing')
+      socket.off('user_stop_typing')
+      socket.off('chat_messages_read')
       socket.disconnect()
       socketRef.current = null
       ;(window as any).kmtiSocket = null

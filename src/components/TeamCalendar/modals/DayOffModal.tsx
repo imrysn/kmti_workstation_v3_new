@@ -1,26 +1,31 @@
-import React, { useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 
 interface DayOffModalProps {
-  engineerName: string
+  initialEngineerName: string
   handleNameChange: (val: string) => void
-  dayOffStart: string
-  setDayOffStart: (val: string) => void
-  dayOffEnd: string
-  setDayOffEnd: (val: string) => void
-  handleRequestDayOffSubmit: (e: React.FormEvent) => void
+  initialStart?: string
+  initialEnd?: string
+  handleRequestDayOffSubmit: (start: string, end: string, leaveType: string, engName: string) => Promise<void> | void
   onClose: () => void
 }
 
 export default function DayOffModal({
-  engineerName,
+  initialEngineerName,
   handleNameChange,
-  dayOffStart,
-  setDayOffStart,
-  dayOffEnd,
-  setDayOffEnd,
+  initialStart = '',
+  initialEnd = '',
   handleRequestDayOffSubmit,
   onClose
 }: DayOffModalProps) {
+  const [engineerName, setEngineerName] = useState(initialEngineerName)
+  const [dayOffStart, setDayOffStart] = useState(initialStart)
+  const [dayOffEnd, setDayOffEnd] = useState(initialEnd)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleNameChange(engineerName); // sync name to parent
+    handleRequestDayOffSubmit(dayOffStart, dayOffEnd, 'Vacation', engineerName);
+  }
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -36,14 +41,14 @@ export default function DayOffModal({
           <h3>Request Leave / Day Off</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
-        <form onSubmit={handleRequestDayOffSubmit}>
+        <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Your Name (Workstation Engineer)</label>
             <input
               type="text"
               placeholder="Enter engineer name..."
               value={engineerName}
-              onChange={e => handleNameChange(e.target.value)}
+              onChange={e => setEngineerName(e.target.value)}
               required
             />
           </div>
