@@ -36,6 +36,8 @@ import quotationCustomerImg from '../assets/updates/quotation_customer.png'
 import wsMonitoringImg from '../assets/updates/ws_monitoring.png'
 import machineNamesImg from '../assets/updates/machine_names.png'
 import systemUpdaterImg from '../assets/updates/system_updater.png'
+import messagingImg from '../assets/updates/messaging.png'
+import notifImg from '../assets/updates/notif.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
@@ -44,28 +46,28 @@ export const CHANGELOG: VersionChangelog[] = [
     entries: [
       {
         type: 'new',
-        text: 'Online tab features + Offline'
-      },
-      {
-        type: 'improvement',
-        text: 'Work Schedule addition features continuation'
+        text: 'In-app Messenger - This feature allows users to send and receive messages to each other. (Note: Still in alpha stage. If you encounter errors and bugs, please contact dev immediately. :D)',
+        image: messagingImg
       },
       {
         type: 'new',
-        text: 'Work Schedule features - ASAP feature - Notify status for users - improved Excel Export feature - Job cards UI (back to newspaper layout)'
-      },
-      {
-        type: 'fix',
-        text: 'quotation table compression layout + customer client info fixed'
-      },
-      {
-        type: 'fix',
-        text: 'billing layout fixed'
+        text: 'New Notification System - Stay informed with real-time system alerts! You will now be instantly notified about important updates and statuses (e.g., ASAP Work Schedule assignments).',
+        image: notifImg
       },
       {
         type: 'improvement',
-        text: 'Edit function on Quotation Library Modal for Workspace name'
-      }
+        text: 'Work Schedule & Export Upgrades - Added new ASAP feature, improved Excel Export functionality, and updated the Job cards UI back to the classic layout.'
+      },
+
+
+      {
+        type: 'improvement',
+        text: 'Smart Quotation Client Info based on Selected Customer'
+      },
+      {
+        type: 'fix',
+        text: 'Billing pdf/print layout fixed where printed output don\'t have header'
+      },
     ]
   },
   {
