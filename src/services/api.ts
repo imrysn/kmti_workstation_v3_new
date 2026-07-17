@@ -5,8 +5,8 @@ import type { IProject, IQuotation, IQuotationHistory, ICustomPage, ICustomMappi
 export const SERVER_BASE = (() => {
   const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null
   if (override) return override
-  // Dev mode checks VITE_API_DEV_URL first, falling back to localhost:8000
-  if (import.meta.env.DEV) return import.meta.env.VITE_API_DEV_URL || 'http://localhost:8000'
+  // Dev mode checks VITE_API_DEV_URL first, falling back to 127.0.0.1:8000
+  if (import.meta.env.DEV) return import.meta.env.VITE_API_DEV_URL || 'http://127.0.0.1:8000'
   return import.meta.env.VITE_API_PROD_URL || 'http://192.168.200.105:8000'
 })()
 export const API_BASE = `${SERVER_BASE}/api`

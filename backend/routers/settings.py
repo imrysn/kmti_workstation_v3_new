@@ -45,21 +45,27 @@ def save_settings(data: dict):
 
 
 @router.get("/")
-async def get_settings(current_user: User = Depends(require_role([UserRole.admin, UserRole.it]))):
-    """Returns application settings. Admin and IT only."""
+async def get_settings(current_user = Depends(get_current_user)):
+    """Returns application settings. Passwords redacted for non-admins."""
     s = await asyncio.to_thread(load_settings)
-    s["dbPass"] = "***" if s.get("dbPass") else ""
+    
+    # Redact sensitive fields for normal users
+    if current_user.role not in [UserRole.admin.value, UserRole.it.value, UserRole.admin, UserRole.it]:
+        s["dbPass"] = "********"
+    else:
+        s["dbPass"] = "***" if s.get("dbPass") else ""
+        
     return s
 
 
 @router.post("/")
 async def update_settings(
     payload: dict,
-    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
+    current_user = Depends(get_current_user),
 ):
-    """Saves application settings. Admin and IT only."""
+    """Saves application settings."""
     current = await asyncio.to_thread(load_settings)
-    if payload.get("dbPass") == "***":
+    if payload.get("dbPass") in ["***", "********"]:
         payload["dbPass"] = current.get("dbPass", "")
     await asyncio.to_thread(save_settings, payload)
     return {"message": "Settings saved successfully"}
@@ -67,9 +73,9 @@ async def update_settings(
 
 @router.delete("/cache")
 async def clear_preview_cache(
-    current_user: User = Depends(require_role([UserRole.admin, UserRole.it])),
+    current_user = Depends(get_current_user),
 ):
-    """Deletes all cached previews. Admin and IT only."""
+    """Deletes all cached previews."""
     cache_dir = PREVIEW_CACHE_DIR
     if os.path.exists(cache_dir):
         try:
@@ -106,12 +112,22 @@ async def update_display_name(
     """Update the display name for the current user."""
     # Only local kmti_users can persist display_name
     source = getattr(current_user, "source", "local")
-    if source == "fms" or not hasattr(current_user, "display_name"):
-        # FMS users or virtual users — display_name persistence not supported
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Display name update is not available for FMS accounts."
-        )
+    new_name = payload.displayName.strip() or None
+
+    if source == "fms":
+        # Import inside the route to avoid circular dependency issues
+        from db.database import FmsAsyncSessionLocal
+        from models.fms import FmsUser
+        from sqlalchemy import select
+
+        async with FmsAsyncSessionLocal() as fms_db:
+            result = await fms_db.execute(select(FmsUser).where(FmsUser.id == current_user.id))
+            fms_user_obj = result.scalar_one_or_none()
+            if fms_user_obj:
+                fms_user_obj.displayName = new_name
+                await fms_db.commit()
+                return {"success": True, "displayName": fms_user_obj.displayName}
+            return {"success": False, "message": "FMS user not found."}
 
     current_user.display_name = payload.displayName.strip() or None
     await db.commit()

@@ -22,6 +22,7 @@ class FmsUser(FmsBase):
     team = Column(String(100), default="General")
     created_at = Column(DateTime)
     profile_picture = Column(String(500))
+    displayName = Column(String(100), nullable=True)
 
 
 class FmsAssignment(FmsBase):

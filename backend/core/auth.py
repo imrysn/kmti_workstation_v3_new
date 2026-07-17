@@ -110,6 +110,7 @@ class FmsAuthUser:
         self.role = UserRole(role_str)
         self.is_active = True
         self.hashed_password = None  # not available / not needed
+        self.source = "fms"
 
 
 # ---------------------------------------------------------------------------

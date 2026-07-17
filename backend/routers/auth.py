@@ -103,6 +103,7 @@ async def login(
             username=fms_user.username,
             full_name=fms_user.fullName,
             role=mapped_role,
+            display_name=fms_user.displayName,
         )
         await log_activity(
             username=fms_user.username, action="LOGIN",
@@ -116,7 +117,7 @@ async def login(
                 "id": fms_user.id,
                 "username": fms_user.username,
                 "fullName": fms_user.fullName,
-                "displayName": None,
+                "displayName": fms_user.displayName,
                 "role": mapped_role,
             },
         }
