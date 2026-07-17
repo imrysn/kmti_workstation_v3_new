@@ -21,8 +21,13 @@ from services.excel_schedule_service import ExcelScheduleService
 
 router = APIRouter()
 
+from core.config import INSTALL_DIR
+
 def get_excel_file_path() -> str:
-    data_dir = r"d:\RAYSAN\KMTI Data Management\Systems\kmti_workstation_v3_new\backend\data"
+    data_dir = os.path.join(INSTALL_DIR, "data")
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
+        
     for f in os.listdir(data_dir):
         if f.startswith("KMTI Work Schedule Monitoring") and f.endswith(".xlsx") and not f.startswith("~"):
             return os.path.join(data_dir, f)
