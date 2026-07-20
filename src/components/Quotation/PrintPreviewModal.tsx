@@ -798,12 +798,16 @@ const PrintPreviewModal = memo(({
                             showAdmin={showAdmin}
                             fillerRowCount={(() => {
                               const isKemco = layoutVariant === 'kemco'
-                              // Special Quotation: no filler rows — table ends naturally at NOTHING FOLLOW
-                              if (!isKemco && printMode === 'quotation') return 0
-                              // Billing: pad to finalLimit
                               const overheadCount = (!isKemco && showAdmin) ? 1 : 0
                               const nothingFollowCount = isKemco ? 0 : 1
                               const totalSoFar = page.tasks.length + overheadCount + nothingFollowCount
+
+                              if (printMode === 'quotation') {
+                                const targetRows = isKemco ? 12 : 10
+                                return Math.max(0, targetRows - totalSoFar)
+                              }
+
+                              // Billing: pad to finalLimit
                               return Math.max(0, finalLimit - totalSoFar)
                             })()}
                             isCompressed={layoutVariant === 'kemco' && page.tasks.length > 10}

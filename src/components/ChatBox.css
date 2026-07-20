@@ -106,77 +106,23 @@
   border: 1px dashed var(--border-color, #e2e8f0) !important;
 }
 
-/* Floating Reaction Panel (Messenger Style) */
-.hover-reaction-pill-bar {
-  display: flex;
-  gap: 6px;
-  background: var(--bg-primary, #ffffff);
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 20px;
-  padding: 4px 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  position: absolute;
-  top: -34px;
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0.9) translateY(5px);
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  z-index: 50;
-}
+/* Floating Reaction Panel removed in favor of inline menu reactions */
 
-.dark .hover-reaction-pill-bar {
-  background: var(--bg-secondary, #1e293b);
-  border-color: #334155;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-}
-
-.chat-msg-bubble-wrapper:hover .hover-reaction-pill-bar {
-  opacity: 1;
-  pointer-events: auto;
-  transform: scale(1) translateY(0);
-}
-
-.outgoing .hover-reaction-pill-bar {
-  right: 0;
-}
-
-.incoming .hover-reaction-pill-bar {
-  left: 0;
-}
-
-.reaction-pill-btn {
-  background: transparent;
-  border: none;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 0;
-  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-.reaction-pill-btn:hover {
-  transform: scale(1.4) translateY(-3px);
+.reaction-pill-btn-inline:hover {
+  transform: scale(1.3) !important;
 }
 
 /* Three-Dots Actions Dropdown Menu */
 .chat-msg-actions-dropdown-wrapper {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 40;
+  position: relative;
+  z-index: 60;
   opacity: 0;
   transition: opacity 0.15s ease;
+  margin: 0 4px;
 }
 
-.chat-msg-bubble-wrapper:hover .chat-msg-actions-dropdown-wrapper {
+.chat-msg-row:hover .chat-msg-actions-dropdown-wrapper {
   opacity: 1;
-}
-
-.outgoing .chat-msg-actions-dropdown-wrapper {
-  left: -28px;
-}
-
-.incoming .chat-msg-actions-dropdown-wrapper {
-  right: -28px;
 }
 
 .three-dots-action-trigger {
@@ -343,9 +289,13 @@
 }
 
 @keyframes typing-bounce {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0);
   }
+
   40% {
     transform: scale(1);
   }
@@ -358,13 +308,21 @@
   justify-content: space-between;
   padding: 8px 12px;
   background: rgba(59, 130, 246, 0.05);
-  border-left: 3px solid #3b82f6;
-  border-top: 1px solid var(--border-color, #e2e8f0);
+  border-left: 2px solid #3b82f6;
+  border-radius: 10px;
   font-size: 12px;
 }
 
 .dark .chat-reply-bar {
   background: rgba(59, 130, 246, 0.1);
+}
+
+.reply-bar-content {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
 }
 
 .reply-bar-content strong {
@@ -378,6 +336,7 @@
   font-size: 16px;
   color: var(--text-muted, #94a3b8);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .reply-bar-close:hover {
@@ -388,6 +347,7 @@
 .chat-msg-row {
   margin-bottom: 2px !important;
 }
+
 .chat-msg-row.last-in-group,
 .chat-msg-row.single-msg {
   margin-bottom: 12px !important;
@@ -404,15 +364,19 @@
 .chat-msg-row.incoming .chat-msg-bubble {
   border-radius: 20px 20px 20px 6px !important;
 }
+
 .chat-msg-row.incoming.first-in-group .chat-msg-bubble {
   border-radius: 20px 20px 20px 6px !important;
 }
+
 .chat-msg-row.incoming.middle-in-group .chat-msg-bubble {
   border-radius: 6px 20px 20px 6px !important;
 }
+
 .chat-msg-row.incoming.last-in-group .chat-msg-bubble {
   border-radius: 6px 20px 20px 20px !important;
 }
+
 .chat-msg-row.incoming.single-msg .chat-msg-bubble {
   border-radius: 20px 20px 20px 6px !important;
 }
@@ -421,15 +385,19 @@
 .chat-msg-row.outgoing .chat-msg-bubble {
   border-radius: 20px 20px 6px 20px !important;
 }
+
 .chat-msg-row.outgoing.first-in-group .chat-msg-bubble {
   border-radius: 20px 20px 6px 20px !important;
 }
+
 .chat-msg-row.outgoing.middle-in-group .chat-msg-bubble {
   border-radius: 20px 6px 6px 20px !important;
 }
+
 .chat-msg-row.outgoing.last-in-group .chat-msg-bubble {
   border-radius: 20px 6px 20px 20px !important;
 }
+
 .chat-msg-row.outgoing.single-msg .chat-msg-bubble {
   border-radius: 20px 20px 6px 20px !important;
 }
@@ -468,7 +436,8 @@
 }
 
 .read-receipt-check.read {
-  color: #3b82f6; /* Modern messenger blue */
+  color: #3b82f6;
+  /* Modern messenger blue */
 }
 
 /* Adaptive Send / Thumbs Up Buttons */
@@ -490,8 +459,15 @@
 }
 
 @keyframes popIn {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  100% { transform: scale(1); opacity: 1; }
+  0% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* Single Emoji Message overrides */

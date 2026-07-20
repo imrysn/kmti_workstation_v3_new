@@ -27,8 +27,31 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi import Request, HTTPException
-from routers import parts, characters, settings, auth, feature_flags, help_center, telemetry, broadcast, librarian, designers, quotations, stopwatch, tts, fms, materials, activity_logs, custom_dictionaries, clients, project_incharges, machines, chat, moderation
-from routers import team_calendar as team_calendar_router
+from modules.quotations import api as quotations_api
+from modules.team_calendar.api import router as team_calendar_router
+from modules.chat.api import router as chat_router
+from modules.parts.api import router as parts_router
+from modules.work_schedule.api import router as work_schedule_router
+from modules.telemetry.api import router as telemetry_router
+from modules.librarian.api import router as librarian_router
+from modules.auth.api import router as auth_router
+from modules.help_center.api import router as help_center_router
+from modules.characters.api import router as characters_router
+from modules.custom_dictionaries.api import router as custom_dictionaries_router
+from modules.notifications.api import router as notifications_router
+from modules.machines.api import router as machines_router
+from modules.broadcast.api import router as broadcast_router
+from modules.settings.api import router as settings_router
+from modules.designers.api import router as designers_router
+from modules.feature_flags.api import router as feature_flags_router
+from modules.project_incharges.api import router as project_incharges_router
+from modules.clients.api import router as clients_router
+from modules.materials.api import router as materials_router
+from modules.fms.api import router as fms_router
+from modules.moderation.api import router as moderation_router
+from modules.stopwatch.api import router as stopwatch_router
+from modules.activity_logs.api import router as activity_logs_router
+from modules.tts.api import router as tts_router
 import time
 import logging
 import os
@@ -173,7 +196,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"  [ERROR] Database initialization failed: {e}")
 
     # Restore persisted achievement counters from DB
-    from routers.telemetry import load_all_telemetry
+    from modules.telemetry.api import load_all_telemetry
     await load_all_telemetry()
 
     try:
@@ -302,33 +325,31 @@ async def general_exception_handler(request: Request, exc: Exception):
     )
 
 
-app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
-app.include_router(help_center.router, prefix="/api/help", tags=["Help Center"])
-app.include_router(feature_flags.router, prefix="/api/flags", tags=["Feature Flags"])
-app.include_router(parts.router, prefix="/api/parts", tags=["Purchased Parts"])
-app.include_router(characters.router, prefix="/api/chars", tags=["Character Search"])
-app.include_router(settings.router, prefix="/api/settings", tags=["Settings"])
-app.include_router(telemetry.router, prefix="/api/telemetry", tags=["Telemetry"])
-app.include_router(broadcast.router, prefix="/api/broadcast", tags=["Broadcast Messages"])
-app.include_router(librarian.router, prefix="/api/librarian", tags=["Technical Librarian"])
-app.include_router(designers.router, prefix="/api/designers", tags=["Designers"])
-app.include_router(quotations.router, prefix="/api/quotations", tags=["Shared Quotations"])
-app.include_router(stopwatch.router, prefix="/api/stopwatch", tags=["Stopwatch Records"])
-app.include_router(tts.router, prefix="/api/tts", tags=["TTS"])
-app.include_router(team_calendar_router.router, prefix="/api/team-calendar", tags=["Team Calendar"])
-app.include_router(fms.router, prefix="/api/fms", tags=["FMS Integration"])
-app.include_router(materials.router, prefix="/api/materials", tags=["Materials"])
-app.include_router(activity_logs.router, prefix="/api/activity-logs", tags=["Activity Logs"])
-app.include_router(custom_dictionaries.router, prefix="/api/custom-pages", tags=["Custom Dictionary Pages"])
-app.include_router(clients.router, prefix="/api/clients", tags=["Clients"])
-app.include_router(project_incharges.router, prefix="/api/project-incharges", tags=["Project Incharges"])
-app.include_router(machines.router, prefix="/api/machines", tags=["Machine Names"])
-from routers import work_schedule
-app.include_router(work_schedule.router, prefix="/api/schedule", tags=["Work Schedule"])
-app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
-app.include_router(moderation.router, prefix="/api/moderation", tags=["Content Moderation"])
-from routers import notifications
-app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
+app.include_router(auth_router, prefix="/api/auth", tags=["Auth"])
+app.include_router(help_center_router, prefix="/api/help", tags=["Help Center"])
+app.include_router(feature_flags_router, prefix="/api/flags", tags=["Feature Flags"])
+app.include_router(parts_router, prefix="/api/parts", tags=["Purchased Parts"])
+app.include_router(characters_router, prefix="/api/chars", tags=["Character Search"])
+app.include_router(settings_router, prefix="/api/settings", tags=["Settings"])
+app.include_router(telemetry_router, prefix="/api/telemetry", tags=["Telemetry"])
+app.include_router(broadcast_router, prefix="/api/broadcast", tags=["Broadcast Messages"])
+app.include_router(librarian_router, prefix="/api/librarian", tags=["Technical Librarian"])
+app.include_router(designers_router, prefix="/api/designers", tags=["Designers"])
+app.include_router(quotations_api.router, prefix="/api/quotations", tags=["Shared Quotations"])
+app.include_router(stopwatch_router, prefix="/api/stopwatch", tags=["Stopwatch Records"])
+app.include_router(tts_router, prefix="/api/tts", tags=["TTS"])
+app.include_router(team_calendar_router, prefix="/api/team-calendar", tags=["Team Calendar"])
+app.include_router(fms_router, prefix="/api/fms", tags=["FMS Integration"])
+app.include_router(materials_router, prefix="/api/materials", tags=["Materials"])
+app.include_router(activity_logs_router, prefix="/api/activity-logs", tags=["Activity Logs"])
+app.include_router(custom_dictionaries_router, prefix="/api/custom-pages", tags=["Custom Dictionary Pages"])
+app.include_router(clients_router, prefix="/api/clients", tags=["Clients"])
+app.include_router(project_incharges_router, prefix="/api/project-incharges", tags=["Project Incharges"])
+app.include_router(machines_router, prefix="/api/machines", tags=["Machine Names"])
+app.include_router(work_schedule_router, prefix="/api/schedule", tags=["Work Schedule"])
+app.include_router(chat_router, prefix="/api/chat", tags=["Chat"])
+app.include_router(moderation_router, prefix="/api/moderation", tags=["Content Moderation"])
+app.include_router(notifications_router, prefix="/api/notifications", tags=["Notifications"])
 
 
 # Wrap with Socket.IO ASGI — this is the documented approach for FastAPI + python-socketio.

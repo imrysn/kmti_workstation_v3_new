@@ -1,0 +1,847 @@
+import os
+import re
+import datetime
+import asyncio
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from db.database import get_db, get_fms_db
+from core.auth import get_current_user
+from models.user import User, UserRole
+from models.fms import FmsUser
+from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember
+from models.notification import AppNotification
+from sqlalchemy import select, delete
+from socket_manager import sio, emit_to_user
+
+from modules.work_schedule.repository import WorkScheduleRepository
+from modules.work_schedule.service import ExcelScheduleService
+
+router = APIRouter()
+
+from core.config import INSTALL_DIR
+
+def get_excel_file_path() -> str:
+    data_dir = os.path.join(INSTALL_DIR, "data")
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
+        
+    for f in os.listdir(data_dir):
+        if f.startswith("KMTI Work Schedule Monitoring") and f.endswith(".xlsx") and not f.startswith("~"):
+            return os.path.join(data_dir, f)
+    # Fallback to the default name if none found
+    return os.path.join(data_dir, "KMTI Work Schedule Monitoring 2026.06.19.xlsx")
+
+EXCEL_FILE_PATH = get_excel_file_path()
+
+# --- Request/Response Pydantic Models ---
+from modules.work_schedule.schemas import (
+    ComponentUpdatePayload, JobCreatePayload, ExportPayload, JobUpdatePayload,
+    ComponentCreatePayload, ComponentUpdateAllPayload, TimelineUpdatePayload,
+    TimelineSpanPayload, MemberCreatePayload, ManualNotificationPayload, MemberRenamePayload
+)
+
+# --- Permission Dependency ---
+
+async def require_schedule_write(
+    current_user = Depends(get_current_user),
+    fms_db: AsyncSession = Depends(get_fms_db)
+):
+    role_str = current_user.role.value if hasattr(current_user.role, "value") else current_user.role
+    if role_str in ("admin", "it"):
+        return current_user
+    
+    # Check FMS DB role
+    try:
+        from sqlalchemy import select
+        fms_res = await fms_db.execute(select(FmsUser).where(FmsUser.username == current_user.username))
+        fms_user = fms_res.scalar_one_or_none()
+        if fms_user and fms_user.role.upper().replace("_", " ").strip() in ("TEAM LEADER", "LEADER", "ADMIN"):
+            return current_user
+    except Exception as e:
+        import logging
+        logger = logging.getLogger("uvicorn.error")
+        logger.warning(f"Error validating Team Leader role in FMS DB: {e}")
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Access denied. You are not allowed to edit this job unless it's assigned to you."
+    )
+
+async def has_component_edit_permission(db: AsyncSession, fms_db: AsyncSession, user, job_id: str) -> bool:
+    role_str = user.role.value if hasattr(user.role, "value") else user.role
+    if role_str in ("admin", "it", "team_leader"):
+        return True
+    
+    # Check FMS DB role
+    try:
+        from sqlalchemy import select
+        fms_res = await fms_db.execute(select(FmsUser).where(FmsUser.username == user.username))
+        fms_user = fms_res.scalar_one_or_none()
+        if fms_user and fms_user.role.upper().replace("_", " ").strip() in ("TEAM LEADER", "LEADER", "ADMIN"):
+            return True
+    except:
+        pass
+
+    # Check assignment on timeline
+    from sqlalchemy import select
+    from models.work_schedule import WorkScheduleAssignment
+    res = await db.execute(select(WorkScheduleAssignment.member_name).where(WorkScheduleAssignment.value == job_id))
+    assigned_members = res.scalars().all()
+
+    user_names = [user.username.lower()]
+    if getattr(user, "display_name", None) and user.display_name:
+        user_names.append(user.display_name.lower())
+
+    for member_str in assigned_members:
+        member_lower = member_str.lower()
+        for name in user_names:
+            if name in member_lower:
+                return True
+                
+    # Check if they were pinged about this job
+    from models.notification import AppNotification
+    ping_res = await db.execute(
+        select(AppNotification.id)
+        .where(AppNotification.reference_id == job_id)
+        .where(AppNotification.member_name == user.username)
+    )
+    if ping_res.scalar_one_or_none():
+        return True
+                
+    return False
+
+# --- Helper functions ---
+
+def normalize_status(status_val):
+    if not status_val:
+        return "Pending/Not Started"
+    s = str(status_val).strip().lower()
+    if s in ("completed", "complete", "complete "):
+        return "Completed"
+    if "checking" in s:
+        return "For Checking"
+    if s == "-":
+        return "Excluded/NA"
+    return "Pending/Not Started"
+
+# --- Routing Endpoints ---
+
+@router.get("/permissions")
+async def get_permissions(
+    current_user = Depends(get_current_user),
+    fms_db: AsyncSession = Depends(get_fms_db)
+):
+    """
+    Check if the current user is authorized to edit the work schedule.
+    """
+    try:
+        await require_schedule_write(current_user, fms_db)
+        return {"success": True, "can_write": True}
+    except Exception:
+        return {"success": True, "can_write": False}
+
+
+@router.get("/jobs")
+async def get_jobs(db: AsyncSession = Depends(get_db)):
+    """
+    Get all schedule jobs with progress metrics.
+    """
+    jobs = await WorkScheduleRepository.get_all_jobs(db)
+    components = await WorkScheduleRepository.get_all_components(db)
+    
+    # Group components by job_id
+    comp_by_job = {}
+    for c in components:
+        if c.job_id not in comp_by_job:
+            comp_by_job[c.job_id] = []
+        comp_by_job[c.job_id].append(c)
+        
+    res = []
+    for j in jobs:
+        comps = comp_by_job.get(j.job_id, [])
+        total = sum(1 for c in comps if c.unit_code.upper().strip() != "POSTPONED")
+        completed = sum(1 for c in comps if normalize_status(c.status) == "Completed" and c.unit_code.upper().strip() != "POSTPONED")
+        checking = sum(1 for c in comps if normalize_status(c.status) == "For Checking" and c.unit_code.upper().strip() != "POSTPONED")
+        progress = (completed / total * 100) if total > 0 else 0.0
+        
+        res.append({
+            "id": j.id,
+            "job_id": j.job_id,
+            "deadline": j.deadline,
+            "total_components": total,
+            "completed_components": completed,
+            "checking_components": checking,
+            "progress_percent": round(progress, 1),
+            "components": [
+                {
+                    "id": c.id,
+                    "job_id": c.job_id,
+                    "unit_code": c.unit_code,
+                    "assembly_3d": c.assembly_3d,
+                    "parts_3d": c.parts_3d,
+                    "assembly_2d": c.assembly_2d,
+                    "parts_2d": c.parts_2d,
+                    "status": c.status,
+                    "submitted_date": c.submitted_date.strftime("%Y-%m-%d") if c.submitted_date else None,
+                    "is_postponed": bool(c.is_postponed)
+                }
+                for c in comps
+            ]
+        })
+        
+    res.sort(key=lambda x: x["job_id"])
+    return {"success": True, "jobs": res}
+
+
+@router.get("/jobs/{job_id}/components")
+async def get_components(job_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Get all components for a specific job.
+    """
+    components = await WorkScheduleRepository.get_components_by_job(db, job_id)
+    res = [
+        {
+            "id": c.id,
+            "job_id": c.job_id,
+            "unit_code": c.unit_code,
+            "assembly_3d": c.assembly_3d,
+            "parts_3d": c.parts_3d,
+            "assembly_2d": c.assembly_2d,
+            "parts_2d": c.parts_2d,
+            "status": c.status,
+            "submitted_date": c.submitted_date.strftime("%Y-%m-%d") if c.submitted_date else None,
+            "is_postponed": bool(c.is_postponed)
+        }
+        for c in components
+    ]
+    return {"success": True, "components": res}
+
+
+@router.post("/components/{component_id}/status")
+async def update_component_status(
+    component_id: int,
+    payload: ComponentUpdatePayload,
+    db: AsyncSession = Depends(get_db),
+    fms_db: AsyncSession = Depends(get_fms_db),
+    user = Depends(get_current_user)
+):
+    """
+    Update status and submitted date of a component.
+    """
+    comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
+    if not comp:
+        raise HTTPException(status_code=404, detail="Component not found.")
+        
+    if not await has_component_edit_permission(db, fms_db, user, comp.job_id):
+        raise HTTPException(status_code=403, detail="Access denied. You are not assigned to this job.")
+        
+    old_status = comp.status
+    comp.status = payload.status
+    if comp.status in ("For Checking", "Completed") and comp.is_postponed:
+        comp.is_postponed = 0
+        
+    if payload.submitted_date:
+        try:
+            comp.submitted_date = datetime.datetime.strptime(payload.submitted_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD.")
+    else:
+        comp.submitted_date = None
+        
+    # Notify assigned members if status changed and user is a leader/admin (or just notify anyone but self)
+    if old_status != payload.status:
+        # Find members assigned to this job
+        res_assign = await db.execute(select(WorkScheduleAssignment.member_name).where(WorkScheduleAssignment.value == comp.job_id))
+        members = set(res_assign.scalars().all())
+        for member in members:
+            if member != user.username:
+                notif = AppNotification(
+                    member_name=member,
+                    reference_type='WORK_SCHEDULE',
+                    reference_id=comp.job_id,
+                    title="Schedule Update",
+                    message=f"Status for Job {comp.job_id} ({comp.unit_code}) was updated to '{payload.status}' by {user.username}.",
+                    link="/team-calendar?tab=schedule"
+                )
+                db.add(notif)
+
+    await db.commit()
+    await sio.emit('schedule_updated')
+    
+    if old_status != payload.status and members:
+        # Emit a socket event specifically for this notification
+        for member in members:
+            if member != user.username:
+                await sio.emit('system_notification', {'member_name': member})
+    return {
+        "success": True, 
+        "message": f"Component '{comp.unit_code}' updated successfully.",
+        "component": {
+            "id": comp.id,
+            "status": comp.status,
+            "submitted_date": comp.submitted_date.strftime("%Y-%m-%d") if comp.submitted_date else None,
+            "is_postponed": bool(comp.is_postponed)
+        }
+    }
+
+# --- Notification Endpoints ---
+
+@router.post("/notifications/manual")
+async def send_manual_notification(
+    payload: ManualNotificationPayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """Send a manual notification to a member."""
+    # Serialize the notification details as JSON to avoid DB schema changes
+    import json
+    
+    sender_name = getattr(user, 'fullName', None) or getattr(user, 'display_name', None) or user.username
+    msg_data = {
+        "type": "ping",
+        "sender": sender_name,
+        "text": payload.message
+    }
+
+    notif = AppNotification(
+        member_name=payload.member_name,
+        reference_type='WORK_SCHEDULE',
+        reference_id=payload.job_id,
+        title="Ping: Job Update Needed",
+        message=json.dumps(msg_data),
+        link="/team-calendar?tab=schedule"
+    )
+    db.add(notif)
+    await db.commit()
+    
+    # Emit socket event ONLY to the target member's room
+    await emit_to_user(payload.member_name, 'system_notification', {'member_name': payload.member_name})
+    
+    return {"success": True}
+
+
+
+@router.post("/jobs")
+async def create_job(
+    payload: JobCreatePayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Create a new Job Group.
+    """
+    existing_job = await WorkScheduleRepository.get_job_by_id(db, payload.job_id)
+    if existing_job:
+        raise HTTPException(status_code=400, detail="Job ID already exists.")
+        
+    new_job = await WorkScheduleRepository.create_job(db, payload.job_id, payload.deadline)
+    await sio.emit('schedule_updated')
+    return {"success": True, "job": {"id": new_job.id, "job_id": new_job.job_id, "deadline": new_job.deadline}}
+
+
+@router.post("/jobs/{job_id}/components")
+async def create_component(
+    job_id: str,
+    payload: ComponentCreatePayload,
+    db: AsyncSession = Depends(get_db),
+    fms_db: AsyncSession = Depends(get_fms_db),
+    user = Depends(get_current_user)
+):
+    """
+    Create a new component unit in a job.
+    """
+    job = await WorkScheduleRepository.get_job_by_id(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+
+    if not await has_component_edit_permission(db, fms_db, user, job_id):
+        raise HTTPException(status_code=403, detail="Access denied. You are not assigned to this job.")
+        
+    sub_date = None
+    if payload.submitted_date:
+        try:
+            sub_date = datetime.datetime.strptime(payload.submitted_date, "%Y-%m-%d").date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD.")
+            
+    new_comp = await WorkScheduleRepository.create_component(
+        db=db,
+        job_id=job_id,
+        unit_code=payload.unit_code,
+        assembly_3d=payload.assembly_3d,
+        parts_3d=payload.parts_3d,
+        assembly_2d=payload.assembly_2d,
+        parts_2d=payload.parts_2d,
+        status=payload.status,
+        submitted_date=sub_date,
+        is_postponed=1 if payload.is_postponed else 0
+    )
+    await sio.emit('schedule_updated')
+    return {"success": True, "component": {"id": new_comp.id, "unit_code": new_comp.unit_code}}
+
+
+@router.delete("/jobs/{job_id}")
+async def delete_job(
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Delete a Job Group and cascade delete all its components.
+    """
+    job = await WorkScheduleRepository.get_job_by_id(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+        
+    await WorkScheduleRepository.delete_job(db, job)
+    await sio.emit('schedule_updated')
+    return {"success": True, "message": f"Job '{job_id}' deleted successfully."}
+
+
+@router.patch("/jobs/{job_id}")
+async def patch_job(
+    job_id: str,
+    payload: JobUpdatePayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Modify job details (e.g. job_id, deadline) and cascade updates.
+    """
+    job = await WorkScheduleRepository.get_job_by_id(db, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found.")
+        
+    old_job_id = job.job_id
+    new_job_id = payload.job_id
+    
+    if new_job_id and new_job_id != old_job_id:
+        # Check if new job_id already exists
+        exists = await WorkScheduleRepository.get_job_by_id(db, new_job_id)
+        if exists:
+            raise HTTPException(status_code=400, detail="Job ID already exists.")
+            
+        dialect = db.bind.dialect.name
+        if dialect == "mysql":
+            await db.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
+        elif dialect == "sqlite":
+            await db.execute(text("PRAGMA foreign_keys = OFF"))
+            
+        try:
+            # Update components referencing old_job_id
+            await db.execute(
+                text("UPDATE work_schedule_components SET job_id = :new_id WHERE job_id = :old_id"),
+                {"new_id": new_job_id, "old_id": old_job_id}
+            )
+            # Update assignments matching old_job_id
+            await db.execute(
+                text("UPDATE work_schedule_assignments SET value = :new_id WHERE value = :old_id"),
+                {"new_id": new_job_id, "old_id": old_job_id}
+            )
+            # Update job itself
+            job.job_id = new_job_id
+            if payload.deadline is not None:
+                job.deadline = payload.deadline
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            raise e
+        finally:
+            if dialect == "mysql":
+                await db.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
+            elif dialect == "sqlite":
+                await db.execute(text("PRAGMA foreign_keys = ON"))
+    else:
+        if payload.deadline is not None:
+            job.deadline = payload.deadline
+        await db.commit()
+        
+    await sio.emit('schedule_updated')
+    return {
+        "success": True,
+        "message": f"Job updated successfully.",
+        "job": {
+            "id": job.id,
+            "job_id": job.job_id,
+            "deadline": job.deadline
+        }
+    }
+
+
+@router.delete("/components/{component_id}")
+async def delete_component(
+    component_id: int,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Delete a specific drawing component unit.
+    """
+    comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
+    if not comp:
+        raise HTTPException(status_code=404, detail="Component not found.")
+        
+    await WorkScheduleRepository.delete_component(db, comp)
+    await sio.emit('schedule_updated')
+    return {"success": True, "message": "Component deleted successfully."}
+
+
+@router.patch("/components/{component_id}")
+async def patch_component(
+    component_id: int,
+    payload: ComponentUpdateAllPayload,
+    db: AsyncSession = Depends(get_db),
+    fms_db: AsyncSession = Depends(get_fms_db),
+    user = Depends(get_current_user)
+):
+    """
+    Modify any details of a drawing component unit.
+    """
+    comp = await WorkScheduleRepository.get_component_by_id(db, component_id)
+    if not comp:
+        raise HTTPException(status_code=404, detail="Component not found.")
+        
+    if not await has_component_edit_permission(db, fms_db, user, comp.job_id):
+        raise HTTPException(status_code=403, detail="Access denied. You are not assigned to this job.")
+        
+    if payload.unit_code is not None:
+        comp.unit_code = payload.unit_code
+    if payload.assembly_3d is not None:
+        comp.assembly_3d = payload.assembly_3d
+    if payload.parts_3d is not None:
+        comp.parts_3d = payload.parts_3d
+    if payload.assembly_2d is not None:
+        comp.assembly_2d = payload.assembly_2d
+    if payload.parts_2d is not None:
+        comp.parts_2d = payload.parts_2d
+    if payload.status is not None:
+        comp.status = payload.status
+    if payload.submitted_date is not None:
+        if payload.submitted_date:
+            try:
+                comp.submitted_date = datetime.datetime.strptime(payload.submitted_date, "%Y-%m-%d").date()
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format. Expected YYYY-MM-DD.")
+        else:
+            comp.submitted_date = None
+            
+    if payload.is_postponed is not None:
+        comp.is_postponed = 1 if payload.is_postponed else 0
+    elif payload.status is not None:
+        if payload.status in ("For Checking", "Completed"):
+            comp.is_postponed = 0
+
+    await db.commit()
+    await sio.emit('schedule_updated')
+    return {
+        "success": True, 
+        "message": "Component updated successfully.",
+        "component": {
+            "id": comp.id,
+            "unit_code": comp.unit_code,
+            "status": comp.status,
+            "submitted_date": comp.submitted_date.strftime("%Y-%m-%d") if comp.submitted_date else None,
+            "is_postponed": bool(comp.is_postponed)
+        }
+    }
+
+
+@router.post("/import")
+async def import_from_excel(
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Seed/Import work schedule data from the local Excel spreadsheet.
+    DANGER: Clears existing work schedule tables.
+    """
+    if not os.path.exists(get_excel_file_path()):
+        raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
+        
+    try:
+        jobs_dict = await asyncio.to_thread(ExcelScheduleService.parse_excel_for_import, get_excel_file_path())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse Excel workbook: {e}")
+        
+    try:
+        await WorkScheduleRepository.clear_all_components_and_jobs(db)
+        # Clear members table during import so it gets re-seeded from the imported layout
+        await db.execute(delete(WorkScheduleMember))
+        await db.commit()
+        
+        for jid, job_info in jobs_dict.items():
+            db_job = WorkScheduleJob(job_id=jid, deadline=job_info["deadline"])
+            db.add(db_job)
+            await db.commit()
+            await db.refresh(db_job)
+            
+            for comp in job_info["components"]:
+                db_comp = WorkScheduleComponent(
+                    job_id=jid,
+                    unit_code=comp["unit_code"],
+                    assembly_3d=comp["assembly_3d"],
+                    parts_3d=comp["parts_3d"],
+                    assembly_2d=comp["assembly_2d"],
+                    parts_2d=comp["parts_2d"],
+                    status=comp["status"],
+                    submitted_date=comp["submitted_date"]
+                )
+                db.add(db_comp)
+            await db.commit()
+            
+        await sio.emit('schedule_updated')
+        return {"success": True, "message": f"Successfully imported {len(jobs_dict)} jobs from spreadsheet."}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database import transaction failed: {e}")
+
+
+@router.post("/export")
+async def export_to_excel(
+    payload: ExportPayload,
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    """
+    Export the current database state back to the Excel file by updating the 
+    master file in-place, preserving the original layout, formatting, formulas, and Gantt charts.
+    Streams the Excel file to the client for download.
+    """
+    if not os.path.exists(get_excel_file_path()):
+        raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
+        
+    db_components = await WorkScheduleRepository.get_all_components(db)
+    db_jobs = await WorkScheduleRepository.get_all_jobs(db)
+    db_assignments = await WorkScheduleRepository.get_all_assignments(db)
+    
+    # Load or seed members list
+    db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    if not db_members_obj:
+        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, get_excel_file_path())
+        for m in layout["members"]:
+            await WorkScheduleRepository.create_member(db, m)
+        db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    db_members = [m.name for m in db_members_obj]
+    
+    # Filter jobs to only include requested jobs
+    requested_ids_lower = {jid.strip().lower() for jid in payload.job_ids}
+    filtered_jobs = [j for j in db_jobs if str(j.job_id).strip().lower() in requested_ids_lower]
+
+    try:
+        output = await asyncio.to_thread(
+            ExcelScheduleService.generate_excel_export,
+            get_excel_file_path(),
+            db_components,
+            filtered_jobs,
+            db_assignments,
+            db_members,
+            payload.target_months,
+            payload.job_ids
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate Excel export: {e}")
+        
+    current_excel_path = get_excel_file_path()
+    headers = {
+        'Content-Disposition': f'attachment; filename="{os.path.basename(current_excel_path)}"'
+    }
+    return StreamingResponse(
+        output,
+        headers=headers,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+@router.get("/timeline")
+async def get_timeline(db: AsyncSession = Depends(get_db)):
+    """
+    Parses the Gantt chart timeline columns 20 onwards of the Excel sheet.
+    """
+    if not os.path.exists(get_excel_file_path()):
+        raise HTTPException(status_code=404, detail="Source Excel file not found on server.")
+        
+    db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    if not db_members_obj:
+        layout = await asyncio.to_thread(ExcelScheduleService._load_and_parse_layout, get_excel_file_path())
+        for m in layout["members"]:
+            await WorkScheduleRepository.create_member(db, m)
+        db_members_obj = await WorkScheduleRepository.get_all_members(db)
+    db_members = [m.name for m in db_members_obj]
+    
+    db_assignments = await WorkScheduleRepository.get_all_assignments(db)
+    
+    try:
+        res = await ExcelScheduleService.parse_timeline(get_excel_file_path(), db_assignments, db_members)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load spreadsheet: {e}")
+        
+    return {
+        "success": True,
+        "members": res["members"],
+        "timeline": res["timeline"]
+    }
+
+
+@router.post("/timeline")
+async def update_timeline_cell(
+    payload: TimelineUpdatePayload,
+    user = Depends(require_schedule_write),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update a single Gantt chart cell in the database.
+    """
+    # Check if member exists in Excel legend OR database
+    target_row = await ExcelScheduleService.get_target_row_for_member(get_excel_file_path(), payload.member_name)
+    if not target_row:
+        all_members = await WorkScheduleRepository.get_all_members(db)
+        if not any(m.name.strip().lower() == payload.member_name.strip().lower() for m in all_members):
+            raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found.")
+        
+    assignment = await WorkScheduleRepository.get_assignment(db, payload.member_name, payload.col_index)
+    
+    if assignment:
+        assignment.value = payload.value if payload.value else None
+    else:
+        assignment = WorkScheduleAssignment(
+            member_name=payload.member_name,
+            col_index=payload.col_index,
+            value=payload.value if payload.value else None
+        )
+        db.add(assignment)
+        
+    await db.commit()
+    await sio.emit('schedule_updated')
+    return {"success": True, "message": "Timeline cell updated in database."}
+
+
+@router.post("/timeline/span")
+async def update_timeline_span(
+    payload: TimelineSpanPayload,
+    user = Depends(require_schedule_write),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Update a range of Gantt chart cells representing a duration span in the database.
+    """
+    # Check if member exists in Excel legend OR database
+    target_row = await ExcelScheduleService.get_target_row_for_member(get_excel_file_path(), payload.member_name)
+    if not target_row:
+        all_members = await WorkScheduleRepository.get_all_members(db)
+        if not any(m.name.strip().lower() == payload.member_name.strip().lower() for m in all_members):
+            raise HTTPException(status_code=404, detail=f"Member '{payload.member_name}' not found.")
+        
+    start = min(payload.start_col, payload.end_col)
+    end = max(payload.start_col, payload.end_col)
+    
+    existing_list = await WorkScheduleRepository.get_assignments_in_range(db, payload.member_name, start, end)
+    existing_assignments = {a.col_index: a for a in existing_list}
+    
+    center = (start + end) // 2
+    for c in range(start, end + 1):
+        if not payload.job_code.strip():
+            val = None
+        else:
+            if c == center:
+                val = payload.job_code
+            else:
+                val = "-->"
+            
+        if c in existing_assignments:
+            existing_assignments[c].value = val
+        else:
+            new_assign = WorkScheduleAssignment(
+                member_name=payload.member_name,
+                col_index=c,
+                value=val
+            )
+            db.add(new_assign)
+            
+    await db.commit()
+    await sio.emit('schedule_updated')
+    return {"success": True, "message": "Timeline span updated in database."}
+
+
+# --- Employee/Member CRUD Endpoints ---
+
+@router.get("/members")
+async def get_members(db: AsyncSession = Depends(get_db)):
+    """
+    Get all active employees/members from the database.
+    """
+    members = await WorkScheduleRepository.get_all_members(db)
+    return {
+        "success": True,
+        "members": [{"id": m.id, "name": m.name, "display_order": m.display_order} for m in members]
+    }
+
+
+@router.post("/members")
+async def create_member(
+    payload: MemberCreatePayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Add a new employee/member to the timeline calendar.
+    """
+    name = payload.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Employee name cannot be empty.")
+        
+    # Check duplicate
+    from sqlalchemy import select
+    res = await db.execute(select(WorkScheduleMember).where(WorkScheduleMember.name == name))
+    if res.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail=f"Employee '{name}' already exists.")
+        
+    member = await WorkScheduleRepository.create_member(db, name)
+    ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
+    await sio.emit('schedule_updated')
+    return {"success": True, "member": {"id": member.id, "name": member.name}}
+
+
+@router.put("/members")
+async def rename_member(
+    payload: MemberRenamePayload,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Rename an employee/member and automatically migrate their schedule assignments.
+    """
+    old_name = payload.old_name.strip()
+    new_name = payload.new_name.strip()
+    if not old_name or not new_name:
+        raise HTTPException(status_code=400, detail="Names cannot be empty.")
+        
+    member = await WorkScheduleRepository.rename_member(db, old_name, new_name)
+    if not member:
+        raise HTTPException(status_code=404, detail=f"Employee '{old_name}' not found.")
+        
+    ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
+    await sio.emit('schedule_updated')
+    return {"success": True, "member": {"id": member.id, "name": member.name}}
+
+
+@router.delete("/members/{name}")
+async def delete_member(
+    name: str,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Delete an employee/member and remove all their schedule assignments.
+    """
+    name = name.strip()
+    success = await WorkScheduleRepository.delete_member(db, name)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Employee '{name}' not found.")
+        
+    ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
+    await sio.emit('schedule_updated')
+    return {"success": True, "message": f"Employee '{name}' removed successfully."}

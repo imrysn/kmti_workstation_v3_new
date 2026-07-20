@@ -1546,10 +1546,10 @@ body.dark-theme .chat-box-header-close:hover {
 .chat-box-body {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  overflow-x: hidden;
+  padding: 12px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .chat-msg-row {

@@ -23,12 +23,12 @@ const renderEmojiSVG = (emoji: string, size = 16) => {
       <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
         <defs>
           <radialGradient id="heartGrad" cx="30%" cy="30%" r="70%">
-            <stop offset="0%" stopColor="#ff85a7"/>
-            <stop offset="60%" stopColor="#ff1744"/>
-            <stop offset="100%" stopColor="#b70000"/>
+            <stop offset="0%" stopColor="#ff85a7" />
+            <stop offset="60%" stopColor="#ff1744" />
+            <stop offset="100%" stopColor="#b70000" />
           </radialGradient>
         </defs>
-        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="url(#heartGrad)"/>
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="url(#heartGrad)" />
       </svg>
     )
   }
@@ -37,16 +37,16 @@ const renderEmojiSVG = (emoji: string, size = 16) => {
       <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
         <defs>
           <linearGradient id="thumbGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#3b82f6"/>
-            <stop offset="100%" stopColor="#1d4ed8"/>
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#1d4ed8" />
           </linearGradient>
           <linearGradient id="handGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffdd6b"/>
-            <stop offset="100%" stopColor="#f59e0b"/>
+            <stop offset="0%" stopColor="#ffdd6b" />
+            <stop offset="100%" stopColor="#f59e0b" />
           </linearGradient>
         </defs>
-        <path d="M2 10.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 2 19.5v-9z" fill="url(#thumbGrad)"/>
-        <path d="M20.5 10.02a2 2 0 0 0-2-2h-5.26l.8-2.61.02-.24a1 1 0 0 0-.29-.71l-.7-.69-4.88 4.88A2 2 0 0 0 7 10.02v8a2 2 0 0 0 2 2h7.32a2 2 0 0 0 1.77-1.12l2.77-6.47a2 2 0 0 0 .14-.77v-1.64z" fill="url(#handGrad)"/>
+        <path d="M2 10.5a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-2A1.5 1.5 0 0 1 2 19.5v-9z" fill="url(#thumbGrad)" />
+        <path d="M20.5 10.02a2 2 0 0 0-2-2h-5.26l.8-2.61.02-.24a1 1 0 0 0-.29-.71l-.7-.69-4.88 4.88A2 2 0 0 0 7 10.02v8a2 2 0 0 0 2 2h7.32a2 2 0 0 0 1.77-1.12l2.77-6.47a2 2 0 0 0 .14-.77v-1.64z" fill="url(#handGrad)" />
       </svg>
     )
   }
@@ -55,21 +55,21 @@ const renderEmojiSVG = (emoji: string, size = 16) => {
       <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
         <defs>
           <radialGradient id="faceGradJoy" cx="35%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#ffe082"/>
-            <stop offset="70%" stopColor="#ffb300"/>
-            <stop offset="100%" stopColor="#ff8f00"/>
+            <stop offset="0%" stopColor="#ffe082" />
+            <stop offset="70%" stopColor="#ffb300" />
+            <stop offset="100%" stopColor="#ff8f00" />
           </radialGradient>
           <linearGradient id="tearGrad" x1="0" y1="0" x2="0" y2="100%">
-            <stop offset="0%" stopColor="#80d8ff"/>
-            <stop offset="100%" stopColor="#00b0ff"/>
+            <stop offset="0%" stopColor="#80d8ff" />
+            <stop offset="100%" stopColor="#00b0ff" />
           </linearGradient>
         </defs>
-        <circle cx="12" cy="12" r="10" fill="url(#faceGradJoy)"/>
-        <path d="M6.5 10c.5-.6 1.5-.6 2 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
-        <path d="M15.5 10c.5-.6 1.5-.6 2 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
-        <path d="M8 14c1 1.5 2.5 2 4 2s3-.5 4-2H8z" fill="#5d4037"/>
-        <path d="M4 11c-.5 0-.8.5-.8 1s.3.8.8.8.8-.3.8-.8-.3-.8-.8-.8z" fill="url(#tearGrad)"/>
-        <path d="M20 11c.5 0 .8.5 .8 1s-.3.8-.8.8-.8-.3-.8-.8.3-.8.8-.8z" fill="url(#tearGrad)"/>
+        <circle cx="12" cy="12" r="10" fill="url(#faceGradJoy)" />
+        <path d="M6.5 10c.5-.6 1.5-.6 2 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M15.5 10c.5-.6 1.5-.6 2 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M8 14c1 1.5 2.5 2 4 2s3-.5 4-2H8z" fill="#5d4037" />
+        <path d="M4 11c-.5 0-.8.5-.8 1s.3.8.8.8.8-.3.8-.8-.3-.8-.8-.8z" fill="url(#tearGrad)" />
+        <path d="M20 11c.5 0 .8.5 .8 1s-.3.8-.8.8-.8-.3-.8-.8.3-.8.8-.8z" fill="url(#tearGrad)" />
       </svg>
     )
   }
@@ -78,18 +78,18 @@ const renderEmojiSVG = (emoji: string, size = 16) => {
       <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
         <defs>
           <radialGradient id="faceGradWow" cx="35%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#ffe082"/>
-            <stop offset="70%" stopColor="#ffb300"/>
-            <stop offset="100%" stopColor="#ff8f00"/>
+            <stop offset="0%" stopColor="#ffe082" />
+            <stop offset="70%" stopColor="#ffb300" />
+            <stop offset="100%" stopColor="#ff8f00" />
           </radialGradient>
         </defs>
-        <circle cx="12" cy="12" r="10" fill="url(#faceGradWow)"/>
-        <ellipse cx="8.5" cy="10" rx="1.2" ry="1.8" fill="#5d4037"/>
-        <ellipse cx="15.5" cy="10" rx="1.2" ry="1.8" fill="#5d4037"/>
-        <ellipse cx="8.5" cy="9.8" rx="0.5" ry="0.7" fill="#fff"/>
-        <ellipse cx="15.5" cy="9.8" rx="0.5" ry="0.7" fill="#fff"/>
-        <path d="M7 7.5c.5-.5 1.5-.5 2 0M15 7.5c.5-.5 1.5-.5 2 0" stroke="#5d4037" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-        <ellipse cx="12" cy="15.5" rx="1.5" ry="2.2" fill="#5d4037"/>
+        <circle cx="12" cy="12" r="10" fill="url(#faceGradWow)" />
+        <ellipse cx="8.5" cy="10" rx="1.2" ry="1.8" fill="#5d4037" />
+        <ellipse cx="15.5" cy="10" rx="1.2" ry="1.8" fill="#5d4037" />
+        <ellipse cx="8.5" cy="9.8" rx="0.5" ry="0.7" fill="#fff" />
+        <ellipse cx="15.5" cy="9.8" rx="0.5" ry="0.7" fill="#fff" />
+        <path d="M7 7.5c.5-.5 1.5-.5 2 0M15 7.5c.5-.5 1.5-.5 2 0" stroke="#5d4037" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+        <ellipse cx="12" cy="15.5" rx="1.5" ry="2.2" fill="#5d4037" />
       </svg>
     )
   }
@@ -98,19 +98,19 @@ const renderEmojiSVG = (emoji: string, size = 16) => {
       <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
         <defs>
           <radialGradient id="faceGradSad" cx="35%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#ffe082"/>
-            <stop offset="70%" stopColor="#ffb300"/>
-            <stop offset="100%" stopColor="#ff8f00"/>
+            <stop offset="0%" stopColor="#ffe082" />
+            <stop offset="70%" stopColor="#ffb300" />
+            <stop offset="100%" stopColor="#ff8f00" />
           </radialGradient>
           <linearGradient id="tearSingle" x1="0" y1="0" x2="0" y2="100%">
-            <stop offset="0%" stopColor="#80d8ff"/>
-            <stop offset="100%" stopColor="#00b0ff"/>
+            <stop offset="0%" stopColor="#80d8ff" />
+            <stop offset="100%" stopColor="#00b0ff" />
           </linearGradient>
         </defs>
-        <circle cx="12" cy="12" r="10" fill="url(#faceGradSad)"/>
-        <path d="M7 10.5c.6-.4 1.5-.4 2 0M15 10.5c.6-.4 1.5-.4 2 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
-        <path d="M9.5 15.5c1.5-1 3.5-1 5 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
-        <path d="M7.5 11.5c.4.4.4 1 0 1.4s-1 .4-1.4 0c-.4-.4.1-1.1.4-1.4.2-.2.6-.4 1 0z" fill="url(#tearSingle)"/>
+        <circle cx="12" cy="12" r="10" fill="url(#faceGradSad)" />
+        <path d="M7 10.5c.6-.4 1.5-.4 2 0M15 10.5c.6-.4 1.5-.4 2 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M9.5 15.5c1.5-1 3.5-1 5 0" stroke="#5d4037" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M7.5 11.5c.4.4.4 1 0 1.4s-1 .4-1.4 0c-.4-.4.1-1.1.4-1.4.2-.2.6-.4 1 0z" fill="url(#tearSingle)" />
       </svg>
     )
   }
@@ -119,16 +119,16 @@ const renderEmojiSVG = (emoji: string, size = 16) => {
       <svg viewBox="0 0 24 24" width={size} height={size} style={{ display: 'inline-block', verticalAlign: 'middle' }}>
         <defs>
           <radialGradient id="angryGrad" cx="35%" cy="35%" r="65%">
-            <stop offset="0%" stopColor="#ff8a80"/>
-            <stop offset="70%" stopColor="#ff1744"/>
-            <stop offset="100%" stopColor="#b71c1c"/>
+            <stop offset="0%" stopColor="#ff8a80" />
+            <stop offset="70%" stopColor="#ff1744" />
+            <stop offset="100%" stopColor="#b71c1c" />
           </radialGradient>
         </defs>
-        <circle cx="12" cy="12" r="10" fill="url(#angryGrad)"/>
-        <path d="M6.5 8.5l2.5 1M17.5 8.5l-2.5 1" stroke="#3e2723" strokeWidth="1.8" strokeLinecap="round"/>
-        <circle cx="8.5" cy="11.5" r="1.2" fill="#3e2723"/>
-        <circle cx="15.5" cy="11.5" r="1.2" fill="#3e2723"/>
-        <path d="M9.5 16c1.5-1 3.5-1 5 0" stroke="#3e2723" strokeWidth="2" strokeLinecap="round" fill="none"/>
+        <circle cx="12" cy="12" r="10" fill="url(#angryGrad)" />
+        <path d="M6.5 8.5l2.5 1M17.5 8.5l-2.5 1" stroke="#3e2723" strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="8.5" cy="11.5" r="1.2" fill="#3e2723" />
+        <circle cx="15.5" cy="11.5" r="1.2" fill="#3e2723" />
+        <path d="M9.5 16c1.5-1 3.5-1 5 0" stroke="#3e2723" strokeWidth="2" strokeLinecap="round" fill="none" />
       </svg>
     )
   }
@@ -140,27 +140,27 @@ const playTypingSound = () => {
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext
     if (!AudioContext) return
     const ctx = new AudioContext()
-    
+
     const osc1 = ctx.createOscillator()
     const osc2 = ctx.createOscillator()
     const gainNode = ctx.createGain()
-    
+
     osc1.type = 'triangle'
     osc1.frequency.setValueAtTime(100 + Math.random() * 50, ctx.currentTime)
-    
+
     osc2.type = 'sine'
     osc2.frequency.setValueAtTime(800 + Math.random() * 200, ctx.currentTime)
-    
+
     gainNode.gain.setValueAtTime(0.04, ctx.currentTime)
     gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06)
-    
+
     osc1.connect(gainNode)
     osc2.connect(gainNode)
     gainNode.connect(ctx.destination)
-    
+
     osc1.start()
     osc2.start()
-    
+
     osc1.stop(ctx.currentTime + 0.08)
     osc2.stop(ctx.currentTime + 0.08)
   } catch (e) {
@@ -190,7 +190,8 @@ export default function ChatBox({
   const [editingMsgId, setEditingMsgId] = useState<number | null>(null)
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
   const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null)
-  
+  const [activeReactionMsgId, setActiveReactionMsgId] = useState<number | null>(null)
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const chatBoxBodyRef = useRef<HTMLDivElement>(null)
@@ -206,16 +207,17 @@ export default function ChatBox({
   // Close dropdown on outside click
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (activeMenuMsgId !== null) {
-        const target = e.target as HTMLElement
+      const target = e.target as HTMLElement
+      if (activeMenuMsgId !== null || activeReactionMsgId !== null) {
         if (!target.closest('.chat-msg-actions-dropdown-wrapper')) {
           setActiveMenuMsgId(null)
+          setActiveReactionMsgId(null)
         }
       }
     }
     document.addEventListener('click', handleOutsideClick)
     return () => document.removeEventListener('click', handleOutsideClick)
-  }, [activeMenuMsgId])
+  }, [activeMenuMsgId, activeReactionMsgId])
 
   // Load chat history on mount/peer/group change
   useEffect(() => {
@@ -321,7 +323,7 @@ export default function ChatBox({
   const notifyTyping = () => {
     const socket = (window as any).kmtiSocket
     if (!socket) return
-    
+
     socket.emit('user_typing', { recipient: peer, group_id: groupId })
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
     typingTimeoutRef.current = setTimeout(() => {
@@ -331,7 +333,7 @@ export default function ChatBox({
 
   const handleSendMessage = async (e?: React.FormEvent, customContent?: string) => {
     if (e) e.preventDefault()
-    
+
     const textToSend = customContent !== undefined ? customContent : chatInputText
     if (!textToSend.trim() && chatAttachments.length === 0) return
 
@@ -434,7 +436,7 @@ export default function ChatBox({
       }
     }
   }
-  
+
   const handleReact = async (id: number, emoji: string) => {
     try {
       await chatApi.reactToMessage(id, emoji)
@@ -449,7 +451,7 @@ export default function ChatBox({
     const today = new Date()
     const yesterday = new Date(today)
     yesterday.setDate(yesterday.getDate() - 1)
-    
+
     if (d.toDateString() === today.toDateString()) return 'Today'
     if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
     return d.toLocaleDateString()
@@ -557,7 +559,7 @@ export default function ChatBox({
               ? (msg.attachment_path.startsWith('http') ? msg.attachment_path : `${SERVER_BASE}${msg.attachment_path}`)
               : null
             const isImage = msg.attachment_name && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(msg.attachment_name)
-            
+
             // Check Date Grouping
             let showDateHeader = false
             if (idx === 0) showDateHeader = true
@@ -618,9 +620,78 @@ export default function ChatBox({
             let parsedReactions: Record<string, string[]> = {}
             try {
               if (msg.reactions) parsedReactions = JSON.parse(msg.reactions)
-            } catch(e) {}
-            
+            } catch (e) { }
+
             const replyParent = msg.reply_to_id ? chatMessages.find(m => m.id === msg.reply_to_id) : null
+
+            const tripleDotActions = !msg.is_deleted ? (
+              <div className="chat-msg-actions-dropdown-wrapper" style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  className="three-dots-action-trigger"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveReactionMsgId(prev => prev === msg.id ? null : msg.id);
+                    setActiveMenuMsgId(null);
+                  }}
+                  title="Add reaction"
+                  style={{ fontSize: '15px', color: 'var(--text-muted, #94a3b8)', display: 'flex', alignItems: 'center' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                    <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                    <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                  </svg>
+                </button>
+                <button
+                  className="three-dots-action-trigger"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveMenuMsgId(prev => prev === msg.id ? null : msg.id);
+                    setActiveReactionMsgId(null);
+                  }}
+                  title="More actions"
+                >
+                  ⋮
+                </button>
+
+                {activeReactionMsgId === msg.id && (
+                  <div className="chat-msg-actions-dropdown-menu" style={{ padding: '6px 8px' }}>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      {SUPPORTED_EMOJIS.map(emoji => (
+                        <button 
+                          key={emoji} 
+                          onClick={() => { handleReact(msg.id, emoji); setActiveReactionMsgId(null); }}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', transition: 'transform 0.15s ease' }}
+                          className="reaction-pill-btn-inline"
+                          title={`React with ${emoji}`}
+                        >
+                          {renderEmojiSVG(emoji, 20)}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {activeMenuMsgId === msg.id && (
+                  <div className="chat-msg-actions-dropdown-menu">
+                    <button onClick={() => { setReplyToMsg(msg); setActiveMenuMsgId(null); }} className="dropdown-item">
+                      Reply
+                    </button>
+                    {isOutgoing && (
+                      <>
+                        <button onClick={() => { setEditingMsgId(msg.id); setChatInputText(msg.content); setActiveMenuMsgId(null); }} className="dropdown-item">
+                          Edit
+                        </button>
+                        <button onClick={() => { handleDelete(msg.id); setActiveMenuMsgId(null); }} className="dropdown-item delete-option">
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : null;
 
             return (
               <div key={msg.id || idx} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -629,169 +700,125 @@ export default function ChatBox({
                     <span>{formatDateHeader(msg.created_at)}</span>
                   </div>
                 )}
-                
+
                 <div className={rowClasses}>
                   {((peer === '__global__' || groupId !== null) && !isOutgoing && isFirstInGroup) && (
                     <span className="chat-msg-sender">{msg.sender}</span>
                   )}
-                  
-                  <div className="chat-msg-bubble-wrapper">
-                    {/* curved connection layout for reply */}
-                    {replyParent && (
-                      <div className="chat-msg-reply-connector-wrapper">
-                        <div className="reply-line-connector"></div>
-                        <div className="chat-msg-reply-preview" onClick={() => {}}>
-                          <div className="reply-author">{replyParent.sender}</div>
-                          <div className="reply-content">{replyParent.is_deleted ? "Message deleted" : (replyParent.content || (replyParent.attachment_name ? "Attachment" : ""))}</div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className={bubbleClasses}>
-                      <div className="bubble-content-text">
-                        {isSingleEmoji ? (
-                          <div className="single-emoji-display">
-                            {renderEmojiSVG(msg.content.trim(), 44)}
+
+                  <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+                    {isOutgoing && tripleDotActions}
+                    <div className="chat-msg-bubble-wrapper">
+                      {/* curved connection layout for reply */}
+                      {replyParent && (
+                        <div className="chat-msg-reply-connector-wrapper">
+                          <div className="reply-line-connector"></div>
+                          <div className="chat-msg-reply-preview" onClick={() => { }}>
+                            <div className="reply-author">{replyParent.sender}</div>
+                            <div className="reply-content">{replyParent.is_deleted ? "Message deleted" : (replyParent.content || (replyParent.attachment_name ? "Attachment" : ""))}</div>
                           </div>
-                        ) : (
-                          msg.content
-                        )}
-                        {msg.is_edited && !msg.is_deleted && <span className="edited-badge">(edited)</span>}
-                        
-                        <div className="bubble-footer-meta">
-                          {msg.created_at && (
-                            <span className="inline-time">
-                              {formatMessageTime(msg.created_at)}
-                            </span>
-                          )}
                         </div>
+                      )}
+
+                      <div className={bubbleClasses}>
+                        <div className="bubble-content-text">
+                          {isSingleEmoji ? (
+                            <div className="single-emoji-display">
+                              {renderEmojiSVG(msg.content.trim(), 44)}
+                            </div>
+                          ) : (
+                            msg.content
+                          )}
+                          {msg.is_edited && !msg.is_deleted && <span className="edited-badge">(edited)</span>}
+
+                          <div className="bubble-footer-meta">
+                            {msg.created_at && (
+                              <span className="inline-time">
+                                {formatMessageTime(msg.created_at)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {attachmentUrl && !msg.is_deleted && (
+                          isImage ? (
+                            <img
+                              src={attachmentUrl}
+                              alt={msg.attachment_name}
+                              className="chat-msg-attachment-preview"
+                              onClick={() => window.open(attachmentUrl, '_blank')}
+                            />
+                          ) : (
+                            <div className="chat-msg-attachment">
+                              📎 <a
+                                href={attachmentUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="chat-msg-attachment-link"
+                              >
+                                {msg.attachment_name}
+                              </a>
+                            </div>
+                          )
+                        )}
                       </div>
 
-                      {attachmentUrl && !msg.is_deleted && (
-                        isImage ? (
-                          <img
-                            src={attachmentUrl}
-                            alt={msg.attachment_name}
-                            className="chat-msg-attachment-preview"
-                            onClick={() => window.open(attachmentUrl, '_blank')}
-                          />
-                        ) : (
-                          <div className="chat-msg-attachment">
-                            📎 <a
-                              href={attachmentUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="chat-msg-attachment-link"
-                            >
-                              {msg.attachment_name}
-                            </a>
-                          </div>
-                        )
-                      )}
-                      
-                      {/* Floating Reaction Pill Panel */}
-                      {!msg.is_deleted && (
-                        <div className="hover-reaction-pill-bar">
-                          {SUPPORTED_EMOJIS.map(emoji => (
-                            <button 
-                              key={emoji} 
+                      {/* Reactions Display */}
+                      {Object.keys(parsedReactions).length > 0 && (
+                        <div className="chat-msg-reactions">
+                          {Object.entries(parsedReactions).map(([emoji, users]) => (
+                            <span
+                              key={emoji}
+                              className={`reaction-badge ${users.includes(currentUsername || '') ? 'reacted' : ''}`}
                               onClick={() => handleReact(msg.id, emoji)}
-                              className="reaction-pill-btn"
+                              title={users.join(', ')}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px' }}
                             >
-                              {renderEmojiSVG(emoji, 22)}
-                            </button>
+                              {renderEmojiSVG(emoji, 13)}
+                              <span style={{ fontSize: '10px', lineHeight: 1 }}>{users.length}</span>
+                            </span>
                           ))}
                         </div>
                       )}
 
-                      {/* Triple Dot Actions dropdown menu */}
-                      {!msg.is_deleted && (
-                        <div className="chat-msg-actions-dropdown-wrapper">
-                          <button 
-                            className="three-dots-action-trigger" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveMenuMsgId(prev => prev === msg.id ? null : msg.id);
-                            }}
-                            title="More actions"
-                          >
-                            ⋮
-                          </button>
-                          {activeMenuMsgId === msg.id && (
-                            <div className="chat-msg-actions-dropdown-menu">
-                              <button onClick={() => { setReplyToMsg(msg); setActiveMenuMsgId(null); }} className="dropdown-item">
-                                ↩️ Reply
-                              </button>
-                              {isOutgoing && (
-                                <>
-                                  <button onClick={() => { setEditingMsgId(msg.id); setChatInputText(msg.content); setActiveMenuMsgId(null); }} className="dropdown-item">
-                                    ✏️ Edit
-                                  </button>
-                                  <button onClick={() => { handleDelete(msg.id); setActiveMenuMsgId(null); }} className="dropdown-item delete-option">
-                                    🗑️ Delete
-                                  </button>
-                                </>
-                              )}
-                            </div>
+                      {/* Status Receipt (Checkmark/Seen Avatar) rendered OUTSIDE the bubble */}
+                      {isOutgoing && !msg.is_deleted && (
+                        <div className="chat-msg-status-receipt" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px', marginRight: '4px' }}>
+                          {msg.is_read ? (
+                            (lastReadOutgoingId !== undefined && msg.id === lastReadOutgoingId) ? (
+                              <div
+                                className="read-receipt-avatar"
+                                style={{
+                                  width: '13px',
+                                  height: '13px',
+                                  borderRadius: '50%',
+                                  overflow: 'hidden',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                                  backgroundColor: 'var(--bg-surface-subtle)'
+                                }}
+                                title={`Seen by ${peerLabel}`}
+                              >
+                                {peerStatus ? (
+                                  renderEquippedSkin(peerStatus.computer_name || peerStatus.ip_address, peerStatus.achievements, peerStatus.equipped_skin)
+                                ) : (
+                                  renderEquippedSkin('', null, 'rookie')
+                                )}
+                              </div>
+                            ) : null
+                          ) : (
+                            (lastOutgoingId !== undefined && msg.id === lastOutgoingId) ? (
+                              <span className="read-receipt-check sent" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                                ✓
+                              </span>
+                            ) : null
                           )}
                         </div>
                       )}
                     </div>
-                    
-                    {/* Reactions Display */}
-                    {Object.keys(parsedReactions).length > 0 && (
-                      <div className="chat-msg-reactions">
-                        {Object.entries(parsedReactions).map(([emoji, users]) => (
-                          <span 
-                            key={emoji} 
-                            className={`reaction-badge ${users.includes(currentUsername || '') ? 'reacted' : ''}`}
-                            onClick={() => handleReact(msg.id, emoji)}
-                            title={users.join(', ')}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px' }}
-                          >
-                            {renderEmojiSVG(emoji, 13)}
-                            <span style={{ fontSize: '10px', lineHeight: 1 }}>{users.length}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Status Receipt (Checkmark/Seen Avatar) rendered OUTSIDE the bubble */}
-                    {isOutgoing && !msg.is_deleted && (
-                      <div className="chat-msg-status-receipt" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px', marginRight: '4px' }}>
-                        {msg.is_read ? (
-                          (lastReadOutgoingId !== undefined && msg.id === lastReadOutgoingId) ? (
-                            <div 
-                              className="read-receipt-avatar"
-                              style={{
-                                width: '13px',
-                                height: '13px',
-                                borderRadius: '50%',
-                                overflow: 'hidden',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                border: '1px solid rgba(0, 0, 0, 0.08)',
-                                backgroundColor: 'var(--bg-surface-subtle)'
-                              }}
-                              title={`Seen by ${peerLabel}`}
-                            >
-                              {peerStatus ? (
-                                renderEquippedSkin(peerStatus.computer_name || peerStatus.ip_address, peerStatus.achievements, peerStatus.equipped_skin)
-                              ) : (
-                                renderEquippedSkin('', null, 'rookie')
-                              )}
-                            </div>
-                          ) : null
-                        ) : (
-                          (lastOutgoingId !== undefined && msg.id === lastOutgoingId) ? (
-                            <span className="read-receipt-check sent" style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                              ✓
-                            </span>
-                          ) : null
-                        )}
-                      </div>
-                    )}
+                    {!isOutgoing && tripleDotActions}
                   </div>
                 </div>
               </div>
@@ -835,7 +862,7 @@ export default function ChatBox({
             <button type="button" onClick={() => { setEditingMsgId(null); setChatInputText('') }} className="reply-bar-close">&times;</button>
           </div>
         )}
-        
+
         {chatAttachments.length > 0 && (
           <div className="chat-footer-attachments-list" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {chatAttachments.map((att, idx) => (
@@ -874,9 +901,9 @@ export default function ChatBox({
             rows={1}
             disabled={isUploading}
           />
-          <button 
-            type="submit" 
-            className="chat-send-btn animate-send-btn" 
+          <button
+            type="submit"
+            className="chat-send-btn animate-send-btn"
             disabled={isUploading || !hasInputText}
           >
             {editingMsgId ? 'Save' : 'Send'}
