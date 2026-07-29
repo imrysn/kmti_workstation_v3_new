@@ -43,7 +43,8 @@ PyInstaller.__main__.run([
     # We exclude models from the bundle to keep server.exe small (~30MB vs 380MB).
     # It will be copied to the dist folder as an external asset instead.
     # f'--add-data=models{os.pathsep}models',
-    f'--add-data=routers{os.pathsep}routers',
+    f'--add-data=modules{os.pathsep}modules',
+    f'--add-data=services{os.pathsep}services',
     f'--add-data=data{os.pathsep}data',
     f'--add-data=.env{os.pathsep}.',
     # Include library internal files

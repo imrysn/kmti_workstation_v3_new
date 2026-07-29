@@ -41,6 +41,28 @@ import notifImg from '../assets/updates/notif.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.7',
+    date: 'July 29, 2026',
+    entries: [
+      {
+        type: 'improvement',
+        text: 'Chat Interface Improvements - Improved the appearance and performance of the chat interface.'
+      },
+      {
+        type: 'improvement',
+        text: 'Billing Metadata Decoupling — Billing Date and Quotation No. in Billing Statement preview are now independent and no longer mutate Quotation details.'
+      },
+      {
+        type: 'fix',
+        text: 'Billing PDF & Print Optimization — Resolved extra trailing blank pages and layout positioning in PDF exports and printouts via React Portal viewport attachment.'
+      },
+      {
+        type: 'improvement',
+        text: 'Excel Export Alignment — Excel export now exports decoupled billing metadata fields accurately for billing statement files.'
+      }
+    ]
+  },
+  {
     version: '3.8.6',
     date: 'July 16, 2026',
     entries: [
