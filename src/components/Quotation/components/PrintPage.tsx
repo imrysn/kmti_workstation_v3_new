@@ -591,16 +591,16 @@ export const PrintPage = memo(({
               <span className="detail-label-visual">DATE:</span>
               <span className="detail-value-visual">
                 <div
-                  contentEditable={!!onQuotationDetailsChange}
+                  contentEditable={!!onBillingDetailsChange}
                   suppressContentEditableWarning
                   className="ppm-unit-input"
                   style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '14px' }}
                   onBlur={e => {
                     const normalized = (e.currentTarget.textContent || '').replace(/\//g, '-')
-                    onQuotationDetailsChange?.({ date: normalized })
+                    onBillingDetailsChange?.({ billingDate: normalized })
                   }}
                 >
-                  {(quotationDetails.date || '').replace(/-/g, '/')}
+                  {(billingDetails.billingDate || quotationDetails.date || '').replace(/-/g, '/')}
                 </div>
               </span>
             </div>
@@ -622,13 +622,13 @@ export const PrintPage = memo(({
               <span className="detail-label-visual">Quotation No.:</span>
               <span className="detail-value-visual">
                 <div
-                  contentEditable={!!onQuotationDetailsChange}
+                  contentEditable={!!onBillingDetailsChange}
                   suppressContentEditableWarning
                   className="ppm-unit-input"
                   style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', height: '100%', textAlign: 'center', minHeight: '14px' }}
-                  onBlur={e => onQuotationDetailsChange?.({ quotationNo: e.currentTarget.textContent || '' })}
+                  onBlur={e => onBillingDetailsChange?.({ quotationNo: e.currentTarget.textContent || '' })}
                 >
-                  {quotationDetails.quotationNo || ''}
+                  {billingDetails.quotationNo || quotationDetails.quotationNo || ''}
                 </div>
               </span>
             </div>

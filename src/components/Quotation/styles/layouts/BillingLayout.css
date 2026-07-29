@@ -103,7 +103,8 @@
 
 /* Responsive bottom content for Billing */
 .quotation-visual-exact.mode-billing {
-  height: 297mm !important;
+  height: 296.5mm !important;
+  max-height: 296.5mm !important;
   display: flex;
   flex-direction: column;
   padding-bottom: 10mm !important;
@@ -193,7 +194,7 @@
   display: none;
 }
 
-.ppm-container .preview-content .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
+.ppm-container .preview-content .mode-billing .quotation-details-visual {
   position: absolute;
   right: 8mm;
   top: 195px;
@@ -210,53 +211,53 @@
   display: none;
 }
 
-.ppm-container .preview-content .quotation-visual-exact:has(.billing-header) .contact-section-visual {
+.ppm-container .preview-content .mode-billing .contact-section-visual {
   min-height: 110px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
 }
 
-.ppm-container .preview-content .quotation-visual-exact:has(.billing-header) .terms-visual {
+.ppm-container .preview-content .mode-billing .terms-visual {
   display: none;
 }
 
 
 @media print {
-  .quotation-visual-exact:has(.billing-header) {
-    padding-bottom: 11mm !important;
+  .mode-billing {
+    padding-bottom: 8mm !important;
   }
 
-  .quotation-visual-exact:has(.billing-header) .billing-header {
+  .mode-billing .billing-header {
     min-height: 80px !important;
     margin-bottom: 5px !important;
   }
 
-  .quotation-visual-exact:has(.billing-header) .billing-header .logo-visual {
+  .mode-billing .billing-header .logo-visual {
     top: 5px !important;
-    width: 90px !important;
-    height: 90px !important;
+    width: 85px !important;
+    height: 85px !important;
   }
 
-  .quotation-visual-exact:has(.billing-header) .company-address-visual {
+  .mode-billing .company-address-visual {
     margin-bottom: 5px !important;
     font-size: 11.5px !important;
   }
 
-  .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
-    top: 180px !important;
+  .mode-billing .quotation-details-visual {
+    top: 175px !important;
   }
 
-  .quotation-visual-exact:has(.billing-header) .contact-section-visual {
-    min-height: 110px !important;
+  .mode-billing .contact-section-visual {
+    min-height: 100px !important;
   }
 
-  .quotation-visual-exact:has(.billing-header) .q-bottom-content {
+  .mode-billing .q-bottom-content {
     gap: 3px !important;
   }
 
-  .quotation-visual-exact:has(.billing-header) .bank-details-section {
-    margin-top: 5mm !important;
+  .mode-billing .bank-details-section {
+    margin-top: 3mm !important;
     box-sizing: border-box !important;
   }
 }

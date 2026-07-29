@@ -640,6 +640,8 @@ export function useInvoiceState() {
       ...(data.billingDetails || {}),
       invoiceNo: data.billingDetails?.invoiceNo ?? qd.invoiceNo ?? '',
       jobOrderNo: data.billingDetails?.jobOrderNo ?? qd.jobOrderNo ?? '',
+      billingDate: data.billingDetails?.billingDate ?? '',
+      quotationNo: data.billingDetails?.quotationNo ?? '',
       quotationStatus: data.billingDetails?.quotationStatus ?? 'DRAFT',
       projectStatus: data.billingDetails?.projectStatus ?? 'On Going',
       submittedToAdminAt: data.billingDetails?.submittedToAdminAt ?? '',

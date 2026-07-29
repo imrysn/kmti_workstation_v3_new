@@ -1,4 +1,5 @@
 import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import type {
   Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, ManualOverrides, TaskOverrides
 } from '../../types/quotation'
@@ -331,34 +332,50 @@ const PrintPreviewModal = memo(({
         size: A4 portrait !important;
         margin: 0 !important;
       }
+
+      /* Force hide all background body elements including #root */
+      #root,
+      body > *:not(.print-preview-modal) {
+        display: none !important;
+        height: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+        visibility: hidden !important;
+      }
+
       html, body {
         margin: 0 !important;
         padding: 0 !important;
-        height: auto !important;
-        width: auto !important;
-        visibility: hidden !important;
+        height: ${totalPages * 296}mm !important;
+        max-height: ${totalPages * 296}mm !important;
+        width: 210mm !important;
         background: white !important;
-        overflow: visible !important;
+        overflow: hidden !important;
       }
+
       .print-preview-modal {
-        position: absolute !important;
+        position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         width: 210mm !important;
-        height: auto !important;
+        height: ${totalPages * 296}mm !important;
+        max-height: ${totalPages * 296}mm !important;
         display: block !important;
         margin: 0 !important;
         padding: 0 !important;
-        background: transparent !important;
+        background: white !important;
         box-shadow: none !important;
         transform: none !important;
+        overflow: hidden !important;
+        z-index: 999999 !important;
         visibility: visible !important;
       }
       .print-preview-modal * {
         visibility: visible !important;
       }
       .ppm-header, .ppm-footer-bar, .ppm-backdrop, .ppm-sidebar,
-      .ppm-page-break-indicator { display: none !important; }
+      .ppm-page-break-indicator, .ppm-tutorial-overlay { display: none !important; }
+
       .ppm-container, .ppm-body, .ppm-scroll-area, .ppm-body-content {
         position: static !important; display: block !important;
         width: 210mm !important; height: auto !important;
@@ -385,13 +402,18 @@ const PrintPreviewModal = memo(({
         width: 210mm !important; margin: 0 !important;
         padding: 0 !important; overflow: visible !important;
       }
+      .preview-content > div:last-child,
+      .preview-content > div:last-child .quotation-visual-exact,
+      .quotation-visual-exact:last-child {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+      }
       .quotation-visual-exact {
         display: flex !important; flex-direction: column !important;
-        width: 210mm !important; height: 297mm !important;
-        min-height: 297mm !important; max-height: 297mm !important;
+        width: 210mm !important; height: 296mm !important;
+        min-height: 296mm !important; max-height: 296mm !important;
         overflow: hidden !important; box-sizing: border-box !important;
         padding: 8mm !important; background: white !important;
-        page-break-after: auto !important; break-after: auto !important;
         page-break-inside: avoid !important; break-inside: avoid !important;
         margin: 0 !important; position: relative !important;
       }
@@ -445,30 +467,30 @@ const PrintPreviewModal = memo(({
         gap: 5px !important;
       }
       /* ── Billing header: explicit print/PDF layout ── */
-      .quotation-visual-exact:has(.billing-header) .billing-header {
+      .mode-billing .billing-header {
         display: flex !important;
         flex-direction: row !important;
         align-items: flex-start !important;
         justify-content: center !important;
         position: relative !important;
-        min-height: 90px !important;
-        margin-bottom: 8px !important;
+        min-height: 80px !important;
+        margin-bottom: 5px !important;
         width: 100% !important;
       }
-      .quotation-visual-exact:has(.billing-header) .billing-header .logo-visual {
+      .mode-billing .billing-header .logo-visual {
         position: absolute !important;
         left: 0 !important;
         top: 5px !important;
-        width: 90px !important;
-        height: 90px !important;
+        width: 85px !important;
+        height: 85px !important;
         flex-shrink: 0 !important;
       }
-      .quotation-visual-exact:has(.billing-header) .billing-header .logo-visual img {
+      .mode-billing .billing-header .logo-visual img {
         width: 100% !important;
         height: 100% !important;
         object-fit: contain !important;
       }
-      .quotation-visual-exact:has(.billing-header) .billing-header .billing-center-block {
+      .mode-billing .billing-header .billing-center-block {
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -478,40 +500,44 @@ const PrintPreviewModal = memo(({
         margin: 0 auto !important;
         padding-top: 4px !important;
       }
-      .quotation-visual-exact:has(.billing-header) .billing-header .billing-company-name {
+      .mode-billing .billing-header .billing-company-name {
         font-size: 20px !important;
         font-weight: bold !important;
         white-space: nowrap !important;
         margin-bottom: 4px !important;
       }
-      .quotation-visual-exact:has(.billing-header) .billing-header .billing-address-line {
+      .mode-billing .billing-header .billing-address-line {
         font-size: 10.5px !important;
         line-height: 1.4 !important;
         text-align: center !important;
         font-weight: normal !important;
       }
-      .quotation-visual-exact:has(.billing-header) .billing-header .billing-title {
+      .mode-billing .billing-header .billing-title {
         font-size: 18px !important;
         margin-top: 8px !important;
         font-weight: bold !important;
       }
-      .quotation-visual-exact:has(.billing-header) .billing-header .right-details-visual {
+      .mode-billing .billing-header .right-details-visual {
         display: none !important;
       }
-      .quotation-visual-exact:has(.billing-header) .contact-section-visual {
-        min-height: 110px !important;
+      .mode-billing .contact-section-visual {
+        min-height: 100px !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: flex-end !important;
       }
-      .quotation-visual-exact:has(.billing-header) .quotation-details-visual {
+      .mode-billing .quotation-details-visual {
         position: absolute !important;
         right: 8mm !important;
-        top: 180px !important;
+        top: 175px !important;
         width: 70mm !important;
         max-width: 70mm !important;
         height: auto !important;
         display: block !important;
+      }
+      .mode-billing .bank-details-section {
+        margin-top: 3mm !important;
+        box-sizing: border-box !important;
       }
     }
   `
@@ -556,7 +582,7 @@ const PrintPreviewModal = memo(({
 
       const docType = printMode === 'billing' ? 'BillingStatement' : 'Quotation'
       const docNo = printMode === 'billing'
-        ? (billingDetails.invoiceNo || quotationDetails.quotationNo || 'Draft')
+        ? (billingDetails.invoiceNo || billingDetails.quotationNo || quotationDetails.quotationNo || 'Draft')
         : (quotationDetails.quotationNo || 'Draft');
       const defaultName = `${docType}_${docNo.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`
 
@@ -683,7 +709,7 @@ const PrintPreviewModal = memo(({
     onQuotationDetailsChange, onBillingDetailsChange,
   }
 
-  return (
+  return createPortal(
     <div className="print-preview-modal">
       <div className="ppm-backdrop" onClick={onClose} />
 
@@ -1064,7 +1090,8 @@ const PrintPreviewModal = memo(({
         onClose={() => setIsTutorialOpen(false)}
         onComplete={onCompleteTutorial}
       />
-    </div>
+    </div>,
+    document.body
   )
 })
 

@@ -33,6 +33,8 @@ const FIELD_LABELS: Record<string, string> = {
   // Billing Details
   'billingDetails.invoiceNo':     'Invoice No',
   'billingDetails.jobOrderNo':    'Job Order No',
+  'billingDetails.billingDate':   'Billing Date',
+  'billingDetails.quotationNo':   'Billing Quotation No',
   'billingDetails.bankName':      'Bank Name',
   'billingDetails.accountName':   'Account Name',
   'billingDetails.accountNumber': 'Account Number',

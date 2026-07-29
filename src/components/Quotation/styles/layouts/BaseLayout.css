@@ -33,15 +33,20 @@
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
-    min-height: 297mm !important;
-    height: auto !important;
+    min-height: 296.5mm !important;
+    height: 296.5mm !important;
+    max-height: 296.5mm !important;
     background-color: white !important;
     transform: none !important;
     margin: 0 !important;
     padding: 8mm !important;
     position: relative !important;
-    page-break-after: auto !important;
     page-break-inside: avoid !important;
+  }
+
+  .quotation-visual-exact:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   .quotation-visual-exact.page-break {
@@ -64,31 +69,36 @@
 
 /* ── Global Print Isolation & Modal Flattening ── */
 @media print {
+  body > *:not(.print-preview-modal),
+  #root {
+    display: none !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    visibility: hidden !important;
+  }
+
   html, body {
     margin: 0 !important;
     padding: 0 !important;
-    height: auto !important;
-    width: auto !important;
-    visibility: hidden !important;
+    width: 210mm !important;
     background: white !important;
-    overflow: visible !important;
+    overflow: hidden !important;
   }
 
-  /* Reveal ONLY the document content */
-  .quotation-visual-exact,
-  .quotation-visual-exact * {
-    visibility: visible !important;
-  }
-
-  /* Flatten the Modal Hierarchy */
   .print-preview-modal {
-    position: absolute !important;
+    position: fixed !important;
     top: 0 !important;
     left: 0 !important;
     width: 210mm !important;
     display: block !important;
     margin: 0 !important;
     padding: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    transform: none !important;
+    overflow: hidden !important;
+    z-index: 999999 !important;
   }
 
   .ppm-container,
@@ -99,7 +109,7 @@
   .preview-content {
     position: static !important;
     display: block !important;
-    width: auto !important;
+    width: 210mm !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
@@ -126,29 +136,9 @@
   .ppm-footer-bar,
   .ppm-backdrop,
   .ppm-close-btn,
-  .ppm-page-break-indicator {
+  .ppm-sidebar,
+  .ppm-page-break-indicator,
+  .ppm-tutorial-overlay {
     display: none !important;
-  }
-
-  /* CRITICAL: Flatten Flexbox for Pagination */
-  .preview-panel-full,
-  .preview-container,
-  .preview-page,
-  .preview-content {
-    display: block !important;
-    height: auto !important;
-    width: auto !important;
-    overflow: visible !important;
-    position: static !important;
-    transform: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Ensure the background stays white and no scrollbars appear */
-  body, html {
-    background-color: white !important;
-    overflow: visible !important;
-    height: auto !important;
   }
 }

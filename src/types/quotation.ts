@@ -88,6 +88,8 @@ export interface QuotationDetails {
 export interface BillingDetails {
   invoiceNo: string
   jobOrderNo: string
+  billingDate?: string
+  quotationNo?: string
   bankName: string
   accountName: string
   accountNumber: string

@@ -70,6 +70,14 @@ export const materialLookupData: Record<string, number> = {
   "窒化珪素": 3.30,
   "超硬": 10.00,
   "ﾆｭｰﾗｲﾄNL-W": 0.92,
+  "ニューライトNL-W": 0.92,
+  "ニューライト": 0.92,
+  "ﾆｭｰﾗｲﾄ": 0.92,
+  "UHMW": 0.92,
+  "UHMW(ﾆｭｰﾗｲﾄ)": 0.92,
+  "UHMW(ニューライト)": 0.92,
+  "NL-W": 0.92,
+
 
   // Carbon steel grades
   "ABREX400": 7.85,

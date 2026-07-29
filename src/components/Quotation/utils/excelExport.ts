@@ -1023,11 +1023,13 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
     ; (['E9', 'E10', 'E11', 'E12'] as const).forEach(cell => {
       sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: true }
     })
-  sheet.getCell('F9').value = metaDate
+  const billingDate = (billingDetails.billingDate || metaDate).replace(/-/g, '/')
+  const billingQuotNo = billingDetails.quotationNo || quotNo
+  sheet.getCell('F9').value = billingDate
   sheet.getCell('F9').font = { name: 'Arial', size: 10 }
   sheet.getCell('F10').value = billingDetails.invoiceNo || ''
   sheet.getCell('F10').font = { name: 'Arial', size: 10 }
-  sheet.getCell('F11').value = quotNo
+  sheet.getCell('F11').value = billingQuotNo
   sheet.getCell('F11').font = { name: 'Arial', size: 10 }
   sheet.getCell('F12').value = billingDetails.jobOrderNo || ''
   sheet.getCell('F12').font = { name: 'Arial', size: 10 }
