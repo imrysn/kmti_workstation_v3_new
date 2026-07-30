@@ -551,7 +551,7 @@ export const scheduleApi = {
   getMembers: () => api.get('/schedule/members').then(r => r.data),
   createMember: (name: string) => api.post('/schedule/members', { name }).then(r => r.data),
   renameMember: (oldName: string, newName: string) => api.put('/schedule/members', { old_name: oldName, new_name: newName }).then(r => r.data),
-  deleteMember: (name: string) => api.delete(`/schedule/members/${encodeURIComponent(name)}`).then(r => r.data),
+  deleteMember: (name: string) => api.delete('/schedule/members', { params: { name } }).then(r => r.data),
   getActiveUsers: () => api.get('/auth/users').then(r => r.data as Array<{ id: number; username: string; fullName?: string; role: string; is_active: boolean }>),
 }
 

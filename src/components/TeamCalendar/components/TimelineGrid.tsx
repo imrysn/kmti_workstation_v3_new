@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import type { ITimelineDay } from '../../../hooks/useWorkSchedule'
 import { useWorkScheduleContext } from '../context/WorkScheduleContext'
 import { scheduleApi } from '../../../services/api'
@@ -39,6 +39,21 @@ export default function TimelineGrid({
     setRenamingEmployee
   } = useWorkScheduleContext()
   const [activePopoverDay, setActivePopoverDay] = useState<ITimelineDay | null>(null)
+
+  const ORIGINAL_MEMBERS = useMemo(() => new Set([
+    'loriemar cañete',
+    'niñalyn cordova',
+    'kerby poniente',
+    'zoren ricablanca',
+    'jonathan orendain',
+    'teoderic limpiado'
+  ]), [])
+
+  const firstAdditionalIdx = useMemo(() => {
+    return timelineMembers.findIndex(
+      m => !ORIGINAL_MEMBERS.has(m.trim().toLowerCase())
+    )
+  }, [timelineMembers, ORIGINAL_MEMBERS])
 
   React.useEffect(() => {
     const el = timelineScrollRef.current
@@ -200,7 +215,7 @@ export default function TimelineGrid({
         </thead>
         <tbody>
           {timelineMembers.map((member, memberIdx) => {
-            const showAdditionalHeader = memberIdx === 6
+            const showAdditionalHeader = firstAdditionalIdx !== -1 ? memberIdx === firstAdditionalIdx : memberIdx === 5
             return (
               <React.Fragment key={member}>
                 {showAdditionalHeader && (
@@ -241,33 +256,6 @@ export default function TimelineGrid({
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {member}
                         </span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            window.dispatchEvent(
-                              new CustomEvent('open-chat-with', {
-                                detail: { username: member, displayName: member }
-                              })
-                            )
-                          }}
-                          title={`Start chat with ${member}`}
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: '#3b82f6',
-                            opacity: 0.75,
-                            padding: '2px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            flexShrink: 0
-                          }}
-                        >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                          </svg>
-                        </button>
                       </div>
                       {canWrite && (
                         <div className="member-row-actions" style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>

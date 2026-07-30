@@ -632,6 +632,7 @@ async def export_to_excel(
     filtered_jobs = [j for j in db_jobs if str(j.job_id).strip().lower() in requested_ids_lower]
 
     try:
+        ExcelScheduleService.clear_cache()
         output = await asyncio.to_thread(
             ExcelScheduleService.generate_excel_export,
             get_excel_file_path(),
@@ -643,6 +644,8 @@ async def export_to_excel(
             payload.job_ids
         )
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to generate Excel export: {e}")
         
     current_excel_path = get_excel_file_path()
@@ -828,20 +831,39 @@ async def rename_member(
     return {"success": True, "member": {"id": member.id, "name": member.name}}
 
 
-@router.delete("/members/{name}")
+@router.delete("/members")
+async def delete_member_query(
+    name: str,
+    db: AsyncSession = Depends(get_db),
+    user = Depends(require_schedule_write)
+):
+    """
+    Delete an employee/member by query parameter ?name=... (safe for slashes/special characters).
+    """
+    clean_name = name.strip()
+    success = await WorkScheduleRepository.delete_member(db, clean_name)
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Employee '{clean_name}' not found.")
+        
+    ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
+    await sio.emit('schedule_updated')
+    return {"success": True, "message": f"Employee '{clean_name}' removed successfully."}
+
+
+@router.delete("/members/{name:path}")
 async def delete_member(
     name: str,
     db: AsyncSession = Depends(get_db),
     user = Depends(require_schedule_write)
 ):
     """
-    Delete an employee/member and remove all their schedule assignments.
+    Delete an employee/member and remove all their schedule assignments. Supports slashes in member names.
     """
-    name = name.strip()
-    success = await WorkScheduleRepository.delete_member(db, name)
+    clean_name = name.strip()
+    success = await WorkScheduleRepository.delete_member(db, clean_name)
     if not success:
-        raise HTTPException(status_code=404, detail=f"Employee '{name}' not found.")
+        raise HTTPException(status_code=404, detail=f"Employee '{clean_name}' not found.")
         
     ExcelScheduleService.clear_cache()  # Invalidate cached Excel layout structure
     await sio.emit('schedule_updated')
-    return {"success": True, "message": f"Employee '{name}' removed successfully."}
+    return {"success": True, "message": f"Employee '{clean_name}' removed successfully."}

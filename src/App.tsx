@@ -10,7 +10,7 @@ import Designers from './pages/Designers'
 import Materials from './pages/Materials'
 import MaterialCalculator from './pages/MaterialCalculator'
 import Settings from './pages/Settings'
-import Users from './pages/Users'
+import Dashboard from './pages/Dashboard'
 import ITControls from './pages/ITControls'
 import AdminHelpCenter from './pages/AdminHelpCenter'
 import Quotation from './pages/Quotation'
@@ -263,9 +263,13 @@ function WorkstationShell() {
             />
             <Route
               path="/users"
+              element={<Navigate to="/dashboard" replace />}
+            />
+            <Route
+              path="/dashboard"
               element={
                 <ProtectedRoute roles={['admin', 'it']}>
-                  <Users />
+                  <Dashboard />
                 </ProtectedRoute>
               }
             />

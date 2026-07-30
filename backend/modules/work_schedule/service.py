@@ -28,7 +28,7 @@ def update_drawing_xml(drawing_bytes: bytes, assignments: List[Any], member_rows
             r_elem = from_elem.find('{http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing}row')
             if r_elem is not None:
                 r_idx = int(r_elem.text)
-                if r_idx in range(4, 25):
+                if r_idx in range(4, 60):
                     continue
         anchors_to_keep.append(anchor)
         
@@ -265,16 +265,17 @@ class ExcelScheduleService:
         wb = openpyxl.load_workbook(excel_path, data_only=True)
         ws = wb['Schedule']
         
-        # Get members starting from Row 5 until blank or row 20
+        # Get members starting from Row 5 until blank or row 35
         members = []
-        for r in range(5, ws.max_row + 1):
+        for r in range(5, min(ws.max_row + 1, 35)):
             name_val = ws.cell(row=r, column=8).value
-            if name_val and r <= 20:
+            name_str = str(name_val).strip() if name_val is not None else ""
+            if name_str and name_str.lower() != "additional members":
                 members.append({
                     "row": r,
-                    "name": str(name_val).strip()
+                    "name": name_str
                 })
-            elif len(members) >= 6 and not name_val:
+            elif len(members) >= 5 and not name_str:
                 break
                 
         # Find the last column that has a day number in row 4
@@ -491,58 +492,119 @@ class ExcelScheduleService:
         _font_additional_header = openpyxl.styles.Font(name='Arial Unicode MS', size=10, bold=True, color='001F497D')
         _align_left_center = openpyxl.styles.Alignment(horizontal='left', vertical='center')
 
-        if N > 6:
-            diff = (N - 6) + 1  # 1 row for "Additional Members" header + (N - 6) new member rows
-            ws.insert_rows(11, diff)
-            shift_merged_cells_manually(ws, 11, diff)
-            shift_row_dimensions_manually(ws, 11, diff)
+        ORIGINAL_SET = {
+            'loriemar cañete',
+            'niñalyn cordova',
+            'kerby poniente',
+            'zoren ricablanca',
+            'jonathan orendain',
+            'teoderic limpiado'
+        }
+
+        orig_members = []
+        add_members = []
+        for m in members_to_use:
+            norm = unicodedata.normalize('NFC', m.strip().lower())
+            if norm in ORIGINAL_SET:
+                orig_members.append(m)
+            else:
+                add_members.append(m)
+
+        if not orig_members and not add_members:
+            orig_members = template_members
+
+        num_orig = len(orig_members)
+        num_add = len(add_members)
+
+        if num_add > 0:
+            insert_at = 5 + max(num_orig, 5)  # Row 10 if 5 original members
+            diff = 1 + num_add  # 1 row for "Additional Members" header + num_add member rows
             
-            # Format row 11 as "Additional Members" section header
-            ws.row_dimensions[11].height = 22
+            ws.insert_rows(insert_at, diff)
+            shift_merged_cells_manually(ws, insert_at, diff)
+            shift_row_dimensions_manually(ws, insert_at, diff)
+
+            # Format insert_at as "Additional Members" section header
+            ws.row_dimensions[insert_at].height = 22
             for c in range(1, ws.max_column + 1):
-                copy_cell_style(ws.cell(row=5, column=c), ws.cell(row=11, column=c))
-            
-            # Clear fill & value for columns 1 to 7 (A to G)
+                copy_cell_style(ws.cell(row=5, column=c), ws.cell(row=insert_at, column=c))
+
             _fill_none = openpyxl.styles.PatternFill(fill_type=None)
             for c in range(1, 8):
-                ws.cell(row=11, column=c, value=None)
-                ws.cell(row=11, column=c).fill = _fill_none
+                ws.cell(row=insert_at, column=c, value=None)
+                ws.cell(row=insert_at, column=c).fill = _fill_none
 
-            # Apply additional header fill only to columns 8 to 19 (H to S)
             for c in range(8, 20):
-                ws.cell(row=11, column=c).fill = _fill_additional_header
+                ws.cell(row=insert_at, column=c).fill = _fill_additional_header
 
-            ws.cell(row=11, column=8, value="Additional Members")
-            ws.cell(row=11, column=8).font = _font_additional_header
-            ws.cell(row=11, column=8).alignment = _align_left_center
-            ws.merge_cells(start_row=11, start_column=8, end_row=11, end_column=19)
+            ws.cell(row=insert_at, column=8, value="Additional Members")
+            ws.cell(row=insert_at, column=8).font = _font_additional_header
+            ws.cell(row=insert_at, column=8).alignment = _align_left_center
+            ws.merge_cells(start_row=insert_at, start_column=8, end_row=insert_at, end_column=19)
 
-            # Copy layout style of row 5 to inserted member rows (rows 12 to 11 + diff - 1)
-            for r in range(12, 11 + diff):
+            # Copy layout style of row 5 to inserted member rows
+            for r in range(insert_at + 1, insert_at + diff):
                 ws.row_dimensions[r].height = ws.row_dimensions[5].height
                 for c in range(1, ws.max_column + 1):
                     copy_cell_style(ws.cell(row=5, column=c), ws.cell(row=r, column=c))
-                # Merge H:S (columns 8 to 19) for the employee name label
                 ws.merge_cells(start_row=r, start_column=8, end_row=r, end_column=19)
-                # Clear fill & value for columns 1 to 7 for inserted rows
                 for c in range(1, 8):
                     ws.cell(row=r, column=c, value=None)
                     ws.cell(row=r, column=c).fill = _fill_none
-                    
+
         # Write member names and build member_rows mapping
         member_rows = {}
-        for idx, name in enumerate(members_to_use):
-            r = (5 + idx) if idx < 6 else (5 + idx + 1)
+        for idx, name in enumerate(orig_members):
+            r = 5 + idx
             ws.cell(row=r, column=8, value=name)
             norm_name = unicodedata.normalize('NFC', name.strip().lower())
             member_rows[norm_name] = r
-            
-        # If we have fewer than 6 members, clear the extra template rows
-        if N < 6:
-            for r in range(5 + N, 11):
-                ws.cell(row=r, column=8, value=None)
-                for c in range(20, ws.max_column + 1):
-                    ws.cell(row=r, column=c, value=None)
+
+        # Clear unused original template rows up to row 9
+        for r in range(5 + num_orig, 10):
+            ws.cell(row=r, column=8, value=None)
+
+        if num_add > 0:
+            insert_at = 5 + max(num_orig, 5)
+            for idx, name in enumerate(add_members):
+                r = insert_at + 1 + idx
+                ws.cell(row=r, column=8, value=name)
+                norm_name = unicodedata.normalize('NFC', name.strip().lower())
+                member_rows[norm_name] = r
+
+        last_member_row = (10 + num_add) if num_add > 0 else (5 + num_orig - 1)
+
+        _border_top_med = openpyxl.styles.Border(
+            left=openpyxl.styles.Side(style='thin', color='000000'),
+            right=openpyxl.styles.Side(style='thin', color='000000'),
+            top=openpyxl.styles.Side(style='medium', color='000000'),
+            bottom=openpyxl.styles.Side(style='thin', color='000000')
+        )
+        _border_mid_thin = openpyxl.styles.Border(
+            left=openpyxl.styles.Side(style='thin', color='000000'),
+            right=openpyxl.styles.Side(style='thin', color='000000'),
+            top=openpyxl.styles.Side(style='thin', color='000000'),
+            bottom=openpyxl.styles.Side(style='thin', color='000000')
+        )
+        _border_bot_med = openpyxl.styles.Border(
+            left=openpyxl.styles.Side(style='thin', color='000000'),
+            right=openpyxl.styles.Side(style='thin', color='000000'),
+            top=openpyxl.styles.Side(style='thin', color='000000'),
+            bottom=openpyxl.styles.Side(style='medium', color='000000')
+        )
+
+        for r in range(5, last_member_row + 1):
+            if r == 5:
+                b_style = _border_top_med
+            elif r == last_member_row:
+                b_style = _border_bot_med
+            else:
+                b_style = _border_mid_thin
+
+            for c in range(8, ws.max_column + 1):
+                cell = ws.cell(row=r, column=c)
+                if type(cell).__name__ != 'MergedCell':
+                    cell.border = copy(b_style)
 
         db_map = {}
         for c in db_components:
@@ -677,39 +739,36 @@ class ExcelScheduleService:
             cell.border = border
             cell.alignment = align
 
-        # Find the last column that has a day number in row 4 (Timeline range)
-        max_gantt_col = 20
-        for c in range(ws.max_column, 19, -1):
-            if ws.cell(row=4, column=c).value is not None:
-                max_gantt_col = c
-                break
+        last_member_row = (10 + num_add) if num_add > 0 else (5 + num_orig - 1)
 
-        last_used_row = max(last_used_row, max_member_row)
-
-        # Clean up any dangling merged cells from rows that were deleted from the template
+        # Remove any merged cell ranges below last_member_row using openpyxl's unmerge_cells
         for m_range in list(ws.merged_cells.ranges):
-            if m_range.min_row > last_used_row:
-                ws.merged_cells.ranges.remove(m_range)
+            if m_range.min_row > last_member_row or m_range.max_row > last_member_row:
+                ws.unmerge_cells(m_range.coord)
 
-        next_row = last_used_row + 1
+        # Clear any old cell values, borders, and fills below last_member_row
+        _border_none = openpyxl.styles.Border()
+        for r in range(last_member_row + 1, max(ws.max_row + 1, last_member_row + 50)):
+            for c in range(1, ws.max_column + 1):
+                cell = ws.cell(row=r, column=c)
+                cell.value = None
+                cell.border = _border_none
+                cell.fill = openpyxl.styles.PatternFill(fill_type=None)
 
-        # If this is a clean template without job status tables yet
-        if next_row == max_member_row + 1:
-            for spacer_offset in range(2):
-                for c in range(1, 20):
-                    ws.cell(row=next_row, column=c, value=None)
-                    ws.cell(row=next_row, column=c).fill = openpyxl.styles.PatternFill(fill_type=None)
-                ws.merge_cells(start_row=next_row, start_column=1, end_row=next_row, end_column=19)
-                next_row += 1
+        next_row = last_member_row + 1
 
         for j in db_jobs:
             j_key = j.job_id.strip().lower()
             if j_key not in seen_jobs:
-                # Add 2 spacer rows
+                # Add 2 light-blue spacer rows (light-blue fill only on cols 1-19, no fill on timeline cols 20+)
                 for spacer_offset in range(2):
-                    for c in range(1, 20):
-                        ws.cell(row=next_row, column=c).fill = _fill_spacer
-                        ws.cell(row=next_row, column=c, value=None)
+                    ws.row_dimensions[next_row].height = 20.1
+                    for c in range(1, ws.max_column + 1):
+                        cell = ws.cell(row=next_row, column=c)
+                        if type(cell).__name__ != 'MergedCell':
+                            cell.value = None
+                            cell.fill = _fill_spacer if c <= 19 else _fill_none
+                            cell.border = _border_none
                     ws.merge_cells(start_row=next_row, start_column=1, end_row=next_row, end_column=19)
                     next_row += 1
                 
@@ -786,8 +845,13 @@ class ExcelScheduleService:
                     
                     next_row += 1
 
-        # member_rows has already been dynamically constructed at the beginning of this function
-                
+        # Find the last column that has a day number in row 4 (Timeline range)
+        max_gantt_col = 20
+        for c in range(ws.max_column, 19, -1):
+            if ws.cell(row=4, column=c).value is not None:
+                max_gantt_col = c
+                break
+
         # Dynamically append columns in Excel if assignments exceed max_gantt_col or to complete full 12 months to Dec 31
         ref_day_num = ws.cell(row=4, column=max_gantt_col).value
         ref_day_week = ws.cell(row=3, column=max_gantt_col).value
