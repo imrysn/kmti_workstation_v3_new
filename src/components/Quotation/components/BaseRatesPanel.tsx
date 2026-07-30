@@ -107,12 +107,12 @@ const BaseRatesPanel = memo(({ isOpen, onClose, baseRates, onUpdate }: Props) =>
                 </div>
               </div>
               <div className="brp-field">
-                <label className="brp-label">Others</label>
+                <label className="brp-label">3D/2D</label>
                 <div className="brp-input-wrap">
                   <span className="brp-currency">¥</span>
                   <input
                     type="number"
-                    value={baseRates.timeChargeRateOthers || ''}
+                    value={baseRates.timeChargeRateOthers ?? 2800}
                     onChange={e => handleUpdate('timeChargeRateOthers', e.target.value)}
                     className="brp-input"
                     min="0"

@@ -1,0 +1,354 @@
+/* ═══════════════════════════════════════════════════════════════
+   TeammatesPill.css — Live TitleBar Online Teammates Pill
+   ═══════════════════════════════════════════════════════════════ */
+
+.teammates-pill-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  -webkit-app-region: no-drag;
+}
+
+.teammates-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  height: 24px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  background: var(--bg-primary, rgba(255, 255, 255, 0.8));
+  color: var(--text-primary, #1f2937);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+body.dark-theme .teammates-pill-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f3f4f6;
+}
+
+body.void-theme .teammates-pill-btn {
+  background: rgba(255, 0, 64, 0.1);
+  border-color: rgba(255, 0, 64, 0.3);
+  color: #ff2040;
+}
+
+/* Green pulse when teammate comes online / logs in */
+.teammates-pill-btn.pulse-green {
+  border-color: rgba(16, 185, 129, 0.85) !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #10b981 !important;
+  animation: teammates-event-pulse-green 1s ease-in-out infinite;
+}
+
+@keyframes teammates-event-pulse-green {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px rgba(16, 185, 129, 0.7);
+    border-color: rgba(16, 185, 129, 1);
+  }
+}
+
+/* Red pulse when teammate goes offline / logs out */
+.teammates-pill-btn.pulse-red {
+  border-color: rgba(239, 68, 68, 0.85) !important;
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #ef4444 !important;
+  animation: teammates-event-pulse-red 1s ease-in-out infinite;
+}
+
+@keyframes teammates-event-pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 10px 2px rgba(239, 68, 68, 0.7);
+    border-color: rgba(239, 68, 68, 1);
+  }
+}
+
+.teammates-pill-btn:hover,
+.teammates-pill-btn.active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #3b82f6;
+  transform: translateY(-1px);
+}
+
+body.dark-theme .teammates-pill-btn:hover,
+body.dark-theme .teammates-pill-btn.active {
+  background: rgba(59, 130, 246, 0.22);
+  color: #60a5fa;
+}
+
+/* Glowing pulse green dot */
+.teammates-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.teammates-pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: teammates-pulse 2s ease-out infinite;
+  opacity: 0;
+}
+
+@keyframes teammates-pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* Mini Avatar Stack */
+.teammates-avatar-stack {
+  display: flex;
+  align-items: center;
+  margin-left: -2px;
+}
+
+.teammates-mini-avatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-left: -4px;
+  border: 1px solid var(--bg-primary, #ffffff);
+  overflow: hidden;
+  background: #1e293b;
+  flex-shrink: 0;
+}
+
+.teammates-mini-avatar:first-child {
+  margin-left: 0;
+}
+
+.teammates-mini-avatar svg {
+  width: 100%;
+  height: 100%;
+}
+
+.teammates-label {
+  white-space: nowrap;
+}
+
+/* Popover Dropdown */
+.teammates-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  max-height: 380px;
+  border-radius: 14px;
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #111827);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: teammates-pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.dark-theme .teammates-popover {
+  background: #1e293b;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f3f4f6;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+
+body.void-theme .teammates-popover {
+  background: rgba(10, 0, 2, 0.96);
+  border-color: rgba(255, 0, 64, 0.4);
+  color: #ff2040;
+}
+
+@keyframes teammates-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.teammates-popover-header {
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+body.dark-theme .teammates-popover-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.teammates-popover-title {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.teammates-drawer-link {
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.teammates-drawer-link:hover {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+/* Popover list body */
+.teammates-popover-body {
+  overflow-y: auto;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.teammates-popover-empty {
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.teammate-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.teammate-row:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.dark-theme .teammate-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.teammate-row-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.teammate-row-avatar svg {
+  width: 100%;
+  height: 100%;
+}
+
+.teammate-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.teammate-row-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teammate-row-module {
+  font-size: 10.5px;
+  color: var(--text-secondary, #6b7280);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teammate-chat-btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+body.dark-theme .teammate-chat-btn {
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.teammate-chat-btn:hover {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.teammate-you-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  text-transform: uppercase;
+}
+
+body.dark-theme .teammate-you-badge {
+  background: rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
+}
+
+.teammate-me-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.dark-theme .teammate-me-tag {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}

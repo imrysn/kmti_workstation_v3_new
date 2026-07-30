@@ -3,11 +3,147 @@ import re
 import datetime
 import unicodedata
 import asyncio
+import zipfile
+import xml.etree.ElementTree as ET
 from typing import Dict, List, Any, Optional, Tuple
 from io import BytesIO
 import openpyxl
 import openpyxl.utils
 from copy import copy
+
+ET.register_namespace('xdr', 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing')
+ET.register_namespace('a', 'http://schemas.openxmlformats.org/drawingml/2006/main')
+ET.register_namespace('r', 'http://schemas.openxmlformats.org/officeDocument/2006/relationships')
+
+def update_drawing_xml(drawing_bytes: bytes, assignments: List[Any], member_rows_map: Dict[str, int], col_widths_map: Optional[Dict[int, float]] = None) -> bytes:
+    root = ET.fromstring(drawing_bytes)
+    if col_widths_map is None:
+        col_widths_map = {}
+    
+    # Keep anchors that do not belong to member timeline rows (rows 5 to 25, i.e. 0-index 4 to 24)
+    anchors_to_keep = []
+    for anchor in root.findall('{http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing}twoCellAnchor'):
+        from_elem = anchor.find('{http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing}from')
+        if from_elem is not None:
+            r_elem = from_elem.find('{http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing}row')
+            if r_elem is not None:
+                r_idx = int(r_elem.text)
+                if r_idx in range(4, 25):
+                    continue
+        anchors_to_keep.append(anchor)
+        
+    root.clear()
+    for a_elem in anchors_to_keep:
+        root.append(a_elem)
+        
+    # Group assignments by member
+    by_member = {}
+    for a in assignments:
+        if a.member_name == '__day_status__' or not a.value:
+            continue
+        m_norm = unicodedata.normalize('NFC', a.member_name.strip().lower())
+        if m_norm in member_rows_map:
+            by_member.setdefault(m_norm, []).append(a)
+            
+    shape_id = 5000
+    for m_norm, ass_list in by_member.items():
+        row_0 = member_rows_map[m_norm] - 1
+        ass_list.sort(key=lambda x: x.col_index)
+        
+        # Group into contiguous blocks
+        blocks = []
+        if ass_list:
+            curr = [ass_list[0]]
+            for next_a in ass_list[1:]:
+                if next_a.col_index - curr[-1].col_index <= 1:
+                    curr.append(next_a)
+                else:
+                    blocks.append(curr)
+                    curr = [next_a]
+            blocks.append(curr)
+            
+        for block in blocks:
+            job_a = next((x for x in block if x.value not in ('-->', '->', '---')), None)
+            if not job_a:
+                continue
+            
+            start_col_0 = block[0].col_index - 1
+            end_col_0 = block[-1].col_index - 1
+            job_label = str(job_a.value).strip()
+            
+            end_col_num = block[-1].col_index
+            end_col_w = col_widths_map.get(end_col_num, 3.50)
+            end_col_off = int(end_col_w * 65000)
+            
+            shape_id += 1
+            # 1. Straight Arrow Connector Shape (lowered to rowOff 195000 near bottom of row)
+            arrow_xml = f'''<xdr:twoCellAnchor xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <xdr:from><xdr:col>{start_col_0}</xdr:col><xdr:colOff>30000</xdr:colOff><xdr:row>{row_0}</xdr:row><xdr:rowOff>195000</xdr:rowOff></xdr:from>
+  <xdr:to><xdr:col>{end_col_0}</xdr:col><xdr:colOff>{end_col_off}</xdr:colOff><xdr:row>{row_0}</xdr:row><xdr:rowOff>195000</xdr:rowOff></xdr:to>
+  <xdr:cxnSp macro="">
+    <xdr:nvCxnSpPr>
+      <xdr:cNvPr id="{shape_id}" name="Straight Arrow Connector {shape_id}"/>
+      <xdr:cNvCxnSpPr/>
+    </xdr:nvCxnSpPr>
+    <xdr:spPr>
+      <a:prstGeom prst="straightConnector1"><a:avLst/></a:prstGeom>
+      <a:ln w="19050">
+        <a:solidFill><a:srgbClr val="0070C0"/></a:solidFill>
+        <a:prstDash val="dash"/>
+        <a:tailEnd type="arrow" w="med" len="med"/>
+      </a:ln>
+    </xdr:spPr>
+    <xdr:style>
+      <a:lnRef idx="1"><a:schemeClr val="accent1"/></a:lnRef>
+      <a:fillRef idx="0"><a:schemeClr val="accent1"/></a:fillRef>
+      <a:effectRef idx="0"><a:schemeClr val="accent1"/></a:effectRef>
+      <a:fontRef idx="minor"><a:schemeClr val="tx1"/></a:fontRef>
+    </xdr:style>
+  </xdr:cxnSp>
+  <xdr:clientData/>
+</xdr:twoCellAnchor>'''
+            root.append(ET.fromstring(arrow_xml))
+            
+            shape_id += 1
+            # 2. Text Box Shape (rowOff 30000 to 140000 - lowered from top border, 55000 EMU gap to arrow line)
+            tb_xml = f'''<xdr:twoCellAnchor xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+  <xdr:from><xdr:col>{start_col_0}</xdr:col><xdr:colOff>10000</xdr:colOff><xdr:row>{row_0}</xdr:row><xdr:rowOff>30000</xdr:rowOff></xdr:from>
+  <xdr:to><xdr:col>{end_col_0}</xdr:col><xdr:colOff>{end_col_off}</xdr:colOff><xdr:row>{row_0}</xdr:row><xdr:rowOff>140000</xdr:rowOff></xdr:to>
+  <xdr:sp macro="" textlink="">
+    <xdr:nvSpPr>
+      <xdr:cNvPr id="{shape_id}" name="TextBox {shape_id}"/>
+      <xdr:cNvSpPr txBox="1"/>
+    </xdr:nvSpPr>
+    <xdr:spPr>
+      <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+      <a:noFill/>
+      <a:ln w="9525" cmpd="sng"><a:noFill/></a:ln>
+    </xdr:spPr>
+    <xdr:style>
+      <a:lnRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef>
+      <a:fillRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>
+      <a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef>
+      <a:fontRef idx="minor"><a:schemeClr val="dk1"/></a:fontRef>
+    </xdr:style>
+    <xdr:txBody>
+      <a:bodyPr vertOverflow="clip" wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"/>
+      <a:lstStyle/>
+      <a:p>
+        <a:pPr algn="ctr"/>
+        <a:r>
+          <a:rPr kumimoji="1" lang="en-US" altLang="ja-JP" sz="850" b="1">
+            <a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>
+          </a:rPr>
+          <a:t>{job_label}</a:t>
+        </a:r>
+      </a:p>
+    </xdr:txBody>
+  </xdr:sp>
+  <xdr:clientData/>
+</xdr:twoCellAnchor>'''
+            root.append(ET.fromstring(tb_xml))
+            
+    return ET.tostring(root, encoding='utf-8', xml_declaration=True)
 
 def determine_year(month_str, day_num, weekday_str) -> int:
     try:
@@ -129,15 +265,17 @@ class ExcelScheduleService:
         wb = openpyxl.load_workbook(excel_path, data_only=True)
         ws = wb['Schedule']
         
-        # Get members (Rows 5 to 10)
+        # Get members starting from Row 5 until blank or row 20
         members = []
-        for r in range(5, 11):
+        for r in range(5, ws.max_row + 1):
             name_val = ws.cell(row=r, column=8).value
-            if name_val:
+            if name_val and r <= 20:
                 members.append({
                     "row": r,
                     "name": str(name_val).strip()
                 })
+            elif len(members) >= 6 and not name_val:
+                break
                 
         # Find the last column that has a day number in row 4
         max_gantt_col = 20
@@ -347,21 +485,54 @@ class ExcelScheduleService:
                     ws.row_dimensions[r].height = h
 
         N = len(members_to_use)
+        max_member_row = (5 + N) if N > 6 else 10
+
+        _fill_additional_header = openpyxl.styles.PatternFill(fill_type='solid', fgColor='DCE6F1')
+        _font_additional_header = openpyxl.styles.Font(name='Arial Unicode MS', size=10, bold=True, color='001F497D')
+        _align_left_center = openpyxl.styles.Alignment(horizontal='left', vertical='center')
+
         if N > 6:
-            diff = N - 6
+            diff = (N - 6) + 1  # 1 row for "Additional Members" header + (N - 6) new member rows
             ws.insert_rows(11, diff)
             shift_merged_cells_manually(ws, 11, diff)
             shift_row_dimensions_manually(ws, 11, diff)
-            # Copy layout style of row 5 to the newly inserted rows
-            for r in range(11, 11 + diff):
+            
+            # Format row 11 as "Additional Members" section header
+            ws.row_dimensions[11].height = 22
+            for c in range(1, ws.max_column + 1):
+                copy_cell_style(ws.cell(row=5, column=c), ws.cell(row=11, column=c))
+            
+            # Clear fill & value for columns 1 to 7 (A to G)
+            _fill_none = openpyxl.styles.PatternFill(fill_type=None)
+            for c in range(1, 8):
+                ws.cell(row=11, column=c, value=None)
+                ws.cell(row=11, column=c).fill = _fill_none
+
+            # Apply additional header fill only to columns 8 to 19 (H to S)
+            for c in range(8, 20):
+                ws.cell(row=11, column=c).fill = _fill_additional_header
+
+            ws.cell(row=11, column=8, value="Additional Members")
+            ws.cell(row=11, column=8).font = _font_additional_header
+            ws.cell(row=11, column=8).alignment = _align_left_center
+            ws.merge_cells(start_row=11, start_column=8, end_row=11, end_column=19)
+
+            # Copy layout style of row 5 to inserted member rows (rows 12 to 11 + diff - 1)
+            for r in range(12, 11 + diff):
                 ws.row_dimensions[r].height = ws.row_dimensions[5].height
                 for c in range(1, ws.max_column + 1):
                     copy_cell_style(ws.cell(row=5, column=c), ws.cell(row=r, column=c))
+                # Merge H:S (columns 8 to 19) for the employee name label
+                ws.merge_cells(start_row=r, start_column=8, end_row=r, end_column=19)
+                # Clear fill & value for columns 1 to 7 for inserted rows
+                for c in range(1, 8):
+                    ws.cell(row=r, column=c, value=None)
+                    ws.cell(row=r, column=c).fill = _fill_none
                     
         # Write member names and build member_rows mapping
         member_rows = {}
         for idx, name in enumerate(members_to_use):
-            r = 5 + idx
+            r = (5 + idx) if idx < 6 else (5 + idx + 1)
             ws.cell(row=r, column=8, value=name)
             norm_name = unicodedata.normalize('NFC', name.strip().lower())
             member_rows[norm_name] = r
@@ -513,6 +684,8 @@ class ExcelScheduleService:
                 max_gantt_col = c
                 break
 
+        last_used_row = max(last_used_row, max_member_row)
+
         # Clean up any dangling merged cells from rows that were deleted from the template
         for m_range in list(ws.merged_cells.ranges):
             if m_range.min_row > last_used_row:
@@ -520,9 +693,8 @@ class ExcelScheduleService:
 
         next_row = last_used_row + 1
 
-        # If this is a completely clean template (next_row == 11), 
-        # add 2 white global spacer rows first!
-        if next_row == 11:
+        # If this is a clean template without job status tables yet
+        if next_row == max_member_row + 1:
             for spacer_offset in range(2):
                 for c in range(1, 20):
                     ws.cell(row=next_row, column=c, value=None)
@@ -616,26 +788,33 @@ class ExcelScheduleService:
 
         # member_rows has already been dynamically constructed at the beginning of this function
                 
-        # Dynamically append columns in Excel if assignments exceed max_gantt_col
-        max_col_to_write = max(max_gantt_col, max((a.col_index for a in db_assignments if a.col_index is not None), default=0))
-        if max_col_to_write > max_gantt_col:
-            # Parse ref date details
-            ref_day_num = ws.cell(row=4, column=max_gantt_col).value
-            ref_day_week = ws.cell(row=3, column=max_gantt_col).value
-            ref_month_name = ""
-            for col_idx in range(max_gantt_col, 19, -1):
-                m_val = ws.cell(row=2, column=col_idx).value
-                if m_val:
-                    ref_month_name = str(m_val).strip()
-                    break
-            ref_year = determine_year(ref_month_name, ref_day_num, ref_day_week)
-            month_map = {
-                'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
-                'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
-            }
-            ref_m_idx = month_map.get(ref_month_name.lower(), 6)
+        # Dynamically append columns in Excel if assignments exceed max_gantt_col or to complete full 12 months to Dec 31
+        ref_day_num = ws.cell(row=4, column=max_gantt_col).value
+        ref_day_week = ws.cell(row=3, column=max_gantt_col).value
+        ref_month_name = ""
+        for col_idx in range(max_gantt_col, 19, -1):
+            m_val = ws.cell(row=2, column=col_idx).value
+            if m_val:
+                ref_month_name = str(m_val).strip()
+                break
+        ref_year = determine_year(ref_month_name, ref_day_num, ref_day_week)
+        month_map = {
+            'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
+            'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+        }
+        ref_m_idx = month_map.get(ref_month_name.lower(), 7)
+        try:
             ref_date = datetime.date(ref_year, ref_m_idx, int(ref_day_num))
-            
+        except (ValueError, TypeError):
+            ref_date = datetime.date(2026, 7, 31)
+
+        dec_31_date = datetime.date(ref_year, 12, 31)
+        extra_days_to_year_end = max(0, (dec_31_date - ref_date).days)
+        target_year_end_col = max_gantt_col + extra_days_to_year_end
+
+        max_col_to_write = max(max_gantt_col, target_year_end_col, max((a.col_index for a in db_assignments if a.col_index is not None), default=0))
+
+        if max_col_to_write > max_gantt_col:
             for c in range(max_gantt_col + 1, max_col_to_write + 1):
                 c_let = openpyxl.utils.get_column_letter(c)
                 ref_let = openpyxl.utils.get_column_letter(max_gantt_col)
@@ -657,7 +836,7 @@ class ExcelScheduleService:
                 copy_cell_style(ws.cell(row=4, column=max_gantt_col), ws.cell(row=4, column=c))
                 ws.cell(row=4, column=c, value=dt.day)
                 
-                for r in range(5, 11):
+                for r in range(5, max_member_row + 1):
                     copy_cell_style(ws.cell(row=r, column=max_gantt_col), ws.cell(row=r, column=c))
 
         # Define fills for day status columns (FFFF0000=Deadline, FFFFC000=Delivered, FF00B0F0=3D, FFFFFF00=2D, FFEB3FC6=Holiday)
@@ -686,10 +865,10 @@ class ExcelScheduleService:
             else:
                 default_fill = openpyxl.styles.PatternFill(fill_type=None)
             
-            for r in range(3, 11):
+            for r in range(3, max_member_row + 1):
                 ws.cell(row=r, column=c).fill = default_fill
 
-            for r in range(5, 11):
+            for r in range(5, max_member_row + 1):
                 ws.cell(row=r, column=c, value=None)
 
         # Write database assignments and column statuses
@@ -700,7 +879,7 @@ class ExcelScheduleService:
                 status_key = (a.value or '').strip().lower()
                 if status_key in _DAY_STATUS_FILLS:
                     fill = _DAY_STATUS_FILLS[status_key]
-                    for r in range(3, 11):
+                    for r in range(3, max_member_row + 1):
                         ws.cell(row=r, column=a.col_index).fill = fill
 
         # 2. Member assignments grouped by member
@@ -720,86 +899,232 @@ class ExcelScheduleService:
         _FONT_BLUE = openpyxl.styles.Font(name='Arial Unicode MS', size=9, color='FF0070C0', bold=True)
         _ALIGN_CENTER = openpyxl.styles.Alignment(horizontal='center', vertical='center')
 
+        # Keep timeline cells clean and unmerged so DrawingML floating shapes (arrows and text boxes) display cleanly
         for member_key, ass_list in member_assignments.items():
             target_row = member_rows[member_key]
+            for a in ass_list:
+                ws.cell(row=target_row, column=a.col_index, value=None)
             
-            # Sort by col_index
+        # ─────────────────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────────
+        # 12-Month Bounds & Target Month Filtering
+        # ─────────────────────────────────────────────────────────────────────────
+        # ─────────────────────────────────────────────────────────────────────────
+        # 12-Month Bounds & Target Month Filtering
+        # ─────────────────────────────────────────────────────────────────────────
+        # Build mapping of column -> year
+        col_years = {}
+        for c in range(20, max_col_to_write + 1):
+            day_num = ws.cell(row=4, column=c).value
+            day_week = ws.cell(row=3, column=c).value
+            month_name = None
+            for col_idx in range(c, 19, -1):
+                m_val = ws.cell(row=2, column=col_idx).value
+                if m_val:
+                    month_name = str(m_val).strip()
+                    break
+            if day_num and day_week and month_name:
+                col_years[c] = determine_year(month_name, day_num, day_week)
+
+        # Detect active year from db_assignments or default to current calendar year
+        active_col_indices = [a.col_index for a in db_assignments if a.col_index and a.col_index >= 20 and a.value and a.member_name != '__day_status__']
+        target_year = datetime.date.today().year
+
+        if active_col_indices:
+            assigned_years = [col_years.get(c) for c in active_col_indices if c in col_years]
+            assigned_years = [y for y in assigned_years if y is not None]
+            if assigned_years:
+                target_year = max(set(assigned_years), key=assigned_years.count)
+
+        target_year_cols = [c for c, y in col_years.items() if y == target_year]
+        if target_year_cols:
+            start_year_col = min(target_year_cols)
+            end_year_col = max(target_year_cols)
+        else:
+            start_year_col = 20
+            end_year_col = min(384, max_col_to_write)
+
+        # Calculate dynamic column widths for short duration spans (e.g. 1 or 2 days) with long job labels
+        col_widths = {}
+        for member_key, ass_list in member_assignments.items():
             ass_list.sort(key=lambda x: x.col_index)
-            
-            # Group into contiguous blocks where gap is <= 1
             blocks = []
             if ass_list:
-                current_block = [ass_list[0]]
-                for next_ass in ass_list[1:]:
-                    if next_ass.col_index - current_block[-1].col_index <= 1:
-                        current_block.append(next_ass)
+                curr = [ass_list[0]]
+                for next_a in ass_list[1:]:
+                    if next_a.col_index - curr[-1].col_index <= 1:
+                        curr.append(next_a)
                     else:
-                        blocks.append(current_block)
-                        current_block = [next_ass]
-                blocks.append(current_block)
-                
-            # Process and style each block
+                        blocks.append(curr)
+                        curr = [next_a]
+                blocks.append(curr)
+
             for block in blocks:
-                # Find the job code assignment in this block
-                job_ass = None
-                for a in block:
-                    if a.value not in ('-->', '->', '---'):
-                        job_ass = a
-                        break
-                
-                if not job_ass:
+                job_a = next((x for x in block if x.value not in ('-->', '->', '---')), None)
+                if not job_a:
                     continue
-                    
-                start_col = block[0].col_index
-                end_col = block[-1].col_index
-                
-                # If it's a multi-day block, append the arrow to the job code
-                if end_col > start_col:
-                    display_text = f"{job_ass.value} ➔"
-                else:
-                    display_text = str(job_ass.value)
-                    
-                # Write the value to the first cell
-                first_cell = ws.cell(row=target_row, column=start_col)
-                first_cell.value = display_text
-                
-                # Merge the cells if it spans multiple days
-                if end_col > start_col:
-                    ws.merge_cells(start_row=target_row, start_column=start_col, end_row=target_row, end_column=end_col)
-                    
-                # Apply styling to all cells in the block so borders remain intact
+                label = str(job_a.value).strip()
+                req_width = len(label) * 0.95 + 1.5
+                span_len = len(block)
+                per_col_req = req_width / span_len
                 for a in block:
-                    cell = ws.cell(row=target_row, column=a.col_index)
-                    cell.font = _FONT_BLUE
-                    cell.alignment = _ALIGN_CENTER
-            
-        # ─────────────────────────────────────────────────────────────────────────
-        # ─────────────────────────────────────────────────────────────────────────
-        # Filter Columns by Target Months (and Unhide Default Groups)
-        # ─────────────────────────────────────────────────────────────────────────
-        # Force-unhide all columns in the template first, so no days are missing
+                    col_widths[a.col_index] = max(col_widths.get(a.col_index, 3.50), per_col_req)
+
+        # Unhide columns for the target year (e.g. 2026), and set width dynamically
         for c in range(20, max_col_to_write + 1):
             col_letter = openpyxl.utils.get_column_letter(c)
-            ws.column_dimensions[col_letter].hidden = False
-            ws.column_dimensions[col_letter].outline_level = 0
-            ws.column_dimensions[col_letter].width = 3.50
-            
+            if start_year_col <= c <= end_year_col:
+                ws.column_dimensions[col_letter].hidden = False
+                ws.column_dimensions[col_letter].outline_level = 0
+                target_w = col_widths.get(c, 3.50)
+                ws.column_dimensions[col_letter].width = max(3.50, round(target_w, 2))
+            else:
+                ws.column_dimensions[col_letter].hidden = True
+
+        # Filter by requested target months within the target year if specified
         if target_months:
             target_months_lower = {m.strip().lower() for m in target_months}
-            for c in range(20, max_col_to_write + 1):
-                # find month name for this column by backtracking
+            for c in range(start_year_col, end_year_col + 1):
                 m_val = None
                 for col_idx in range(c, 19, -1):
                     val = ws.cell(row=2, column=col_idx).value
                     if val:
                         m_val = str(val).strip().lower()
                         break
-                
                 if m_val and m_val not in target_months_lower:
                     col_letter = openpyxl.utils.get_column_letter(c)
                     ws.column_dimensions[col_letter].hidden = True
 
-        out = BytesIO()
-        wb.save(out)
-        out.seek(0)
-        return out
+        # Set scroll position for unfrozen pane (topLeftCell)
+        target_scroll_col = None
+
+        # 1. If target_months specified, scroll to first target month in the target year
+        if target_months:
+            first_m = target_months[0].strip().lower()
+            for c in range(start_year_col, end_year_col + 1):
+                m_val = None
+                for col_idx in range(c, 19, -1):
+                    val = ws.cell(row=2, column=col_idx).value
+                    if val:
+                        m_val = str(val).strip().lower()
+                        break
+                if m_val == first_m:
+                    target_scroll_col = c
+                    break
+
+        # 2. Default scroll position for 12-month export is the CURRENT calendar month (e.g. July) in target year
+        if not target_scroll_col:
+            current_month_name = datetime.date.today().strftime("%B").lower()
+            for c in range(start_year_col, end_year_col + 1):
+                m_val = None
+                for col_idx in range(c, 19, -1):
+                    val = ws.cell(row=2, column=col_idx).value
+                    if val:
+                        m_val = str(val).strip().lower()
+                        break
+                if m_val == current_month_name:
+                    target_scroll_col = c
+                    break
+
+        # 3. Fallback to start of target year if current month not found
+        if not target_scroll_col:
+            target_scroll_col = start_year_col
+
+        if ws.sheet_view and ws.sheet_view.pane:
+            target_col_letter = openpyxl.utils.get_column_letter(target_scroll_col)
+            ws.sheet_view.pane.topLeftCell = f"{target_col_letter}1"
+
+        # ─────────────────────────────────────────────────────────────────────────
+        # Complete Excel Export with DrawingML Floating Shapes (Arrows & TextBoxes)
+        # ─────────────────────────────────────────────────────────────────────────
+        out_base = BytesIO()
+        wb.save(out_base)
+        out_base.seek(0)
+
+        # Load template drawing1.xml and drawing1.xml.rels
+        template_drawing_bytes = None
+        template_rels_bytes = None
+        if os.path.exists(excel_path):
+            try:
+                with zipfile.ZipFile(excel_path, 'r') as ztmpl:
+                    if 'xl/drawings/drawing1.xml' in ztmpl.namelist():
+                        template_drawing_bytes = ztmpl.read('xl/drawings/drawing1.xml')
+                    if 'xl/drawings/_rels/drawing1.xml.rels' in ztmpl.namelist():
+                        template_rels_bytes = ztmpl.read('xl/drawings/_rels/drawing1.xml.rels')
+            except Exception:
+                pass
+
+        if not template_drawing_bytes:
+            return out_base
+
+        try:
+            updated_drawing_bytes = update_drawing_xml(template_drawing_bytes, db_assignments, member_rows, col_widths)
+            out_final = BytesIO()
+            with zipfile.ZipFile(out_base, 'r') as zin:
+                with zipfile.ZipFile(out_final, 'w', compression=zipfile.ZIP_DEFLATED) as zout:
+                    has_drawing = False
+                    has_drawing_rels = False
+                    has_sheet_rels = False
+
+                    sheet_rels_content = (
+                        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+                        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                        '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/>'
+                        '</Relationships>'
+                    )
+
+                    for item in zin.infolist():
+                        data = zin.read(item.filename)
+                        if item.filename == 'xl/worksheets/sheet1.xml':
+                            xml_str = data.decode('utf-8')
+                            if 'xmlns:r=' not in xml_str:
+                                xml_str = xml_str.replace('<worksheet', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"', 1)
+                            if '<drawing' not in xml_str:
+                                xml_str = xml_str.replace('</worksheet>', '<drawing r:id="rId2"/></worksheet>')
+                            zout.writestr(item.filename, xml_str.encode('utf-8'))
+
+                        elif item.filename == 'xl/worksheets/_rels/sheet1.xml.rels':
+                            xml_str = data.decode('utf-8')
+                            if 'drawing1.xml' not in xml_str:
+                                xml_str = xml_str.replace(
+                                    '</Relationships>',
+                                    '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>'
+                                )
+                            zout.writestr(item.filename, xml_str.encode('utf-8'))
+                            has_sheet_rels = True
+
+                        elif item.filename == '[Content_Types].xml':
+                            xml_str = data.decode('utf-8')
+                            if 'drawing1.xml' not in xml_str:
+                                xml_str = xml_str.replace(
+                                    '</Types>',
+                                    '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>'
+                                )
+                            zout.writestr(item.filename, xml_str.encode('utf-8'))
+
+                        elif item.filename == 'xl/drawings/drawing1.xml':
+                            zout.writestr(item.filename, updated_drawing_bytes)
+                            has_drawing = True
+
+                        elif item.filename == 'xl/drawings/_rels/drawing1.xml.rels':
+                            if template_rels_bytes:
+                                zout.writestr(item.filename, template_rels_bytes)
+                                has_drawing_rels = True
+                            else:
+                                zout.writestr(item.filename, data)
+                        else:
+                            zout.writestr(item.filename, data)
+
+                    if not has_drawing and updated_drawing_bytes:
+                        zout.writestr('xl/drawings/drawing1.xml', updated_drawing_bytes)
+                    if not has_drawing_rels and template_rels_bytes:
+                        zout.writestr('xl/drawings/_rels/drawing1.xml.rels', template_rels_bytes)
+                    if not has_sheet_rels:
+                        zout.writestr('xl/worksheets/_rels/sheet1.xml.rels', sheet_rels_content)
+
+            out_final.seek(0)
+            return out_final
+        except Exception as err:
+            print(f"[EXCEL-EXPORT-WARNING] Failed to inject DrawingML shapes: {err}")
+            out_base.seek(0)
+            return out_base

@@ -45,11 +45,11 @@ const DEFAULT_CLIENT_KEMCO: ClientInfo = {
 }
 
 const DEFAULT_BASE_RATES: BaseRates = {
-  timeChargeRate2D: 2700,
-  timeChargeRate3D: 2700,
-  timeChargeRateOthers: 0,
+  timeChargeRate2D: 2800,
+  timeChargeRate3D: 2800,
+  timeChargeRateOthers: 2800,
   otHoursMultiplier: 1.3,
-  overtimeRate: 3300,
+  overtimeRate: 3640,
   softwareRate: 500,
   overheadPercentage: 20,
 }

@@ -562,6 +562,13 @@ export const notificationApi = {
   deleteNotification: (id: number) => api.delete(`/notifications/${id}`).then(r => r.data),
   deleteAllNotifications: () => api.delete('/notifications').then(r => r.data),
   testNotifications: () => api.post('/notifications/test').then(r => r.data),
+  broadcastNotification: (payload: {
+    category: string
+    title: string
+    message: string
+    target_role?: string
+    link?: string
+  }) => api.post('/notifications/broadcast', payload).then(r => r.data),
 }
 
 export const chatApi = {
@@ -601,6 +608,10 @@ export const chatApi = {
     api.delete<any>(`/chat/threads/dm/${peer}`).then(r => r.data),
   deleteGroup: (groupId: number) =>
     api.delete<any>(`/chat/threads/group/${groupId}`).then(r => r.data),
+  pinMessage: (msgId: number) =>
+    api.post<any>(`/chat/messages/${msgId}/pin`),
+  getThreadMedia: (peer?: string | null, groupId?: number | null) =>
+    api.get<any>('/chat/media', { params: { peer: peer || undefined, group_id: groupId || undefined } }),
 }
 
 

@@ -8,6 +8,9 @@
  * Storage: localStorage key `kmti_equipped_skin_<computerName>` = achievement key string
  */
 
+import { useState } from 'react'
+import { API_BASE } from '../../services/api'
+
 export interface AvatarSkin {
   key: string;
   label: string;        // Display name in the picker
@@ -1132,7 +1135,7 @@ function SkinTagapagma() {
       </defs>
       <rect width="100" height="100" fill="url(#sk-taga-bg)" />
       <g opacity="0.2" stroke="#F59E0B" strokeWidth="0.5">
-        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <><line key={`v${v}`} x1={v} y1="0" x2={v} y2="100" /><line key={`h${v}`} x1="0" y1={v} x2="100" y2={v} /></>)}
+        {[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => <g key={v}><line x1={v} y1="0" x2={v} y2="100" /><line x1="0" y1={v} x2="100" y2={v} /></g>)}
       </g>
       <g opacity="0.5" fill="#F59E0B" fontSize="4" fontFamily="monospace">
         <text x="2" y="13">01</text><text x="2" y="53">05</text><text x="2" y="93">09</text>
@@ -1584,16 +1587,67 @@ export function getUnlockedSkins(
   });
 }
 
-/** Render the equipped skin for a workstation, falling back to rookie */
+/** Session cache of FMS identifiers that returned 404 — prevents repeated requests. */
+const noFmsProfileCache = new Set<string>();
+
+function AvatarImageOrSkin({
+  computerName,
+  achievements,
+  equippedSkinOverride,
+  profilePictureUrl
+}: {
+  computerName: string;
+  achievements: Record<string, boolean> | undefined | null;
+  equippedSkinOverride?: string;
+  profilePictureUrl?: string;
+}) {
+  const [imgError, setImgError] = useState(false);
+
+  const cachedMiss = profilePictureUrl && noFmsProfileCache.has(profilePictureUrl);
+
+  if (profilePictureUrl && !imgError && !cachedMiss) {
+    // Use profilePictureUrl as the FMS identifier (username OR fullName).
+    // The endpoint accepts both: WHERE username = x OR fullName = x.
+    // computerName is kept separately as the localStorage key for the skin fallback.
+    const avatarUrl = profilePictureUrl.startsWith('http')
+      ? profilePictureUrl
+      : `${API_BASE}/fms/users/avatar/${encodeURIComponent(profilePictureUrl)}`;
+    return (
+      <img
+        src={avatarUrl}
+        alt="User Profile"
+        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+        onError={() => {
+          if (profilePictureUrl) noFmsProfileCache.add(profilePictureUrl);
+          setImgError(true);
+        }}
+      />
+    );
+  }
+
+  // No profile picture (or cached 404) — render the equippedSkin.
+  // Use computerName (e.g. "TIGER") as the localStorage key to find the user's chosen skin.
+  const equippedKey = equippedSkinOverride || loadEquippedSkin(computerName);
+  const unlocked = getUnlockedSkins(computerName, achievements);
+  const skin = unlocked.find(s => s.key === equippedKey) ?? unlocked[0];
+  return skin.render();
+}
+
+/** Render the equipped skin for a workstation, falling back to rookie or uploaded profile picture */
 export function renderEquippedSkin(
   computerName: string,
   achievements: Record<string, boolean> | undefined | null,
-  equippedSkinOverride?: string
+  equippedSkinOverride?: string,
+  profilePictureUrl?: string
 ): React.ReactNode {
-  const equippedKey = equippedSkinOverride || loadEquippedSkin(computerName);
-  const unlocked = getUnlockedSkins(computerName, achievements);
-  const skin = unlocked.find(s => s.key === equippedKey) ?? unlocked[0]; // fallback to rookie
-  return skin.render();
+  return (
+    <AvatarImageOrSkin
+      computerName={computerName}
+      achievements={achievements}
+      equippedSkinOverride={equippedSkinOverride}
+      profilePictureUrl={profilePictureUrl}
+    />
+  );
 }
 
 export function getEquippedSkin(

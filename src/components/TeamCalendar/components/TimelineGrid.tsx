@@ -199,119 +199,184 @@ export default function TimelineGrid({
           </tr>
         </thead>
         <tbody>
-          {timelineMembers.map((member) => (
-            <tr key={member}>
-              <td className="timeline-member-col">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '6px' }}>
-                    {member}
-                  </span>
-                  {canWrite && (
-                    <div className="member-row-actions" style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setRenamingEmployee(member)
-                        }}
+          {timelineMembers.map((member, memberIdx) => {
+            const showAdditionalHeader = memberIdx === 6
+            return (
+              <React.Fragment key={member}>
+                {showAdditionalHeader && (
+                  <tr className="additional-members-header-row">
+                    <td
+                      className="timeline-member-col"
+                      style={{
+                        padding: '6px 12px',
+                        color: 'var(--primary, #3b82f6)',
+                        fontWeight: 700,
+                        fontSize: '11px',
+                        letterSpacing: '0.8px',
+                        textTransform: 'uppercase',
+                        background: 'rgba(59, 130, 246, 0.15)',
+                        borderTop: '1px solid rgba(59, 130, 246, 0.3)',
+                        borderBottom: '1px solid rgba(59, 130, 246, 0.3)'
+                      }}
+                    >
+                      Additional Members
+                    </td>
+                    {timelineDays.map((d) => (
+                      <td
+                        key={`add-hdr-${d.col_index}`}
+                        className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''}`}
                         style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--text-secondary, rgba(255,255,255,0.6))',
-                          cursor: 'pointer',
-                          padding: '2px 4px',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
+                          background: 'rgba(59, 130, 246, 0.05)',
+                          borderTop: '1px solid rgba(59, 130, 246, 0.2)',
+                          borderBottom: '1px solid rgba(59, 130, 246, 0.2)'
                         }}
-                        title={`Rename ${member}`}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                          <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteEmployee(member)
-                        }}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--danger, #ef4444)',
-                          cursor: 'pointer',
-                          padding: '2px 4px',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}
-                        title={`Remove ${member}`}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                      </button>
+                      />
+                    ))}
+                  </tr>
+                )}
+                <tr>
+                  <td className="timeline-member-col">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflow: 'hidden', minWidth: 0 }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {member}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            window.dispatchEvent(
+                              new CustomEvent('open-chat-with', {
+                                detail: { username: member, displayName: member }
+                              })
+                            )
+                          }}
+                          title={`Start chat with ${member}`}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#3b82f6',
+                            opacity: 0.75,
+                            padding: '2px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            flexShrink: 0
+                          }}
+                        >
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                          </svg>
+                        </button>
+                      </div>
+                      {canWrite && (
+                        <div className="member-row-actions" style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setRenamingEmployee(member)
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--text-secondary, rgba(255,255,255,0.6))',
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title={`Rename ${member}`}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteEmployee(member)
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--danger, #ef4444)',
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                            title={`Remove ${member}`}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </td>
-              {timelineDays.map((d, index) => {
-                const assignment = d.assignments[member] || ''
-                const dayStatus = d.assignments['__day_status__'] || ''
-                const statusClass = dayStatus ? `col-status-${dayStatus.toLowerCase()}` : ''
+                  </td>
+                  {timelineDays.map((d, index) => {
+                    const assignment = d.assignments[member] || ''
+                    const dayStatus = d.assignments['__day_status__'] || ''
+                    const statusClass = dayStatus ? `col-status-${dayStatus.toLowerCase()}` : ''
 
-                // Check if this cell is currently within the drag range
-                let isHighlighted = false
-                if (dragStartCell && dragStartCell.member === member && dragHoverCol !== null) {
-                  const start = Math.min(dragStartCell.colIndex, dragHoverCol)
-                  const end = Math.max(dragStartCell.colIndex, dragHoverCol)
-                  isHighlighted = d.col_index >= start && d.col_index <= end
-                }
-
-                const isArrow = assignment === '-->'
-                let isArrowEnd = false
-                if (isArrow) {
-                  // Look ahead to check if there are any further arrow segments
-                  let foundFurtherArrow = false
-                  for (let i = index + 1; i < timelineDays.length; i++) {
-                    const nextAssign = timelineDays[i].assignments[member] || ''
-                    if (nextAssign === '-->') {
-                      foundFurtherArrow = true
-                      break
+                    // Check if this cell is currently within the drag range
+                    let isHighlighted = false
+                    if (dragStartCell && dragStartCell.member === member && dragHoverCol !== null) {
+                      const start = Math.min(dragStartCell.colIndex, dragHoverCol)
+                      const end = Math.max(dragStartCell.colIndex, dragHoverCol)
+                      isHighlighted = d.col_index >= start && d.col_index <= end
                     }
-                    if (nextAssign === '') {
-                      break
-                    }
-                  }
-                  if (!foundFurtherArrow) {
-                    isArrowEnd = true
-                  }
-                }
 
-                return (
-                  <TimelineCell
-                    key={d.col_index}
-                    colIndex={d.col_index}
-                    member={member}
-                    assignment={assignment}
-                    isHighlighted={isHighlighted}
-                    isToday={isToday(d)}
-                    dayClass={`${getDayClass(d)} ${statusClass}`}
-                    isArrow={isArrow}
-                    isArrowEnd={isArrowEnd}
-                    onMouseDown={handleMouseDown}
-                    onMouseEnter={handleMouseEnter}
-                    onMouseUp={handleMouseUpCell}
-                  />
-                )
-              })}
-            </tr>
-          ))}
+                    const isArrow = assignment === '-->'
+                    let isArrowEnd = false
+                    if (isArrow) {
+                      // Look ahead to check if there are any further arrow segments
+                      let foundFurtherArrow = false
+                      for (let i = index + 1; i < timelineDays.length; i++) {
+                        const nextAssign = timelineDays[i].assignments[member] || ''
+                        if (nextAssign === '-->') {
+                          foundFurtherArrow = true
+                          break
+                        }
+                        if (nextAssign === '') {
+                          break
+                        }
+                      }
+                      if (!foundFurtherArrow) {
+                        isArrowEnd = true
+                      }
+                    }
+
+                    return (
+                      <TimelineCell
+                        key={d.col_index}
+                        colIndex={d.col_index}
+                        member={member}
+                        assignment={assignment}
+                        isHighlighted={isHighlighted}
+                        isToday={isToday(d)}
+                        dayClass={`${getDayClass(d)} ${statusClass}`}
+                        isArrow={isArrow}
+                        isArrowEnd={isArrowEnd}
+                        onMouseDown={handleMouseDown}
+                        onMouseEnter={handleMouseEnter}
+                        onMouseUp={handleMouseUpCell}
+                      />
+                    )
+                  })}
+                </tr>
+              </React.Fragment>
+            )
+          })}
         </tbody>
       </table>
 

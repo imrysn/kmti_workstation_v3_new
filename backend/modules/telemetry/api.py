@@ -461,6 +461,20 @@ async def get_all_status(include_offline: bool = False, db: AsyncSession = Depen
         .order_by(WorkstationStatus.last_ping.desc())
     )
     statuses = result.scalars().all()
+
+    # Map usernames to FMS profile pictures from kmtifms
+    fms_profile_map = {}
+    try:
+        from db.database import FmsAsyncSessionLocal
+        from models.fms import FmsUser
+        async with FmsAsyncSessionLocal() as fms_db:
+            fms_res = await fms_db.execute(select(FmsUser.username, FmsUser.profile_picture))
+            for u_name, pic in fms_res.all():
+                if u_name and pic:
+                    fms_profile_map[u_name.lower()] = pic
+    except Exception as e:
+        logger.warning(f"Failed to map FMS profile pictures for workstations: {e}")
+
     # active_names is computed against a strict 5 min window for streaks
     five_mins_ago = datetime.now() - timedelta(minutes=5)
     active_names = [s.computer_name for s in statuses if s.computer_name and s.last_ping and s.last_ping >= five_mins_ago]
@@ -472,6 +486,7 @@ async def get_all_status(include_offline: bool = False, db: AsyncSession = Depen
                 "computer_name": s.computer_name or s.ip_address,
                 "current_user": s.current_user,
                 "display_name": s.display_name,
+                "profile_picture": fms_profile_map.get((s.current_user or '').lower()),
                 "active_module": s.active_module,
                 "version": s.version,
                 "status_message": s.status_message,

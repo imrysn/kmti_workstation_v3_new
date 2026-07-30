@@ -222,6 +222,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
     dragStartCell,
     dragHoverCol,
     setIsAddingJob,
+    setIsAddingEmployee,
     filteredJobs,
     getDayClass,
     isToday,
@@ -343,22 +344,19 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
               </select>
             )}
             {canWrite && (
-              // Fix #6: button disabled until feature is implemented
               <button
                 className="btn-schedule-action primary"
-                disabled
-                title="Feature coming soon"
+                onClick={() => setIsAddingEmployee(true)}
+                title="Add a new member to the work schedule"
                 style={{
                   padding: '4px 12px',
                   borderRadius: '6px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  cursor: 'not-allowed',
-                  marginLeft: '8px',
-                  opacity: 0.5
+                  marginLeft: '8px'
                 }}
               >
-                + Add Employee
+                + Add Members
               </button>
             )}
           </div>

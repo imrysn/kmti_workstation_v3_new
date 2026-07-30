@@ -304,3 +304,73 @@ class ChatService:
         msg.reactions = json.dumps(reactions)
         await db.commit()
         return msg
+
+    @staticmethod
+    async def pin_message(db: AsyncSession, current_username: str, msg_id: int):
+        result = await db.execute(select(ChatMessage).where(ChatMessage.id == msg_id))
+        msg = result.scalar_one_or_none()
+        if not msg:
+            raise ValueError("Message not found")
+        
+        msg.is_pinned = not msg.is_pinned
+        msg.pinned_by = current_username if msg.is_pinned else None
+        await db.commit()
+        return msg
+
+    @staticmethod
+    async def get_thread_media(db: AsyncSession, current_username: str, peer: Optional[str] = None, group_id: Optional[int] = None):
+        if group_id is not None:
+            stmt = select(ChatMessage).where(and_(ChatMessage.group_id == group_id, ChatMessage.is_deleted == False))
+        elif peer == "__global__":
+            stmt = select(ChatMessage).where(and_(ChatMessage.recipient == "__global__", ChatMessage.is_deleted == False))
+        elif peer:
+            stmt = select(ChatMessage).where(
+                and_(
+                    or_(
+                        and_(ChatMessage.sender == current_username, ChatMessage.recipient == peer),
+                        and_(ChatMessage.sender == peer, ChatMessage.recipient == current_username)
+                    ),
+                    ChatMessage.is_deleted == False
+                )
+            )
+        else:
+            raise ValueError("Either peer or group_id is required")
+
+        result = await db.execute(stmt.order_by(ChatMessage.id.desc()))
+        messages = result.scalars().all()
+
+        media = []
+        files = []
+        links = []
+
+        import re
+        url_regex = re.compile(r'https?://[^\s]+')
+
+        for m in messages:
+            if m.attachment_path and m.attachment_name:
+                filename = m.attachment_name.lower()
+                is_img_vid = any(filename.endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm'])
+                item = {
+                    "id": m.id,
+                    "sender": m.sender,
+                    "name": m.attachment_name,
+                    "path": m.attachment_path,
+                    "created_at": m.created_at.isoformat() if m.created_at else None
+                }
+                if is_img_vid:
+                    media.append(item)
+                else:
+                    files.append(item)
+
+            if m.content:
+                urls = url_regex.findall(m.content)
+                for u in urls:
+                    links.append({
+                        "id": m.id,
+                        "sender": m.sender,
+                        "url": u,
+                        "created_at": m.created_at.isoformat() if m.created_at else None
+                    })
+
+        return {"media": media, "files": files, "links": links}
+

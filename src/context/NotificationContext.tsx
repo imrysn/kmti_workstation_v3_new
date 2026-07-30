@@ -88,6 +88,18 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       await notificationApi.testNotifications()
     }
 
+    ;(window as any).sendBroadcast = async (payload?: { category?: string; title?: string; message?: string; target_role?: string; link?: string }) => {
+      console.log('Sending test broadcast notification to yourself via console...')
+      const res = await notificationApi.broadcastNotification({
+        category: payload?.category || 'UPDATE',
+        title: payload?.title || 'Software Update Available: v3.8.8',
+        message: payload?.message || 'New features and improvements are live!',
+        target_role: payload?.target_role || 'me',
+        link: payload?.link || '/whats-new'
+      })
+      console.log('Broadcast result:', res)
+    }
+
     fetchNotifications()
 
     const socket = io(SERVER_BASE, {

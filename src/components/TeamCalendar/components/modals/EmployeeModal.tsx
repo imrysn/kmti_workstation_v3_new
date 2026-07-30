@@ -54,16 +54,16 @@ export default function EmployeeModal() {
     <div className="schedule-modal-overlay" style={{ zIndex: 99999 }}>
       <form className="schedule-modal-card" onSubmit={handleSubmit} style={{ width: '380px' }}>
         <h3 className="schedule-modal-title">
-          {isAddingEmployee ? 'Add New Employee' : `Rename Employee`}
+          {isAddingEmployee ? 'Add New Member' : `Rename Member`}
         </h3>
 
         <div className="schedule-form-group" style={{ marginTop: '15px' }}>
-          <label>Employee Name</label>
+          <label>Member Name</label>
           <input
             type="text"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
-            placeholder="Enter employee name"
+            placeholder="Enter member name"
             required
             autoFocus
           />
@@ -84,7 +84,7 @@ export default function EmployeeModal() {
             className="btn-schedule-action primary"
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : isAddingEmployee ? 'Add Employee' : 'Rename'}
+            {isSaving ? 'Saving...' : isAddingEmployee ? 'Add Member' : 'Rename'}
           </button>
         </div>
       </form>

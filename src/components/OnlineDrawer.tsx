@@ -7,7 +7,7 @@ import AchievementUnlockModal from './AchievementUnlockModal'
 import AvatarPickerModal from './AvatarPickerModal'
 import ChatBox from './ChatBox'
 import { useModal } from './ModalContext'
-import { renderEquippedSkin } from './Achievement'
+import { renderEquippedSkin, getEquippedSkin } from './Achievement'
 import './OnlineDrawer.css'
 
 import { useDrawerState } from '../hooks/useDrawerState'
@@ -134,6 +134,20 @@ export default function OnlineDrawer() {
       socket.off('connect', doAuth);
     };
   }, [user, token]);
+
+  // Global listener for opening chat from anywhere in the app (TitleBar Pill, Work Schedule, etc.)
+  useEffect(() => {
+    const handleOpenChatCustom = (e: any) => {
+      const { username, displayName, groupId } = e.detail || {};
+      if (username || groupId !== undefined) {
+        handleOpenChat(username || null, displayName || username || 'Group Chat', groupId ?? null);
+      }
+    };
+    window.addEventListener('open-chat-with', handleOpenChatCustom as EventListener);
+    return () => {
+      window.removeEventListener('open-chat-with', handleOpenChatCustom as EventListener);
+    };
+  }, [handleOpenChat]);
 
   // Socket.io listeners for incoming chats/groups
   useEffect(() => {
@@ -322,7 +336,7 @@ export default function OnlineDrawer() {
 
   const filteredWorkstations = useMemo(() => {
     const fiveMinsAgo = Date.now() - (5 * 60 * 1000);
-    
+
     // Deduplicate by current_user (fallback to computer_name or IP) to show only the latest session per user
     const latestWsMap = new Map<string, typeof workstations[0]>();
     workstations.forEach(ws => {
@@ -331,7 +345,7 @@ export default function OnlineDrawer() {
       const existing = latestWsMap.get(key);
       const pingTime = ws.last_ping ? new Date(ws.last_ping).getTime() : 0;
       const existingPingTime = existing?.last_ping ? new Date(existing.last_ping).getTime() : 0;
-      
+
       // If we already have an ONLINE record for this user, and the new one is OFFLINE, keep the online one.
       // Otherwise, pick the most recent ping.
       const isExistingOnline = existingPingTime >= fiveMinsAgo && existing?.active_module !== 'offline';
@@ -361,24 +375,18 @@ export default function OnlineDrawer() {
         return u.includes(term) || comp.includes(term) || mod.includes(term);
       })
       .sort((a, b) => {
-        if (activeTab === 'offline') {
-          const tA = a.last_ping ? new Date(a.last_ping).getTime() : 0;
-          const tB = b.last_ping ? new Date(b.last_ping).getTime() : 0;
-          return tB - tA;
-        }
-        const statusA = getStatusClass(a.last_ping, a.active_module);
-        const statusB = getStatusClass(b.last_ping, b.active_module);
+        // Always pin the current user's workstation at the top
+        const aMine = a.computer_name === myComputerName && myComputerName !== '';
+        const bMine = b.computer_name === myComputerName && myComputerName !== '';
+        if (aMine && !bMine) return -1;
+        if (!aMine && bMine) return 1;
 
-        const rank: Record<string, number> = { 'status-active': 2, 'status-offline': 1 };
-        const rankA = rank[statusA] || 0;
-        const rankB = rank[statusB] || 0;
-        if (rankA !== rankB) return rankB - rankA;
-
-        const nameA = a.current_user || 'Guest';
-        const nameB = b.current_user || 'Guest';
+        // Sort remaining entries A-Z by display name / username
+        const nameA = (a.display_name || a.current_user || a.computer_name || '').toLowerCase();
+        const nameB = (b.display_name || b.current_user || b.computer_name || '').toLowerCase();
         return nameA.localeCompare(nameB);
       });
-  }, [workstations, searchQuery, activeTab]);
+  }, [workstations, searchQuery, activeTab, myComputerName]);
 
   const filteredGroups = useMemo(() => {
     const groupThreads = threads.filter(t => t.type === 'group');
@@ -395,18 +403,58 @@ export default function OnlineDrawer() {
   return (
     <>
       <div className={`received-waves-toasts-container${isOpen ? ' drawer-open' : ''}`} aria-live="polite">
-        {toasts.map(toast => (
-          <div key={toast.id} className="wave-received-toast">
-            {toast.type === 'login' ? <div className="wave-toast-icon-login">🟢</div> : <div className="wave-toast-hand">👋</div>}
-            <div className="wave-toast-content">
-              {toast.type === 'login' ? (
-                <><span className="wave-toast-sender">{toast.sender}</span> is online</>
-              ) : (
-                <><span className="wave-toast-sender">{toast.sender}</span> waved at you!</>
-              )}
+        {toasts.map(toast => {
+          const isLogin = toast.type === 'login';
+          const isLogout = toast.type === 'logout';
+          const variantClass = isLogin ? 'toast-online' : isLogout ? 'toast-offline' : 'toast-wave';
+
+          const ws = workstations.find(w =>
+            (w.current_user && w.current_user.toLowerCase() === toast.sender?.toLowerCase()) ||
+            (w.display_name && w.display_name.toLowerCase() === toast.sender?.toLowerCase()) ||
+            (w.computer_name && w.computer_name.toLowerCase() === toast.sender?.toLowerCase())
+          );
+          // Only pass a real picture URL — never a username string. A non-URL string
+          // causes AvatarImageOrSkin to construct /fms/users/avatar/<computerName> which 404s.
+          const avatarNode = ws
+            ? renderEquippedSkin(
+                ws.computer_name || ws.ip_address,  // computerName — localStorage skin key
+                ws.achievements,
+                ws.equipped_skin,
+                ws.current_user  // profilePictureUrl — FMS identifier (username or fullName)
+              )
+            : renderEquippedSkin(toast.sender || '', null, 'rookie');
+
+          const wsAchievements = ws?.achievements ?? null;
+          const wsEquippedSkin = ws?.equipped_skin;
+          const skin = getEquippedSkin(ws?.computer_name || ws?.ip_address || toast.sender || '', wsAchievements, wsEquippedSkin);
+          const rarityColor: Record<string, string> = {
+            common: '#648b67ff', rare: '#8b5cf6', legendary: '#f59e0b', exclusive: '#ef4444'
+          };
+          const ringColor = rarityColor[skin.rarity] ?? '#64748b';
+
+          return (
+            <div key={toast.id} className={`wave-received-toast ${variantClass}`}>
+              <div className="wave-toast-avatar-wrapper">
+                <div
+                  className={`wave-toast-avatar-skin rarity-ring rarity-${skin.rarity}`}
+                >
+                  {avatarNode}
+                </div>
+                {isLogin && <span className="toast-badge-dot online" title="Online">🟢</span>}
+                {isLogout && <span className="toast-badge-dot offline" title="Offline">🔴</span>}
+              </div>
+              <div className="wave-toast-content">
+                {isLogin ? (
+                  <><span className="wave-toast-sender">{toast.sender}</span> logged in</>
+                ) : isLogout ? (
+                  <><span className="wave-toast-sender">{toast.sender}</span> logged out</>
+                ) : (
+                  <><span className="wave-toast-sender">{toast.sender}</span> waved at you!</>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {isOpen && (
@@ -434,9 +482,9 @@ export default function OnlineDrawer() {
             </div>
 
             <div className="online-drawer-tabs">
-              <button className={`drawer-tab ${activeTab === 'chats' ? 'active' : ''}`} onClick={() => setActiveTab('chats')}>Chats</button>
-              <button className={`drawer-tab ${activeTab === 'online' ? 'active' : ''}`} onClick={() => setActiveTab('online')}>Online</button>
-              <button className={`drawer-tab ${activeTab === 'offline' ? 'active' : ''}`} onClick={() => setActiveTab('offline')}>Offline</button>
+              <button className={`drawer-tab ${activeTab === 'chats' ? 'active' : ''}`} onClick={() => { setActiveTab('chats'); setSearchQuery(''); }}>Chats</button>
+              <button className={`drawer-tab ${activeTab === 'online' ? 'active' : ''}`} onClick={() => { setActiveTab('online'); setSearchQuery(''); fetchWorkstations(); }}>Online</button>
+              <button className={`drawer-tab ${activeTab === 'offline' ? 'active' : ''}`} onClick={() => { setActiveTab('offline'); setSearchQuery(''); fetchWorkstations(); }}>Offline</button>
             </div>
 
             <div className="online-drawer-search-wrapper">
@@ -489,7 +537,6 @@ export default function OnlineDrawer() {
                               <span className="global-chat-title">{g.name}</span>
                               <span className="global-chat-subtitle">{subtitle}</span>
                             </div>
-                            {unread > 0 && <span className="drawer-unread-badge">{unread}</span>}
                             <button className="chat-thread-delete-btn" onClick={(e) => handleDeleteConversation(e, null, g.group_id)} title="Delete conversation">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -519,7 +566,7 @@ export default function OnlineDrawer() {
                           <div key={`dm_${dmUsername}`} className={`global-chat-entry-card dm-card ${status} ${unread > 0 ? 'is-unread' : 'is-read'}`} onClick={() => handleOpenChat(dmUsername, displayName)}>
                             <div className="global-chat-icon" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px' }}>
                               <div className="user-avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden' }}>
-                                {ws ? renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin) : renderEquippedSkin('', null, 'rookie')}
+                                {ws ? renderEquippedSkin(ws.current_user || ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin, (ws as any).profile_picture || ws.current_user) : renderEquippedSkin(dmUsername, null, 'rookie', dmUsername)}
                               </div>
                               <span className={`status-badge-dot ${status}`} style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', border: '1.5px solid var(--bg-primary)', borderRadius: '50%' }}></span>
                             </div>
@@ -527,7 +574,6 @@ export default function OnlineDrawer() {
                               <span className="global-chat-title">{displayName}</span>
                               <span className="global-chat-subtitle">{subtitle}</span>
                             </div>
-                            {unread > 0 && <span className="drawer-unread-badge">{unread}</span>}
                             <button className="chat-thread-delete-btn" onClick={(e) => handleDeleteConversation(e, dmUsername, null)} title="Delete conversation">
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -562,7 +608,6 @@ export default function OnlineDrawer() {
                         getStatusLabel={getStatusLabel}
                         stripEmoji={stripEmoji}
                         onOpenChat={handleOpenChat}
-                        unreadCount={ws.current_user ? chatUnreadCounts[ws.current_user] : 0}
                       />
                     );
                   })

@@ -50,11 +50,11 @@ export function calculateTaskTotal(
     }
   }
 
-  // Original Special Logic
   const getRate = (type: string) => {
-    if (type === '2D') return baseRates.timeChargeRate2D
-    if (type === '3D' || type === '3D/2D' || !type) return baseRates.timeChargeRate3D
-    return baseRates.timeChargeRateOthers || 0
+    if (type === '2D') return baseRates.timeChargeRate2D || 2800
+    if (type === '3D/2D') return baseRates.timeChargeRateOthers || 2800
+    if (type === '3D' || !type) return baseRates.timeChargeRate3D || 2800
+    return baseRates.timeChargeRateOthers || baseRates.timeChargeRate3D || 2800
   }
 
   const subTasks = task.isMainTask

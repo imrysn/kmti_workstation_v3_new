@@ -68,6 +68,8 @@ async def get_chat_history(
                 "is_read": msg.is_read,
                 "is_edited": msg.is_edited,
                 "is_deleted": msg.is_deleted,
+                "is_pinned": getattr(msg, "is_pinned", False),
+                "pinned_by": getattr(msg, "pinned_by", None),
                 "reply_to_id": msg.reply_to_id,
                 "reactions": msg.reactions,
                 "created_at": msg.created_at.isoformat() if msg.created_at else None
@@ -394,6 +396,40 @@ async def react_to_message(
     from socket_manager import broadcast_mutation
     await broadcast_mutation("chat_message", "react", {"id": msg_id, "reactions": msg.reactions})
     return {"success": True}
+
+@router.get("/media")
+async def get_thread_media(
+    peer: Optional[str] = Query(None),
+    group_id: Optional[int] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Retrieve all shared media, documents/files, and extracted links for a thread."""
+    try:
+        return await ChatService.get_thread_media(db, current_user.username, peer, group_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/messages/{msg_id}/pin")
+async def pin_message(
+    msg_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Toggle pin status of a message in a conversation thread."""
+    try:
+        msg = await ChatService.pin_message(db, current_user.username, msg_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    
+    from socket_manager import broadcast_mutation
+    await broadcast_mutation("chat_message", "pin", {
+        "id": msg_id,
+        "is_pinned": msg.is_pinned,
+        "pinned_by": msg.pinned_by
+    })
+    return {"success": True, "is_pinned": msg.is_pinned}
+
 
 @sio.on("user_typing")
 async def handle_user_typing(sid: str, data: dict):

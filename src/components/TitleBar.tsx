@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useModal } from './ModalContext'
 import { useNotifications } from '../context/NotificationContext'
 import NotificationPopup from './NotificationPopup'
+import TeammatesPill from './TeammatesPill'
 import logo from '../assets/kmti_logo.png'
 import { teamCalendarApi } from '../services/teamCalendarService'
 import './TitleBar.css'
@@ -108,19 +109,9 @@ export default function TitleBar() {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0)
   const [isOnlineOpen, setIsOnlineOpen] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [isServerOnline, setIsServerOnline] = useState(true)
   const [isNotifOpen, setIsNotifOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const { unreadCount } = useNotifications()
-
-  useEffect(() => {
-    const handleServerStatus = (e: Event) => {
-      const customEvent = e as CustomEvent
-      setIsServerOnline(!!customEvent.detail?.online)
-    }
-    window.addEventListener('kmti:server-status', handleServerStatus)
-    return () => window.removeEventListener('kmti:server-status', handleServerStatus)
-  }, [])
 
   useEffect(() => {
     const handleStatusChange = (e: Event) => {
@@ -213,11 +204,6 @@ export default function TitleBar() {
       <div className="titlebar-app-info" style={{ pointerEvents: 'auto' }}>
         <img src={logo} alt="K" className="titlebar-logo-img" style={{ height: '20px', width: 'auto', objectFit: 'contain', pointerEvents: 'none' }} />
         <span className="titlebar-title" style={{ pointerEvents: 'none' }}>KMTI Workstation</span>
-        <span 
-          className={`server-status-dot ${isServerOnline ? 'online' : 'offline'}`} 
-          title={isServerOnline ? "Connected to KMTI Server" : "Disconnected from KMTI Server (Reconnecting...)"}
-          style={{ cursor: 'pointer' }}
-        />
       </div>
 
       <nav className="titlebar-nav">
@@ -281,6 +267,9 @@ export default function TitleBar() {
             <div className="titlebar-user-info">
               <span className="user-role">{user.role.replace(/_/g, ' ')}</span>
             </div>
+
+            {/* Live Teammates Pill */}
+            <TeammatesPill />
           </>
         )}
 
@@ -505,23 +494,6 @@ export default function TitleBar() {
                 <line x1="12" y1="14" x2="16" y2="14" transform="translate(0, -5) scale(0.7)" />
               </svg>
             </NavLink>
-          )}
-
-          {user && (
-            <button
-              className={`titlebar-btn${isOnlineOpen ? ' active' : ''}`}
-              onClick={() => window.dispatchEvent(new CustomEvent('kmti:toggle-online-drawer'))}
-              title="Who's Online"
-              style={{ position: 'relative' }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="2" />
-                <path d="M4.93 4.93a10 10 0 0 0 0 14.14" />
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                <path d="M7.76 7.76a6 6 0 0 0 0 8.49" />
-                <path d="M16.24 7.76a6 6 0 0 1 0 8.49" />
-              </svg>
-            </button>
           )}
 
           {user && (
