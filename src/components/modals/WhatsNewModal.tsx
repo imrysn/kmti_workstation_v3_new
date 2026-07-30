@@ -32,12 +32,20 @@ export default function WhatsNewModal() {
       // Global Trigger
       ; (window as any).showWhatsNew = () => setVisible(true)
 
+      const handleOpenEvent = () => setVisible(true)
+      window.addEventListener('open-whats-new-modal', handleOpenEvent)
+
     // Show if user has NOT ticked "Do not show again" for THIS version
     const shouldShow = !(dismissed === 'true' && dismissedVersion === currentVersion)
     if (shouldShow) {
       const t = setTimeout(() => setVisible(true), 600)
-      return () => clearTimeout(t)
+      return () => {
+        clearTimeout(t)
+        window.removeEventListener('open-whats-new-modal', handleOpenEvent)
+      }
     }
+
+    return () => window.removeEventListener('open-whats-new-modal', handleOpenEvent)
   }, [currentVersion])
 
   function handleClose() {

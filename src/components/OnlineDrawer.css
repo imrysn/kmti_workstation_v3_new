@@ -291,6 +291,194 @@ body.void-theme .user-avatar {
   box-shadow: 0 4px 10px rgba(255, 0, 64, 0.15);
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Immersive 360° Dual-Layer Rotating Cyberpunk Rarity Ring Engine
+   ────────────────────────────────────────────────────────────── */
+
+@keyframes rotateRarityRing {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rotateRarityRingRev {
+  0% {
+    transform: rotate(360deg);
+  }
+
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes rarityAuraPulse {
+
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+/* Base Ring Wrapper */
+.rarity-ring {
+  position: relative !important;
+  z-index: 1 !important;
+  padding: 2px !important;
+  border-radius: 50% !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+/* Force all inner children (avatar img / svg skin) to clip neatly inside the spinning ring */
+.rarity-ring>* {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  position: relative !important;
+  z-index: 2 !important;
+  background: var(--bg-primary, #ffffff);
+  display: block !important;
+}
+
+/* Inner Spinning Gradient Border Ring */
+.rarity-ring::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: 50% !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease;
+}
+
+/* Outer Spinning Blurred Glow Aura */
+.rarity-ring::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: -2px !important;
+  border-radius: 50% !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  filter: blur(2px);
+  opacity: 0.65;
+}
+
+/* ── COMMON TIER (Dark Slate to Bright Steel) ── */
+.rarity-common::before {
+  background: conic-gradient(from 0deg, #48505e 0%, #475569 30%, #94a3b8 50%, #bfc4ca 60%, #475569 80%, #535963 100%);
+  animation: rotateRarityRing 8s linear infinite;
+}
+
+.rarity-common::after {
+  background: conic-gradient(from 180deg, #4d5768, #475569, #94a3b8, #5c6a81);
+  animation: rotateRarityRingRev 10s linear infinite;
+  filter: blur(1.5px);
+  opacity: 0.4;
+}
+
+/* ── RARE TIER (Deep Purple to Glowing Lilac) ── */
+.rarity-rare::before {
+  background: conic-gradient(from 0deg, #4b19a8 0%, #581c87 25%, #8b5cf6 50%, #ab62fa 65%, #7e22ce 85%, #4b17ac 100%);
+  animation: rotateRarityRing 3s linear infinite;
+}
+
+.rarity-rare::after {
+  background: conic-gradient(from 180deg, #4919a1 0%, #8b5cf6 50%, #b26ffa 75%, #4e18b1 100%);
+  animation: rotateRarityRingRev 10.5s linear infinite, rarityAuraPulse 2s ease-in-out infinite;
+  filter: blur(2px);
+  opacity: 0.7;
+}
+
+/* ── LEGENDARY TIER (Deep Bronze to Radiant Gold) ── */
+.rarity-legendary::before {
+  background: conic-gradient(from 0deg, #451a03 0%, #92400e 25%, #f59e0b 50%, #fef08a 65%, #d97706 85%, #451a03 100%);
+  animation: rotateRarityRing 2.4s linear infinite;
+}
+
+.rarity-legendary::after {
+  background: conic-gradient(from 180deg, #451a03 0%, #f59e0b 50%, #fef08a 75%, #451a03 100%);
+  animation: rotateRarityRingRev 3.6s linear infinite, rarityAuraPulse 2.2s ease-in-out infinite;
+  filter: blur(2.5px);
+  opacity: 0.75;
+}
+
+/* ── EXCLUSIVE TIER (Deep Crimson to Cyber Neon Fire) ── */
+@keyframes exclusiveGlitch {
+
+  0%,
+  100% {
+    filter: contrast(1.1) brightness(1);
+  }
+
+  25% {
+    filter: contrast(1.35) brightness(1.25) hue-rotate(10deg);
+  }
+
+  50% {
+    filter: contrast(1) brightness(0.95);
+  }
+
+  75% {
+    filter: contrast(1.4) brightness(1.3) hue-rotate(-10deg);
+  }
+}
+
+.rarity-exclusive::before {
+  background: conic-gradient(from 0deg, #cf003b 0%, #9f1239 20%, #ef4444 40%, #f97316 55%, #ff3c53 65%, #e11d48 85%, #c7033a 100%);
+  animation: rotateRarityRing 10s linear infinite, exclusiveGlitch 1.5s ease-in-out infinite;
+}
+
+.rarity-exclusive::after {
+  background: conic-gradient(from 90deg, #f10346 0%, #ef4444 40%, #f93816 65%, #f00749 100%);
+  animation: rotateRarityRingRev 10s linear infinite, rarityAuraPulse 1.6s ease-in-out infinite;
+  filter: blur(3px);
+  opacity: 0.8;
+}
+
+/* Override phc-avatar-frame when rarity-ring is active so static border doesn't clash */
+.phc-avatar-frame.rarity-ring {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Theme Overrides ── */
+body.dark-theme .rarity-rare::after {
+  filter: blur(2.5px);
+  opacity: 0.8;
+}
+
+body.dark-theme .rarity-legendary::after {
+  filter: blur(3px);
+  opacity: 0.85;
+}
+
+body.dark-theme .rarity-exclusive::after {
+  filter: blur(3.5px);
+  opacity: 0.9;
+}
+
+body.void-theme .rarity-common::before {
+  background: linear-gradient(135deg, #64748b, #cbd5e1);
+}
+
+body.void-theme .rarity-exclusive::after {
+  filter: blur(12px);
+  opacity: 1;
+}
+
 .status-badge-dot {
   position: absolute;
   bottom: 0;
@@ -623,6 +811,42 @@ body.void-theme .wave-received-toast {
   animation: toastHandWave 1s infinite alternate ease-in-out;
 }
 
+.wave-toast-avatar-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.wave-toast-avatar-skin {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.wave-toast-avatar-skin svg,
+.wave-toast-avatar-skin img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.toast-badge-dot {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  font-size: 10px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
 .wave-toast-content {
   font-weight: 550;
 }
@@ -632,7 +856,74 @@ body.void-theme .wave-received-toast {
   color: var(--accent);
 }
 
-.wave-toast-icon-login {
+/* Glassmorphism Variants - Online (Green Border & Tint) */
+.wave-received-toast.toast-online {
+  background: rgba(236, 253, 245, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1.5px solid rgba(16, 185, 129, 0.65);
+  box-shadow: 0 10px 28px -4px rgba(16, 185, 129, 0.25), 0 0 16px rgba(16, 185, 129, 0.12);
+}
+
+.wave-received-toast.toast-online .wave-toast-sender {
+  color: #047857;
+}
+
+body.dark-theme .wave-received-toast.toast-online {
+  background: rgba(6, 78, 59, 0.85);
+  border: 1.5px solid rgba(52, 211, 153, 0.7);
+  box-shadow: 0 10px 30px -4px rgba(52, 211, 153, 0.3), 0 0 18px rgba(52, 211, 153, 0.18);
+}
+
+body.dark-theme .wave-received-toast.toast-online .wave-toast-sender {
+  color: #34d399;
+}
+
+body.void-theme .wave-received-toast.toast-online {
+  background: rgba(6, 40, 30, 0.92);
+  border: 1.5px solid rgba(16, 185, 129, 0.85);
+  box-shadow: 0 10px 30px -4px rgba(16, 185, 129, 0.4), 0 0 22px rgba(16, 185, 129, 0.25);
+}
+
+body.void-theme .wave-received-toast.toast-online .wave-toast-sender {
+  color: #34d399;
+}
+
+/* Glassmorphism Variants - Offline (Red Border & Tint) */
+.wave-received-toast.toast-offline {
+  background: rgba(254, 242, 242, 0.92);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1.5px solid rgba(239, 68, 68, 0.65);
+  box-shadow: 0 10px 28px -4px rgba(239, 68, 68, 0.25), 0 0 16px rgba(239, 68, 68, 0.12);
+}
+
+.wave-received-toast.toast-offline .wave-toast-sender {
+  color: #b91c1c;
+}
+
+body.dark-theme .wave-received-toast.toast-offline {
+  background: rgba(127, 29, 29, 0.85);
+  border: 1.5px solid rgba(248, 113, 113, 0.7);
+  box-shadow: 0 10px 30px -4px rgba(248, 113, 113, 0.3), 0 0 18px rgba(248, 113, 113, 0.18);
+}
+
+body.dark-theme .wave-received-toast.toast-offline .wave-toast-sender {
+  color: #f87171;
+}
+
+body.void-theme .wave-received-toast.toast-offline {
+  background: rgba(40, 6, 6, 0.92);
+  border: 1.5px solid rgba(239, 68, 68, 0.85);
+  box-shadow: 0 10px 30px -4px rgba(239, 68, 68, 0.4), 0 0 22px rgba(239, 68, 68, 0.25);
+}
+
+body.void-theme .wave-received-toast.toast-offline .wave-toast-sender {
+  color: #f87171;
+}
+
+.wave-toast-icon-login,
+.wave-toast-icon-logout {
   font-size: 16px;
   animation: pulseLogin 2s infinite;
 }
@@ -768,66 +1059,249 @@ body.void-theme .shift-ticker-container {
   }
 }
 
-/* Achievements Tooltip styling */
-.avatar-container {
-  position: relative;
-}
-
-/* Base tooltip styles shared between portal and legacy */
-.avatar-achievements-tooltip {
-  width: 280px;
-  max-height: 380px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* ──────────────────────────────────────────────────────────────
+   Profile Hover Card (replaces plain achievements tooltip)
+   ────────────────────────────────────────────────────────────── */
+.profile-hover-card {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.18), 0 2px 10px rgba(0, 0, 0, 0.07);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  pointer-events: none;
-  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 12px;
+  animation: phcFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Portal variant — position is set inline via JS, no :hover needed */
-.avatar-achievements-tooltip.portal-tooltip {
-  position: fixed;
-  z-index: 9999;
+body.dark-theme .profile-hover-card {
+  background: rgba(15, 23, 42, 0.96);
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Tooltip arrow pointing right (toward the avatar) */
-.avatar-achievements-tooltip::after {
-  content: '';
+body.void-theme .profile-hover-card {
+  background: rgba(8, 8, 12, 0.97);
+  border-color: rgba(255, 0, 64, 0.15);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 0, 64, 0.1);
+}
+
+@keyframes phcFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.96) translateX(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1) translateX(0);
+  }
+}
+
+/* Arrow pointing right toward the avatar */
+.profile-hover-arrow {
   position: absolute;
   top: 50%;
-  left: 100%;
+  right: -6px;
   transform: translateY(-50%);
-  border-width: 6px;
-  border-style: solid;
-  border-color: transparent transparent transparent rgba(255, 255, 255, 0.95);
+  width: 0;
+  height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-left: 6px solid rgba(255, 255, 255, 0.94);
+  filter: drop-shadow(1px 0 1px rgba(0, 0, 0, 0.05));
 }
 
-body.dark-theme .avatar-achievements-tooltip::after {
-  border-color: transparent transparent transparent rgba(15, 23, 42, 0.95);
+body.dark-theme .profile-hover-arrow {
+  border-left-color: rgba(15, 23, 42, 0.96);
 }
 
-body.void-theme .avatar-achievements-tooltip::after {
-  border-color: transparent transparent transparent rgba(10, 10, 12, 0.95);
+body.void-theme .profile-hover-arrow {
+  border-left-color: rgba(8, 8, 12, 0.97);
 }
 
-/* Tooltip dark and void theme overrides */
-body.dark-theme .avatar-achievements-tooltip {
-  background: rgba(15, 23, 42, 0.95);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+/* Avatar + name row */
+.phc-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-body.void-theme .avatar-achievements-tooltip {
-  background: rgba(10, 10, 12, 0.95);
-  border-color: rgba(255, 0, 64, 0.2);
-  box-shadow: 0 12px 32px rgba(255, 0, 64, 0.15);
+.phc-avatar-frame {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 2.5px solid var(--rarity-color, #64748b);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--rarity-color, #64748b) 18%, transparent), 0 4px 14px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+  transition: box-shadow 0.2s ease;
+}
+
+.phc-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.phc-display-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phc-username {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.phc-status-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.phc-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.phc-status-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Divider */
+.phc-divider {
+  height: 1px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 1px;
+}
+
+body.dark-theme .phc-divider {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body.void-theme .phc-divider {
+  background: rgba(255, 0, 64, 0.1);
+}
+
+/* Skin name inline pill — no avatar icon */
+.phc-skin-inline {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 5px 9px;
+}
+
+body.dark-theme .phc-skin-inline {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.void-theme .phc-skin-inline {
+  background: rgba(255, 0, 64, 0.04);
+  border-color: rgba(255, 0, 64, 0.08);
+}
+
+.phc-skin-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* Footer: module + version */
+.phc-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.phc-module {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.phc-version {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1px 5px;
+  border-radius: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+body.dark-theme .phc-version {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+body.void-theme .phc-version {
+  background: rgba(255, 0, 64, 0.08);
+  color: #ff0040;
+}
+
+/* Rarity badges */
+.phc-rarity-badge {
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  width: fit-content;
+}
+
+.phc-rarity-badge.common {
+  background: rgba(100, 116, 139, 0.1);
+  color: #64748b;
+}
+
+.phc-rarity-badge.rare {
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+}
+
+.phc-rarity-badge.legendary {
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+.phc-rarity-badge.exclusive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* Keep legacy classes for backward compat */
+.avatar-achievements-tooltip {
+  display: none;
 }
 
 .tooltip-header {
@@ -1273,35 +1747,39 @@ body.void-theme .global-chat-entry-card:hover {
   box-shadow: 0 4px 12px rgba(255, 0, 64, 0.15);
 }
 
-/* --- Unread Highlighted Style --- */
+/* --- Unread Highlighted Style (Modern Bold Messaging App Style) --- */
 .global-chat-entry-card.is-unread {
-  background: linear-gradient(135deg, rgba(0, 153, 255, 0.08), rgba(99, 102, 241, 0.08));
-  border-color: rgba(0, 153, 255, 0.25);
-  box-shadow: 0 0 10px rgba(0, 153, 255, 0.08);
+  background: linear-gradient(135deg, rgba(0, 153, 255, 0.09), rgba(99, 102, 241, 0.06));
+  border-color: rgba(0, 153, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 153, 255, 0.1);
 }
 
 body.dark-theme .global-chat-entry-card.is-unread {
-  background: linear-gradient(135deg, rgba(0, 153, 255, 0.12), rgba(99, 102, 241, 0.12));
-  border-color: rgba(0, 153, 255, 0.35);
+  background: linear-gradient(135deg, rgba(0, 153, 255, 0.14), rgba(99, 102, 241, 0.1));
+  border-color: rgba(56, 189, 248, 0.4);
 }
 
 body.void-theme .global-chat-entry-card.is-unread {
-  background: linear-gradient(135deg, rgba(255, 0, 64, 0.1), rgba(255, 0, 64, 0.05));
-  border-color: rgba(255, 0, 64, 0.3);
+  background: linear-gradient(135deg, rgba(255, 0, 64, 0.12), rgba(255, 0, 64, 0.06));
+  border-left-color: #ff0040 !important;
+  border-color: rgba(255, 0, 64, 0.35);
 }
 
 .global-chat-entry-card.is-unread:hover {
-  background: linear-gradient(135deg, rgba(0, 153, 255, 0.15), rgba(99, 102, 241, 0.15));
-  border-color: rgba(0, 153, 255, 0.4);
+  background: linear-gradient(135deg, rgba(0, 153, 255, 0.16), rgba(99, 102, 241, 0.14));
+  border-color: rgba(0, 153, 255, 0.5);
 }
 
 .global-chat-entry-card.is-unread .global-chat-title {
-  font-weight: 800;
+  font-weight: 800 !important;
+  font-size: 13.5px;
+  color: var(--text-primary);
 }
 
 .global-chat-entry-card.is-unread .global-chat-subtitle {
-  color: var(--text-primary);
-  font-weight: 600;
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+  opacity: 0.95;
 }
 
 .global-chat-icon {

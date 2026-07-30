@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { chatApi, SERVER_BASE } from '../services/api'
 import { renderEquippedSkin } from './Achievement'
+import { ThreadSettingsModal } from './OnlineDrawer/ThreadSettingsModal'
+import { useModal } from './ModalContext'
 import './ChatBox.css'
 
 interface ChatBoxProps {
@@ -185,17 +188,32 @@ export default function ChatBox({
   const [chatMessages, setChatMessages] = useState<any[]>([])
   const [chatInputText, setChatInputText] = useState('')
   const [chatAttachments, setChatAttachments] = useState<{ path: string; name: string }[]>([])
+  const { confirm: showConfirmModal } = useModal()
   const [isUploading, setIsUploading] = useState(false)
   const [replyToMsg, setReplyToMsg] = useState<any>(null)
   const [editingMsgId, setEditingMsgId] = useState<number | null>(null)
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
   const [activeMenuMsgId, setActiveMenuMsgId] = useState<number | null>(null)
   const [activeReactionMsgId, setActiveReactionMsgId] = useState<number | null>(null)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [lightboxImage, setLightboxImage] = useState<{ url: string; name: string } | null>(null)
+  const [showPinnedList, setShowPinnedList] = useState(false)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const chatBoxBodyRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<any>(null)
+
+  const handlePin = async (msgId: number) => {
+    try {
+      const res = await chatApi.pinMessage(msgId)
+      if (res.data) {
+        setChatMessages(prev => prev.map(m => m.id === msgId ? { ...m, is_pinned: res.data.is_pinned, pinned_by: currentUsername } : m))
+      }
+    } catch (err) {
+      console.error('Failed to pin message:', err)
+    }
+  }
 
   // Scroll to bottom when messages update (instant, no animation)
   useEffect(() => {
@@ -204,7 +222,7 @@ export default function ChatBox({
     }
   }, [chatMessages, typingUsers])
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or Escape key
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement
@@ -214,10 +232,30 @@ export default function ChatBox({
           setActiveReactionMsgId(null)
         }
       }
+      if (showPinnedList) {
+        if (!target.closest('.chat-pinned-banner-multi-container')) {
+          setShowPinnedList(false)
+        }
+      }
     }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (lightboxImage) setLightboxImage(null)
+        if (showSettingsModal) setShowSettingsModal(false)
+        if (showPinnedList) setShowPinnedList(false)
+        setActiveMenuMsgId(null)
+        setActiveReactionMsgId(null)
+      }
+    }
+
     document.addEventListener('click', handleOutsideClick)
-    return () => document.removeEventListener('click', handleOutsideClick)
-  }, [activeMenuMsgId, activeReactionMsgId])
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('click', handleOutsideClick)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [activeMenuMsgId, activeReactionMsgId, lightboxImage, showSettingsModal, showPinnedList])
 
   // Load chat history on mount/peer/group change
   useEffect(() => {
@@ -273,6 +311,8 @@ export default function ChatBox({
           setChatMessages(prev => prev.map(m => m.id === payload.data.id ? { ...m, is_deleted: true, content: 'This message was deleted.', attachment_path: null, attachment_name: null } : m))
         } else if (payload.action === 'react') {
           setChatMessages(prev => prev.map(m => m.id === payload.data.id ? { ...m, reactions: payload.data.reactions } : m))
+        } else if (payload.action === 'pin') {
+          setChatMessages(prev => prev.map(m => m.id === payload.data.id ? { ...m, is_pinned: payload.data.is_pinned, pinned_by: payload.data.pinned_by } : m))
         }
       }
     }
@@ -409,7 +449,7 @@ export default function ChatBox({
 
       setIsUploading(true)
       try {
-        const newAttachments = []
+        const newAttachments: { path: string; name: string }[] = []
         for (const file of toUpload) {
           const formData = new FormData()
           formData.append('file', file)
@@ -427,14 +467,21 @@ export default function ChatBox({
     }
   }
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this message?")) {
-      try {
-        await chatApi.deleteMessage(id)
-      } catch (err) {
-        console.error("Failed to delete", err)
-      }
-    }
+  const handleDelete = (id: number) => {
+    showConfirmModal(
+      'Are you sure you want to delete this message?',
+      async () => {
+        try {
+          await chatApi.deleteMessage(id)
+        } catch (err) {
+          console.error('Failed to delete message:', err)
+        }
+      },
+      undefined,
+      'danger',
+      'Delete Message',
+      'Delete'
+    )
   }
 
   const handleReact = async (id: number, emoji: string) => {
@@ -480,9 +527,9 @@ export default function ChatBox({
       <div className="chat-box-header">
         <div className="chat-box-header-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', position: 'relative' }}>
           {groupId !== null ? (
-            '👥'
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
           ) : peer === '__global__' ? (
-            '🌐'
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
           ) : (
             <>
               <div
@@ -497,9 +544,14 @@ export default function ChatBox({
                 }}
               >
                 {peerStatus ? (
-                  renderEquippedSkin(peerStatus.computer_name || peerStatus.ip_address, peerStatus.achievements, peerStatus.equipped_skin)
+                  renderEquippedSkin(
+                    peerStatus.computer_name || peerStatus.ip_address,
+                    peerStatus.achievements,
+                    peerStatus.equipped_skin,
+                    peerStatus.current_user || undefined
+                  )
                 ) : (
-                  renderEquippedSkin('', null, 'rookie')
+                  renderEquippedSkin(peer || '', null, 'rookie', peer || undefined)
                 )}
               </div>
               <span
@@ -521,6 +573,14 @@ export default function ChatBox({
           <span className="chat-box-header-name">{peerLabel}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button
+            className="display-name-pencil-btn"
+            onClick={() => setShowSettingsModal(true)}
+            title="Shared Media, Files & Links"
+            style={{ fontSize: '13px', border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: 'var(--text-muted)' }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
+          </button>
           {groupId !== null && onEditGroup && (
             <button
               className="display-name-pencil-btn"
@@ -528,7 +588,7 @@ export default function ChatBox({
               title="Edit group members/name"
               style={{ fontSize: '14px', border: 'none', background: 'transparent', cursor: 'pointer' }}
             >
-              ⚙️
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
             </button>
           )}
           {onMinimize && (
@@ -536,16 +596,132 @@ export default function ChatBox({
               className="chat-box-header-minimize"
               onClick={onMinimize}
               title="Minimize chat"
-              style={{ fontSize: '16px', border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: 'var(--text-muted)' }}
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '0 4px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center' }}
             >
-              &minus;
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </button>
           )}
-          <button className="chat-box-header-close" onClick={onClose}>
-            &times;
+          <button className="chat-box-header-close" onClick={onClose} style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
       </div>
+
+      {/* Pinned Messages Sticky Banner & Multi-Pin Manager */}
+      {(() => {
+        const pinnedMessages = chatMessages.filter(m => m.is_pinned && !m.is_deleted).reverse()
+        if (pinnedMessages.length === 0) return null
+
+        if (pinnedMessages.length === 1) {
+          const pinnedMsg = pinnedMessages[0]
+          return (
+            <div
+              className="chat-pinned-banner"
+              onClick={() => {
+                const el = document.getElementById(`msg-${pinnedMsg.id}`)
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }}
+              title="Click to jump to pinned message"
+            >
+              <div className="pinned-left">
+                <span className="pinned-pin-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                </span>
+                <div className="pinned-info">
+                  <span className="pinned-author">{pinnedMsg.sender}</span>
+                  <span className="pinned-text">
+                    {pinnedMsg.content || (pinnedMsg.attachment_name ? 'Attachment' : '')}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="pinned-unpin-btn"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handlePin(pinnedMsg.id)
+                }}
+                title="Unpin message"
+                style={{ display: 'inline-flex', alignItems: 'center' }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          )
+        }
+
+        const latestPinned = pinnedMessages[0]
+        return (
+          <div className="chat-pinned-banner-multi-container" style={{ position: 'relative' }}>
+            <div
+              className="chat-pinned-banner"
+              onClick={() => setShowPinnedList(!showPinnedList)}
+              title="Click to view all pinned messages"
+            >
+              <div className="pinned-left">
+                <span className="pinned-pin-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                </span>
+                <div className="pinned-info">
+                  <span className="pinned-author">{pinnedMessages.length} Pinned Messages</span>
+                  <span className="pinned-text">
+                    {latestPinned.sender}: {latestPinned.content || (latestPinned.attachment_name ? 'Attachment' : '')}
+                  </span>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--accent, #0084ff)', fontWeight: 600 }}>
+                <span>View All</span>
+                <span style={{ fontSize: '9px' }}>{showPinnedList ? '▲' : '▼'}</span>
+              </div>
+            </div>
+
+            {/* Pinned Messages Popover List */}
+            {showPinnedList && (
+              <div className="chat-pinned-popover-list">
+                <div className="pinned-popover-header">
+                  <span>Pinned Messages ({pinnedMessages.length})</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPinnedList(false)}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
+                </div>
+                <div className="pinned-popover-body">
+                  {pinnedMessages.map(msg => (
+                    <div
+                      key={msg.id}
+                      className="pinned-popover-item"
+                      onClick={() => {
+                        const el = document.getElementById(`msg-${msg.id}`)
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                        setShowPinnedList(false)
+                      }}
+                    >
+                      <div className="pinned-popover-item-content">
+                        <span className="pinned-item-sender">{msg.sender}</span>
+                        <span className="pinned-item-text">{msg.content || (msg.attachment_name ? 'Attachment' : '')}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="pinned-item-unpin"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handlePin(msg.id)
+                        }}
+                        title="Unpin message"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       <div className="chat-box-body" ref={chatBoxBodyRef}>
         {chatMessages.length === 0 ? (
@@ -613,7 +789,8 @@ export default function ChatBox({
               'chat-msg-bubble',
               !msg.content?.trim() && isImage ? 'image-only' : '',
               msg.is_deleted ? 'deleted-msg' : '',
-              isSingleEmoji ? 'single-emoji-msg' : ''
+              isSingleEmoji ? 'single-emoji-msg' : '',
+              msg.is_pinned ? 'is-pinned-msg' : ''
             ].filter(Boolean).join(' ')
 
             // Parse reactions JSON string
@@ -656,11 +833,11 @@ export default function ChatBox({
                 </button>
 
                 {activeReactionMsgId === msg.id && (
-                  <div className="chat-msg-actions-dropdown-menu" style={{ padding: '6px 8px' }}>
+                  <div className="chat-msg-actions-dropdown-menu chat-reaction-popover" style={{ padding: '6px 8px' }}>
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                       {SUPPORTED_EMOJIS.map(emoji => (
-                        <button 
-                          key={emoji} 
+                        <button
+                          key={emoji}
                           onClick={() => { handleReact(msg.id, emoji); setActiveReactionMsgId(null); }}
                           style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', transition: 'transform 0.15s ease' }}
                           className="reaction-pill-btn-inline"
@@ -678,6 +855,9 @@ export default function ChatBox({
                     <button onClick={() => { setReplyToMsg(msg); setActiveMenuMsgId(null); }} className="dropdown-item">
                       Reply
                     </button>
+                    <button onClick={() => { handlePin(msg.id); setActiveMenuMsgId(null); }} className="dropdown-item">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg> {msg.is_pinned ? 'Unpin Message' : 'Pin Message'}
+                    </button>
                     {isOutgoing && (
                       <>
                         <button onClick={() => { setEditingMsgId(msg.id); setChatInputText(msg.content); setActiveMenuMsgId(null); }} className="dropdown-item">
@@ -694,7 +874,7 @@ export default function ChatBox({
             ) : null;
 
             return (
-              <div key={msg.id || idx} style={{ display: 'flex', flexDirection: 'column' }}>
+              <div key={msg.id || idx} id={`msg-${msg.id}`} style={{ display: 'flex', flexDirection: 'column' }}>
                 {showDateHeader && msg.created_at && (
                   <div className="chat-date-divider">
                     <span>{formatDateHeader(msg.created_at)}</span>
@@ -721,6 +901,11 @@ export default function ChatBox({
                       )}
 
                       <div className={bubbleClasses}>
+                        {msg.is_pinned && (
+                          <span className="pinned-bubble-corner-icon" title={`Pinned by ${msg.pinned_by || 'user'}`}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                          </span>
+                        )}
                         <div className="bubble-content-text">
                           {isSingleEmoji ? (
                             <div className="single-emoji-display">
@@ -746,7 +931,7 @@ export default function ChatBox({
                               src={attachmentUrl}
                               alt={msg.attachment_name}
                               className="chat-msg-attachment-preview"
-                              onClick={() => window.open(attachmentUrl, '_blank')}
+                              onClick={() => setLightboxImage({ url: attachmentUrl, name: msg.attachment_name || 'Image' })}
                             />
                           ) : (
                             <div className="chat-msg-attachment">
@@ -802,9 +987,14 @@ export default function ChatBox({
                                 title={`Seen by ${peerLabel}`}
                               >
                                 {peerStatus ? (
-                                  renderEquippedSkin(peerStatus.computer_name || peerStatus.ip_address, peerStatus.achievements, peerStatus.equipped_skin)
+                                  renderEquippedSkin(
+                                    peerStatus.computer_name || peerStatus.ip_address,
+                                    peerStatus.achievements,
+                                    peerStatus.equipped_skin,
+                                    peerStatus.current_user || undefined
+                                  )
                                 ) : (
-                                  renderEquippedSkin('', null, 'rookie')
+                                  renderEquippedSkin(peer || '', null, 'rookie', peer || undefined)
                                 )}
                               </div>
                             ) : null
@@ -830,7 +1020,7 @@ export default function ChatBox({
           Array.from(typingUsers).map(user => (
             <div key={user} className="chat-msg-row incoming typing-indicator-row">
               <div className="user-avatar" style={{ width: '24px', height: '24px', borderRadius: '50%', overflow: 'hidden', marginRight: '8px' }}>
-                {renderEquippedSkin(user, null, 'rookie')}
+                {renderEquippedSkin(user, null, 'rookie', user)}
               </div>
               <div className="chat-msg-bubble typing-bubble">
                 <div className="bouncing-dots-container">
@@ -910,6 +1100,53 @@ export default function ChatBox({
           </button>
         </div>
       </form>
+
+      {showSettingsModal && (
+        <ThreadSettingsModal
+          peer={peer}
+          groupId={groupId}
+          peerLabel={peerLabel}
+          onClose={() => setShowSettingsModal(false)}
+        />
+      )}
+
+      {/* Custom In-App Lightbox Portal */}
+      {lightboxImage && createPortal(
+        <div className="chat-lightbox-overlay" onClick={() => setLightboxImage(null)}>
+          <div className="chat-lightbox-header" onClick={e => e.stopPropagation()}>
+            <span className="chat-lightbox-title">{lightboxImage.name}</span>
+            <div className="chat-lightbox-actions">
+              <a
+                href={lightboxImage.url}
+                download={lightboxImage.name}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="chat-lightbox-download-btn"
+                title="Download Image"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download
+              </a>
+              <button
+                type="button"
+                className="chat-lightbox-close-btn"
+                onClick={() => setLightboxImage(null)}
+                title="Close"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <img
+            src={lightboxImage.url}
+            alt={lightboxImage.name}
+            className="chat-lightbox-img"
+            onClick={e => e.stopPropagation()}
+          />
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

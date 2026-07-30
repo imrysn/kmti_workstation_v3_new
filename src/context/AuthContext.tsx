@@ -23,6 +23,7 @@ export interface AuthUser {
   username: string
   fullName: string
   displayName?: string
+  profilePicture?: string
   role: UserRole
 }
 
@@ -215,8 +216,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     setIsLoggingOut(true)
     
-    // Send offline heartbeat before clearing user
-    if (user) {
+    // Call backend logout API to broadcast logout event
+    if (user && token) {
+      try {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+      } catch (e) {}
+
       try {
         const body = new URLSearchParams()
         body.append('module', 'offline')

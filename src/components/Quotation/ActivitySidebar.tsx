@@ -70,7 +70,7 @@ export function ActivitySidebar({ userName, chatLog, workspaceName, onDeleteChat
       return pcName === lowerName || curUser === lowerName || dispName === lowerName
     })
     if (ws) {
-      return renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin)
+      return renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin, ws.current_user)
     }
     return null
   }

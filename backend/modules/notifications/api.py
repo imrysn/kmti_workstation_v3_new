@@ -4,13 +4,88 @@ from sqlalchemy.future import select
 from sqlalchemy import delete
 from typing import List
 
+from pydantic import BaseModel
+from typing import List, Optional
 from db.database import get_db
-from models.user import User
+from models.user import User, UserRole
 from core.auth import get_current_user
 from models.notification import AppNotification
 from socket_manager import sio, emit_to_user
 
 router = APIRouter()
+
+class BroadcastRequest(BaseModel):
+    category: str  # 'UPDATE', 'DOWNTIME', 'ANNOUNCEMENT'
+    title: str
+    message: str
+    target_role: Optional[str] = 'all'
+    link: Optional[str] = None
+
+@router.post("/broadcast")
+async def broadcast_notification(
+    payload: BroadcastRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Broadcast a system notification (Soft Updates, Server Downtime Notice, Admin Announcement).
+    Restricted to Admins or IT roles only.
+    """
+    if current_user.role not in (UserRole.admin, UserRole.it):
+        raise HTTPException(status_code=403, detail="Only Admins or IT personnel can broadcast system notifications.")
+
+    # Query target users
+    if payload.target_role in ('me', 'self'):
+        usernames = [current_user.username]
+    elif payload.target_role and payload.target_role != 'all':
+        stmt = select(User.username).where(User.role == payload.target_role)
+        res = await db.execute(stmt)
+        usernames = list(res.scalars().all())
+    else:
+        stmt = select(User.username)
+        res = await db.execute(stmt)
+        usernames = list(res.scalars().all())
+
+    if not usernames:
+        usernames = [current_user.username]
+
+    ref_type = (
+        'SYSTEM_UPDATE' if payload.category == 'UPDATE'
+        else ('SERVER_DOWNTIME' if payload.category == 'DOWNTIME'
+        else 'ADMIN_ANNOUNCEMENT')
+    )
+    default_link = '/whats-new' if payload.category == 'UPDATE' else payload.link
+
+    # Create notification records
+    notifications = [
+        AppNotification(
+            member_name=u,
+            reference_type=ref_type,
+            reference_id=payload.category,
+            title=payload.title,
+            message=payload.message,
+            link=default_link
+        )
+        for u in usernames
+    ]
+
+    db.add_all(notifications)
+    await db.commit()
+
+    # Emit real-time Socket.IO notification to each recipient
+    for u in usernames:
+        await emit_to_user(u, 'system_notification', {
+            'category': payload.category,
+            'title': payload.title,
+            'message': payload.message,
+            'link': default_link
+        })
+
+    return {
+        "success": True,
+        "recipient_count": len(usernames),
+        "message": f"Broadcast sent successfully to {len(usernames)} user(s)."
+    }
 
 @router.get("/")
 async def get_notifications(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):

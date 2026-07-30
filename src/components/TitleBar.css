@@ -23,7 +23,8 @@
   pointer-events: none;
   z-index: 1;
   flex-shrink: 0;
-  min-width: 240px; /* Preserve space for logo + title */
+  min-width: 240px;
+  /* Preserve space for logo + title */
 }
 
 .titlebar-logo {
@@ -61,12 +62,13 @@
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  font-size: 15px;
+  padding: 0 12px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 2px solid transparent;
   transition: all var(--transition);
+  white-space: nowrap;
 }
 
 .titlebar-link:hover {
@@ -86,6 +88,7 @@
 .titlebar-controls {
   display: flex;
   align-items: center;
+  gap: 5px;
   margin-left: auto;
   z-index: 1;
   flex-shrink: 0;
@@ -96,6 +99,7 @@
 .titlebar-controls-group {
   display: flex;
   align-items: center;
+  gap: 2px;
 }
 
 /* Burger wrapper — hidden by default, shown at 1024px via media query below */
@@ -240,10 +244,12 @@
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(0, 255, 127, 0.7);
   }
+
   70% {
     transform: scale(1);
     box-shadow: 0 0 0 10px rgba(0, 255, 127, 0);
   }
+
   100% {
     transform: scale(0.95);
     box-shadow: 0 0 0 0 rgba(0, 255, 127, 0);
@@ -255,13 +261,16 @@
   .nav-label.has-icon {
     display: none;
   }
+
   .titlebar-link {
     padding: 0 10px;
   }
+
   .titlebar-app-info {
     min-width: unset;
     padding-left: 12px;
   }
+
   .titlebar-nav {
     gap: 2px;
     margin-left: 0;
@@ -271,35 +280,43 @@
 /* Hide utility controls, show burger — triggers at Electron's min window width (1024px) */
 @media (max-width: 1024px) {
   .titlebar-app-info {
-    min-width: 160px; /* keep logo + title visible at min width */
+    min-width: 160px;
+    /* keep logo + title visible at min width */
     padding-left: 10px;
   }
+
   /* Hide the group of utility icon buttons — they move into the burger */
   .titlebar-controls-group {
     display: none;
   }
+
   /* Show the burger button */
   .titlebar-burger-wrapper {
     display: flex;
   }
+
   /* More breathing room for nav icons now that controls-group is gone */
   .titlebar-nav {
     gap: 16px;
   }
+
   .titlebar-link {
     padding: 0 18px;
   }
+
   /* Role badge takes precious space at min width — hide it */
   .titlebar-user-info,
   .titlebar-notif-btn {
     display: none;
   }
+
   /* Update badge text is too wide at min width */
   .update-badge {
     font-size: 0;
     padding: 0 8px;
     gap: 4px;
   }
+
   .update-badge .pulse {
     display: block;
   }
@@ -307,8 +324,17 @@
 
 /* 🥚 Void armed: pulses orange before void fires */
 @keyframes void-arm-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(1.2); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
 }
 
 .titlebar-btn.void-armed {
@@ -351,9 +377,17 @@
 }
 
 @keyframes pulse-red {
-  0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-  70%  { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
 }
 
 .titlebar-nav-dropdown {
@@ -379,6 +413,7 @@
     opacity: 0;
     transform: translateY(-8px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);

@@ -1,0 +1,203 @@
+/* ═══════════════════════════════════════════════════════════════
+   AdminBroadcastModal.css — Dynamic Theme Aware Modal
+   ═══════════════════════════════════════════════════════════════ */
+
+.abm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100000;
+  animation: abm-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.abm-modal {
+  width: 92%;
+  max-width: 520px;
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1f2937);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
+  display: flex;
+  flex-direction: column;
+  animation: abm-slide-up 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+/* Dark Theme overrides */
+body.dark-theme .abm-modal {
+  background: var(--bg-secondary, #1c1c1e);
+  color: var(--text-primary, #f9fafb);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* Void Theme overrides */
+body.void-theme .abm-modal {
+  background: rgba(10, 0, 2, 0.96);
+  color: #ff2040;
+  border-color: rgba(255, 0, 64, 0.4);
+  box-shadow: 0 25px 50px -12px rgba(255, 0, 64, 0.25);
+}
+
+/* Header */
+.abm-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+}
+
+body.dark-theme .abm-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+body.void-theme .abm-header {
+  border-bottom-color: rgba(255, 0, 64, 0.2);
+}
+
+.abm-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #111827);
+}
+
+body.dark-theme .abm-title {
+  color: #ffffff;
+}
+
+body.void-theme .abm-title {
+  color: #ff2040;
+}
+
+.abm-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+}
+
+body.dark-theme .abm-subtitle {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+body.void-theme .abm-subtitle {
+  color: rgba(255, 0, 64, 0.6);
+}
+
+.abm-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-secondary, #4b5563);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+body.dark-theme .abm-close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+body.void-theme .abm-close-btn {
+  background: rgba(255, 0, 64, 0.12);
+  color: #ff2040;
+}
+
+.abm-close-btn:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+body.dark-theme .abm-close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Inputs & Form Controls */
+.abm-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: 6px;
+}
+
+body.dark-theme .abm-label {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+body.void-theme .abm-label {
+  color: rgba(255, 0, 64, 0.8);
+}
+
+.abm-input,
+.abm-select,
+.abm-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
+  background: var(--bg-secondary, #f9fafb);
+  color: var(--text-primary, #111827);
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+body.dark-theme .abm-input,
+body.dark-theme .abm-select,
+body.dark-theme .abm-textarea {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+body.void-theme .abm-input,
+body.void-theme .abm-select,
+body.void-theme .abm-textarea {
+  background: rgba(255, 0, 64, 0.05);
+  border-color: rgba(255, 0, 64, 0.3);
+  color: #ff2040;
+}
+
+.abm-input:focus,
+.abm-select:focus,
+.abm-textarea:focus {
+  border-color: #3b82f6;
+}
+
+body.void-theme .abm-input:focus,
+body.void-theme .abm-select:focus,
+body.void-theme .abm-textarea:focus {
+  border-color: #ff2040;
+}
+
+/* Animations */
+@keyframes abm-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes abm-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

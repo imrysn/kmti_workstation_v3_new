@@ -89,6 +89,12 @@ export function useHeartbeat() {
           module = `💤 ${module}`;
         }
 
+        // Optimistic update: notify the drawer immediately so the module label updates
+        // without waiting for the next 15s telemetry poll.
+        window.dispatchEvent(new CustomEvent('kmti:module-changed', {
+          detail: { computerName: computerNameRef.current, module }
+        }));
+
         const formData = new FormData();
         formData.append('module', module);
         // user_name stays as the stable auth identity (fullName or username) — never the

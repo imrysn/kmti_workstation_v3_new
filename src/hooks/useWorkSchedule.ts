@@ -109,8 +109,8 @@ export async function prefetchWorkScheduleData() {
     if (fetchTimeline) {
       isFetchingTimeline = true
       const monthNames = [
-        'january','february','march','april','may','june',
-        'july','august','september','october','november','december'
+        'january', 'february', 'march', 'april', 'may', 'june',
+        'july', 'august', 'september', 'october', 'november', 'december'
       ]
       fetches.push(
         scheduleApi.getTimeline()
@@ -122,7 +122,7 @@ export async function prefetchWorkScheduleData() {
                 if (mIdx !== -1) {
                   const year = d.year || new Date().getFullYear()
                   const date = new Date(year, mIdx, d.day)
-                  const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+                  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
                   return { ...d, weekday: weekdays[date.getDay()] }
                 }
                 return d
@@ -156,7 +156,7 @@ export function useWorkSchedule() {
   const [isLoadingComponents, setIsLoadingComponents] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = useState(false)
-  
+
   // Timeline State
   const [timelineMembers, setTimelineMembers] = useState<string[]>(cachedTimelineMembers)
   const [allTimelineDays, setAllTimelineDays] = useState<ITimelineDay[]>(cachedTimelineDays)
@@ -285,7 +285,7 @@ export function useWorkSchedule() {
       if (res.success) {
         setTimelineMembers(res.members)
         cachedTimelineMembers = res.members
-        
+
         const monthNames = [
           'january', 'february', 'march', 'april', 'may', 'june',
           'july', 'august', 'september', 'october', 'november', 'december'
@@ -304,7 +304,7 @@ export function useWorkSchedule() {
           }
           return d
         })
-        
+
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const sevenDaysAgo = new Date(today)
@@ -418,16 +418,16 @@ export function useWorkSchedule() {
       // 1. Search Query filter
       if (query) {
         const queryParts = query.split(',').map(q => q.trim()).filter(Boolean)
-        
+
         // Ensure the job matches at least one of the query parts
         const matchesAnyPart = queryParts.some(q => {
           const matchesJobId = j.job_id.toLowerCase().includes(q)
-          const matchesCompCode = j.components?.some(c => 
+          const matchesCompCode = j.components?.some(c =>
             c.unit_code.toLowerCase().includes(q)
           )
           return matchesJobId || matchesCompCode
         })
-        
+
         if (!matchesAnyPart) return false
       }
 
@@ -537,17 +537,17 @@ export function useWorkSchedule() {
     // Save previous state for rollback
     const rollbackComponents = [...components]
     const rollbackJobs = [...jobs]
-    
+
     // Optimistically update components state
     setComponents(prev => prev.map(c => c.id === editingComponent.id ? updatedComp : c))
-    
+
     // Optimistically update jobs state so the JobCard changes immediately
     setJobs(prevJobs => prevJobs.map(job => {
       if (job.job_id === editingComponent.job_id) {
-        const updatedComps = (job.components || []).map(c => 
+        const updatedComps = (job.components || []).map(c =>
           c.id === editingComponent.id ? updatedComp : c
         )
-        
+
         // Re-calculate stats
         const total = updatedComps.filter(c => c.unit_code.toUpperCase().trim() !== "POSTPONED").length
         const completed = updatedComps.filter(c => {
@@ -604,10 +604,10 @@ export function useWorkSchedule() {
       async () => {
         const rollbackComponents = [...components]
         const rollbackJobs = [...jobs]
-        
+
         // Optimistically update components state
         setComponents(prev => prev.filter(c => c.id !== comp.id))
-        
+
         // Optimistically update jobs state
         setJobs(prevJobs => prevJobs.map(job => {
           if (job.job_id === comp.job_id) {
@@ -911,13 +911,13 @@ export function useWorkSchedule() {
       if (res.success) {
         loadTimeline(true)
       } else {
-        throw new Error(res.message || "Failed to add employee")
+        throw new Error(res.message || "Failed to member")
       }
     } catch (err: any) {
       setTimelineMembers(rollbackMembers)
       setAllTimelineDays(rollbackDays)
       const errMsg = err.response?.data?.error || err.message
-      alert(`Failed to add employee: ${errMsg}`)
+      alert(`Failed to add member: ${errMsg}`)
     }
   }
 

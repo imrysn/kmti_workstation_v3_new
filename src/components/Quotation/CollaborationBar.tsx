@@ -54,7 +54,7 @@ export function CollaborationBar({ remoteUsers, myColor, userName, quotNo, isSyn
   const getCustomAvatar = (name: string) => {
     const ws = findWS(name)
     if (!ws) return null
-    return renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin)
+    return renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin, ws.current_user)
   }
 
   if (!quotNo) return null

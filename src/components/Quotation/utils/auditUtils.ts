@@ -45,7 +45,7 @@ const FIELD_LABELS: Record<string, string> = {
   // Base Rates
   'baseRates.timeChargeRate2D':     '2D Time Charge Rate',
   'baseRates.timeChargeRate3D':     '3D Time Charge Rate',
-  'baseRates.timeChargeRateOthers': 'Others Time Charge Rate',
+  'baseRates.timeChargeRateOthers': '3D/2D Time Charge Rate',
   'baseRates.otHoursMultiplier':    'OT Hours Multiplier',
   'baseRates.overtimeRate':         'Overtime Rate',
   'baseRates.softwareRate':         'Software Rate',

@@ -10,6 +10,8 @@ class FmsUserOut(BaseModel):
     role: str
     team: Optional[str]
     created_at: Optional[datetime]
+    profile_picture: Optional[str] = None
+    displayName: Optional[str] = None
 
     class Config:
         from_attributes = True

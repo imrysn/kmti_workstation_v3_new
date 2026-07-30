@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { WorkstationStatus, renderEquippedSkin } from '../Achievement';
+import { WorkstationStatus, renderEquippedSkin, getEquippedSkin } from '../Achievement';
 import { AchievementTooltipPortal } from './AchievementTooltip';
 import { getDisplayName } from '../../utils/nameUtils';
 
@@ -41,6 +41,12 @@ export function WorkstationCard({
   const isOutdated = ws.version && ws.version !== appVersion;
   const isOffline = status === 'status-offline';
 
+  const skin = getEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin);
+  const rarityColorMap: Record<string, string> = {
+    common: '#64748b', rare: '#8b5cf6', legendary: '#f59e0b', exclusive: '#ef4444'
+  };
+  const rarityRingColor = rarityColorMap[skin.rarity] ?? '#64748b';
+
   return (
     <div
       className={`online-user-card ${status} ${isOffline ? 'offline-card' : ''} ${(!isMe && ws.current_user) ? 'clickable' : ''}`}
@@ -51,8 +57,16 @@ export function WorkstationCard({
       }}
     >
       <div className="avatar-container" ref={avatarRef}>
-        <div className="user-avatar" style={isOffline ? { filter: 'grayscale(1)', opacity: 0.8 } : undefined}>
-          {renderEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin)}
+        <div
+          className={`user-avatar ${isOffline ? '' : `rarity-ring rarity-${skin.rarity}`}`}
+          style={isOffline ? { filter: 'grayscale(1)', opacity: 0.8 } : undefined}
+        >
+          {renderEquippedSkin(
+            ws.computer_name || ws.ip_address,  // computerName — localStorage skin key
+            ws.achievements,
+            ws.equipped_skin,
+            ws.current_user  // profilePictureUrl — FMS identifier (username or fullName)
+          )}
         </div>
         <span className={`status-badge-dot ${status}`} title={getStatusLabel(status)}></span>
 
@@ -77,6 +91,11 @@ export function WorkstationCard({
           computerName={ws.computer_name || ws.ip_address}
           achievements={ws.achievements}
           equippedSkin={ws.equipped_skin}
+          currentUser={ws.current_user}
+          displayName={ws.display_name || getDisplayName(ws.current_user || '') || undefined}
+          status={status}
+          activeModule={ws.active_module}
+          version={ws.version}
         />
       </div>
 
@@ -84,7 +103,6 @@ export function WorkstationCard({
         <div className="user-header-row">
           <span className="user-name" title={ws.computer_name || ws.ip_address}>
             {ws.display_name || getDisplayName(ws.current_user || '') || ws.current_user || ws.computer_name || ws.ip_address}
-            {unreadCount > 0 && <span className="card-unread-badge">{unreadCount}</span>}
             {ws.streaks?.includes(myComputerName) && (
               <span className="streak-flame active" title={`You have an active wave streak with ${ws.computer_name || 'this workstation'}! 🔥`}>
                 🔥

@@ -75,6 +75,16 @@ async def login(
             username=local_user.username, action="LOGIN",
             details="Successful login (local account)", ip_address=request.client.host
         )
+        try:
+            from socket_manager import sio
+            display_name = getattr(local_user, 'display_name', None) or local_user.username
+            await sio.emit("user_status_event", {
+                "type": "login",
+                "username": local_user.username,
+                "displayName": display_name,
+            })
+        except Exception:
+            pass
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -110,6 +120,16 @@ async def login(
             details=f"Successful login (FMS account, fullName='{fms_user.fullName}')",
             ip_address=request.client.host
         )
+        try:
+            from socket_manager import sio
+            display_name = fms_user.displayName or fms_user.fullName or fms_user.username
+            await sio.emit("user_status_event", {
+                "type": "login",
+                "username": fms_user.username,
+                "displayName": display_name,
+            })
+        except Exception:
+            pass
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -118,6 +138,7 @@ async def login(
                 "username": fms_user.username,
                 "fullName": fms_user.fullName,
                 "displayName": fms_user.displayName,
+                "profilePicture": fms_user.profile_picture,
                 "role": mapped_role,
             },
         }
@@ -132,6 +153,27 @@ async def login(
         detail="Incorrect username or password.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+@router.post("/logout")
+async def logout(request: Request, current_user=Depends(get_current_user)):
+    """Notify system that user logged out and record activity."""
+    try:
+        from socket_manager import sio
+        username = getattr(current_user, 'username', 'Unknown')
+        display_name = getattr(current_user, 'display_name', None) or getattr(current_user, 'displayName', None) or username
+        await log_activity(
+            username=username, action="LOGOUT",
+            details="User logged out", ip_address=request.client.host
+        )
+        await sio.emit("user_status_event", {
+            "type": "logout",
+            "username": username,
+            "displayName": display_name,
+        })
+    except Exception as e:
+        print(f"[AUTH LOGOUT] Error processing logout event: {e}")
+    return {"success": True}
 
 
 @router.get("/me")

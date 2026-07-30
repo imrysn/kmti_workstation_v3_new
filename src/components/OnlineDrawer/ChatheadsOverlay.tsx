@@ -77,9 +77,13 @@ export function ChatheadsOverlay({
       >
         <div className="chathead-avatar-wrapper" style={{ position: 'relative', width: '48px', height: '48px', cursor: 'pointer' }}>
           {chat.groupId !== null ? (
-            <div className="chathead-group-avatar" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent, #0099ff)', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>👥</div>
+            <div className="chathead-group-avatar" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent, #0099ff)', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
           ) : chat.peer === '__global__' ? (
-            <div className="chathead-group-avatar" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent, #0099ff)', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>🌐</div>
+            <div className="chathead-group-avatar" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '50%', background: 'var(--accent, #0099ff)', color: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
           ) : (
             <>
               <div
@@ -95,9 +99,14 @@ export function ChatheadsOverlay({
                 }}
               >
                 {peerStatus ? (
-                  renderEquippedSkin(peerStatus.computer_name || peerStatus.ip_address, peerStatus.achievements, peerStatus.equipped_skin)
+                  renderEquippedSkin(
+                    peerStatus.computer_name || peerStatus.ip_address,
+                    peerStatus.achievements,
+                    peerStatus.equipped_skin,
+                    peerStatus.current_user || undefined
+                  )
                 ) : (
-                  renderEquippedSkin('', null, 'rookie')
+                  renderEquippedSkin(chat.peer || '', null, 'rookie', chat.peer || undefined)
                 )}
               </div>
               <span

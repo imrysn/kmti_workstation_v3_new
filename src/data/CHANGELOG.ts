@@ -38,8 +38,42 @@ import machineNamesImg from '../assets/updates/machine_names.png'
 import systemUpdaterImg from '../assets/updates/system_updater.png'
 import messagingImg from '../assets/updates/messaging.png'
 import notifImg from '../assets/updates/notif.png'
+import addMember from '../assets/updates/excel_add_emp.png'
+import profileImg from '../assets/updates/profile_fms.png'
 
 export const CHANGELOG: VersionChangelog[] = [
+  {
+    version: '3.8.8',
+    date: 'July 30, 2026',
+    entries: [
+      {
+        type: 'new',
+        text: 'Profile Picture — Implemented profile picture from FMS application + avatar border(equipped skin from avatar picker).',
+        image: profileImg
+      },
+      {
+        type: 'improvement',
+        text: 'Work Schedule Additional Members & Clean Section Headers — Implemented "Additional Members" section header. Auto scroll on month.',
+        image: addMember
+      },
+      {
+        type: 'improvement',
+        text: 'Chat Interface — Improved chat interface with new messaging UI/UX and added typing indicator. + Shared content modal for images sent.'
+      },
+      {
+        type: 'fix',
+        text: 'Aggressive ".. is Online" toast — Removed aggressive toast notif for user\'s online status as it distracts Interface.'
+      },
+      {
+        type: 'fix',
+        text: 'Missing Value (Billing) — Fixed the issue where Total value in Billing Monitoring has missing value (Others). '
+      },
+      {
+        type: 'fix',
+        text: 'Remove "Others" type — Completely removed "Others" type in Quotation. Replaced with 3D/2D type with own value config in Rate Settings.'
+      }
+    ]
+  },
   {
     version: '3.8.7',
     date: 'July 29, 2026',

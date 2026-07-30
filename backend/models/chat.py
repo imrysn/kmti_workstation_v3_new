@@ -30,6 +30,8 @@ class ChatMessage(Base):
     is_read = Column(Boolean, default=False, nullable=False)
     is_edited = Column(Boolean, default=False, nullable=False)
     is_deleted = Column(Boolean, default=False, nullable=False)
+    is_pinned = Column(Boolean, default=False, nullable=False)
+    pinned_by = Column(String(100), nullable=True)
     reply_to_id = Column(Integer, ForeignKey("kmti_chat_messages.id", ondelete="SET NULL"), nullable=True)
     reactions = Column(Text, nullable=True)  # JSON encoded string of reactions
     created_at = Column(DateTime(timezone=True), server_default=func.now())

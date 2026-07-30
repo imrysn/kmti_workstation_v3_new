@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { telemetryApi } from '../services/api';
 import { WorkstationStatus, AchievementInfo, detectNewUnlockedAchievement } from '../components/Achievement';
-import { getDisplayName } from '../utils/nameUtils';
 
 export function useWorkstationTelemetry(user: any) {
   const [workstations, setWorkstations] = useState<WorkstationStatus[]>([]);
@@ -14,7 +13,7 @@ export function useWorkstationTelemetry(user: any) {
     most_active_module: string;
   } | null>(null);
 
-  const [toasts, setToasts] = useState<{ id: string; sender: string; type?: 'wave' | 'login' }[]>([]);
+  const [toasts, setToasts] = useState<{ id: string; sender: string; type?: 'wave' | 'login' | 'logout' }[]>([]);
   const [isWaving, setIsWaving] = useState<Record<string, boolean>>({});
   const [pendingAchievement, setPendingAchievement] = useState<AchievementInfo | null>(null);
 
@@ -22,7 +21,6 @@ export function useWorkstationTelemetry(user: any) {
   const alreadyPoppedRef = useRef<Record<string, boolean>>({});
   const prevPingsRef = useRef<Record<string, { ping: string; module: string }>>({});
   const isInitialFetchRef = useRef(true);
-  const lastFetchTimeRef = useRef<number>(Date.now());
 
   // Fetch local hostname/workstation name on mount
   useEffect(() => {
@@ -56,6 +54,38 @@ export function useWorkstationTelemetry(user: any) {
     window.addEventListener('kmti:wave-received', handleWave);
     return () => window.removeEventListener('kmti:wave-received', handleWave);
   }, []);
+
+  // Listen to real-time login & logout events via Socket.IO
+  useEffect(() => {
+    const socket = (window as any).kmtiSocket;
+    if (!socket) return;
+
+    const handleUserStatusEvent = (data: { type?: 'login' | 'logout'; username?: string; displayName?: string }) => {
+      if (!data || !data.username) return;
+      if (user && user.username && data.username.toLowerCase() === user.username.toLowerCase()) return;
+
+      const senderName = data.displayName || data.username;
+      const toastId = Math.random().toString();
+      const toastType = data.type === 'logout' ? 'logout' : 'login';
+
+      setToasts(prev => [...prev, { id: toastId, sender: senderName, type: toastType }]);
+
+      window.dispatchEvent(
+        new CustomEvent('kmti:user-presence-change', {
+          detail: { type: toastType, username: senderName }
+        })
+      );
+
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== toastId));
+      }, 4500);
+    };
+
+    socket.on('user_status_event', handleUserStatusEvent);
+    return () => {
+      socket.off('user_status_event', handleUserStatusEvent);
+    };
+  }, [user]);
 
   const detectNewAchievements = useCallback((newWorkstations: WorkstationStatus[]) => {
     const result = detectNewUnlockedAchievement(
@@ -100,39 +130,12 @@ export function useWorkstationTelemetry(user: any) {
         setWorkstations(newWorkstations);
         detectNewAchievements(newWorkstations);
 
-        const nowMs = Date.now();
-        const timeSinceLastFetch = nowMs - lastFetchTimeRef.current;
-        lastFetchTimeRef.current = nowMs;
-        const skipToasts = timeSinceLastFetch > 30000;
-
         const newPingsMap: Record<string, { ping: string; module: string }> = {};
-        const fiveMins = 5 * 60 * 1000;
 
         newWorkstations.forEach(ws => {
           const compName = ws.computer_name || ws.ip_address;
           if (ws.last_ping) {
             newPingsMap[compName] = { ping: ws.last_ping, module: ws.active_module || '' };
-
-            if (!isInitialFetchRef.current) {
-              const prevState = prevPingsRef.current[compName];
-              if (prevState) {
-                const prevPingMs = new Date(prevState.ping).getTime();
-                const newPingMs = new Date(ws.last_ping).getTime();
-
-                const wasGenuinelyOffline = (newPingMs - prevPingMs >= fiveMins) || (prevState.module === 'offline');
-                const isNowOnline = (nowMs - newPingMs < fiveMins) && (ws.active_module !== 'offline');
-
-                if (!skipToasts && wasGenuinelyOffline && isNowOnline) {
-                  const toastId = Math.random().toString();
-                  const name = ws.display_name || getDisplayName(ws.current_user || '') || ws.current_user || compName;
-                  setToasts(prev => [...prev, { id: toastId, sender: name, type: 'login' }]);
-
-                  setTimeout(() => {
-                    setToasts(prev => prev.filter(t => t.id !== toastId));
-                  }, 4500);
-                }
-              }
-            }
           }
         });
 
@@ -149,6 +152,24 @@ export function useWorkstationTelemetry(user: any) {
       setIsLoading(false);
     }
   }, [detectNewAchievements]);
+
+  // Optimistic UI: update local active_module immediately when the user switches app
+  // modules, instead of waiting for the next 15-second telemetry poll.
+  useEffect(() => {
+    const handleModuleChanged = (e: any) => {
+      const { computerName, module } = e.detail || {};
+      if (!computerName || !module) return;
+      setWorkstations(prev =>
+        prev.map(ws =>
+          ws.computer_name === computerName
+            ? { ...ws, active_module: module, last_ping: new Date().toISOString() }
+            : ws
+        )
+      );
+    };
+    window.addEventListener('kmti:module-changed', handleModuleChanged);
+    return () => window.removeEventListener('kmti:module-changed', handleModuleChanged);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
