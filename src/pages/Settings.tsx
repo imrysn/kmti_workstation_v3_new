@@ -192,7 +192,11 @@ export default function Settings() {
             {updateStatus === 'idle' && "Your workstation is running the latest production build."}
             {updateStatus === 'checking' && "Searching our servers for a newer version..."}
             {updateStatus === 'available' && `Version ${updateInfo?.version} is available. Please run the installer from the NAS folder to upgrade.`}
-            {updateStatus === 'error' && `Something went wrong: ${updateError || 'Connection lost'}`}
+            {updateStatus === 'error' && (
+              <span style={{ color: 'var(--accent-red, #ef4444)', fontWeight: 500 }}>
+                {updateError || 'Cloud update feed not found. Please use Manual Update via NAS.'}
+              </span>
+            )}
           </div>
 
           <div className="sett-update-actions">

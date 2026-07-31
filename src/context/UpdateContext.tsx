@@ -13,6 +13,23 @@ interface UpdateContextValue {
 
 const UpdateContext = createContext<UpdateContextValue | null>(null)
 
+function sanitizeUpdateError(rawErr: any): string {
+  if (!rawErr) return 'Connection lost'
+  const errStr = typeof rawErr === 'string' ? rawErr : (rawErr.message || JSON.stringify(rawErr))
+  
+  if (
+    errStr.includes('404') ||
+    errStr.includes('releases.atom') ||
+    errStr.includes('github.com') ||
+    errStr.includes('remote method') ||
+    errStr.includes('HttpError')
+  ) {
+    return 'Cloud update feed not found on GitHub. Please use "Manual Update via NAS" to download the latest setup installer.'
+  }
+  
+  return errStr.length > 180 ? errStr.slice(0, 180) + '...' : errStr
+}
+
 export function UpdateProvider({ children }: { children: ReactNode }) {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('idle')
   const [updateInfo, setUpdateInfo] = useState<any>(null)
@@ -39,7 +56,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
 
     api.onUpdateError((err: string) => {
       setUpdateStatus('error')
-      setUpdateError(err)
+      setUpdateError(sanitizeUpdateError(err))
     })
 
     return () => {
@@ -63,7 +80,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       await window.electronAPI?.checkForUpdate()
     } catch (err: any) {
       setUpdateStatus('error')
-      setUpdateError(err.message || 'Failed to check for updates')
+      setUpdateError(sanitizeUpdateError(err))
     }
   }, [])
 

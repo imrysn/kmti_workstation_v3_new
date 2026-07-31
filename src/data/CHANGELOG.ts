@@ -43,6 +43,16 @@ import profileImg from '../assets/updates/profile_fms.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.9',
+    date: 'July 31, 2026',
+    entries: [
+      {
+        type: 'fix',
+        text: 'Server-side bugs.'
+      }
+    ]
+  },
+  {
     version: '3.8.8',
     date: 'July 30, 2026',
     entries: [

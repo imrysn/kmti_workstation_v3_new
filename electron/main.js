@@ -405,7 +405,12 @@ if (!gotTheLock) {
   // --- Auto Updater IPC Handlers ---
   ipcMain.handle('check-for-update', async () => {
     if (!autoUpdater) return { error: 'Updater not available' }
-    return await autoUpdater.checkForUpdates()
+    try {
+      return await autoUpdater.checkForUpdates()
+    } catch (err) {
+      console.warn('Auto updater check failed:', err?.message || err)
+      throw new Error('Cloud update feed not found on GitHub. Please use "Manual Update via NAS" to download the latest setup installer.')
+    }
   })
 
   createWindow()
