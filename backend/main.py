@@ -1,9 +1,13 @@
 import asyncio
 import sys
 
-# Windows Stability Fix: Force SelectorEventLoop for reliable MySQL networking
+# Windows Stability Fix: Force SelectorEventLoop for reliable MySQL networking and UTF-8 output encoding
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
     
     # Silence annoying WinError 10054 tracebacks from proactor connection loss
     try:
@@ -291,7 +295,9 @@ async def lifespan(app: FastAPI):
     yield  # Application runs here
 
     # --- Shutdown ---
-    logger.info(">>> KMTI Workstation Backend Shutting Down...")
+    logger.info("""
+KMTI Workstation API — Main Entry Point
+""")
     if indexer:
         try:
             indexer.stop()
@@ -307,10 +313,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Global Production Error Handlers ---
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    logger.error(f"HTTP {exc.status_code} Error: {exc.detail} at {request.url}")
+    # Silence 404s (e.g. missing external app avatars) so backend logs stay clean while frontend falls back to equippedSkin avatar
+    if exc.status_code >= 500:
+        logger.error(f"HTTP {exc.status_code} Error: {exc.detail} at {request.url}")
+    elif exc.status_code != 404:
+        logger.warning(f"HTTP {exc.status_code}: {exc.detail} at {request.url}")
+    else:
+        logger.debug(f"HTTP 404: {exc.detail} at {request.url}")
     return JSONResponse(
         status_code=exc.status_code,
         content={"success": False, "error": exc.detail},

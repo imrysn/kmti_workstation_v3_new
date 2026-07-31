@@ -210,7 +210,7 @@ export default function OnlineDrawer() {
         }
       }
 
-      if (msg.sender && msg.sender !== user?.username) {
+      if (msg.sender && msg.sender.toLowerCase() !== user?.username?.toLowerCase()) {
         playMessageChime();
         if (document.visibilityState === 'hidden') {
           window.electronAPI?.flashWindow?.(true);
@@ -221,7 +221,7 @@ export default function OnlineDrawer() {
           handleOpenChat(null, groupName, msg.group_id, true);
         } else {
           const senderUsername = msg.sender;
-          const ws = workstations.find(w => w.current_user === senderUsername);
+          const ws = workstations.find(w => w.current_user?.toLowerCase() === senderUsername.toLowerCase());
           const displayName = ws?.display_name || getDisplayName(senderUsername) || senderUsername;
           handleOpenChat(senderUsername, displayName, null, true);
         }

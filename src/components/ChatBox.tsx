@@ -281,8 +281,8 @@ export default function ChatBox({
   useEffect(() => {
     const isForThisGroup = (msg: any) => groupId !== null && msg.group_id === groupId
     const isForThisP2P = (msg: any) => groupId === null && peer !== null &&
-      ((msg.sender === peer && msg.recipient === currentUsername) ||
-        (msg.sender === currentUsername && msg.recipient === peer))
+      ((msg.sender?.toLowerCase() === peer.toLowerCase() && msg.recipient?.toLowerCase() === currentUsername?.toLowerCase()) ||
+        (msg.sender?.toLowerCase() === currentUsername?.toLowerCase() && msg.recipient?.toLowerCase() === peer.toLowerCase()))
 
     const handleReceiveMessage = (e: any) => {
       const msg = e.detail
@@ -293,7 +293,7 @@ export default function ChatBox({
           if (prev.some(m => m.id === msg.id)) return prev
           return [...prev, msg]
         })
-        if (msg.sender !== currentUsername) {
+        if (msg.sender?.toLowerCase() !== currentUsername?.toLowerCase()) {
           chatApi.markRead(peer || undefined, groupId || undefined).catch(err => console.error(err))
           if (onMessageReceived) {
             onMessageReceived(msg.sender, msg.recipient, msg.group_id)
@@ -319,8 +319,8 @@ export default function ChatBox({
 
     const handleTyping = (e: any) => {
       const { sender, recipient, group_id } = e.detail
-      if (sender === currentUsername) return
-      if ((groupId !== null && group_id === groupId) || (groupId === null && recipient === currentUsername && sender === peer)) {
+      if (sender?.toLowerCase() === currentUsername?.toLowerCase()) return
+      if ((groupId !== null && group_id === groupId) || (groupId === null && recipient?.toLowerCase() === currentUsername?.toLowerCase() && sender?.toLowerCase() === peer?.toLowerCase())) {
         setTypingUsers(prev => new Set(prev).add(sender))
         playTypingSound()
       }
@@ -328,7 +328,7 @@ export default function ChatBox({
 
     const handleStopTyping = (e: any) => {
       const { sender, recipient, group_id } = e.detail
-      if ((groupId !== null && group_id === groupId) || (groupId === null && recipient === currentUsername && sender === peer)) {
+      if ((groupId !== null && group_id === groupId) || (groupId === null && recipient?.toLowerCase() === currentUsername?.toLowerCase() && sender?.toLowerCase() === peer?.toLowerCase())) {
         setTypingUsers(prev => {
           const next = new Set(prev)
           next.delete(sender)
@@ -340,8 +340,8 @@ export default function ChatBox({
     const handleMessagesRead = (e: any) => {
       const { reader, sender: msgSender } = e.detail
       // If we are the sender and the peer read them, update our local read state to double checks
-      if (msgSender === currentUsername && reader === peer && groupId === null) {
-        setChatMessages(prev => prev.map(m => m.sender === currentUsername ? { ...m, is_read: true } : m))
+      if (msgSender?.toLowerCase() === currentUsername?.toLowerCase() && reader?.toLowerCase() === peer?.toLowerCase() && groupId === null) {
+        setChatMessages(prev => prev.map(m => m.sender?.toLowerCase() === currentUsername?.toLowerCase() ? { ...m, is_read: true } : m))
       }
     }
 

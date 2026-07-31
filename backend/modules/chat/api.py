@@ -31,8 +31,9 @@ from modules.chat.schemas import GroupCreate
 
 async def join_online_members_to_group(group_id: int, members: List[str]):
     from socket_manager import _sid_to_user
+    members_lower = {m.lower().strip() for m in members if m}
     for sid, username in list(_sid_to_user.items()):
-        if username in members:
+        if username and username.lower().strip() in members_lower:
             try:
                 await sio.enter_room(sid, f"group:{group_id}")
                 logger.info(f"Dynamically joined online user {username} (sid={sid}) to room group:{group_id}")
@@ -102,7 +103,7 @@ async def mark_messages_read(
     await db.commit()
 
     if peer:
-        await sio.emit("chat_messages_read", {"reader": current_user.username, "sender": peer}, room=f"user:{peer}")
+        await sio.emit("chat_messages_read", {"reader": current_user.username, "sender": peer}, room=f"user:{peer.lower().strip()}")
 
     return {"success": True}
 
@@ -261,17 +262,19 @@ async def delete_group_thread(
 async def handle_authenticate(sid: str, data: dict):
     username = data.get("username")
     if username:
+        clean_username = username.lower().strip()
         from socket_manager import _sid_to_user
         _sid_to_user[sid] = username
-        await sio.enter_room(sid, f"user:{username}")
-        print(f"[Socket] {username} authenticated via event (sid={sid})")
+        await sio.enter_room(sid, f"user:{clean_username}")
+        print(f"[Socket] {username} authenticated via event (sid={sid}, room=user:{clean_username})")
         
         # Join group rooms
         try:
             from db.database import AsyncSessionLocal
             from models.chat import GroupMember
+            from sqlalchemy import func
             async with AsyncSessionLocal() as db:
-                stmt = select(GroupMember.group_id).where(GroupMember.username == username)
+                stmt = select(GroupMember.group_id).where(func.lower(GroupMember.username) == clean_username)
                 res = await db.execute(stmt)
                 group_ids = res.scalars().all()
                 for g_id in group_ids:
@@ -342,8 +345,10 @@ async def handle_send_chat_message(sid: str, data: dict):
     elif recipient == "__global__":
         await sio.emit("receive_chat_message", msg_payload)
     else:
-        await sio.emit("receive_chat_message", msg_payload, room=f"user:{recipient}")
-        await sio.emit("receive_chat_message", msg_payload, room=f"user:{sender}")
+        if recipient:
+            await sio.emit("receive_chat_message", msg_payload, room=f"user:{recipient.lower().strip()}")
+        if sender:
+            await sio.emit("receive_chat_message", msg_payload, room=f"user:{sender.lower().strip()}")
 
 @router.put("/messages/{msg_id}")
 async def edit_message(
@@ -443,7 +448,7 @@ async def handle_user_typing(sid: str, data: dict):
     if group_id is not None:
         await sio.emit("user_typing", payload, room=f"group:{group_id}", skip_sid=sid)
     elif recipient:
-        await sio.emit("user_typing", payload, room=f"user:{recipient}")
+        await sio.emit("user_typing", payload, room=f"user:{recipient.lower().strip()}", skip_sid=sid)
 
 @sio.on("user_stop_typing")
 async def handle_user_stop_typing(sid: str, data: dict):
@@ -457,5 +462,5 @@ async def handle_user_stop_typing(sid: str, data: dict):
     if group_id is not None:
         await sio.emit("user_stop_typing", payload, room=f"group:{group_id}", skip_sid=sid)
     elif recipient:
-        await sio.emit("user_stop_typing", payload, room=f"user:{recipient}")
+        await sio.emit("user_stop_typing", payload, room=f"user:{recipient.lower().strip()}", skip_sid=sid)
 

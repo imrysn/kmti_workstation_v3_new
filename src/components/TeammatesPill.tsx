@@ -110,7 +110,7 @@ export default function TeammatesPill() {
         {topTeammates.length > 0 ? (
           <div className="teammates-avatar-stack">
             {topTeammates.map((w, idx) => (
-              <div key={w.computer_name || w.ip_address || idx} className="teammates-mini-avatar" style={{ zIndex: 10 - idx }}>
+              <div key={`${w.computer_name || 'comp'}_${w.current_user || 'user'}_${w.ip_address || idx}_${idx}`} className="teammates-mini-avatar" style={{ zIndex: 10 - idx }}>
                 {renderEquippedSkin(
                   w.computer_name || w.ip_address,
                   w.achievements,
@@ -158,13 +158,13 @@ export default function TeammatesPill() {
                 <p>No teammates online right now</p>
               </div>
             ) : (
-              onlineList.map(w => {
+              onlineList.map((w, idx) => {
                 const name = w.current_user || w.computer_name || 'Workstation'
                 const moduleName = w.active_module || 'Active'
                 const isMe = (w.current_user || w.computer_name || '').toLowerCase() === (user?.username || '').toLowerCase()
 
                 return (
-                  <div key={w.computer_name || w.ip_address} className={`teammate-row${isMe ? ' is-me' : ''}`}>
+                  <div key={`${w.computer_name || 'comp'}_${w.current_user || 'user'}_${w.ip_address || idx}_${idx}`} className={`teammate-row${isMe ? ' is-me' : ''}`}>
                     <div className="teammate-row-avatar">
                       {renderEquippedSkin(
                         w.computer_name || w.ip_address,

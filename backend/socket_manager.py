@@ -32,6 +32,7 @@ async def broadcast_mutation(target: str, action: str, data: dict, exclude_sid: 
 
 async def emit_to_user(username: str, event: str, data: dict):
     """Emit an event only to the specific user's room."""
-    room = f'user:{username}'
+    room = f'user:{username.lower().strip()}'
     await sio.emit(event, data, room=room)
     logger.info(f"[SocketManager] Emitted {event} to room {room}")
+

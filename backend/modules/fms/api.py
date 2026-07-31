@@ -1,3 +1,6 @@
+import os
+import urllib
+import urllib.parse
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
@@ -51,54 +54,52 @@ async def get_fms_users(
     return users
 
 
-@router.get("/users/avatar/{username}")
+@router.get("/users/avatar/{username:path}")
 async def get_fms_user_avatar(
     username: str,
     fms_db: AsyncSession = Depends(get_fms_db)
 ):
     """
     Fetch the uploaded profile picture for a given username from fms_db / NAS storage.
+    Raises 404 if not found so the system falls back to its equippedSkin.
     """
-    import os, httpx
-    from fastapi.responses import FileResponse, RedirectResponse, Response
+    import os, urllib.parse, logging
+    from fastapi.responses import FileResponse, RedirectResponse
+    logger = logging.getLogger("kmti_backend")
+
     try:
+        username = urllib.parse.unquote(username).strip()
         stmt = select(FmsUser).where(or_(FmsUser.username == username, FmsUser.fullName == username))
         res = await fms_db.execute(stmt)
         fms_user = res.scalar_one_or_none()
 
-        if not fms_user:
-            raise HTTPException(status_code=404, detail="User not found")
+        if fms_user:
+            nas_dir = r"\\KMTI-NAS\Shared\data\profile_pictures"
+            alt_nas_dir = r"\\192.168.200.105\Shared\data\profile_pictures"
 
-        # 1. Check direct file by FMS User ID on NAS share
-        nas_dir = r"\\KMTI-NAS\Shared\data\profile_pictures"
-        alt_nas_dir = r"\\192.168.200.105\Shared\data\profile_pictures"
-
-        for base_dir in [nas_dir, alt_nas_dir]:
-            for ext in [".jpg", ".png", ".jpeg", ".webp"]:
-                candidate = os.path.join(base_dir, f"{fms_user.id}{ext}")
-                if os.path.exists(candidate):
-                    return FileResponse(candidate)
-
-        # 2. Check by filename from profile_picture column if stored
-        if fms_user.profile_picture:
-            pic_path = fms_user.profile_picture.strip()
-            clean_name = os.path.basename(pic_path.split("?")[0])
             for base_dir in [nas_dir, alt_nas_dir]:
-                candidate = os.path.join(base_dir, clean_name)
-                if os.path.exists(candidate):
-                    return FileResponse(candidate)
+                for ext in [".jpg", ".png", ".jpeg", ".webp"]:
+                    candidate = os.path.join(base_dir, f"{fms_user.id}{ext}")
+                    if os.path.exists(candidate):
+                        return FileResponse(candidate)
 
-            if os.path.exists(pic_path):
-                return FileResponse(pic_path)
+            if fms_user.profile_picture:
+                pic_path = fms_user.profile_picture.strip()
+                clean_name = os.path.basename(pic_path.split("?")[0])
+                for base_dir in [nas_dir, alt_nas_dir]:
+                    candidate = os.path.join(base_dir, clean_name)
+                    if os.path.exists(candidate):
+                        return FileResponse(candidate)
 
-            if pic_path.startswith("http://") or pic_path.startswith("https://"):
-                return RedirectResponse(url=pic_path)
+                if os.path.exists(pic_path):
+                    return FileResponse(pic_path)
 
-        raise HTTPException(status_code=404, detail="Avatar image file not accessible")
-    except HTTPException:
-        raise
+                if pic_path.startswith("http://") or pic_path.startswith("https://"):
+                    return RedirectResponse(url=pic_path)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.debug(f"FMS avatar lookup fallback for {username}: {e}")
+
+    raise HTTPException(status_code=404, detail="Avatar image file not accessible")
 
 
 @router.get("/assignments", response_model=List[FmsAssignmentOut])

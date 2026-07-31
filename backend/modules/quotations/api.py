@@ -99,18 +99,19 @@ async def connect(sid: str, environ: dict, auth=None):
     if isinstance(auth, dict):
         username = auth.get('username')
         if username:
+            clean_username = username.lower().strip()
             from socket_manager import _sid_to_user
             _sid_to_user[sid] = username
-            await sio.enter_room(sid, f'user:{username}')
-            print(f"[Socket] {username} joined room user:{username}")
+            await sio.enter_room(sid, f'user:{clean_username}')
+            print(f"[Socket] {username} joined room user:{clean_username}")
 
             # Join Group Rooms dynamically
             try:
                 from db.database import AsyncSessionLocal
                 from models.chat import GroupMember
-                from sqlalchemy import select
+                from sqlalchemy import select, func
                 async with AsyncSessionLocal() as db:
-                    stmt = select(GroupMember.group_id).where(GroupMember.username == username)
+                    stmt = select(GroupMember.group_id).where(func.lower(GroupMember.username) == clean_username)
                     res = await db.execute(stmt)
                     group_ids = res.scalars().all()
                     for g_id in group_ids:

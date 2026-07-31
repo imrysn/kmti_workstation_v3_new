@@ -171,6 +171,30 @@
   color: #f472b6;
 }
 
+/* Offset Holiday column — company-declared holidays placed by admin in TeamCalendar */
+.cell-offset-holiday {
+  background: rgba(236, 72, 153, 0.15) !important;
+  border-left: 2px solid rgba(236, 72, 153, 0.45) !important;
+  border-right: 2px solid rgba(236, 72, 153, 0.45) !important;
+}
+
+.timeline-table th.cell-offset-holiday {
+  color: #ec4899 !important;
+  font-weight: 700 !important;
+}
+
+/* Small dot indicator shown in the day-number header row */
+.timeline-holiday-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  margin-left: 3px;
+  vertical-align: middle;
+  opacity: 0.8;
+}
+
 .timeline-assignment-text {
   font-family: var(--font-mono);
   font-weight: bold;

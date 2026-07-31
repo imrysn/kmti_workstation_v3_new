@@ -47,17 +47,25 @@ export function useSocketSync() {
     socketRef.current = socket
     ;(window as any).kmtiSocket = socket
 
+    const authenticateSocket = () => {
+      const username = getUsername()
+      if (username && socket.connected) {
+        socket.emit('authenticate', { username })
+        console.log(`[SocketSync] Authenticated socket for ${username}`)
+      }
+    }
+
     socket.on('connect', () => {
       console.log(`[SocketSync] Connected. ID: ${socket.id}`)
       setApiSocketId(socket.id || null)
       window.dispatchEvent(new CustomEvent('kmti:server-status', { detail: { online: true } }))
-      
-      const username = getUsername()
-      if (username) {
-        socket.emit('authenticate', { username })
-        console.log(`[SocketSync] Auto-authenticated socket for ${username}`)
-      }
+      authenticateSocket()
     })
+
+    const handleAuthChange = () => {
+      authenticateSocket()
+    }
+    window.addEventListener('kmti:auth-change', handleAuthChange)
 
     socket.on('disconnect', (reason) => {
       console.warn(`[SocketSync] Disconnected: ${reason}`)
@@ -98,6 +106,7 @@ export function useSocketSync() {
     })
 
     return () => {
+      window.removeEventListener('kmti:auth-change', handleAuthChange)
       socket.off('connect')
       socket.off('disconnect')
       socket.off('connect_error')

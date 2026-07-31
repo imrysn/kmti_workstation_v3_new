@@ -5,6 +5,7 @@ import TimelineGrid from './components/TimelineGrid'
 import ScheduleModals from './components/ScheduleModals'
 import PingMemberModal from './components/modals/PingMemberModal'
 import type { IJob, IComponent } from '../../hooks/useWorkSchedule'
+import { teamCalendarApi } from '../../services/teamCalendarService'
 import './WorkSchedule.css'
 
 
@@ -239,6 +240,27 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
   const [isPingOpen, setIsPingOpen] = useState(false)
   const location = useLocation()
 
+  // ── Offset Holiday awareness ────────────────────────────────────────
+  const [offsetHolidayDates, setOffsetHolidayDates] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    // Fetch Offset Holidays (Company_Event with leave_type === 'Holiday') for the current displayYear
+    const start = `${displayYear}-01-01`
+    const end = `${displayYear}-12-31`
+    teamCalendarApi.getGrid(start, end)
+      .then(res => {
+        if (!res.success || !Array.isArray(res.events)) return
+        const dates = new Set<string>(
+          res.events
+            .filter((e: any) => e.event_type === 'Company_Event' && e.leave_type === 'Holiday')
+            .map((e: any) => (e.start_date || '').split('T')[0])
+            .filter(Boolean)
+        )
+        setOffsetHolidayDates(dates)
+      })
+      .catch(() => { /* non-critical — silently ignore */ })
+  }, [displayYear])
+
   const [visibleCount, setVisibleCount] = useState(10)
   const loaderRef = useRef<HTMLDivElement | null>(null)
 
@@ -381,7 +403,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
               <span>2D</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#ec4899', border: '1px solid rgba(255,255,255,0.1)' }}></div>
+              <div style={{ width: '10px', height: '10px', borderRadius: '3px', background: '#ec4899', border: '1px solid rgba(255,255,255,0.15)' }}></div>
               <span>Holiday</span>
             </div>
           </div>
@@ -403,6 +425,7 @@ function WorkScheduleContent({ isVisible }: { isVisible: boolean }) {
           handleMouseDown={handleMouseDown}
           handleMouseEnter={handleMouseEnter}
           handleMouseUpCell={handleMouseUpCell}
+          offsetHolidayDates={offsetHolidayDates}
         />
       </div>
 

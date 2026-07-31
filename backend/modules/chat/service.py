@@ -18,9 +18,12 @@ class ChatService:
             stmt = select(ChatMessage).where(ChatMessage.recipient == "__global__")
         elif peer:
             stmt = select(ChatMessage).where(
-                or_(
-                    and_(ChatMessage.sender == current_username, ChatMessage.recipient == peer),
-                    and_(ChatMessage.sender == peer, ChatMessage.recipient == current_username)
+                and_(
+                    ChatMessage.group_id == None,
+                    or_(
+                        and_(func.lower(ChatMessage.sender) == current_username.lower(), func.lower(ChatMessage.recipient) == peer.lower()),
+                        and_(func.lower(ChatMessage.sender) == peer.lower(), func.lower(ChatMessage.recipient) == current_username.lower())
+                    )
                 )
             )
         else:
@@ -34,7 +37,7 @@ class ChatService:
     async def get_unread_counts(db: AsyncSession, current_username: str):
         stmt = (
             select(ChatMessage.sender, func.count(ChatMessage.id))
-            .where(and_(ChatMessage.recipient == current_username, ChatMessage.is_read == False))
+            .where(and_(func.lower(ChatMessage.recipient) == current_username.lower(), ChatMessage.is_read == False))
             .group_by(ChatMessage.sender)
         )
         result = await db.execute(stmt)
@@ -42,7 +45,7 @@ class ChatService:
 
     @staticmethod
     async def get_groups(db: AsyncSession, current_username: str):
-        subq = select(GroupMember.group_id).where(GroupMember.username == current_username)
+        subq = select(GroupMember.group_id).where(func.lower(GroupMember.username) == current_username.lower())
         stmt_groups = select(Group).where(Group.id.in_(subq))
         res_groups = await db.execute(stmt_groups)
         groups = res_groups.scalars().all()
@@ -64,7 +67,7 @@ class ChatService:
     @staticmethod
     async def get_chat_threads(db: AsyncSession, current_username: str):
         # 1. Fetch all groups current_user belongs to
-        subq = select(GroupMember.group_id).where(GroupMember.username == current_username)
+        subq = select(GroupMember.group_id).where(func.lower(GroupMember.username) == current_username.lower())
         stmt_groups = select(Group).where(Group.id.in_(subq))
         res_groups = await db.execute(stmt_groups)
         groups = res_groups.scalars().all()
@@ -111,32 +114,40 @@ class ChatService:
                 and_(
                     ChatMessage.group_id == None,
                     ChatMessage.recipient != "__global__",
-                    or_(ChatMessage.sender == current_username, ChatMessage.recipient == current_username)
+                    or_(func.lower(ChatMessage.sender) == current_username.lower(), func.lower(ChatMessage.recipient) == current_username.lower())
                 )
             )
         )
         res_peers = await db.execute(stmt_peers)
         rows = res_peers.all()
-        peers = set()
+        
+        # Deduplicate peers by lowercase key to avoid duplicate threads due to username casing variations
+        peer_map = {} # lower_peer -> display_peer
         for row in rows:
-            if row[0] == current_username and row[1] == current_username:
-                peers.add(current_username)
-            else:
-                if row[0] != current_username:
-                    peers.add(row[0])
-                if row[1] != current_username:
-                    peers.add(row[1])
+            sender, recipient = row[0], row[1]
+            if sender and sender.lower() != current_username.lower():
+                key = sender.lower()
+                if key not in peer_map:
+                    peer_map[key] = sender
+            if recipient and recipient.lower() != current_username.lower() and recipient != "__global__":
+                key = recipient.lower()
+                if key not in peer_map:
+                    peer_map[key] = recipient
+            if sender and recipient and sender.lower() == current_username.lower() and recipient.lower() == current_username.lower():
+                key = sender.lower()
+                if key not in peer_map:
+                    peer_map[key] = sender
 
         # For each peer, get last message and unread count
-        for peer in peers:
+        for lower_peer, display_peer in peer_map.items():
             stmt_msg = (
                 select(ChatMessage)
                 .where(
                     and_(
                         ChatMessage.group_id == None,
                         or_(
-                            and_(ChatMessage.sender == current_username, ChatMessage.recipient == peer),
-                            and_(ChatMessage.sender == peer, ChatMessage.recipient == current_username)
+                            and_(func.lower(ChatMessage.sender) == current_username.lower(), func.lower(ChatMessage.recipient) == lower_peer),
+                            and_(func.lower(ChatMessage.sender) == lower_peer, func.lower(ChatMessage.recipient) == current_username.lower())
                         )
                     )
                 )
@@ -156,14 +167,14 @@ class ChatService:
 
             stmt_unread = (
                 select(func.count(ChatMessage.id))
-                .where(and_(ChatMessage.sender == peer, ChatMessage.recipient == current_username, ChatMessage.is_read == False))
+                .where(and_(func.lower(ChatMessage.sender) == lower_peer, func.lower(ChatMessage.recipient) == current_username.lower(), ChatMessage.is_read == False))
             )
             res_unread = await db.execute(stmt_unread)
             unread_count = res_unread.scalar() or 0
 
             threads.append({
                 "type": "dm",
-                "peer": peer,
+                "peer": display_peer,
                 "last_message": last_msg_data,
                 "unread_count": unread_count
             })

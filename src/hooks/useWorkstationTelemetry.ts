@@ -126,7 +126,26 @@ export function useWorkstationTelemetry(user: any) {
     try {
       const res = await telemetryApi.getStatuses({ signal, params: { include_offline: true } });
       if (res.data?.data) {
-        const newWorkstations: WorkstationStatus[] = res.data.data;
+        const rawWorkstations: WorkstationStatus[] = res.data.data;
+
+        // Deduplicate by computer_name (fallback: ip_address), keeping the most recently pinged entry.
+        // Duplicate rows can appear when the same machine reconnects without the old row expiring.
+        const wsMap = new Map<string, WorkstationStatus>();
+        for (const ws of rawWorkstations) {
+          const key = (ws.computer_name || ws.ip_address || '').toLowerCase();
+          if (!key) continue;
+          const existing = wsMap.get(key);
+          if (!existing) {
+            wsMap.set(key, ws);
+          } else {
+            // Keep whichever row has the more recent last_ping
+            const existingTime = existing.last_ping ? new Date(existing.last_ping).getTime() : 0;
+            const newTime = ws.last_ping ? new Date(ws.last_ping).getTime() : 0;
+            if (newTime > existingTime) wsMap.set(key, ws);
+          }
+        }
+        const newWorkstations: WorkstationStatus[] = Array.from(wsMap.values());
+
         setWorkstations(newWorkstations);
         detectNewAchievements(newWorkstations);
 

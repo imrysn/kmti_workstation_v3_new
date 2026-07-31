@@ -16,6 +16,22 @@ interface TimelineGridProps {
   handleMouseDown: (e: React.MouseEvent, member: string, colIndex: number) => void
   handleMouseEnter: (member: string, colIndex: number) => void
   handleMouseUpCell: (e: React.MouseEvent, member: string, colIndex: number) => void
+  offsetHolidayDates?: Set<string>
+}
+
+// Month name → zero-based index map for date reconstruction
+const MONTH_INDEX: Record<string, number> = {
+  january: 0, february: 1, march: 2, april: 3, may: 4, june: 5,
+  july: 6, august: 7, september: 8, october: 9, november: 10, december: 11
+}
+
+/** Reconstruct ISO date string from ITimelineDay fields */
+function getDayDateStr(d: ITimelineDay): string {
+  const mIdx = MONTH_INDEX[d.month?.toLowerCase() ?? '']
+  if (mIdx === undefined || !d.year) return ''
+  const mm = String(mIdx + 1).padStart(2, '0')
+  const dd = String(d.day).padStart(2, '0')
+  return `${d.year}-${mm}-${dd}`
 }
 
 export default function TimelineGrid({
@@ -29,7 +45,8 @@ export default function TimelineGrid({
   isToday,
   handleMouseDown,
   handleMouseEnter,
-  handleMouseUpCell
+  handleMouseUpCell,
+  offsetHolidayDates = new Set()
 }: TimelineGridProps) {
 
   const {
@@ -181,13 +198,16 @@ export default function TimelineGrid({
             {timelineDays.map((d, index) => {
               const dayStatus = d.assignments['__day_status__'] || ''
               const statusClass = dayStatus ? `col-status-${dayStatus.toLowerCase()}` : ''
+              const dateStr = getDayDateStr(d)
+              const isOffsetHol = dateStr ? offsetHolidayDates.has(dateStr) : false
+              const holidayClass = isOffsetHol ? 'cell-offset-holiday' : ''
               return (
                 <th
                   key={index}
-                  className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''} ${statusClass}`}
+                  className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''} ${statusClass} ${holidayClass}`}
                   onClick={() => handleHeaderClick(d)}
                   style={canWrite ? { cursor: 'pointer' } : undefined}
-                  title={canWrite ? 'Click to set day status' : undefined}
+                  title={isOffsetHol ? 'Offset Holiday' : (canWrite ? 'Click to set day status' : undefined)}
                 >
                   {d.weekday}
                 </th>
@@ -199,15 +219,19 @@ export default function TimelineGrid({
             {timelineDays.map((d, index) => {
               const dayStatus = d.assignments['__day_status__'] || ''
               const statusClass = dayStatus ? `col-status-${dayStatus.toLowerCase()}` : ''
+              const dateStr = getDayDateStr(d)
+              const isOffsetHol = dateStr ? offsetHolidayDates.has(dateStr) : false
+              const holidayClass = isOffsetHol ? 'cell-offset-holiday' : ''
               return (
                 <th
                   key={index}
-                  className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''} ${statusClass}`}
+                  className={`${getDayClass(d)} ${isToday(d) ? 'cell-today' : ''} ${statusClass} ${holidayClass}`}
                   style={{ borderBottom: '2px solid rgba(255,255,255,0.2)', cursor: canWrite ? 'pointer' : undefined }}
                   onClick={() => handleHeaderClick(d)}
-                  title={canWrite ? 'Click to set day status' : undefined}
+                  title={isOffsetHol ? 'Offset Holiday' : (canWrite ? 'Click to set day status' : undefined)}
                 >
                   {d.day}
+                  {isOffsetHol && <span className="timeline-holiday-dot" />}
                 </th>
               )
             })}
@@ -315,6 +339,9 @@ export default function TimelineGrid({
                     const assignment = d.assignments[member] || ''
                     const dayStatus = d.assignments['__day_status__'] || ''
                     const statusClass = dayStatus ? `col-status-${dayStatus.toLowerCase()}` : ''
+                    const dateStr = getDayDateStr(d)
+                    const isOffsetHol = dateStr ? offsetHolidayDates.has(dateStr) : false
+                    const holidayClass = isOffsetHol ? 'cell-offset-holiday' : ''
 
                     // Check if this cell is currently within the drag range
                     let isHighlighted = false
@@ -352,7 +379,7 @@ export default function TimelineGrid({
                         assignment={assignment}
                         isHighlighted={isHighlighted}
                         isToday={isToday(d)}
-                        dayClass={`${getDayClass(d)} ${statusClass}`}
+                        dayClass={`${getDayClass(d)} ${statusClass} ${holidayClass}`}
                         isArrow={isArrow}
                         isArrowEnd={isArrowEnd}
                         onMouseDown={handleMouseDown}
