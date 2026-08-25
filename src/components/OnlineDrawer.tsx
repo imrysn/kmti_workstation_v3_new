@@ -18,51 +18,8 @@ import { WorkstationCard } from './OnlineDrawer/WorkstationCard'
 import { GroupManagerModal } from './OnlineDrawer/GroupManagerModal'
 import { ChatheadsOverlay } from './OnlineDrawer/ChatheadsOverlay'
 
-const playEasterEggChime = () => {
-  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-  if (AudioContextClass) {
-    const ctx = new AudioContextClass();
-    const now = ctx.currentTime;
-    const playNote = (freq: number, start: number, duration: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0.05, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + duration);
-    };
-    playNote(523.25, now, 0.1);
-    playNote(659.25, now + 0.05, 0.1);
-    playNote(783.99, now + 0.1, 0.1);
-    playNote(1046.50, now + 0.15, 0.3);
-  }
-};
+import { playMessageChime, playEasterEggChime } from '../utils/sound'
 
-const playMessageChime = () => {
-  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-  if (AudioContextClass) {
-    const ctx = new AudioContextClass();
-    const now = ctx.currentTime;
-    const playNote = (freq: number, start: number, duration: number) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0.06, start);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + duration);
-    };
-    playNote(659.25, now, 0.08); // E5
-    playNote(880.00, now + 0.06, 0.15); // A5
-  }
-};
 
 export default function OnlineDrawer() {
   const { user, hasRole, token } = useAuth();
@@ -427,10 +384,6 @@ export default function OnlineDrawer() {
           const wsAchievements = ws?.achievements ?? null;
           const wsEquippedSkin = ws?.equipped_skin;
           const skin = getEquippedSkin(ws?.computer_name || ws?.ip_address || toast.sender || '', wsAchievements, wsEquippedSkin);
-          const rarityColor: Record<string, string> = {
-            common: '#648b67ff', rare: '#8b5cf6', legendary: '#f59e0b', exclusive: '#ef4444'
-          };
-          const ringColor = rarityColor[skin.rarity] ?? '#64748b';
 
           return (
             <div key={toast.id} className={`wave-received-toast ${variantClass}`}>

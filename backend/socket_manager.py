@@ -14,6 +14,17 @@ sio = socketio.AsyncServer(
 _sid_to_user: dict[str, str] = {}
 
 
+def register_user(sid: str, username: str):
+    """Register sid mapping for an authenticated user."""
+    if sid and username:
+        _sid_to_user[sid] = username.strip()
+
+
+def remove_sid(sid: str) -> str | None:
+    """Remove sid mapping when client disconnects to prevent memory leak."""
+    return _sid_to_user.pop(sid, None)
+
+
 async def broadcast_mutation(target: str, action: str, data: dict, exclude_sid: str = None):
     """
     Broadcasts a database mutation event to all active clients except the initiator.

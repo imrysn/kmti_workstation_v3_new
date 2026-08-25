@@ -54,8 +54,9 @@ export function ThreadSettingsModal({
 
     chatApi.getThreadMedia(peer, groupId)
       .then(res => {
-        if (isMounted && res.data) {
-          setData(res.data);
+        const mediaData = res?.data || res;
+        if (isMounted && mediaData) {
+          setData(mediaData);
         }
       })
       .catch(err => {

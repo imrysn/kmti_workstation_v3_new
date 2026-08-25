@@ -609,9 +609,9 @@ export const chatApi = {
   deleteGroup: (groupId: number) =>
     api.delete<any>(`/chat/threads/group/${groupId}`).then(r => r.data),
   pinMessage: (msgId: number) =>
-    api.post<any>(`/chat/messages/${msgId}/pin`),
+    api.post<any>(`/chat/messages/${msgId}/pin`).then(r => r.data),
   getThreadMedia: (peer?: string | null, groupId?: number | null) =>
-    api.get<any>('/chat/media', { params: { peer: peer || undefined, group_id: groupId || undefined } }),
+    api.get<any>('/chat/media', { params: { peer: peer || undefined, group_id: groupId || undefined } }).then(r => r.data),
 }
 
 

@@ -138,38 +138,7 @@ const renderEmojiSVG = (emoji: string, size = 16) => {
   return emoji
 }
 
-const playTypingSound = () => {
-  try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext
-    if (!AudioContext) return
-    const ctx = new AudioContext()
-
-    const osc1 = ctx.createOscillator()
-    const osc2 = ctx.createOscillator()
-    const gainNode = ctx.createGain()
-
-    osc1.type = 'triangle'
-    osc1.frequency.setValueAtTime(100 + Math.random() * 50, ctx.currentTime)
-
-    osc2.type = 'sine'
-    osc2.frequency.setValueAtTime(800 + Math.random() * 200, ctx.currentTime)
-
-    gainNode.gain.setValueAtTime(0.04, ctx.currentTime)
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06)
-
-    osc1.connect(gainNode)
-    osc2.connect(gainNode)
-    gainNode.connect(ctx.destination)
-
-    osc1.start()
-    osc2.start()
-
-    osc1.stop(ctx.currentTime + 0.08)
-    osc2.stop(ctx.currentTime + 0.08)
-  } catch (e) {
-    console.error('Failed to play typing sound', e)
-  }
-}
+import { playTypingSound } from '../utils/sound'
 
 const SUPPORTED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡']
 
@@ -203,24 +172,34 @@ export default function ChatBox({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const chatBoxBodyRef = useRef<HTMLDivElement>(null)
   const typingTimeoutRef = useRef<any>(null)
+  const isInitialLoadRef = useRef(true)
 
   const handlePin = async (msgId: number) => {
     try {
       const res = await chatApi.pinMessage(msgId)
-      if (res.data) {
-        setChatMessages(prev => prev.map(m => m.id === msgId ? { ...m, is_pinned: res.data.is_pinned, pinned_by: currentUsername } : m))
+      const pinData = res?.data || res
+      if (pinData && pinData.success !== false) {
+        setChatMessages(prev => prev.map(m => m.id === msgId ? { ...m, is_pinned: pinData.is_pinned, pinned_by: currentUsername } : m))
       }
     } catch (err) {
       console.error('Failed to pin message:', err)
     }
   }
 
-  // Scroll to bottom when messages update (instant, no animation)
+  // Scroll to bottom when messages update (auto-scroll only on initial load or if user is near bottom)
   useEffect(() => {
-    if (chatBoxBodyRef.current) {
-      chatBoxBodyRef.current.scrollTop = chatBoxBodyRef.current.scrollHeight
+    if (!chatBoxBodyRef.current) return
+    const el = chatBoxBodyRef.current
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120
+
+    if (isInitialLoadRef.current || isNearBottom) {
+      el.scrollTop = el.scrollHeight
+      if (chatMessages.length > 0) {
+        isInitialLoadRef.current = false
+      }
     }
-  }, [chatMessages, typingUsers])
+  }, [chatMessages])
+
 
   // Close dropdown on outside click or Escape key
   useEffect(() => {
@@ -396,6 +375,7 @@ export default function ChatBox({
 
     if (chatAttachments.length === 0) {
       socket.emit('send_chat_message', {
+        sender: currentUsername,
         recipient: peer,
         group_id: groupId,
         content: textToSend,
@@ -407,6 +387,7 @@ export default function ChatBox({
       chatAttachments.forEach((att, idx) => {
         const textContent = idx === 0 ? textToSend : ''
         socket.emit('send_chat_message', {
+          sender: currentUsername,
           recipient: peer,
           group_id: groupId,
           content: textContent,
@@ -416,6 +397,7 @@ export default function ChatBox({
         })
       })
     }
+
 
     if (customContent === undefined) {
       setChatInputText('')
@@ -1070,6 +1052,49 @@ export default function ChatBox({
           </div>
         )}
         <div className="chat-input-row">
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            multiple
+            onChange={async (e) => {
+              const files = e.target.files
+              if (!files || files.length === 0) return
+              const availableSlots = 3 - chatAttachments.length
+              const toUpload = Array.from(files).slice(0, availableSlots)
+              if (toUpload.length === 0) return
+              setIsUploading(true)
+              try {
+                const newAttachments: { path: string; name: string }[] = []
+                for (const file of toUpload) {
+                  const formData = new FormData()
+                  formData.append('file', file)
+                  const res = await chatApi.upload(formData)
+                  if (res.success) {
+                    newAttachments.push({ path: res.attachment_path, name: res.attachment_name })
+                  }
+                }
+                setChatAttachments(prev => [...prev, ...newAttachments])
+              } catch (err) {
+                console.error('Failed to upload selected file:', err)
+              } finally {
+                setIsUploading(false)
+                if (fileInputRef.current) fileInputRef.current.value = ''
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="chat-attach-btn"
+            onClick={() => fileInputRef.current?.click()}
+            title="Attach file or image"
+            disabled={isUploading || chatAttachments.length >= 3}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', color: 'var(--text-muted, #94a3b8)', display: 'flex', alignItems: 'center' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
           <textarea
             className="chat-input-field"
             placeholder={isUploading ? "Uploading..." : "Type a message..."}
@@ -1091,15 +1116,28 @@ export default function ChatBox({
             rows={1}
             disabled={isUploading}
           />
-          <button
-            type="submit"
-            className="chat-send-btn animate-send-btn"
-            disabled={isUploading || !hasInputText}
-          >
-            {editingMsgId ? 'Save' : 'Send'}
-          </button>
+          {!hasInputText && !editingMsgId ? (
+            <button
+              type="button"
+              className="chat-thumbs-up-btn"
+              onClick={handleSendThumbsUp}
+              title="Send thumbs up"
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 6px', display: 'flex', alignItems: 'center' }}
+            >
+              {renderEmojiSVG('👍', 22)}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className="chat-send-btn animate-send-btn"
+              disabled={isUploading || !hasInputText}
+            >
+              {editingMsgId ? 'Save' : 'Send'}
+            </button>
+          )}
         </div>
       </form>
+
 
       {showSettingsModal && (
         <ThreadSettingsModal

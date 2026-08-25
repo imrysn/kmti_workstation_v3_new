@@ -66,118 +66,121 @@ class ChatService:
 
     @staticmethod
     async def get_chat_threads(db: AsyncSession, current_username: str):
+        from collections import defaultdict
+        clean_user = current_username.lower().strip()
+
         # 1. Fetch all groups current_user belongs to
-        subq = select(GroupMember.group_id).where(func.lower(GroupMember.username) == current_username.lower())
+        subq = select(GroupMember.group_id).where(func.lower(GroupMember.username) == clean_user)
         stmt_groups = select(Group).where(Group.id.in_(subq))
         res_groups = await db.execute(stmt_groups)
         groups = res_groups.scalars().all()
 
         threads = []
-        
-        # Process Group Threads
-        for g in groups:
-            stmt_m = select(GroupMember.username).where(GroupMember.group_id == g.id)
-            res_m = await db.execute(stmt_m)
-            members = res_m.scalars().all()
+        group_ids = [g.id for g in groups]
 
-            # Get last message
-            stmt_msg = (
-                select(ChatMessage)
-                .where(ChatMessage.group_id == g.id)
-                .order_by(ChatMessage.id.desc())
-                .limit(1)
+        if group_ids:
+            # Batch fetch all group members in 1 query
+            stmt_all_members = select(GroupMember.group_id, GroupMember.username).where(GroupMember.group_id.in_(group_ids))
+            res_members = await db.execute(stmt_all_members)
+            group_members_map = defaultdict(list)
+            for g_id, uname in res_members.all():
+                group_members_map[g_id].append(uname)
+
+            # Batch fetch last message for all groups in 1 query
+            subq_last_group_msg = (
+                select(func.max(ChatMessage.id).label("max_id"))
+                .where(ChatMessage.group_id.in_(group_ids))
+                .group_by(ChatMessage.group_id)
             )
-            res_msg = await db.execute(stmt_msg)
-            last_msg = res_msg.scalar_one_or_none()
+            stmt_last_group_msgs = select(ChatMessage).where(ChatMessage.id.in_(subq_last_group_msg))
+            res_last_group_msgs = await db.execute(stmt_last_group_msgs)
+            last_group_msg_map = {m.group_id: m for m in res_last_group_msgs.scalars().all()}
 
-            last_msg_data = None
-            if last_msg:
-                last_msg_data = {
-                    "sender": last_msg.sender,
-                    "content": last_msg.content or (f"[Attachment: {last_msg.attachment_name}]" if last_msg.attachment_name else ""),
-                    "created_at": last_msg.created_at.isoformat() if last_msg.created_at else None
-                }
+            for g in groups:
+                last_msg = last_group_msg_map.get(g.id)
+                last_msg_data = None
+                if last_msg:
+                    last_msg_data = {
+                        "sender": last_msg.sender,
+                        "content": last_msg.content or (f"[Attachment: {last_msg.attachment_name}]" if last_msg.attachment_name else ""),
+                        "created_at": last_msg.created_at.isoformat() if last_msg.created_at else None
+                    }
 
-            threads.append({
-                "type": "group",
-                "group_id": g.id,
-                "name": g.name,
-                "members": list(members),
-                "last_message": last_msg_data,
-                "unread_count": 0
-            })
+                threads.append({
+                    "type": "group",
+                    "group_id": g.id,
+                    "name": g.name,
+                    "members": group_members_map.get(g.id, []),
+                    "last_message": last_msg_data,
+                    "unread_count": 0
+                })
 
         # 2. Fetch all DMs (group_id is null, recipient is not __global__)
+        # Batch unread counts per peer in 1 query
+        stmt_unread = (
+            select(func.lower(ChatMessage.sender), func.count(ChatMessage.id))
+            .where(
+                and_(
+                    ChatMessage.group_id == None,
+                    func.lower(ChatMessage.recipient) == clean_user,
+                    ChatMessage.is_read == False
+                )
+            )
+            .group_by(func.lower(ChatMessage.sender))
+        )
+        res_unread = await db.execute(stmt_unread)
+        unread_map = {row[0]: row[1] for row in res_unread.all()}
+
+        # Fetch all DM messages involving this user to build peer list and latest message
         stmt_peers = (
-            select(ChatMessage.sender, ChatMessage.recipient)
+            select(ChatMessage)
             .where(
                 and_(
                     ChatMessage.group_id == None,
                     ChatMessage.recipient != "__global__",
-                    or_(func.lower(ChatMessage.sender) == current_username.lower(), func.lower(ChatMessage.recipient) == current_username.lower())
-                )
-            )
-        )
-        res_peers = await db.execute(stmt_peers)
-        rows = res_peers.all()
-        
-        # Deduplicate peers by lowercase key to avoid duplicate threads due to username casing variations
-        peer_map = {} # lower_peer -> display_peer
-        for row in rows:
-            sender, recipient = row[0], row[1]
-            if sender and sender.lower() != current_username.lower():
-                key = sender.lower()
-                if key not in peer_map:
-                    peer_map[key] = sender
-            if recipient and recipient.lower() != current_username.lower() and recipient != "__global__":
-                key = recipient.lower()
-                if key not in peer_map:
-                    peer_map[key] = recipient
-            if sender and recipient and sender.lower() == current_username.lower() and recipient.lower() == current_username.lower():
-                key = sender.lower()
-                if key not in peer_map:
-                    peer_map[key] = sender
-
-        # For each peer, get last message and unread count
-        for lower_peer, display_peer in peer_map.items():
-            stmt_msg = (
-                select(ChatMessage)
-                .where(
-                    and_(
-                        ChatMessage.group_id == None,
-                        or_(
-                            and_(func.lower(ChatMessage.sender) == current_username.lower(), func.lower(ChatMessage.recipient) == lower_peer),
-                            and_(func.lower(ChatMessage.sender) == lower_peer, func.lower(ChatMessage.recipient) == current_username.lower())
-                        )
+                    or_(
+                        func.lower(ChatMessage.sender) == clean_user,
+                        func.lower(ChatMessage.recipient) == clean_user
                     )
                 )
-                .order_by(ChatMessage.id.desc())
-                .limit(1)
             )
-            res_msg = await db.execute(stmt_msg)
-            last_msg = res_msg.scalar_one_or_none()
+            .order_by(ChatMessage.id.desc())
+        )
+        res_dm_msgs = await db.execute(stmt_peers)
+        dm_msgs = res_dm_msgs.scalars().all()
 
-            last_msg_data = None
-            if last_msg:
+        # Deduplicate by peer
+        seen_peers = set()
+        for msg in dm_msgs:
+            s_lower = (msg.sender or "").lower().strip()
+            r_lower = (msg.recipient or "").lower().strip()
+
+            if s_lower == clean_user and r_lower == clean_user:
+                peer_lower = clean_user
+                display_peer = msg.sender
+            elif s_lower == clean_user:
+                peer_lower = r_lower
+                display_peer = msg.recipient
+            else:
+                peer_lower = s_lower
+                display_peer = msg.sender
+
+            if not peer_lower or peer_lower == "__global__":
+                continue
+
+            if peer_lower not in seen_peers:
+                seen_peers.add(peer_lower)
                 last_msg_data = {
-                    "sender": last_msg.sender,
-                    "content": last_msg.content or (f"[Attachment: {last_msg.attachment_name}]" if last_msg.attachment_name else ""),
-                    "created_at": last_msg.created_at.isoformat() if last_msg.created_at else None
+                    "sender": msg.sender,
+                    "content": msg.content or (f"[Attachment: {msg.attachment_name}]" if msg.attachment_name else ""),
+                    "created_at": msg.created_at.isoformat() if msg.created_at else None
                 }
-
-            stmt_unread = (
-                select(func.count(ChatMessage.id))
-                .where(and_(func.lower(ChatMessage.sender) == lower_peer, func.lower(ChatMessage.recipient) == current_username.lower(), ChatMessage.is_read == False))
-            )
-            res_unread = await db.execute(stmt_unread)
-            unread_count = res_unread.scalar() or 0
-
-            threads.append({
-                "type": "dm",
-                "peer": display_peer,
-                "last_message": last_msg_data,
-                "unread_count": unread_count
-            })
+                threads.append({
+                    "type": "dm",
+                    "peer": display_peer,
+                    "last_message": last_msg_data,
+                    "unread_count": unread_map.get(peer_lower, 0)
+                })
 
         # Sort threads by last message timestamp desc
         def get_sort_key(t):
@@ -228,10 +231,15 @@ class ChatService:
 
     @staticmethod
     async def delete_dm_thread(db: AsyncSession, current_username: str, peer: str):
+        c_user = current_username.lower().strip()
+        c_peer = peer.lower().strip()
         stmt = delete(ChatMessage).where(
-            or_(
-                and_(ChatMessage.sender == current_username, ChatMessage.recipient == peer),
-                and_(ChatMessage.sender == peer, ChatMessage.recipient == current_username)
+            and_(
+                ChatMessage.group_id == None,
+                or_(
+                    and_(func.lower(ChatMessage.sender) == c_user, func.lower(ChatMessage.recipient) == c_peer),
+                    and_(func.lower(ChatMessage.sender) == c_peer, func.lower(ChatMessage.recipient) == c_user)
+                )
             )
         )
         await db.execute(stmt)
@@ -245,18 +253,29 @@ class ChatService:
         if not group:
             raise ValueError("Group not found")
 
-        if group.created_by == current_username:
+        is_creator = group.created_by.lower().strip() == current_username.lower().strip()
+        if is_creator:
             await db.execute(delete(GroupMember).where(GroupMember.group_id == group_id))
             await db.execute(delete(ChatMessage).where(ChatMessage.group_id == group_id))
             await db.execute(delete(Group).where(Group.id == group_id))
+            await db.commit()
+            return True, [], group.name
         else:
             await db.execute(
                 delete(GroupMember).where(
-                    and_(GroupMember.group_id == group_id, GroupMember.username == current_username)
+                    and_(
+                        GroupMember.group_id == group_id,
+                        func.lower(GroupMember.username) == current_username.lower().strip()
+                    )
                 )
             )
-        
-        await db.commit()
+            await db.commit()
+            # Fetch remaining members
+            stmt_m = select(GroupMember.username).where(GroupMember.group_id == group_id)
+            res_m = await db.execute(stmt_m)
+            remaining_members = list(res_m.scalars().all())
+            return False, remaining_members, group.name
+
 
     @staticmethod
     async def edit_message(db: AsyncSession, current_username: str, msg_id: int, content: str):

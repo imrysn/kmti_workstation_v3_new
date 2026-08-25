@@ -97,13 +97,13 @@ export function useHeartbeat() {
 
         const formData = new FormData();
         formData.append('module', module);
-        // user_name stays as the stable auth identity (fullName or username) — never the
-        // custom displayName, so current_user on the server never flips when the user
-        // sets a display name. The display_name field carries the presentable name.
-        formData.append('user_name', user.fullName || user.username);
-        if (user.displayName && user.displayName !== user.fullName) {
-          formData.append('display_name', user.displayName);
+        // user_name is the canonical unique auth username for routing and chat
+        formData.append('user_name', user.username);
+        const presentableName = user.displayName || user.fullName;
+        if (presentableName) {
+          formData.append('display_name', presentableName);
         }
+
         formData.append('version', appVersion);
         if (computerNameRef.current) {
           formData.append('computer_name', computerNameRef.current);

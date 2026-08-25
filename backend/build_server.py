@@ -38,6 +38,8 @@ PyInstaller.__main__.run([
     '--hidden-import=engineio.async_drivers.asgi',
     '--hidden-import=aiomysql',
     '--hidden-import=cryptography',
+    '--hidden-import=multipart',
+    '--hidden-import=python_multipart',
     '--hidden-import=pystray',
     '--hidden-import=PIL._tkinter_finder',
     # Include project data

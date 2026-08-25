@@ -154,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       await new Promise(resolve => setTimeout(resolve, 120))
       setUser(data.user)
+      window.dispatchEvent(new CustomEvent('kmti:auth-change'))
       setLoginSucceeded(false)
     } catch (err: any) {
       // If server is down, try offline authentication
@@ -179,8 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ;(window as any).electronAPI?.loginSuccess?.()
               await new Promise(resolve => setTimeout(resolve, 120))
               setUser(cached.user)
+              window.dispatchEvent(new CustomEvent('kmti:auth-change'))
               setLoginSucceeded(false)
               return
+
             } else {
               throw new Error('Incorrect password. Offline credentials do not match.')
             }
@@ -267,8 +270,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     setToken(null)
     setUser(null)
+    window.dispatchEvent(new CustomEvent('kmti:auth-change'))
     setIsLoggingOut(false)
   }, [])
+
 
   /**
    * Returns true if the current user has ANY of the provided roles.

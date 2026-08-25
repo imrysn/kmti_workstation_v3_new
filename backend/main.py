@@ -385,11 +385,8 @@ else:
     logger.warning(f"Feedback storage directory not found: {FEEDBACK_DIR}. Screenshot serving disabled.")
 
 # Static serving for Chat Attachments
-CHAT_DIR = r"\\KMTI-NAS\Shared\data\storage\chat"
-if not os.path.exists(CHAT_DIR):
-    CHAT_DIR = os.path.join(os.path.dirname(__file__), "storage", "chat")
-    os.makedirs(CHAT_DIR, exist_ok=True)
-app.mount("/storage/chat", StaticFiles(directory=CHAT_DIR), name="chat_attachments")
+from core.config import CHAT_STORAGE_DIR
+app.mount("/storage/chat", StaticFiles(directory=CHAT_STORAGE_DIR), name="chat_attachments")
 
 @app.get("/health")
 def health_check():

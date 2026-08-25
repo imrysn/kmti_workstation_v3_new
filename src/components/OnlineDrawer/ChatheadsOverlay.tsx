@@ -196,6 +196,7 @@ export function ChatheadsOverlay({
 
   if (hiddenCount > 0) {
     const { x, y } = getCoordinates(totalArcItems - 1, totalArcItems);
+    const nextHiddenChat = activeChats[3];
     elements.push(
       <div
         key="head_hidden_count"
@@ -205,9 +206,15 @@ export function ChatheadsOverlay({
           right: `${x}px`,
           bottom: `${y}px`,
           zIndex: 3100 - totalArcItems,
+          cursor: 'pointer',
           transition: 'right 0.3s cubic-bezier(0.16, 1, 0.3, 1), bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
-        title={`${hiddenCount} more active chats`}
+        onClick={() => {
+          if (nextHiddenChat) {
+            onOpenChat(nextHiddenChat.peer, nextHiddenChat.peerLabel, nextHiddenChat.groupId);
+          }
+        }}
+        title={`${hiddenCount} more active chat${hiddenCount > 1 ? 's' : ''} — click to open ${nextHiddenChat?.peerLabel || 'next'}`}
       >
         <div className="chathead-avatar-wrapper" style={{ position: 'relative', width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary, #1e293b)', borderRadius: '50%', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '14px' }}>
           +{hiddenCount}
@@ -215,6 +222,7 @@ export function ChatheadsOverlay({
       </div>
     );
   }
+
 
   return <>{elements}</>;
 }

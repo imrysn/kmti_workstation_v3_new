@@ -42,10 +42,6 @@ export function WorkstationCard({
   const isOffline = status === 'status-offline';
 
   const skin = getEquippedSkin(ws.computer_name || ws.ip_address, ws.achievements, ws.equipped_skin);
-  const rarityColorMap: Record<string, string> = {
-    common: '#64748b', rare: '#8b5cf6', legendary: '#f59e0b', exclusive: '#ef4444'
-  };
-  const rarityRingColor = rarityColorMap[skin.rarity] ?? '#64748b';
 
   return (
     <div
@@ -69,6 +65,11 @@ export function WorkstationCard({
           )}
         </div>
         <span className={`status-badge-dot ${status}`} title={getStatusLabel(status)}></span>
+        {unreadCount > 0 && (
+          <span className="user-unread-badge" style={{ position: 'absolute', top: '-2px', left: '-2px', background: '#ef4444', color: '#fff', fontSize: '9px', fontWeight: 'bold', minWidth: '16px', height: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', zIndex: 5 }}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
 
         {isMe && onEditAvatar && (
           <button

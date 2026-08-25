@@ -322,7 +322,10 @@ async def disconnect(sid: str):
                 except Exception as e:
                     print(f"[COLLAB] Failed to deactivate session {q_id} on disconnect: {e}")
             break
-    print(f"[Socket] Client disconnected: {sid}")
+    
+    from socket_manager import remove_sid
+    user_left = remove_sid(sid)
+    print(f"[Socket] Client disconnected: {sid}{f' (user: {user_left})' if user_left else ''}")
 
 @sio.event
 async def leave_doc(sid: str, data: dict):

@@ -62,3 +62,17 @@ TTS_VOICES_PATH = get_resource_path(os.path.join("models", "tts", "voices-v1.0.b
 
 # Shared NAS Cache for generated audio
 NAS_TTS_CACHE_DIR = r"\\KMTI-NAS\Shared\data\tts"
+
+# --- Chat Storage Directory (NAS with Local AppData Writable Fallback) ---
+CHAT_STORAGE_DIR = r"\\KMTI-NAS\Shared\data\storage\chat"
+try:
+    if not os.path.exists(CHAT_STORAGE_DIR):
+        try:
+            os.makedirs(CHAT_STORAGE_DIR, exist_ok=True)
+        except Exception:
+            CHAT_STORAGE_DIR = os.path.join(DATA_DIR, "storage", "chat")
+            os.makedirs(CHAT_STORAGE_DIR, exist_ok=True)
+except Exception:
+    CHAT_STORAGE_DIR = os.path.join(DATA_DIR, "storage", "chat")
+    os.makedirs(CHAT_STORAGE_DIR, exist_ok=True)
+
