@@ -19,7 +19,13 @@ interface ChatBoxProps {
   onMinimize?: () => void
 }
 
+const matchUser = (a?: string | null, b?: string | null) => {
+  if (!a || !b) return false
+  return a.toLowerCase().trim() === b.toLowerCase().trim()
+}
+
 // 100% Offline-compatible glossy vector SVGs
+
 const renderEmojiSVG = (emoji: string, size = 16) => {
   if (emoji === '❤️') {
     return (
@@ -258,13 +264,8 @@ export default function ChatBox({
 
   // Listen to socket events
   useEffect(() => {
-    const matchUser = (a?: string | null, b?: string | null) => {
-      if (!a || !b) return false
-      return a.toLowerCase().trim() === b.toLowerCase().trim()
-    }
-
-
     const isForThisGroup = (msg: any) => groupId !== null && msg.group_id === groupId
+
     const isForThisP2P = (msg: any) => groupId === null && peer !== null &&
       ((matchUser(msg.sender, peer) && matchUser(msg.recipient, currentUsername)) ||
         (matchUser(msg.sender, currentUsername) && matchUser(msg.recipient, peer)))

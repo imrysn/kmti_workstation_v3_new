@@ -447,6 +447,19 @@ function _safeMerge(sheet: ExcelJS.Worksheet, range: string) {
   }
 }
 
+function _cleanAndReMerge(sheet: ExcelJS.Worksheet, rNum: number, startColChar: string, endColChar: string) {
+  try {
+    sheet.unMergeCells(`${startColChar}${rNum}:${endColChar}${rNum}`)
+  } catch (e) { }
+  const startIdx = startColChar.charCodeAt(0) - 64
+  const endIdx = endColChar.charCodeAt(0) - 64
+  const row = sheet.getRow(rNum)
+  for (let c = startIdx; c <= endIdx; c++) {
+    row.getCell(c).value = null
+  }
+  _safeMerge(sheet, `${startColChar}${rNum}:${endColChar}${rNum}`)
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Row insertion helper
 // ─────────────────────────────────────────────────────────────────────────────
@@ -511,19 +524,6 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     return override?.[field] !== undefined ? override[field] : defaultValue
   }
 
-  function _cleanAndReMerge(rNum: number, startColChar: string, endColChar: string) {
-    try {
-      sheet.unMergeCells(`${startColChar}${rNum}:${endColChar}${rNum}`)
-    } catch (e) { }
-    const startIdx = startColChar.charCodeAt(0) - 64
-    const endIdx = endColChar.charCodeAt(0) - 64
-    const row = sheet.getRow(rNum)
-    for (let c = startIdx; c <= endIdx; c++) {
-      row.getCell(c).value = null
-    }
-    _safeMerge(sheet, `${startColChar}${rNum}:${endColChar}${rNum}`)
-  }
-
   const isKemco = layoutVariant === 'kemco'
 
   // Custom grouping for KEMCO mode
@@ -551,8 +551,12 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   }
 
   const TEMPLATE_TASK_ROWS = 10
-  const effectiveTaskRows = isKemco ? Math.max(10, kemcoRows.length + 1) : 10
-  const extraRows = Math.max(0, (isKemco ? kemcoRows.length + 1 : mainTasks.length) - TEMPLATE_TASK_ROWS)
+  const totalContentRows = isKemco
+    ? (kemcoRows.length + 1)
+    : (mainTasks.length + (showAdmin && overheadTotal !== 0 ? 1 : 0) + 1)
+  const effectiveTaskRows = isKemco ? Math.max(10, totalContentRows) : 10
+  const extraRows = Math.max(0, totalContentRows - TEMPLATE_TASK_ROWS)
+
 
   // Compute assembly percentages for KEMCO mode
   const assemblyPercentages: Record<number, number> = {}
@@ -920,7 +924,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
       ? manualOverrides.footer.adjustment
       : -148400
 
-    _cleanAndReMerge(totalAmountRow, 'A', 'G')
+    _cleanAndReMerge(sheet, totalAmountRow, 'A', 'G')
     const lblCell = sheet.getCell(`A${totalAmountRow}`)
     lblCell.value = 'Total Amount'
     lblCell.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -931,15 +935,30 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     sheet.getCell(`H${totalAmountRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
     sheet.getCell(`H${totalAmountRow}`).font = { name: 'Arial', size: 11, bold: true }
   } else {
-    sheet.getCell(`G${totalAmountRow}`).value = grandTotal
-    sheet.getCell(`G${totalAmountRow}`).numFmt = '"¥"#,##0'
-    sheet.getCell(`G${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-    sheet.getCell(`G${totalAmountRow}`).font = { name: 'Arial', size: 10, bold: true }
+    _cleanAndReMerge(sheet, totalAmountRow, 'A', 'F')
+    const lblCell = sheet.getCell(`A${totalAmountRow}`)
+    lblCell.value = 'Total Amount'
+    lblCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    lblCell.font = { name: 'Arial', size: 10, bold: true }
 
-    // Align the "Total Amount" label row
-    sheet.getCell(`B${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    const grandTotalCell = sheet.getCell(`G${totalAmountRow}`)
+    grandTotalCell.value = grandTotal
+    grandTotalCell.numFmt = '"¥"#,##0'
+    grandTotalCell.alignment = { horizontal: 'center', vertical: 'middle' }
+    grandTotalCell.font = { name: 'Arial', size: 10, bold: true }
 
-    // Clear the secondary total row (30 in original template) to avoid confusion
+    // Reapply borders on Total Amount row (Col A to Col G)
+    for (let c = 1; c <= 7; c++) {
+      const cell = sheet.getRow(totalAmountRow).getCell(c)
+      cell.border = {
+        top: { style: 'thin' },
+        bottom: { style: 'medium' },
+        left: c === 1 ? { style: 'medium' } : { style: 'thin' },
+        right: c === 7 ? { style: 'medium' } : (c === 6 ? { style: 'thin' } : undefined)
+      }
+    }
+
+    // Clear the secondary total row if shifted
     const secondaryTotalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2
     if (secondaryTotalRow !== totalAmountRow) {
       sheet.getCell(`G${secondaryTotalRow}`).value = null
@@ -951,13 +970,14 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   const s = extraRows // signature row offset
 
   if (isKemco) {
-    _cleanAndReMerge(39 + s, 'A', 'C')
-    _cleanAndReMerge(40 + s, 'A', 'C')
-    _cleanAndReMerge(46 + s, 'A', 'C')
-    _cleanAndReMerge(47 + s, 'A', 'C')
-    _cleanAndReMerge(46 + s, 'F', 'H')
-    _cleanAndReMerge(47 + s, 'F', 'H')
+    _cleanAndReMerge(sheet, 39 + s, 'A', 'C')
+    _cleanAndReMerge(sheet, 40 + s, 'A', 'C')
+    _cleanAndReMerge(sheet, 46 + s, 'A', 'C')
+    _cleanAndReMerge(sheet, 47 + s, 'A', 'C')
+    _cleanAndReMerge(sheet, 46 + s, 'F', 'H')
+    _cleanAndReMerge(sheet, 47 + s, 'F', 'H')
   }
+
 
   sheet.getCell(`A${39 + s}`).value = signatures.quotation.preparedBy.name
   sheet.getCell(`A${39 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
@@ -1058,6 +1078,8 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   const TABLE_START = 16
   const TEMPLATE_TASK_ROWS = 10
   const TABLE_END = TABLE_START + TEMPLATE_TASK_ROWS - 1  // 25
+  const totalContentRows = mainTasks.length + (showAdmin && overheadTotal !== 0 ? 1 : 0) + 1
+  const extraRows = Math.max(0, totalContentRows - TEMPLATE_TASK_ROWS)
 
   // Clear all pre-styled data rows
   for (let r = TABLE_START; r <= TABLE_END; r++) {
@@ -1065,7 +1087,6 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   }
 
   // Insert extra rows when task count exceeds template capacity
-  const extraRows = Math.max(0, mainTasks.length - TEMPLATE_TASK_ROWS)
   if (extraRows > 0) {
     _insertRows(sheet, TABLE_END, extraRows, TABLE_END)
   }
@@ -1114,11 +1135,27 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
 
   // ── Grand total ───────────────────────────────────────────────────────────
   const totalAmountRow = TABLE_END + extraRows + 1
-  sheet.getCell(`G${totalAmountRow}`).value = grandTotal
-  sheet.getCell(`G${totalAmountRow}`).numFmt = '"¥"#,##0'
-  sheet.getCell(`G${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getCell(`G${totalAmountRow}`).font = { name: 'Arial', size: 10, bold: true }
-  sheet.getCell(`B${totalAmountRow}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  _cleanAndReMerge(sheet, totalAmountRow, 'A', 'F')
+  const lblCell = sheet.getCell(`A${totalAmountRow}`)
+  lblCell.value = 'Total Amount'
+  lblCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  lblCell.font = { name: 'Arial', size: 10, bold: true }
+
+  const grandTotalCell = sheet.getCell(`G${totalAmountRow}`)
+  grandTotalCell.value = grandTotal
+  grandTotalCell.numFmt = '"¥"#,##0'
+  grandTotalCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  grandTotalCell.font = { name: 'Arial', size: 10, bold: true }
+
+  for (let c = 1; c <= 7; c++) {
+    const cell = sheet.getRow(totalAmountRow).getCell(c)
+    cell.border = {
+      top: { style: 'thin' },
+      bottom: { style: 'medium' },
+      left: c === 1 ? { style: 'medium' } : { style: 'thin' },
+      right: c === 7 ? { style: 'medium' } : (c === 6 ? { style: 'thin' } : undefined)
+    }
+  }
 
   // Clear secondary total row if any
   const secondaryTotalRow = TABLE_END + extraRows + (showAdmin ? 1 : 0) + 2
@@ -1126,6 +1163,7 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
     sheet.getCell(`G${secondaryTotalRow}`).value = null
     sheet.getCell(`B${secondaryTotalRow}`).value = null
   }
+
 
   // ── Signatures (shift by extraRows) ──────────────────────────────────────
   const s = extraRows
