@@ -127,10 +127,16 @@ export default function OnlineDrawer() {
         return;
       }
 
+      const matchUser = (a?: string | null, b?: string | null) => {
+        if (!a || !b) return false;
+        return a.toLowerCase().trim() === b.toLowerCase().trim();
+      };
+
+
       const isCurrentGroup = expandedGroupId !== null && msg.group_id === expandedGroupId;
       const isCurrentP2P = expandedGroupId === null && expandedPeer !== null &&
-        ((msg.sender === expandedPeer && msg.recipient === user?.username) ||
-          (msg.sender === user?.username && msg.recipient === expandedPeer));
+        ((matchUser(msg.sender, expandedPeer) && matchUser(msg.recipient, user?.username)) ||
+          (matchUser(msg.sender, user?.username) && matchUser(msg.recipient, expandedPeer)));
 
       fetchGroupsAndUsers();
 
@@ -138,7 +144,7 @@ export default function OnlineDrawer() {
         const key = msg.group_id !== null ? `group:${msg.group_id}` : msg.sender;
         setChatUnreadCounts(prev => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
 
-        if (msg.sender && msg.sender !== user?.username) {
+        if (msg.sender && !matchUser(msg.sender, user?.username)) {
           const timestamp = Date.now();
           let previewText = msg.content;
           if (!previewText?.trim() && msg.attachment_name) {
@@ -167,11 +173,12 @@ export default function OnlineDrawer() {
         }
       }
 
-      if (msg.sender && msg.sender.toLowerCase() !== user?.username?.toLowerCase()) {
+      if (msg.sender && !matchUser(msg.sender, user?.username)) {
         playMessageChime();
         if (document.visibilityState === 'hidden') {
           window.electronAPI?.flashWindow?.(true);
         }
+
 
         if (msg.group_id !== null) {
           const groupName = threads.find(t => t.type === 'group' && t.group_id === msg.group_id)?.name || 'Group Chat';
@@ -354,8 +361,14 @@ export default function OnlineDrawer() {
   const filteredActiveDms = useMemo(() => {
     const dmThreads = threads.filter(t => t.type === 'dm');
     if (!searchQuery) return dmThreads;
-    return dmThreads.filter(dm => dm.peer.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [threads, searchQuery]);
+    const q = searchQuery.toLowerCase().trim();
+    return dmThreads.filter(dm => {
+      const peer = (dm.peer || '').toLowerCase();
+      const ws = workstations.find(w => w.current_user?.toLowerCase() === peer);
+      const disp = (ws?.display_name || getDisplayName(dm.peer) || '').toLowerCase();
+      return peer.includes(q) || disp.includes(q);
+    });
+  }, [threads, searchQuery, workstations]);
 
   return (
     <>
@@ -481,7 +494,7 @@ export default function OnlineDrawer() {
                       filteredGroups.map(g => {
                         const unread = chatUnreadCounts[`group:${g.group_id}`] || g.unread_count || 0;
                         const subtitle = g.last_message
-                          ? `${g.last_message.sender === user?.username ? 'You' : g.last_message.sender}: ${g.last_message.content}`
+                          ? `${g.last_message.sender?.toLowerCase() === user?.username?.toLowerCase() ? 'You' : (getDisplayName(g.last_message.sender) || g.last_message.sender)}: ${g.last_message.content}`
                           : `${g.members.length} members`;
                         return (
                           <div key={`group_${g.group_id}`} className={`global-chat-entry-card group-card ${unread > 0 ? 'is-unread' : 'is-read'}`} onClick={() => handleOpenChat(null, g.name, g.group_id)}>
@@ -507,12 +520,12 @@ export default function OnlineDrawer() {
                     ) : (
                       filteredActiveDms.map(dm => {
                         const dmUsername = dm.peer;
-                        const ws = workstations.find(w => w.current_user === dmUsername);
+                        const ws = workstations.find(w => w.current_user?.toLowerCase() === dmUsername?.toLowerCase());
                         const status = ws ? getStatusClass(ws.last_ping, ws.active_module) : 'status-offline';
                         const displayName = ws?.display_name || getDisplayName(dmUsername) || dmUsername;
-                        const unread = chatUnreadCounts[dmUsername] || dm.unread_count || 0;
+                        const unread = chatUnreadCounts[dmUsername] || chatUnreadCounts[dmUsername?.toLowerCase()] || dm.unread_count || 0;
                         const subtitle = dm.last_message
-                          ? `${dm.last_message.sender === user?.username ? 'You' : dm.last_message.sender}: ${dm.last_message.content}`
+                          ? `${dm.last_message.sender?.toLowerCase() === user?.username?.toLowerCase() ? 'You' : (getDisplayName(dm.last_message.sender) || dm.last_message.sender)}: ${dm.last_message.content}`
                           : 'No messages yet';
 
                         return (
@@ -541,6 +554,7 @@ export default function OnlineDrawer() {
                 ) : filteredWorkstations.length === 0 ? (
                   <div className="online-drawer-empty">
                     {searchQuery ? 'No matching users found.' : 'No active users seen recently.'}
+
                   </div>
                 ) : (
                   filteredWorkstations.map(ws => {

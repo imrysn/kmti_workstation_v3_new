@@ -11,15 +11,16 @@ from sqlalchemy.future import select
 from sqlalchemy import or_, and_, update, delete, func
 from pydantic import BaseModel
 
-from db.database import get_db, AsyncSessionLocal
+from db.database import get_db, get_fms_db, AsyncSessionLocal, FmsAsyncSessionLocal
 from models.chat import ChatMessage, Group, GroupMember
 from models.user import User
+from models.fms import FmsUser
 from models.telemetry import WorkstationStatus
 from core.auth import get_current_user
 from core.config import CHAT_STORAGE_DIR
 from socket_manager import sio, _sid_to_user, register_user, broadcast_mutation
 from modules.chat.schemas import GroupCreate
-from modules.chat.service import ChatService
+from modules.chat.service import ChatService, resolve_user_aliases
 from utils.moderation import get_banned_words_cached, censor_text
 
 logger = logging.getLogger("kmti_backend.chat")
@@ -29,12 +30,14 @@ STORAGE_DIR = CHAT_STORAGE_DIR
 async def join_online_members_to_group(group_id: int, members: List[str]):
     members_lower = {m.lower().strip() for m in members if m}
     for sid, username in list(_sid_to_user.items()):
-        if username and username.lower().strip() in members_lower:
-            try:
-                await sio.enter_room(sid, f"group:{group_id}")
-                logger.info(f"Dynamically joined online user {username} (sid={sid}) to room group:{group_id}")
-            except Exception as e:
-                logger.error(f"Failed to join online user {username} to group:{group_id} room: {e}")
+        if username:
+            user_info = await resolve_user_aliases(username)
+            if any(alias in members_lower for alias in user_info["aliases"]):
+                try:
+                    await sio.enter_room(sid, f"group:{group_id}")
+                    logger.info(f"Dynamically joined online user {username} (sid={sid}) to room group:{group_id}")
+                except Exception as e:
+                    logger.error(f"Failed to join online user {username} to group:{group_id} room: {e}")
 
 
 @router.get("/history")
@@ -90,22 +93,27 @@ async def mark_messages_read(
     if peer == "__global__":
         return {"success": True}
         
-    c_peer = peer.lower().strip() if peer else ""
-    c_user = current_user.username.lower().strip()
-    stmt = (
-        update(ChatMessage)
-        .where(and_(
-            func.lower(ChatMessage.sender) == c_peer,
-            func.lower(ChatMessage.recipient) == c_user,
-            ChatMessage.is_read == False
-        ))
-        .values(is_read=True)
-    )
-    await db.execute(stmt)
-    await db.commit()
-
     if peer:
-        await sio.emit("chat_messages_read", {"reader": current_user.username, "sender": peer}, room=f"user:{c_peer}")
+        curr_info = await resolve_user_aliases(current_user.username)
+        peer_info = await resolve_user_aliases(peer)
+        curr_aliases = list(curr_info["aliases"])
+        peer_aliases = list(peer_info["aliases"])
+
+        stmt = (
+            update(ChatMessage)
+            .where(and_(
+                func.lower(ChatMessage.sender).in_(peer_aliases),
+                func.lower(ChatMessage.recipient).in_(curr_aliases),
+                ChatMessage.is_read == False
+            ))
+            .values(is_read=True)
+        )
+        await db.execute(stmt)
+        await db.commit()
+
+        # Emit read receipt to all peer socket rooms
+        for alias in peer_aliases:
+            await sio.emit("chat_messages_read", {"reader": current_user.username, "sender": peer}, room=f"user:{alias}")
 
     return {"success": True}
 
@@ -191,21 +199,58 @@ async def get_groups(
 @router.get("/users")
 async def list_chat_users(
     db: AsyncSession = Depends(get_db),
+    fms_db: AsyncSession = Depends(get_fms_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Returns a list of all active users for group member selection. Anyone can access this."""
-    query = select(User).where(User.is_active == True).order_by(User.username)
-    result = await db.execute(query)
-    users = result.scalars().all()
-    return [
-        {
-            "id": u.id,
-            "username": u.username,
-            "display_name": u.display_name,
-            "fullName": u.display_name or u.username
-        }
-        for u in users
-    ]
+    """
+    Returns a unified list of all active users from BOTH databases:
+    1. kmti_users (Primary DB)
+    2. kmtifms.users (Secondary DB)
+    Deduplicated by lowercase username.
+    """
+    seen_usernames = set()
+    combined_users = []
+
+    # 1. Fetch Primary DB Users
+    try:
+        query_local = select(User).where(User.is_active == True).order_by(User.username)
+        res_local = await db.execute(query_local)
+        local_users = res_local.scalars().all()
+        for u in local_users:
+            uname_clean = (u.username or "").lower().strip()
+            if uname_clean and uname_clean not in seen_usernames:
+                seen_usernames.add(uname_clean)
+                disp = u.display_name or u.username
+                combined_users.append({
+                    "id": u.id,
+                    "username": u.username,
+                    "display_name": disp,
+                    "fullName": disp,
+                    "profilePicture": None
+                })
+    except Exception as e:
+        logger.warning(f"Error fetching local users for chat: {e}")
+
+    # 2. Fetch Secondary FMS DB Users (Bulk of company users)
+    try:
+        query_fms = select(FmsUser).order_by(FmsUser.username)
+        res_fms = await fms_db.execute(query_fms)
+        fms_users = res_fms.scalars().all()
+        for fu in fms_users:
+            uname_clean = (fu.username or "").lower().strip()
+            if uname_clean and uname_clean not in seen_usernames:
+                seen_usernames.add(uname_clean)
+                combined_users.append({
+                    "id": fu.id,
+                    "username": fu.username,
+                    "display_name": fu.displayName or fu.fullName or fu.username,
+                    "fullName": fu.fullName or fu.username,
+                    "profilePicture": fu.profile_picture
+                })
+    except Exception as e:
+        logger.warning(f"Error fetching FMS users for chat: {e}")
+
+    return sorted(combined_users, key=lambda x: (x.get("display_name") or x.get("username") or "").lower())
 
 
 @router.get("/threads")
@@ -252,11 +297,14 @@ async def delete_dm_thread(
     """Hard-delete all messages in a direct conversation for both sides."""
     await ChatService.delete_dm_thread(db, current_user.username, peer)
     
-    clean_current = current_user.username.lower().strip()
-    clean_peer = peer.lower().strip()
-    # Emit thread sync notification targeted specifically to both parties
-    await sio.emit("receive_chat_message", {"type": "thread_deleted", "peer": peer}, room=f"user:{clean_current}")
-    await sio.emit("receive_chat_message", {"type": "thread_deleted", "peer": current_user.username}, room=f"user:{clean_peer}")
+    curr_info = await resolve_user_aliases(current_user.username)
+    peer_info = await resolve_user_aliases(peer)
+
+    # Emit thread sync notification to all aliases of both parties
+    for a in curr_info["aliases"]:
+        await sio.emit("receive_chat_message", {"type": "thread_deleted", "peer": peer}, room=f"user:{a}")
+    for a in peer_info["aliases"]:
+        await sio.emit("receive_chat_message", {"type": "thread_deleted", "peer": current_user.username}, room=f"user:{a}")
     return {"success": True}
 
 
@@ -278,7 +326,10 @@ async def delete_group_thread(
         await sio.emit("receive_chat_message", {"type": "group_deleted", "group_id": group_id}, room=f"group:{group_id}")
     else:
         # User left group -> notify only the leaving user to close their local chat
-        await sio.emit("receive_chat_message", {"type": "group_deleted", "group_id": group_id}, room=f"user:{clean_user}")
+        curr_info = await resolve_user_aliases(current_user.username)
+        for a in curr_info["aliases"]:
+            await sio.emit("receive_chat_message", {"type": "group_deleted", "group_id": group_id}, room=f"user:{a}")
+        
         # Notify remaining members in the group room with the updated member list
         await sio.emit("group_updated", {
             "id": group_id,
@@ -288,7 +339,7 @@ async def delete_group_thread(
         
         # Remove leaving user's active sockets from the group room
         for sid, uname in list(_sid_to_user.items()):
-            if uname and uname.lower().strip() == clean_user:
+            if uname and uname.lower().strip() in curr_info["aliases"]:
                 try:
                     await sio.leave_room(sid, f"group:{group_id}")
                 except Exception:
@@ -388,31 +439,25 @@ async def pin_message(
 async def handle_authenticate(sid: str, data: dict):
     username = data.get("username")
     if username:
-        clean_username = username.lower().strip()
         register_user(sid, username)
-        await sio.enter_room(sid, f"user:{clean_username}")
-        logger.info(f"[Socket] {username} authenticated via event (sid={sid}, room=user:{clean_username})")
         
-        # Look up user's display_name and join group rooms
+        # Look up ALL aliases across both databases
+        user_info = await resolve_user_aliases(username)
+        for alias in user_info["aliases"]:
+            await sio.enter_room(sid, f"user:{alias}")
+            logger.info(f"[Socket] {username} joined room user:{alias}")
+        
+        # Join group rooms where any alias is a member
         try:
             async with AsyncSessionLocal() as db:
-                u_res = await db.execute(select(User).where(func.lower(User.username) == clean_username))
-                u = u_res.scalars().first()
-                if u:
-                    disp = getattr(u, "display_name", None) or getattr(u, "full_name", None)
-                    if disp and disp.lower().strip() != clean_username:
-                        disp_clean = disp.lower().strip()
-                        await sio.enter_room(sid, f"user:{disp_clean}")
-                        logger.info(f"[Socket] {username} also joined room user:{disp_clean}")
-
-                stmt = select(GroupMember.group_id).where(func.lower(GroupMember.username) == clean_username)
+                stmt = select(GroupMember.group_id).where(func.lower(GroupMember.username).in_(list(user_info["aliases"])))
                 res = await db.execute(stmt)
                 group_ids = res.scalars().all()
                 for g_id in group_ids:
                     await sio.enter_room(sid, f"group:{g_id}")
                     logger.info(f"[Socket] {username} joined group room group:{g_id} via event")
         except Exception as e:
-            logger.error(f"[Socket Error] Failed to join rooms for {username}: {e}")
+            logger.error(f"[Socket Error] Failed to join group rooms for {username}: {e}")
 
 
 @sio.on("send_chat_message")
@@ -424,8 +469,9 @@ async def handle_send_chat_message(sid: str, data: dict):
 
     if sid not in _sid_to_user and sender:
         register_user(sid, sender)
-        clean_sender = sender.lower().strip()
-        await sio.enter_room(sid, f"user:{clean_sender}")
+        sender_info = await resolve_user_aliases(sender)
+        for alias in sender_info["aliases"]:
+            await sio.enter_room(sid, f"user:{alias}")
         
     recipient = data.get("recipient")
     group_id = data.get("group_id")
@@ -442,37 +488,11 @@ async def handle_send_chat_message(sid: str, data: dict):
     banned_words = await get_banned_words_cached()
     censored_content = censor_text(content, banned_words)
     
-    resolved_recipient = recipient
-    async with AsyncSessionLocal() as db:
-        # If recipient was sent as display_name / full_name, resolve it to canonical username
-        if recipient and recipient != "__global__":
-            clean_rec = recipient.lower().strip()
-            # 1. Match User display_name or username
-            u_res = await db.execute(
-                select(User).where(
-                    or_(
-                        func.lower(User.display_name) == clean_rec,
-                        func.lower(User.username) == clean_rec
-                    )
-                )
-            )
-            matched_user = u_res.scalars().first()
-            if matched_user:
-                resolved_recipient = matched_user.username
-            else:
-                # 2. Match WorkstationStatus display_name or current_user
-                ws_res = await db.execute(
-                    select(WorkstationStatus).where(
-                        or_(
-                            func.lower(WorkstationStatus.display_name) == clean_rec,
-                            func.lower(WorkstationStatus.current_user) == clean_rec
-                        )
-                    )
-                )
-                matched_ws = ws_res.scalars().first()
-                if matched_ws and matched_ws.current_user:
-                    resolved_recipient = matched_ws.current_user
+    # Resolve recipient across both databases
+    rec_info = await resolve_user_aliases(recipient) if recipient and recipient != "__global__" else {"canonical_username": recipient, "aliases": set()}
+    resolved_recipient = rec_info.get("canonical_username") or recipient
 
+    async with AsyncSessionLocal() as db:
         new_msg = ChatMessage(
             sender=sender,
             recipient=resolved_recipient or "",
@@ -508,15 +528,22 @@ async def handle_send_chat_message(sid: str, data: dict):
     elif recipient == "__global__":
         await sio.emit("receive_chat_message", msg_payload)
     else:
-        # Emit to recipient's canonical username room
+        # Broadcast to ALL aliases of the recipient
+        target_rooms = set()
         if resolved_recipient:
-            await sio.emit("receive_chat_message", msg_payload, room=f"user:{resolved_recipient.lower().strip()}")
-        # If recipient was different string (e.g. display/full name), also emit to that room
-        if recipient and recipient.lower().strip() != resolved_recipient.lower().strip():
-            await sio.emit("receive_chat_message", msg_payload, room=f"user:{recipient.lower().strip()}")
-        # Also emit to sender so other tabs/devices for sender receive the message
-        if sender:
-            await sio.emit("receive_chat_message", msg_payload, room=f"user:{sender.lower().strip()}")
+            target_rooms.add(f"user:{resolved_recipient.lower().strip()}")
+        if recipient:
+            target_rooms.add(f"user:{recipient.lower().strip()}")
+        for alias in rec_info.get("aliases", set()):
+            target_rooms.add(f"user:{alias}")
+            
+        for room_name in target_rooms:
+            await sio.emit("receive_chat_message", msg_payload, room=room_name)
+
+        # Broadcast to sender aliases so sender's other devices/tabs stay in sync
+        sender_info = await resolve_user_aliases(sender)
+        for alias in sender_info.get("aliases", {sender.lower().strip()}):
+            await sio.emit("receive_chat_message", msg_payload, room=f"user:{alias}")
 
     return {"success": True, "id": new_msg.id}
 
@@ -532,7 +559,9 @@ async def handle_user_typing(sid: str, data: dict):
     if group_id is not None:
         await sio.emit("user_typing", payload, room=f"group:{group_id}", skip_sid=sid)
     elif recipient:
-        await sio.emit("user_typing", payload, room=f"user:{recipient.lower().strip()}", skip_sid=sid)
+        rec_info = await resolve_user_aliases(recipient)
+        for alias in rec_info.get("aliases", {recipient.lower().strip()}):
+            await sio.emit("user_typing", payload, room=f"user:{alias}", skip_sid=sid)
 
 
 @sio.on("user_stop_typing")
@@ -546,4 +575,6 @@ async def handle_user_stop_typing(sid: str, data: dict):
     if group_id is not None:
         await sio.emit("user_stop_typing", payload, room=f"group:{group_id}", skip_sid=sid)
     elif recipient:
-        await sio.emit("user_stop_typing", payload, room=f"user:{recipient.lower().strip()}", skip_sid=sid)
+        rec_info = await resolve_user_aliases(recipient)
+        for alias in rec_info.get("aliases", {recipient.lower().strip()}):
+            await sio.emit("user_stop_typing", payload, room=f"user:{alias}", skip_sid=sid)

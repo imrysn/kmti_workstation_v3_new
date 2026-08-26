@@ -56,7 +56,7 @@ export function useChatSystem(user: any) {
     setActiveChats(prev => {
       const existsIdx = prev.findIndex(c =>
         (groupId !== null && c.groupId === groupId) ||
-        (groupId === null && c.peer === peer && c.groupId === null)
+        (groupId === null && c.groupId === null && c.peer?.toLowerCase() === peer?.toLowerCase())
       );
 
       if (spawnMinimized) {
@@ -82,7 +82,8 @@ export function useChatSystem(user: any) {
 
     if (!spawnMinimized) {
       const key = groupId !== null ? `group:${groupId}` : (peer || '');
-      setChatUnreadCounts(prev => ({ ...prev, [key]: 0 }));
+      const lowerKey = groupId !== null ? `group:${groupId}` : (peer?.toLowerCase() || '');
+      setChatUnreadCounts(prev => ({ ...prev, [key]: 0, [lowerKey]: 0 }));
 
       try {
         await chatApi.markRead(peer || undefined, groupId || undefined);
@@ -92,6 +93,7 @@ export function useChatSystem(user: any) {
       }
     }
   }, [fetchGroupsAndUsers]);
+
 
   // Escape key to minimize active chats
   useEffect(() => {

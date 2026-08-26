@@ -48,12 +48,13 @@ export function ChatheadsOverlay({
   const elements = visibleChats.map((chat, i) => {
     const { x, y } = getCoordinates(i, totalArcItems);
 
-    const peerStatus = chat.peer ? workstations.find(w => w.current_user === chat.peer) : null;
+    const peerStatus = chat.peer ? workstations.find(w => w.current_user?.toLowerCase() === chat.peer?.toLowerCase()) : null;
     const isOffline = chat.peer && (!peerStatus || (peerStatus.last_ping && (Date.now() - new Date(peerStatus.last_ping).getTime() > 300000)) || peerStatus.active_module === 'offline');
     const isCurrentExpanded = !chat.isMinimized;
     const key = chat.groupId !== null ? `group:${chat.groupId}` : chat.peer || '';
-    const unread = chatUnreadCounts[key] || 0;
-    const preview = chatPreviews[key];
+    const unread = chatUnreadCounts[key] || chatUnreadCounts[key.toLowerCase()] || 0;
+    const preview = chatPreviews[key] || chatPreviews[key.toLowerCase()];
+
 
     return (
       <div

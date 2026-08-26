@@ -106,8 +106,18 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
   }
 
+  // Open external links and shared chat attachments in user's default system browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url)
+      return { action: 'deny' }
+    }
+    return { action: 'allow' }
+  })
+
   mainWindow.on('resize', saveState)
   mainWindow.on('move', saveState)
+
   mainWindow.on('maximize', () => mainWindow.webContents.send('window-maximized', true))
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window-maximized', false))
 }

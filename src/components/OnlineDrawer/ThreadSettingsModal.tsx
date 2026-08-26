@@ -70,16 +70,17 @@ export function ThreadSettingsModal({
   }, [peer, groupId]);
 
   const filteredMedia = data.media.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase()) || m.sender.toLowerCase().includes(search.toLowerCase())
+    (m.name || '').toLowerCase().includes(search.toLowerCase()) || (m.sender || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const filteredFiles = data.files.filter(f =>
-    f.name.toLowerCase().includes(search.toLowerCase()) || f.sender.toLowerCase().includes(search.toLowerCase())
+    (f.name || '').toLowerCase().includes(search.toLowerCase()) || (f.sender || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const filteredLinks = data.links.filter(l =>
-    l.url.toLowerCase().includes(search.toLowerCase()) || l.sender.toLowerCase().includes(search.toLowerCase())
+    (l.url || '').toLowerCase().includes(search.toLowerCase()) || (l.sender || '').toLowerCase().includes(search.toLowerCase())
   );
+
 
   return createPortal(
     <div className="thread-settings-overlay" onClick={onClose}>

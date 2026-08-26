@@ -258,10 +258,16 @@ export default function ChatBox({
 
   // Listen to socket events
   useEffect(() => {
+    const matchUser = (a?: string | null, b?: string | null) => {
+      if (!a || !b) return false
+      return a.toLowerCase().trim() === b.toLowerCase().trim()
+    }
+
+
     const isForThisGroup = (msg: any) => groupId !== null && msg.group_id === groupId
     const isForThisP2P = (msg: any) => groupId === null && peer !== null &&
-      ((msg.sender?.toLowerCase() === peer.toLowerCase() && msg.recipient?.toLowerCase() === currentUsername?.toLowerCase()) ||
-        (msg.sender?.toLowerCase() === currentUsername?.toLowerCase() && msg.recipient?.toLowerCase() === peer.toLowerCase()))
+      ((matchUser(msg.sender, peer) && matchUser(msg.recipient, currentUsername)) ||
+        (matchUser(msg.sender, currentUsername) && matchUser(msg.recipient, peer)))
 
     const handleReceiveMessage = (e: any) => {
       const msg = e.detail
@@ -272,7 +278,7 @@ export default function ChatBox({
           if (prev.some(m => m.id === msg.id)) return prev
           return [...prev, msg]
         })
-        if (msg.sender?.toLowerCase() !== currentUsername?.toLowerCase()) {
+        if (!matchUser(msg.sender, currentUsername)) {
           chatApi.markRead(peer || undefined, groupId || undefined).catch(err => console.error(err))
           if (onMessageReceived) {
             onMessageReceived(msg.sender, msg.recipient, msg.group_id)
@@ -298,8 +304,8 @@ export default function ChatBox({
 
     const handleTyping = (e: any) => {
       const { sender, recipient, group_id } = e.detail
-      if (sender?.toLowerCase() === currentUsername?.toLowerCase()) return
-      if ((groupId !== null && group_id === groupId) || (groupId === null && recipient?.toLowerCase() === currentUsername?.toLowerCase() && sender?.toLowerCase() === peer?.toLowerCase())) {
+      if (matchUser(sender, currentUsername)) return
+      if ((groupId !== null && group_id === groupId) || (groupId === null && matchUser(recipient, currentUsername) && matchUser(sender, peer))) {
         setTypingUsers(prev => new Set(prev).add(sender))
         playTypingSound()
       }
@@ -307,7 +313,7 @@ export default function ChatBox({
 
     const handleStopTyping = (e: any) => {
       const { sender, recipient, group_id } = e.detail
-      if ((groupId !== null && group_id === groupId) || (groupId === null && recipient?.toLowerCase() === currentUsername?.toLowerCase() && sender?.toLowerCase() === peer?.toLowerCase())) {
+      if ((groupId !== null && group_id === groupId) || (groupId === null && matchUser(recipient, currentUsername) && matchUser(sender, peer))) {
         setTypingUsers(prev => {
           const next = new Set(prev)
           next.delete(sender)
@@ -319,10 +325,11 @@ export default function ChatBox({
     const handleMessagesRead = (e: any) => {
       const { reader, sender: msgSender } = e.detail
       // If we are the sender and the peer read them, update our local read state to double checks
-      if (msgSender?.toLowerCase() === currentUsername?.toLowerCase() && reader?.toLowerCase() === peer?.toLowerCase() && groupId === null) {
-        setChatMessages(prev => prev.map(m => m.sender?.toLowerCase() === currentUsername?.toLowerCase() ? { ...m, is_read: true } : m))
+      if (matchUser(msgSender, currentUsername) && matchUser(reader, peer) && groupId === null) {
+        setChatMessages(prev => prev.map(m => matchUser(m.sender, currentUsername) ? { ...m, is_read: true } : m))
       }
     }
+
 
     window.addEventListener('kmti:receive_chat_message', handleReceiveMessage)
     window.addEventListener('kmti:db_mutation', handleMutation as EventListener)
@@ -712,7 +719,7 @@ export default function ChatBox({
           </div>
         ) : (
           chatMessages.map((msg, idx) => {
-            const isOutgoing = msg.sender === currentUsername
+            const isOutgoing = matchUser(msg.sender, currentUsername)
             const attachmentUrl = msg.attachment_path
               ? (msg.attachment_path.startsWith('http') ? msg.attachment_path : `${SERVER_BASE}${msg.attachment_path}`)
               : null
@@ -735,7 +742,7 @@ export default function ChatBox({
             if (idx === 0) isFirstInGroup = true
             else {
               const prevMsg = chatMessages[idx - 1]
-              if (prevMsg.sender !== msg.sender || showDateHeader) {
+              if (!matchUser(prevMsg.sender, msg.sender) || showDateHeader) {
                 isFirstInGroup = true
               } else {
                 const diff = new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime()
@@ -748,13 +755,14 @@ export default function ChatBox({
               const nextMsg = chatMessages[idx + 1]
               const nextDate = new Date(nextMsg.created_at).toDateString()
               const currDate = new Date(msg.created_at).toDateString()
-              if (nextMsg.sender !== msg.sender || nextDate !== currDate) {
+              if (!matchUser(nextMsg.sender, msg.sender) || nextDate !== currDate) {
                 isLastInGroup = true
               } else {
                 const diff = new Date(nextMsg.created_at).getTime() - new Date(msg.created_at).getTime()
                 if (diff > twoMins) isLastInGroup = true
               }
             }
+
 
             const isSingleEmoji = msg.content && SUPPORTED_EMOJIS.includes(msg.content.trim()) && !msg.attachment_path
 
