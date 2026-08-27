@@ -138,7 +138,6 @@ async def get_cached_preview(file_path: str, ext: str, full: bool = False) -> Re
     
     try:
         if not os.path.exists(file_path):
-            print(f">>> [PREVIEW DIAG] File not found: {file_path}")
             if os.path.exists(MISSING_FILE_PLACEHOLDER):
                 return FileResponse(MISSING_FILE_PLACEHOLDER)
             raise HTTPException(status_code=404, detail="File missing on disk")
@@ -156,10 +155,9 @@ async def get_cached_preview(file_path: str, ext: str, full: bool = False) -> Re
                         return f.read()
                 cache_data = await asyncio.to_thread(_read_cache)
                 return Response(content=cache_data, media_type="image/png")
-    except Exception as e:
+    except Exception:
         # If cache fails, we proceed...
         cache_path = None
-        print(f">>> [PREVIEW DIAG] Exception in cache check for {file_path}: {e}")
 
     def return_and_cache(content, media_type="image/png"):
         if not full and cache_path and content and media_type == "image/png":
@@ -191,8 +189,9 @@ async def get_cached_preview(file_path: str, ext: str, full: bool = False) -> Re
                 pdf_thumb = await asyncio.to_thread(_get_pdf_thumb)
                 if pdf_thumb:
                     return return_and_cache(pdf_thumb)
-            except Exception as e:
-                print(f">>> [PREVIEW DIAG] PDF Thumbnailing failed for {file_path}: {e}")
+            except Exception:
+                pass
+
         
         # Fallback to direct PDF serving if thumbnailing fails or fitz missing
         try:
@@ -237,20 +236,21 @@ async def get_cached_preview(file_path: str, ext: str, full: bool = False) -> Re
             
             # --- ICD FALLBACK POINT CLOUD RENDERING ---
             if ext == '.icd':
-                print(f">>> [PREVIEW DIAG] Shell extension failed for .icd. Pivoting to pure-python 3D point cloud fallback for {file_path}")
                 try:
                     fallback_data = await asyncio.to_thread(render_icd_point_cloud_fallback, file_path)
                     if fallback_data:
                         return return_and_cache(fallback_data)
-                except Exception as fe:
-                    print(f">>> [PREVIEW DIAG] Point cloud fallback failed: {fe}")
+                except Exception:
+                    pass
 
-            print(f">>> [PREVIEW DIAG] Professional engine skipped for {ext}. No handlers available.")
             if os.path.exists(ENGINE_MISSING_PLACEHOLDER):
                 return FileResponse(ENGINE_MISSING_PLACEHOLDER)
             return Response(content=b"", status_code=204)
-        except Exception as e:
-            print(f">>> [PREVIEW DIAG] Professional extraction failed for {file_path}: {e}")
+        except Exception:
+            if os.path.exists(ENGINE_MISSING_PLACEHOLDER):
+                return FileResponse(ENGINE_MISSING_PLACEHOLDER)
+            return Response(content=b"", status_code=204)
+
 
     # 5. Standard Images (Direct Serving)
     preview_extensions = {

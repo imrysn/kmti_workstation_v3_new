@@ -78,13 +78,13 @@ def get_dwg_preview(file_path: str) -> bytes:
                     buf = io.BytesIO()
                     img.save(buf, format="PNG")
                     return buf.getvalue()
-                except Exception as e:
-                    print(f"PIL could not decode DWG payload: {e}")
+                except Exception:
+                    pass
                 
         return None
-    except Exception as e:
-        print(f"DWG Forensic extraction failed: {e}")
+    except Exception:
         return None
+
 
 if __name__ == "__main__":
     pass

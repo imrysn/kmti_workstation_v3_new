@@ -103,14 +103,9 @@ def get_sw_preview(file_path: str) -> bytes:
                     pass
         
         return None
-    except Exception as e:
-        print(f"SolidWorks Forensic extraction failed for {file_path}: {e}")
+    except Exception:
         return None
 
-        return None
-    except Exception as e:
-        print(f"SolidWorks Forensic extraction failed for {file_path}: {e}")
-        return None
 
 if __name__ == "__main__":
     # Test stub

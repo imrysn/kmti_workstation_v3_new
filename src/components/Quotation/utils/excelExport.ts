@@ -553,7 +553,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   const TEMPLATE_TASK_ROWS = 10
   const totalContentRows = isKemco
     ? (kemcoRows.length + 1)
-    : (mainTasks.length + (showAdmin && overheadTotal !== 0 ? 1 : 0) + 1)
+    : (mainTasks.length + (showAdmin ? 1 : 0) + 1)
   const effectiveTaskRows = isKemco ? Math.max(10, totalContentRows) : 10
   const extraRows = Math.max(0, totalContentRows - TEMPLATE_TASK_ROWS)
 
@@ -899,7 +899,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     currentRow = leasingRowIdx + 1
   } else {
     // ── Administrative Overhead ───────────────────────────────────────────────
-    if (showAdmin && overheadTotal !== 0) {
+    if (showAdmin) {
       sheet.getCell(`B${currentRow}`).value = 'Administrative Overhead'
       sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
       sheet.getCell(`B${currentRow}`).font = { name: 'Arial', size: 10 }
@@ -910,6 +910,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
       sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 10 }
       currentRow++
     }
+
 
     // ── Nothing Follow ────────────────────────────────────────────────────────
     sheet.getCell(`D${currentRow}`).value = '\u2026\u2026NOTHING FOLLOW \u2026\u2026'
@@ -1078,7 +1079,7 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   const TABLE_START = 16
   const TEMPLATE_TASK_ROWS = 10
   const TABLE_END = TABLE_START + TEMPLATE_TASK_ROWS - 1  // 25
-  const totalContentRows = mainTasks.length + (showAdmin && overheadTotal !== 0 ? 1 : 0) + 1
+  const totalContentRows = mainTasks.length + (showAdmin ? 1 : 0) + 1
   const extraRows = Math.max(0, totalContentRows - TEMPLATE_TASK_ROWS)
 
   // Clear all pre-styled data rows
@@ -1117,7 +1118,7 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   let currentRow = TABLE_START + mainTasks.length
 
   // ── Administrative Overhead ───────────────────────────────────────────────
-  if (showAdmin && overheadTotal !== 0) {
+  if (showAdmin) {
     sheet.getCell(`B${currentRow}`).value = 'Administrative Overhead'
     sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'left', vertical: 'middle' }
     sheet.getCell(`B${currentRow}`).font = { name: 'Arial', size: 10 }
@@ -1126,6 +1127,7 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
     sheet.getCell(`G${currentRow}`).font = { name: 'Arial', size: 10 }
     currentRow++
   }
+
 
   // ── Nothing Follow ────────────────────────────────────────────────────────
   sheet.getCell(`D${currentRow}`).value = '\u2026\u2026NOTHING FOLLOW \u2026\u2026'
