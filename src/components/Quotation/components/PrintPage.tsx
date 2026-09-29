@@ -1,7 +1,17 @@
 import { memo } from 'react'
-import type { CompanyInfo, QuotationDetails, BillingDetails, Task, Signatures, ManualOverrides, TaskOverrides } from '../../../hooks/quotation'
+import type { CompanyInfo, QuotationDetails, BillingDetails, Task, Signatures, ManualOverrides, TaskOverrides, FooterOverrides } from '../../../hooks/quotation'
+import { DEFAULT_BILLING_DETAILS } from '../../../hooks/quotation'
 import PrintHeader from './PrintHeader'
 import { getUnitPageCount } from '../../../utils/quotation'
+
+const BANK_LABEL_MAP: Array<{ key: keyof BillingDetails; label: string }> = [
+  { key: 'bankName', label: 'BANK NAME:' },
+  { key: 'accountName', label: 'SAVINGS ACCOUNT NAME:' },
+  { key: 'accountNumber', label: 'SAVINGS ACCOUNT NUMBER:' },
+  { key: 'bankAddress', label: 'BANK ADDRESS:' },
+  { key: 'swiftCode', label: 'SWIFT CODE:' },
+  { key: 'branchCode', label: 'BRANCH CODE:' },
+]
 
 interface PrintPageProps {
   pageTasks: Task[]
@@ -25,6 +35,7 @@ interface PrintPageProps {
   layoutVariant?: 'special' | 'kemco'
   lastAssemblyId?: number
   onTaskOverride?: (taskId: number, updates: Partial<TaskOverrides>) => void
+  onFooterOverride?: (updates: Partial<FooterOverrides>) => void
   allTasks: Task[]
   onQuotationDetailsChange?: (updates: Partial<QuotationDetails>) => void
   onBillingDetailsChange?: (updates: Partial<BillingDetails>) => void
@@ -39,12 +50,21 @@ export const PrintPage = memo(({
   layoutVariant = 'special',
   lastAssemblyId: _lastAssemblyId,
   onTaskOverride,
+  onFooterOverride,
   allTasks,
   onQuotationDetailsChange,
   onBillingDetailsChange
 }: PrintPageProps) => {
 
   const fmt = (n: number) => '¥' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+
+  const kemcoPrice = manualOverrides?.footer?.price !== undefined
+    ? manualOverrides.footer.price
+    : 1848400
+  const kemcoAdjustment = manualOverrides?.footer?.adjustment !== undefined
+    ? manualOverrides.footer.adjustment
+    : -148400
+  const kemcoTotalAmount = kemcoPrice + kemcoAdjustment
 
   const resolveField = (task: Task, field: string, defaultValue: any) => {
     const override = manualOverrides.tasks[task.id] as any
@@ -164,13 +184,48 @@ export const PrintPage = memo(({
     if (!isLastPage) return null
     return printMode === 'billing' ? (
       <div className="bank-details-section">
-        <div className="bank-details-title">BANK ACCOUNT DETAILS:</div>
+        <div className="bank-details-title">BANK DETAILS (Yen)</div>
         <div className="bank-details-grid">
-          <div className="bank-details-row"><span className="bank-label">Bank Name:</span> <span className="bank-value">METROPOLITAN BANK AND TRUST CO.</span></div>
-          <div className="bank-details-row"><span className="bank-label">Branch:</span> <span className="bank-value">CARMONA BRANCH</span></div>
-          <div className="bank-details-row"><span className="bank-label">Account Name:</span> <span className="bank-value">KMTI MANUFACTURING AND TRADING INC.</span></div>
-          <div className="bank-details-row"><span className="bank-label">Account Number:</span> <span className="bank-value">554-3-55410115-3</span></div>
-          <div className="bank-details-row"><span className="bank-label">TIN No.:</span> <span className="bank-value">008-831-508-000</span></div>
+          {BANK_LABEL_MAP.map(({ key, label }) => {
+            const rawVal = billingDetails?.[key]
+            const val = (rawVal !== undefined && rawVal !== '')
+              ? String(rawVal)
+              : (DEFAULT_BILLING_DETAILS[key as keyof typeof DEFAULT_BILLING_DETAILS] || '')
+            if (!val) return null
+            return (
+              <div key={key} className="bank-details-row">
+                <span className="bank-label">{label}</span>
+                <span className="bank-value">
+                  {onBillingDetailsChange ? (
+                    <div
+                      contentEditable
+                      suppressContentEditableWarning
+                      className="ppm-unit-input"
+                      style={{
+                        border: 'none',
+                        outline: 'none',
+                        background: 'transparent',
+                        width: '100%',
+                        textAlign: 'left',
+                        minHeight: '14px',
+                        cursor: 'text',
+                      }}
+                      onBlur={e => {
+                        const newText = e.currentTarget.textContent?.trim() || ''
+                        if (newText !== val) {
+                          onBillingDetailsChange({ [key]: newText })
+                        }
+                      }}
+                    >
+                      {val}
+                    </div>
+                  ) : (
+                    val
+                  )}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
     ) : (
@@ -413,9 +468,25 @@ export const PrintPage = memo(({
                         </div>
                       </td>
                     )}
-                    {rowIndex === 0 && isFirstPage && (
+                    {rowIndex === 0 && (
                       <td className="price-cell kemco-merged-price" rowSpan={kemcoRows.length} style={{ textAlign: 'right', verticalAlign: 'middle', borderLeft: '1px solid #000', paddingRight: '8px' }}>
-                        ¥{(1848400).toLocaleString()}
+                        {isLastPage ? (
+                          <div
+                            contentEditable
+                            suppressContentEditableWarning
+                            className="ppm-kemco-price-input"
+                            style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', textAlign: 'right', cursor: 'text' }}
+                            onBlur={e => {
+                              const val = parseFloat((e.currentTarget.textContent || '').replace(/[^0-9.-]/g, ''))
+                              if (!isNaN(val) && val >= 0) {
+                                onFooterOverride?.({ price: val })
+                              }
+                            }}
+                            title="Click to edit Price"
+                          >
+                            {`¥${kemcoPrice.toLocaleString()}`}
+                          </div>
+                        ) : ''}
                       </td>
                     )}
                   </tr>
@@ -466,7 +537,24 @@ export const PrintPage = memo(({
                     <td /><td /><td /><td />
                     <td className="description-cell text-red">Leasing fee</td>
                     <td /><td />
-                    <td className="price-cell text-red">- ¥{(148400).toLocaleString()}</td>
+                    <td className="price-cell text-red">
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="ppm-kemco-leasing-input"
+                        style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', textAlign: 'right', cursor: 'text', color: 'red' }}
+                        onBlur={e => {
+                          const val = parseFloat((e.currentTarget.textContent || '').replace(/[^0-9.-]/g, ''))
+                          if (!isNaN(val)) {
+                            const adjustedVal = val > 0 ? -val : val
+                            onFooterOverride?.({ adjustment: adjustedVal })
+                          }
+                        }}
+                        title="Click to edit Leasing Fee"
+                      >
+                        {`- ¥${Math.abs(kemcoAdjustment).toLocaleString()}`}
+                      </div>
+                    </td>
                   </tr>
                 )}
                 {layoutVariant !== 'kemco' && (
@@ -483,7 +571,7 @@ export const PrintPage = memo(({
                 )}
                 {(() => {
                   const actualFillerCount = layoutVariant === 'kemco'
-                    ? Math.max(0, 10 - kemcoRows.length)  // 10 = 11 target rows - 1 leasing fee
+                    ? Math.max(0, (printMode === 'billing' ? 14 : 10) - kemcoRows.length)
                     : fillerRowCount
                   return Array.from({ length: actualFillerCount }, (_, i) => (
                     <tr key={`empty-${i}`}>
@@ -494,7 +582,25 @@ export const PrintPage = memo(({
                 <tr className="total-amount-row">
                   <td colSpan={layoutVariant === 'kemco' ? 7 : 5} className="total-label-cell">Total Amount</td>
                   <td className="price-cell">
-                    {layoutVariant === 'kemco' ? `¥${(1700000).toLocaleString()}` : fmt(grandTotal)}
+                    {layoutVariant === 'kemco' ? (
+                      <div
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="ppm-kemco-total-input"
+                        style={{ border: 'none', outline: 'none', background: 'transparent', width: '100%', textAlign: 'right', cursor: 'text' }}
+                        onBlur={e => {
+                          const val = parseFloat((e.currentTarget.textContent || '').replace(/[^0-9.-]/g, ''))
+                          if (!isNaN(val) && val >= 0) {
+                            onFooterOverride?.({ adjustment: val - kemcoPrice })
+                          }
+                        }}
+                        title="Click to edit Total Amount"
+                      >
+                        {`¥${kemcoTotalAmount.toLocaleString()}`}
+                      </div>
+                    ) : (
+                      fmt(grandTotal)
+                    )}
                   </td>
                 </tr>
               </>
@@ -502,15 +608,6 @@ export const PrintPage = memo(({
 
             {!isLastPage && (
               <>
-                {layoutVariant === 'kemco' && (() => {
-                  // Fill non-last KEMCO pages to look full (20 row target - actual rows)
-                  const fillers = Math.max(0, 18 - kemcoRows.length)
-                  return Array.from({ length: fillers }, (_, i) => (
-                    <tr key={`empty-nonlast-${i}`}>
-                      {Array.from({ length: 8 }).map((_, j) => <td key={j}>&nbsp;</td>)}
-                    </tr>
-                  ))
-                })()}
                 <tr aria-hidden="true" style={{ display: 'none' }}><td /></tr>
               </>
             )}
@@ -532,7 +629,7 @@ export const PrintPage = memo(({
         'quotation-visual-exact',
         `mode-${printMode}`,
         `variant-${layoutVariant}`,
-        `task-count-${taskCountForCompression}`,
+        isLastPage ? `task-count-${taskCountForCompression} is-last-page` : 'non-last-page',
         isContinuation ? 'page-break' : '',
         isCompressed ? 'compressed' : '',
       ].filter(Boolean).join(' ')}

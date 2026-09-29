@@ -61,18 +61,18 @@
 
 /* Bank Details Section */
 .bank-details-section {
-  margin-top: 6%;
-  margin-bottom: 20px;
-  font-size: 11px;
+  margin-top: 10px;
+  margin-bottom: 0;
+  font-size: 10px;
   color: #000;
-  border: 2px solid #000;
-  padding: 8px !important;
+  border: 1.5px solid #000;
+  padding: 5px 8px !important;
 }
 
 .bank-details-title {
   font-weight: bold;
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 3px;
+  font-size: 1.05em;
   color: #000;
   text-decoration: underline;
 }
@@ -86,19 +86,21 @@
 
 .bank-details-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
 .bank-label {
   font-weight: bold;
-  min-width: 130px;
-  font-size: 11px;
+  min-width: 175px;
+  flex-shrink: 0;
+  font-size: inherit;
 }
 
 .bank-value {
   font-weight: normal;
-  font-size: 11px;
+  font-size: inherit;
+  flex: 1;
 }
 
 /* Responsive bottom content for Billing */
@@ -107,17 +109,53 @@
   max-height: 296.5mm !important;
   display: flex;
   flex-direction: column;
-  padding-bottom: 10mm !important;
+  padding: 6mm 8mm !important;
 }
 
 .quotation-visual-exact.mode-billing .q-bottom-content {
-  margin-top: 25px;
+  margin-top: auto;
 }
 
-/* Compact signatures for Billing */
+/* Table visual overrides for Billing Mode */
+.mode-billing .table-visual th,
+.mode-billing .table-visual td {
+  padding: 4px 3px !important;
+  font-size: 11px !important;
+}
+
+.mode-billing .table-visual .nothing-follow {
+  padding: 4px 0 !important;
+  height: 18px !important;
+}
+
+/* Signatures for Billing */
 .mode-billing .signature-row-visual {
-  min-height: 80px !important;
-  margin-bottom: 15px !important;
+  min-height: 70px !important;
+  margin-bottom: 8px !important;
+}
+
+.mode-billing .signature-row-visual:last-child {
+  min-height: 58px !important;
+  margin-bottom: 0 !important;
+}
+
+.mode-billing .sig-label-visual {
+  font-size: 12px !important;
+  font-weight: bold !important;
+  margin-bottom: 6px !important;
+}
+
+.mode-billing .sig-line-visual {
+  height: 26px !important;
+  margin-bottom: 4px !important;
+  width: 250px !important;
+}
+
+.mode-billing .sig-name-visual {
+  font-size: 13.5px !important;
+  font-weight: bold !important;
+  width: 250px !important;
+  text-align: center !important;
 }
 
 /* Hide terms in billing mode */
@@ -197,7 +235,7 @@
 .ppm-container .preview-content .mode-billing .quotation-details-visual {
   position: absolute;
   right: 8mm;
-  top: 195px;
+  top: 150px !important;
   width: 70mm;
   max-width: 70mm;
   height: auto;
@@ -212,7 +250,8 @@
 }
 
 .ppm-container .preview-content .mode-billing .contact-section-visual {
-  min-height: 110px;
+  min-height: 80px;
+  margin-bottom: 8px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -225,7 +264,7 @@
 
 @media print {
   .mode-billing {
-    padding-bottom: 8mm !important;
+    padding-bottom: 6mm !important;
   }
 
   .mode-billing .billing-header {
@@ -245,11 +284,11 @@
   }
 
   .mode-billing .quotation-details-visual {
-    top: 175px !important;
+    top: 150px !important;
   }
 
   .mode-billing .contact-section-visual {
-    min-height: 100px !important;
+    min-height: 80px !important;
   }
 
   .mode-billing .q-bottom-content {

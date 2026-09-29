@@ -30,18 +30,25 @@ const DEFAULT_COMPANY: CompanyInfo = {
   phone: 'TEL: +63-46-414-4009',
 }
 
-const DEFAULT_CLIENT: ClientInfo = {
+export const DEFAULT_CLIENT: ClientInfo = {
   company: 'NEXT ENGINEERING Co., Ltd.',
   contact: 'MR. Masahiko Hasegawa',
-  address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
-  phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013',
+  address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
+  phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613',
 }
 
-const DEFAULT_CLIENT_KEMCO: ClientInfo = {
+export const DEFAULT_CLIENT_KEMCO: ClientInfo = {
   company: 'Kusakabe Electric and Machinery Co.,Ltd.',
   contact: 'Mr. Seiichi Fujiyama',
-  address: '11-2,2Chome Murotani Nishiku Kobe, Japan (651-2241)',
+  address: '2-11-2-Chome Murotani Nishi-ku Kobe, Japan (651-2241)',
   phone: 'TEL  078-992-9145 / FAX 078-992-9149',
+}
+
+export const DEFAULT_CLIENT_AGCC: ClientInfo = {
+  company: 'AGC Ceramics Co. LTD.',
+  contact: 'Mr. Nabuchi',
+  address: '5-6-1 UMEI, TAKASAGO CITY, HYOGO PREF. 6768655 JAPAN',
+  phone: '',
 }
 
 const DEFAULT_BASE_RATES: BaseRates = {
@@ -54,7 +61,7 @@ const DEFAULT_BASE_RATES: BaseRates = {
   overheadPercentage: 20,
 }
 
-const DEFAULT_BILLING_DETAILS: BillingDetails = {
+export const DEFAULT_BILLING_DETAILS: BillingDetails = {
   invoiceNo: '',
   jobOrderNo: '',
   bankName: 'RIZAL COMMERCIAL BANK CORPORATION',
@@ -579,14 +586,14 @@ export function useInvoiceState() {
       contact: customer.contact,
       address: customer.address,
       phone: customer.phone
-    } : (variant === 'kemco' ? DEFAULT_CLIENT_KEMCO : DEFAULT_CLIENT)
+    } : (variant === 'kemco' ? DEFAULT_CLIENT_KEMCO : (forcedQuotNo?.startsWith('KMAG-') || customerId === 'AGCC' ? DEFAULT_CLIENT_AGCC : DEFAULT_CLIENT))
 
     const newBilling: BillingDetails = {
       ...DEFAULT_BILLING_DETAILS,
       invoiceNo: '',
       jobOrderNo: '',
-      billTo: customer ? customer.clientName : '',
-      clientName: customer ? customer.clientName : ''
+      billTo: customer ? customer.clientName : (forcedQuotNo?.startsWith('KMAG-') || customerId === 'AGCC' ? DEFAULT_CLIENT_AGCC.company : ''),
+      clientName: customer ? customer.clientName : (forcedQuotNo?.startsWith('KMAG-') || customerId === 'AGCC' ? DEFAULT_CLIENT_AGCC.company : '')
     }
 
     // Pre-seed the new namespace before switching so useStickyState resync
@@ -619,10 +626,10 @@ export function useInvoiceState() {
     setChatLog([])
     setClientInfo(defaultClient)
     setCompanyInfo(DEFAULT_COMPANY)
-    setLayoutVariant(variant)
+    setLayoutVariantRaw(variant)
     setCurrentFilePath(null)
     setHasUnsavedChanges(false)
-  }, [])
+  }, [setLayoutVariantRaw])
 
   const loadData = useCallback((data: any, fileName: string) => {
     const qd = data.quotationDetails || {}
@@ -713,10 +720,10 @@ export function useInvoiceState() {
     setManualOverrides(resolvedOverrides)
     setCollapsedTaskIds(resolvedCollapsed)
     setChatLog(resolvedChatLog)
-    setLayoutVariant(resolvedVariant)
+    setLayoutVariantRaw(resolvedVariant)
     setCurrentFilePath(fileName)
     setHasUnsavedChanges(false)
-  }, [])
+  }, [setLayoutVariantRaw])
 
   const getSaveData = useCallback(() => ({
     companyInfo,
@@ -748,8 +755,8 @@ export function useInvoiceState() {
         const finalId = existing ? existing.id : imported.id
         idMap.set(imported.id, finalId)
 
-        const finalParentId = imported.parentId !== null 
-          ? (idMap.get(imported.parentId) ?? imported.parentId) 
+        const finalParentId = imported.parentId !== null
+          ? (idMap.get(imported.parentId) ?? imported.parentId)
           : null
 
         if (existing) {

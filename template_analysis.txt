@@ -91,10 +91,10 @@ Dimensions: Range { model: { top: 1, left: 1, bottom: 50, right: 7 } }
   G12    | KMTE-260423-12345                        | font:{sz:10,bold:true} align:{h:center,v:undefined}
   A13    | MR. Masahiro Hasegawa                    | font:{sz:11,bold:true} align:{h:undefined,v:middle}
   E13    | REFERENCE NO.:                           | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  A14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  B14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  C14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  D14    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  A14    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  B14    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  C14    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  D14    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
   E14    | DATE:                                    | font:{sz:10,bold:undefined} align:{h:left,v:middle}
   F14    | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
   G14    | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
@@ -291,10 +291,10 @@ Dimensions: Range { model: { top: 1, left: 1, bottom: 50, right: 7 } }
   E11    | Quotation No.:                           | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
   F11    | KMTE-260423-12345                        | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
   G11    | KMTE-260423-12345                        | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
-  A12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  B12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  C12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  D12    | 7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  A12    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  B12    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  C12    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  D12    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
   E12    | Job Order No.:                           | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
   A13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
   B13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}

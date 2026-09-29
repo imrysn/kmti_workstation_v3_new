@@ -1,7 +1,7 @@
 import { memo, useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type {
-  Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, ManualOverrides, TaskOverrides
+  Task, BaseRates, Signatures, CompanyInfo, ClientInfo, QuotationDetails, BillingDetails, ManualOverrides, TaskOverrides, FooterOverrides
 } from '../../types/quotation'
 import { calculateTaskTotal as calculateTaskSubtotal, calculateOverhead, getUnitPageCount } from '../../utils/quotation'
 import { LAYOUT } from './constants'
@@ -236,11 +236,9 @@ const PrintPreviewModal = memo(({
         }
       })
 
-      // 2. Paginate KEMCO rows with KEMCO-specific limits
-      // KEMCO rows are more compact than standard tasks, so we use larger per-page limits
-      // to avoid spurious 2nd pages with only the leasing fee row.
-      const KEMCO_FINAL_LIMIT = 16   // max rows on final (only) page
-      const KEMCO_STANDARD_LIMIT = 20 // max rows on non-final pages
+      // 2. Paginate KEMCO rows with max 14 rows per page (splits to page 2 when > 14)
+      const KEMCO_FINAL_LIMIT = 14   // max rows on final page
+      const KEMCO_STANDARD_LIMIT = 14 // max rows on non-final pages
       const computeKemcoPages = <T,>(items: T[]): PageSlice<T>[] => {
         if (items.length <= KEMCO_FINAL_LIMIT) {
           return [{ tasks: items, totals: items.map(() => 0), startIndex: 0 }]
@@ -282,13 +280,17 @@ const PrintPreviewModal = memo(({
         }
       })
 
-      const allMainTasks = tasks.filter(t => t.isMainTask)
-      const subtotal = allMainTasks.reduce((s, t) => s + calculateTaskTotal(t), 0)
+      const allTopTasks = tasks.filter(t => t.level === 0)
+      const calculatedSub = allTopTasks.reduce((s, t) => s + calculateTaskTotal(t), 0)
       const footer = manualOverrides?.footer || {}
-      const overhead = footer.overhead !== undefined
-        ? footer.overhead
-        : calculateOverhead(subtotal, baseRates.overheadPercentage)
-      const grand = subtotal + overhead + (footer.adjustment || 0)
+      const kemcoPrice = footer.price !== undefined
+        ? footer.price
+        : (calculatedSub > 0 ? calculatedSub : 1848400)
+      const kemcoAdjustment = footer.adjustment !== undefined
+        ? footer.adjustment
+        : -148400
+      const grand = kemcoPrice + kemcoAdjustment
+      const overhead = 0
 
       const lastAssembly = tasks.slice().reverse().find(t => t.level === 0)
       const lastAssemblyId = lastAssembly?.id
@@ -324,6 +326,13 @@ const PrintPreviewModal = memo(({
     }))
   }, [onManualOverrideChange])
 
+  const handleFooterOverride = useCallback((updates: Partial<FooterOverrides>) => {
+    onManualOverrideChange(prev => ({
+      ...prev,
+      footer: { ...(prev.footer || {}), ...updates },
+    }))
+  }, [onManualOverrideChange])
+
   // ── Print style injection helper ────────────────────────────────
   // Shared between handlePrint and handleDownloadPDF to avoid duplication.
   const buildPrintStyleContent = () => `
@@ -346,28 +355,26 @@ const PrintPreviewModal = memo(({
       html, body {
         margin: 0 !important;
         padding: 0 !important;
-        height: ${totalPages * 296}mm !important;
-        max-height: ${totalPages * 296}mm !important;
+        height: auto !important;
+        max-height: none !important;
         width: 210mm !important;
         background: white !important;
-        overflow: hidden !important;
+        overflow: visible !important;
       }
 
       .print-preview-modal {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
+        position: static !important;
         width: 210mm !important;
-        height: ${totalPages * 296}mm !important;
-        max-height: ${totalPages * 296}mm !important;
+        height: auto !important;
+        max-height: none !important;
         display: block !important;
         margin: 0 !important;
         padding: 0 !important;
         background: white !important;
         box-shadow: none !important;
         transform: none !important;
-        overflow: hidden !important;
-        z-index: 999999 !important;
+        overflow: visible !important;
+        z-index: auto !important;
         visibility: visible !important;
       }
       .print-preview-modal * {
@@ -707,6 +714,7 @@ const PrintPreviewModal = memo(({
     signatures, manualOverrides, baseRates, grandTotal, overheadTotal,
     layoutVariant, lastAssemblyId,
     onQuotationDetailsChange, onBillingDetailsChange,
+    onFooterOverride: handleFooterOverride,
   }
 
   return createPortal(
@@ -836,7 +844,7 @@ const PrintPreviewModal = memo(({
                               // Billing: pad to finalLimit
                               return Math.max(0, finalLimit - totalSoFar)
                             })()}
-                            isCompressed={layoutVariant === 'kemco' && page.tasks.length > 10}
+                            isCompressed={printMode === 'quotation' && isLastPage && ((layoutVariant === 'kemco' && page.tasks.length > 10) || (layoutVariant === 'special' && page.tasks.length >= 13))}
                           />
                         </div>
                       )

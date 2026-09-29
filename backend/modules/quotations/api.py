@@ -86,7 +86,7 @@ def _get_audit_label(path: str, full_state: dict = None) -> str:
     if "footer" in p: return f"Footer {field}"
     return path
 
-from .service import safe_json_loads, QuotationService
+from .service import safe_json_loads, QuotationService, calculate_grand_total
 from .repository import quotation_repo
 from .schemas import QuotationCreatePayload
 
@@ -690,7 +690,7 @@ async def update_quotation(
     quot = res.scalar_one_or_none()
     q_no = quot.quotation_no if quot else f"ID {q_id}"
     
-    await _sync_metadata(q_id, data, db, current_user.username)
+    await QuotationService.sync_metadata(q_id, data, db, current_user.username)
     
     await log_activity(
         username=current_user.username,

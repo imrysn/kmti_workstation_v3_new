@@ -136,6 +136,7 @@ export interface Signatures {
 export interface FooterOverrides {
   overhead?: number
   adjustment?: number
+  price?: number
   showAdmin?: boolean
 }
 

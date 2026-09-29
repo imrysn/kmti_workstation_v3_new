@@ -121,7 +121,7 @@ export default function ClientStatementView({
     clientInvoices.forEach(q => {
       const isPartial = q.quotationStatus === 'Partial Billing'
       const pct = isPartial ? getPartialBillingPercentage(q.updateDetail) : 100
-      
+
       const billedAmount = q.grandTotal || 0
       const paidAmount = (q.datePaid || q.billingStatus === 'PAID')
         ? (isPartial ? (q.grandTotal || 0) * (pct / 100) : (q.grandTotal || 0))
@@ -270,10 +270,10 @@ export default function ClientStatementView({
       // Get initial address & phone based on client match
       const norm = selectedClient.toLowerCase()
       if (norm.includes('kusakabe') || norm.includes('kemco')) {
-        setCustomClientAddress('11-2, 2Chome Murotani Nishiku Kobe, Japan (651-2241)')
+        setCustomClientAddress('2-11-2-Chome Murotani Nishi-ku Kobe, Japan (651-2241)')
         setCustomClientPhone('TEL 078-992-9145 / FAX 078-992-9149')
       } else if (norm.includes('next engineering')) {
-        setCustomClientAddress('7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan')
+        setCustomClientAddress('7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan')
         setCustomClientPhone('TEL: +81-95-801-9012 / FAX: +81-95-801-9013')
       } else {
         setCustomClientAddress('')

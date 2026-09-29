@@ -467,7 +467,7 @@ function OverviewTab() {
   // App version breakdown across online workstations
   const versionCounts: Record<string, number> = {}
   onlineWs.forEach(w => {
-    const v = w.version || 'v3.8.8'
+    const v = w.version || 'v3.8.12'
     versionCounts[v] = (versionCounts[v] || 0) + 1
   })
 
@@ -530,7 +530,7 @@ function OverviewTab() {
               <div className="dash-version-header">App Version Adoption</div>
               <div className="dash-version-pills">
                 {Object.entries(versionCounts).map(([ver, cnt]) => (
-                  <div key={ver} className={`dash-ver-chip ${ver === 'v3.8.8' ? 'current' : 'outdated'}`}>
+                  <div key={ver} className={`dash-ver-chip ${ver === 'v3.8.12' ? 'current' : 'outdated'}`}>
                     <span className="dash-ver-tag">{ver}</span>
                     <span className="dash-ver-cnt">{cnt} workstation{cnt > 1 ? 's' : ''}</span>
                   </div>

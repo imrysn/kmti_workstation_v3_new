@@ -14,7 +14,7 @@ from models.user import User, UserRole
 from models.fms import FmsUser
 from models.work_schedule import WorkScheduleJob, WorkScheduleComponent, WorkScheduleAssignment, WorkScheduleMember
 from models.notification import AppNotification
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, text
 from socket_manager import sio, emit_to_user
 
 from modules.work_schedule.repository import WorkScheduleRepository

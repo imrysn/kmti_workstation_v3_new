@@ -23,7 +23,7 @@ export function calculateTaskTotal(
 
   if (isKemco) {
     const children = allTasks.filter(t => t.parentId === task.id)
-    
+
     // If it has children, sum their calculated totals
     if (children.length > 0) {
       const childrenTotal = children.reduce((sum, child) => {
@@ -38,9 +38,12 @@ export function calculateTaskTotal(
       }
     }
 
-    // If no children, use the amount field or manual override
+    // If no children, use the amount field or manual override, or compute from time & rank
     const override = (manualOverrides?.tasks || {})[task.id]
-    const amount = override?.total !== undefined ? override.total : (task.amount || 0)
+    let amount = override?.total !== undefined ? override.total : (task.amount || 0)
+    if (amount === 0 && (task.time || 0) > 0) {
+      amount = getKemcoRankAndPrice(task.time || 0, task.level || 0, task.type || '3D').price
+    }
 
     return {
       basicLabor: 0,
@@ -186,14 +189,14 @@ export interface Customer {
 }
 
 export const CUSTOMERS_CONFIG: Customer[] = [
-  { id: 'KUSAKABE', name: 'Kusakabe (KEMCO)', prefix: 'KM-',    clientName: 'Kusakabe Electric and Machinery Co.,Ltd.', contact: 'Mr. Seiichi Fujiyama',           address: '11-2,2Chome Murotani Nishiku Kobe, Japan (651-2241)', phone: 'TEL  078-992-9145 / FAX 078-992-9149' },
-  { id: 'NIKKO',    name: 'Nikko',            prefix: 'KMN-',   clientName: 'NEXT ENGINEERING Co., Ltd.',               contact: 'MR. Masahiko Hasegawa',              address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'JFE',      name: 'JFE',              prefix: 'KMJFE-', clientName: 'NEXT ENGINEERING Co., Ltd.',               contact: 'MR. Masahiko Hasegawa',              address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'AGCC',     name: 'AGCC',             prefix: 'KMAG-',  clientName: 'AGCC',                                     contact: 'Mr. Nabuchi',                        address: 'Japan',                                                         phone: '' },
-  { id: 'TEX_WAKAYAMA', name: 'Tex Wakayama', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.',               contact: 'MR. Masahiko Hasegawa',              address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'TEX_HANSHIN', name: 'Tex Hanshin',   prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.',               contact: 'MR. Masahiko Hasegawa',              address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'OKINAKA',  name: 'Okinaka',          prefix: 'KMOK-', clientName: 'NEXT ENGINEERING Co., Ltd.',               contact: 'MR. Masahiko Hasegawa',              address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'AMANO',    name: 'Amano',            prefix: 'KMAC-', clientName: 'NEXT ENGINEERING Co., Ltd.',               contact: 'MR. Masahiko Hasegawa',              address: '7-7, Hashimoto-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'KUSAKABE', name: 'Kusakabe (KEMCO)', prefix: 'KM-', clientName: 'Kusakabe Electric and Machinery Co.,Ltd.', contact: 'Mr. Seiichi Fujiyama', address: '2-11-2-Chome Murotani Nishiku Kobe, Japan (651-2241)', phone: 'TEL  078-992-9145 / FAX 078-992-9149' },
+  { id: 'NIKKO', name: 'Nikko', prefix: 'KMN-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'JFE', name: 'JFE', prefix: 'KMJFE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'AGCC', name: 'AGCC', prefix: 'KMAG-', clientName: 'AGC Ceramics Co. Ltd.', contact: 'Mr. Nabuchi', address: '5-6-1 UMEI, TAKASAGO CITY, HYOGO PREF. 6768655 JAPAN', phone: '' },
+  { id: 'TEX_WAKAYAMA', name: 'Tex Wakayama', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'TEX_HANSHIN', name: 'Tex Hanshin', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'OKINAKA', name: 'Okinaka', prefix: 'KMOK-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'AMANO', name: 'Amano', prefix: 'KMAC-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
 ]
 
 export function generateQuotationNumber(date: string, prefix = 'KMTE-', sequential = '001'): string {
@@ -202,7 +205,7 @@ export function generateQuotationNumber(date: string, prefix = 'KMTE-', sequenti
   const yy = year.toString().slice(-2)
   const month = (dateObj.getMonth() + 1).toString().padStart(2, '0')
   const day = dateObj.getDate().toString().padStart(2, '0')
-  
+
   if (prefix === 'KM-') {
     return `KM-${year}-${month}${day}-${sequential}`
   }

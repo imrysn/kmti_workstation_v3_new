@@ -108,6 +108,10 @@ const TasksTable = memo(({
   const [editingGrandTotal, setEditingGrandTotal] = useState(false)
   const [overheadDraft, setOverheadDraft] = useState<string>('')
   const [grandTotalDraft, setGrandTotalDraft] = useState<string>('')
+  const [editingKemcoPrice, setEditingKemcoPrice] = useState(false)
+  const [editingKemcoLeasing, setEditingKemcoLeasing] = useState(false)
+  const [kemcoPriceDraft, setKemcoPriceDraft] = useState<string>('')
+  const [kemcoLeasingDraft, setKemcoLeasingDraft] = useState<string>('')
 
   // ── Engineer bookmark row refs & positions ─────────────────────
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -153,30 +157,40 @@ const TasksTable = memo(({
   }, [collapsedTasks, onCollapsedTasksChange])
 
   // ── Totals memo ────────────────────────────────────────────────
-  const { taskTotals, overheadTotal, subtotal, rawSubtotal, grandTotal, mainTaskCount } = useMemo(() => {
-    const mainTaskCount = tasks.filter(t => t.isMainTask).length
+  const { taskTotals, overheadTotal, subtotal, rawSubtotal, grandTotal, mainTaskCount, kemcoAdjustment } = useMemo(() => {
+    const isKemco = layoutVariant === 'kemco'
+    const isMainTaskForSum = (t: Task) => isKemco ? t.level === 0 : t.isMainTask
+    const mainTaskCount = tasks.filter(isMainTaskForSum).length
 
     const totals: TaskSubtotals[] = tasks.map(task => {
       const { basicLabor, overtime, software, total } = calculateTaskTotal(task, tasks, baseRates, manualOverrides, layoutVariant)
       return { taskId: task.id, basicLabor, overtime, software, total }
     })
 
-    const rawSub = totals.filter((_, i) => tasks[i].isMainTask).reduce((s, t) => s + t.total, 0)
-    const sub = rawSub
+    const rawSub = totals.filter((_, i) => isMainTaskForSum(tasks[i])).reduce((s, t) => s + t.total, 0)
+    const sub = isKemco
+      ? (manualOverrides.footer?.price !== undefined ? manualOverrides.footer.price : (rawSub > 0 ? rawSub : 1848400))
+      : rawSub
 
     const overhead = manualOverrides.footer?.overhead !== undefined
       ? manualOverrides.footer.overhead
-      : calculateOverhead(sub, baseRates.overheadPercentage)
+      : (isKemco ? 0 : calculateOverhead(sub, baseRates.overheadPercentage))
 
-    const grand = sub + overhead + (manualOverrides.footer?.adjustment || 0)
+    const adjustment = manualOverrides.footer?.adjustment !== undefined
+      ? manualOverrides.footer.adjustment
+      : (isKemco ? -148400 : 0)
 
-    return { taskTotals: totals, overheadTotal: overhead, subtotal: sub, rawSubtotal: rawSub, grandTotal: grand, mainTaskCount }
-  }, [tasks, baseRates, manualOverrides])
+    const grand = sub + overhead + adjustment
+
+    return { taskTotals: totals, overheadTotal: overhead, subtotal: sub, rawSubtotal: rawSub, grandTotal: grand, mainTaskCount, kemcoAdjustment: adjustment }
+  }, [tasks, baseRates, manualOverrides, layoutVariant])
 
   // Reset footer overrides when the underlying sum of tasks changes
   // so that overhead and adjustments auto-recalculate from the new base.
   const prevRawSubtotalRef = useRef<number | null>(null)
   useEffect(() => {
+    if (layoutVariant === 'kemco') return
+
     // Initial mount: capture current raw subtotal
     if (prevRawSubtotalRef.current === null) {
       prevRawSubtotalRef.current = rawSubtotal
@@ -193,7 +207,7 @@ const TasksTable = memo(({
       if (Object.keys(prev.footer || {}).length === 0) return prev
       return { ...prev, footer: {} }
     })
-  }, [rawSubtotal, setManualOverrides])
+  }, [rawSubtotal, setManualOverrides, layoutVariant])
 
   // ── Footer helpers ─────────────────────────────────────────────
   const formatValue = (val: number): string => {
@@ -212,17 +226,44 @@ const TasksTable = memo(({
     setEditingOverhead(false)
   }, [onFooterUpdate])
 
+  const handleKemcoPriceBlur = useCallback((draft: string) => {
+    if (draft.trim() === '') {
+      onFooterUpdate?.('price', undefined)
+    } else {
+      const val = parseFloat(draft.replace(/[^0-9.-]/g, ''))
+      if (!isNaN(val) && val >= 0) onFooterUpdate?.('price', val)
+    }
+    setEditingKemcoPrice(false)
+  }, [onFooterUpdate])
+
+  const handleKemcoLeasingBlur = useCallback((draft: string) => {
+    if (draft.trim() === '') {
+      onFooterUpdate?.('adjustment', undefined)
+    } else {
+      let val = parseFloat(draft.replace(/[^0-9.-]/g, ''))
+      if (!isNaN(val)) {
+        const adjustedVal = val > 0 ? -val : val
+        onFooterUpdate?.('adjustment', adjustedVal)
+      }
+    }
+    setEditingKemcoLeasing(false)
+  }, [onFooterUpdate])
+
   const handleGrandTotalBlur = useCallback((draft: string) => {
     if (draft.trim() === '') {
       onFooterUpdate?.('adjustment', undefined)
     } else {
-      const val = parseFloat(draft)
+      const val = parseFloat(draft.replace(/[^0-9.-]/g, ''))
       if (!isNaN(val) && val >= 0) {
-        onFooterUpdate?.('adjustment', val - (subtotal + overheadTotal))
+        if (layoutVariant === 'kemco') {
+          onFooterUpdate?.('adjustment', val - subtotal)
+        } else {
+          onFooterUpdate?.('adjustment', val - (subtotal + overheadTotal))
+        }
       }
     }
     setEditingGrandTotal(false)
-  }, [onFooterUpdate, subtotal, overheadTotal])
+  }, [onFooterUpdate, subtotal, overheadTotal, layoutVariant])
 
   // ── Manual override editing ────────────────────────────────────
   const handleCancelEdit = useCallback(() => {
@@ -657,7 +698,126 @@ const TasksTable = memo(({
 
 
       {/* ── Footer: Totals (Hidden for KEMCO) ─────────────────────── */}
-      {layoutVariant !== 'kemco' && (
+      {/* ── Footer: Totals ────────────────────────────────────────── */}
+      {layoutVariant === 'kemco' ? (
+        <div className="grand-total-section">
+          <div className="grand-total-row">
+            <div className="grand-total-label">Price:</div>
+            <div className="grand-total-value">
+              {editingKemcoPrice ? (
+                <div className="footer-input-wrapper">
+                  <span className="footer-currency-symbol">¥</span>
+                  <CollaborativeField
+                    fieldKey="footer.price"
+                    remoteUsers={remoteUsers}
+                    onFocus={() => emitFocus('footer.price')}
+                    onBlur={() => emitBlur('footer.price')}
+                  >
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={kemcoPriceDraft}
+                      onChange={e => setKemcoPriceDraft(e.target.value)}
+                      onBlur={e => handleKemcoPriceBlur(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleKemcoPriceBlur((e.target as HTMLInputElement).value)
+                        if (e.key === 'Escape') setEditingKemcoPrice(false)
+                      }}
+                      className="footer-input amount-input" autoFocus
+                    />
+                  </CollaborativeField>
+                </div>
+              ) : (
+                <span
+                  className="footer-value-display"
+                  onClick={() => { setKemcoPriceDraft(formatValue(subtotal)); setEditingKemcoPrice(true) }}
+                  title="Click to edit Price"
+                >
+                  {formatCurrency(subtotal)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grand-total-row">
+            <div className="grand-total-label" style={{ color: '#ef4444' }}>Leasing fee:</div>
+            <div className="grand-total-value">
+              {editingKemcoLeasing ? (
+                <div className="footer-input-wrapper">
+                  <span className="footer-currency-symbol" style={{ color: '#ef4444' }}>¥</span>
+                  <CollaborativeField
+                    fieldKey="footer.adjustment"
+                    remoteUsers={remoteUsers}
+                    onFocus={() => emitFocus('footer.adjustment')}
+                    onBlur={() => emitBlur('footer.adjustment')}
+                  >
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={kemcoLeasingDraft}
+                      onChange={e => setKemcoLeasingDraft(e.target.value)}
+                      onBlur={e => handleKemcoLeasingBlur(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleKemcoLeasingBlur((e.target as HTMLInputElement).value)
+                        if (e.key === 'Escape') setEditingKemcoLeasing(false)
+                      }}
+                      className="footer-input amount-input" autoFocus
+                      style={{ color: '#ef4444' }}
+                    />
+                  </CollaborativeField>
+                </div>
+              ) : (
+                <span
+                  className="footer-value-display"
+                  onClick={() => { setKemcoLeasingDraft(formatValue(Math.abs(kemcoAdjustment))); setEditingKemcoLeasing(true) }}
+                  title="Click to edit Leasing Fee"
+                  style={{ color: '#ef4444', fontWeight: 700 }}
+                >
+                  {`- ¥${Math.abs(kemcoAdjustment).toLocaleString()}`}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grand-total-row grand-total-final">
+            <div className="grand-total-label">Total Amount:</div>
+            <div className="grand-total-value">
+              {editingGrandTotal ? (
+                <div className="footer-input-wrapper final-total">
+                  <span className="footer-currency-symbol">¥</span>
+                  <CollaborativeField
+                    fieldKey="footer.adjustment"
+                    remoteUsers={remoteUsers}
+                    onFocus={() => emitFocus('footer.adjustment')}
+                    onBlur={() => emitBlur('footer.adjustment')}
+                  >
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={grandTotalDraft}
+                      onChange={e => setGrandTotalDraft(e.target.value)}
+                      onBlur={e => handleGrandTotalBlur(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleGrandTotalBlur((e.target as HTMLInputElement).value)
+                        if (e.key === 'Escape') setEditingGrandTotal(false)
+                      }}
+                      className="footer-input amount-input total-input" autoFocus
+                    />
+                  </CollaborativeField>
+                </div>
+              ) : (
+                <span
+                  className="footer-value-display grand-total-display"
+                  onClick={() => { setGrandTotalDraft(formatValue(grandTotal)); setEditingGrandTotal(true) }}
+                  title="Click to edit Total Amount"
+                >
+                  {formatCurrency(grandTotal)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
         <div className="grand-total-section">
           <div className="grand-total-row">
             <div className="grand-total-label">Total:</div>

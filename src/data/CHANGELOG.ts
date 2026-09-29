@@ -43,6 +43,16 @@ import profileImg from '../assets/updates/profile_fms.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.12',
+    date: 'September 29, 2026',
+    entries: [
+      {
+        type: 'fix',
+        text: 'Quotation & Billing: Fixed KEMCO layout Excel export signatory cell merges, page pagination breaks, and enabled editable Price and Leasing Fee calculations.'
+      }
+    ]
+  },
+  {
     version: '3.8.9',
     date: 'July 31, 2026',
     entries: [

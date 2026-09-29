@@ -28,17 +28,24 @@ export async function exportToExcel(data: ExcelExportData) {
   } = data
 
   // ── 1. Compute totals ─────────────────────────────────────────────────────
-  const mainTasks = layoutVariant === 'kemco'
-    ? tasks.filter(t => t.level === 1)
-    : tasks.filter(t => t.isMainTask)
+  const isKemco = layoutVariant === 'kemco'
+  const isMainTaskForSum = (t: Task) => isKemco ? t.level === 0 : t.isMainTask
+  const mainTasks = tasks.filter(isMainTaskForSum)
   const taskTotals = mainTasks.map(t => calculateTaskTotal(t, tasks, baseRates, manualOverrides, layoutVariant).total)
-  const subtotal = taskTotals.reduce((s, t) => s + t, 0)
+  const calculatedSubtotal = taskTotals.reduce((s, t) => s + t, 0)
   const footer = manualOverrides?.footer || {}
-  const overheadTotal = footer.overhead !== undefined
-    ? footer.overhead
-    : calculateOverhead(subtotal, baseRates.overheadPercentage)
-  const showAdmin = baseRates.overheadPercentage > 0
-  const grandTotal = subtotal + overheadTotal + (footer.adjustment || 0)
+  const kemcoPrice = footer.price !== undefined
+    ? footer.price
+    : (calculatedSubtotal > 0 ? calculatedSubtotal : 1848400)
+  const subtotal = isKemco ? kemcoPrice : calculatedSubtotal
+  const overheadTotal = isKemco
+    ? 0
+    : (footer.overhead !== undefined ? footer.overhead : calculateOverhead(subtotal, baseRates.overheadPercentage))
+  const showAdmin = isKemco ? false : baseRates.overheadPercentage > 0
+  const adjustment = footer.adjustment !== undefined
+    ? footer.adjustment
+    : (isKemco ? -148400 : 0)
+  const grandTotal = subtotal + overheadTotal + adjustment
   const metaDate = (quotationDetails.date || new Date().toISOString().slice(0, 10)).replace(/-/g, '/')
 
   // ── 2. Fetch template from backend ────────────────────────────────────────
@@ -857,7 +864,10 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
       _safeMerge(sheet, `H${TABLE_START}:H${lastTaskRow}`)
 
       const priceCell = sheet.getCell(`H${TABLE_START}`)
-      priceCell.value = 1848400
+      const kemcoPrice = manualOverrides.footer?.price !== undefined
+        ? manualOverrides.footer.price
+        : 1848400
+      priceCell.value = kemcoPrice
       priceCell.numFmt = '"¥"#,##0'
       priceCell.alignment = { horizontal: 'right', vertical: 'middle' }
       priceCell.font = { name: 'Arial', size: 11, bold: true }
@@ -924,6 +934,9 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     const adjustment = manualOverrides.footer?.adjustment !== undefined
       ? manualOverrides.footer.adjustment
       : -148400
+    const kemcoPrice = manualOverrides.footer?.price !== undefined
+      ? manualOverrides.footer.price
+      : 1848400
 
     _cleanAndReMerge(sheet, totalAmountRow, 'A', 'G')
     const lblCell = sheet.getCell(`A${totalAmountRow}`)
@@ -931,7 +944,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     lblCell.alignment = { horizontal: 'center', vertical: 'middle' }
     lblCell.font = { name: 'Arial', size: 11, bold: true }
 
-    sheet.getCell(`H${totalAmountRow}`).value = 1848400 + adjustment
+    sheet.getCell(`H${totalAmountRow}`).value = kemcoPrice + adjustment
     sheet.getCell(`H${totalAmountRow}`).numFmt = '"¥"#,##0'
     sheet.getCell(`H${totalAmountRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
     sheet.getCell(`H${totalAmountRow}`).font = { name: 'Arial', size: 11, bold: true }
@@ -970,15 +983,47 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   // ── Signatures ────────────────────────────────────────────────────────────
   const s = extraRows // signature row offset
 
-  if (isKemco) {
-    _cleanAndReMerge(sheet, 39 + s, 'A', 'C')
-    _cleanAndReMerge(sheet, 40 + s, 'A', 'C')
-    _cleanAndReMerge(sheet, 46 + s, 'A', 'C')
-    _cleanAndReMerge(sheet, 47 + s, 'A', 'C')
-    _cleanAndReMerge(sheet, 46 + s, 'F', 'H')
-    _cleanAndReMerge(sheet, 47 + s, 'F', 'H')
+  // If rows were inserted, remove stale merges left behind at original template row positions
+  if (s > 0) {
+    try { sheet.unMergeCells('A39:C39') } catch (e) { }
+    try { sheet.unMergeCells('A40:C40') } catch (e) { }
+    try { sheet.unMergeCells('A46:C46') } catch (e) { }
+    try { sheet.unMergeCells('A47:C47') } catch (e) { }
+    if (isKemco) {
+      try { sheet.unMergeCells('F42:G42') } catch (e) { }
+      try { sheet.unMergeCells('F45:H45') } catch (e) { }
+      try { sheet.unMergeCells('F46:H46') } catch (e) { }
+    } else {
+      try { sheet.unMergeCells('E46:F46') } catch (e) { }
+    }
   }
 
+  const recStartCol = isKemco ? 'F' : 'E'
+  const recEndCol = isKemco ? 'H' : 'F'
+
+  // Clean and merge signature name & title cells for both Special and KEMCO
+  _cleanAndReMerge(sheet, 39 + s, 'A', 'C')
+  _cleanAndReMerge(sheet, 40 + s, 'A', 'C')
+  _cleanAndReMerge(sheet, 46 + s, 'A', 'C')
+  _cleanAndReMerge(sheet, 47 + s, 'A', 'C')
+  _cleanAndReMerge(sheet, 46 + s, recStartCol, recEndCol)
+  _cleanAndReMerge(sheet, 47 + s, recStartCol, recEndCol)
+
+  // Ensure underline border on row 38 + s and row 45 + s
+  for (let c = 1; c <= 3; c++) {
+    const cell = sheet.getRow(38 + s).getCell(c)
+    cell.border = { ...cell.border, bottom: { style: 'medium' } }
+  }
+  for (let c = 1; c <= 3; c++) {
+    const cell = sheet.getRow(45 + s).getCell(c)
+    cell.border = { ...cell.border, bottom: { style: 'medium' } }
+  }
+  const rStartIdx = recStartCol.charCodeAt(0) - 64
+  const rEndIdx = recEndCol.charCodeAt(0) - 64
+  for (let c = rStartIdx; c <= rEndIdx; c++) {
+    const cell = sheet.getRow(45 + s).getCell(c)
+    cell.border = { ...cell.border, bottom: { style: 'medium' } }
+  }
 
   sheet.getCell(`A${39 + s}`).value = signatures.quotation.preparedBy.name
   sheet.getCell(`A${39 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
@@ -994,10 +1039,14 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
   sheet.getCell(`A${47 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`A${47 + s}`).font = { name: 'Arial', size: 10, italic: true }
 
-  const receivedCol = isKemco ? 'F' : 'E'
-  sheet.getCell(`${receivedCol}${46 + s}`).value = signatures.quotation.receivedBy.label || '(Signature Over Printed Name)'
-  sheet.getCell(`${receivedCol}${46 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
-  sheet.getCell(`${receivedCol}${46 + s}`).font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell(`${recStartCol}${46 + s}`).value = signatures.quotation.receivedBy.label || '(Signature Over Printed Name)'
+  sheet.getCell(`${recStartCol}${46 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`${recStartCol}${46 + s}`).font = { name: 'Arial', size: 10, bold: true }
+  if (signatures.quotation.receivedBy.title) {
+    sheet.getCell(`${recStartCol}${47 + s}`).value = signatures.quotation.receivedBy.title
+    sheet.getCell(`${recStartCol}${47 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    sheet.getCell(`${recStartCol}${47 + s}`).font = { name: 'Arial', size: 10, italic: true }
+  }
 
   // Un-bold TIN in header (only for Special template since KEMCO doesn't need it)
   if (!isKemco) {
@@ -1170,29 +1219,42 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   // ── Signatures (shift by extraRows) ──────────────────────────────────────
   const s = extraRows
 
-  // Prepared by: A33 name, A34 title (merge guard)
+  // If rows were inserted, remove stale merges left behind at original template row positions
+  if (s > 0) {
+    try { sheet.unMergeCells('A33:C33') } catch (e) { }
+    try { sheet.unMergeCells('A34:C34') } catch (e) { }
+    try { sheet.unMergeCells('E33:G33') } catch (e) { }
+    try { sheet.unMergeCells('E34:G34') } catch (e) { }
+    try { sheet.unMergeCells('E40:G40') } catch (e) { }
+    try { sheet.unMergeCells('E41:G41') } catch (e) { }
+  }
+
+  // Prepared by: A33 name, A34 title
+  _cleanAndReMerge(sheet, 33 + s, 'A', 'C')
+  _cleanAndReMerge(sheet, 34 + s, 'A', 'C')
   sheet.getCell(`A${33 + s}`).value = signatures.billing.preparedBy.name
   sheet.getCell(`A${33 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`A${33 + s}`).font = { name: 'Arial', size: 10, bold: true }
-  _safeMerge(sheet, `A${34 + s}:C${34 + s}`)
   sheet.getCell(`A${34 + s}`).value = signatures.billing.preparedBy.title || 'Accounting Staff'
   sheet.getCell(`A${34 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`A${34 + s}`).font = { name: 'Arial', size: 10, italic: true }
 
   // Approved by: E33 name, E34 title
+  _cleanAndReMerge(sheet, 33 + s, 'E', 'G')
+  _cleanAndReMerge(sheet, 34 + s, 'E', 'G')
   sheet.getCell(`E${33 + s}`).value = signatures.billing.approvedBy.name
   sheet.getCell(`E${33 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`E${33 + s}`).font = { name: 'Arial', size: 10, bold: true }
-  _safeMerge(sheet, `E${34 + s}:G${34 + s}`)
   sheet.getCell(`E${34 + s}`).value = signatures.billing.approvedBy.title || 'Engineering Manager'
   sheet.getCell(`E${34 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`E${34 + s}`).font = { name: 'Arial', size: 10, italic: true }
 
   // Final approver: E40 name, E41 title
+  _cleanAndReMerge(sheet, 40 + s, 'E', 'G')
+  _cleanAndReMerge(sheet, 41 + s, 'E', 'G')
   sheet.getCell(`E${40 + s}`).value = signatures.billing.finalApprover.name
   sheet.getCell(`E${40 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`E${40 + s}`).font = { name: 'Arial', size: 10, bold: true }
-  _safeMerge(sheet, `E${41 + s}:G${41 + s}`)
   sheet.getCell(`E${41 + s}`).value = signatures.billing.finalApprover.title || 'President'
   sheet.getCell(`E${41 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
   sheet.getCell(`E${41 + s}`).font = { name: 'Arial', size: 10, italic: true }
