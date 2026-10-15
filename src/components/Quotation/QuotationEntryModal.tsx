@@ -3,7 +3,7 @@ import { quotationApi } from '../../services/api'
 import { useAuth } from '../../context/AuthContext'
 import QuotationLibraryModal from './QuotationLibraryModal'
 import { LobbyTutorial } from './LobbyTutorial'
-import { CUSTOMERS_CONFIG } from '../../utils/quotation'
+import { getEffectiveCustomers, type Customer } from '../../utils/quotation'
 import './QuotationEntryModal.css'
 
 interface ActiveSession {
@@ -37,6 +37,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
   const [isCreating, setIsCreating] = useState(false)
   const [isLibraryOpen, setIsLibraryOpen] = useState(false)
   const [isLobbyTutorialOpen, setIsLobbyTutorialOpen] = useState(false)
+  const [customers, setCustomers] = useState<Customer[]>(() => getEffectiveCustomers())
   const [newRoom, setNewRoom] = useState<NewRoomForm>({ name: '', variant: 'special', customerId: 'TEX_WAKAYAMA' })
   const [joiningSession, setJoiningSession] = useState<ActiveSession | null>(null)
   const [joinPassword, setJoinPassword] = useState('')
@@ -45,6 +46,16 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
   const { hasRole } = useAuth()
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    const sync = () => setCustomers(getEffectiveCustomers())
+    window.addEventListener('kmti:companies_list_updated', sync)
+    window.addEventListener('kmti:client_profiles_updated', sync)
+    return () => {
+      window.removeEventListener('kmti:companies_list_updated', sync)
+      window.removeEventListener('kmti:client_profiles_updated', sync)
+    }
+  }, [])
 
   const fetchSessions = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -61,7 +72,9 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
   }
 
   const handleCustomerChange = (id: string) => {
-    const variant = id === 'KUSAKABE' ? 'kemco' : 'special'
+    const cust = customers.find(c => c.id === id)
+    const isKemco = id === 'KUSAKABE' || (cust && (cust.clientName || '').toLowerCase().includes('kusakabe'))
+    const variant = isKemco ? 'kemco' : 'special'
     setNewRoom(prev => ({ ...prev, customerId: id, variant }))
   }
 
@@ -209,7 +222,7 @@ export default function QuotationEntryModal({ onJoin, onCreateNew, onStartTutori
                           paddingRight: '40px',
                         }}
                       >
-                        {CUSTOMERS_CONFIG.map(c => (
+                        {customers.map(c => (
                           <option key={c.id} value={c.id} style={{ color: '#000000' }}>
                             {c.name}
                           </option>

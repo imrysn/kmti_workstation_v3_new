@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import type { IQuotation } from '../../types'
 import { normalizeClientName } from '../../hooks/useBillingMonitoring'
 import { useModal } from '../ModalContext'
+import { getCustomerProfile } from '../../utils/quotation'
 import agcLogo from '../../assets/agcc.svg'
 import kusakabeLogo from '../../assets/kusakabe.gif'
 import nextLogo from '../../assets/nextengineering.png'
@@ -249,7 +250,6 @@ export default function ClientStatementView({
   const [customApprovedByName, setCustomApprovedByName] = useState('MR. YUICHIRO MAENO')
 
   // Editable BILL TO states
-  const [customClientName, setCustomClientName] = useState('')
   const [customClientAddress, setCustomClientAddress] = useState('')
   const [customClientPhone, setCustomClientPhone] = useState('')
 
@@ -265,20 +265,11 @@ export default function ClientStatementView({
       setCustomStatementNo(statementNo)
       setCustomDate(currentDateStr)
       setCustomPeriod(billingPeriod)
-      setCustomClientName(selectedClient)
 
-      // Get initial address & phone based on client match
-      const norm = selectedClient.toLowerCase()
-      if (norm.includes('kusakabe') || norm.includes('kemco')) {
-        setCustomClientAddress('2-11-2-Chome Murotani Nishi-ku Kobe, Japan (651-2241)')
-        setCustomClientPhone('TEL 078-992-9145 / FAX 078-992-9149')
-      } else if (norm.includes('next engineering')) {
-        setCustomClientAddress('7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan')
-        setCustomClientPhone('TEL: +81-95-801-9012 / FAX: +81-95-801-9013')
-      } else {
-        setCustomClientAddress('')
-        setCustomClientPhone('')
-      }
+      // Get initial address & phone based on the 3 client profiles
+      const profile = getCustomerProfile(selectedClient)
+      setCustomClientAddress(profile.address || '')
+      setCustomClientPhone(profile.phone || '')
 
       // Try to extract dynamic remittance details from the first matching invoice's data payload
       const firstInvoice = clientInvoices[0]
@@ -286,7 +277,6 @@ export default function ClientStatementView({
         try {
           const parsed = typeof firstInvoice.data === 'string' ? JSON.parse(firstInvoice.data) : firstInvoice.data
           const bd = parsed?.billingDetails
-          const company = parsed?.companyInfo
 
           if (bd?.accountName) setCustomAccountName(bd.accountName)
           if (bd?.bankName) {

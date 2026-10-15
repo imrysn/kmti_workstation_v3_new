@@ -1,10 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
-import { settingsApi, moderationApi, SERVER_BASE } from '../services/api'
+import { settingsApi, moderationApi, clientsApi, SERVER_BASE } from '../services/api'
 import { useModal } from '../components/ModalContext'
 import type { IAppSettings } from '../types'
 import { StatusIcon } from '../components/FileIcons'
 import { useAuth } from '../context/AuthContext'
 import { useUpdate } from '../context/UpdateContext'
+import {
+  getClientProfiles,
+  saveClientProfiles,
+  getStoredCompanies,
+  saveStoredCompanies,
+  type ClientAddressProfile,
+  type Customer,
+} from '../utils/quotation'
 import './Settings.css'
 
 const DEFAULT: IAppSettings = {
@@ -45,6 +53,11 @@ export default function Settings() {
   const { confirm, alert, notify } = useModal()
   const [displayNameInput, setDisplayNameInput] = useState(user?.displayName || '')
 
+  // Client Profiles (Admin/IT only: NEXT Engineering, KEMCO, AGCC)
+  const [clientProfiles, setClientProfiles] = useState<Record<'next' | 'kemco' | 'agcc', ClientAddressProfile>>(getClientProfiles)
+  const [savingProfiles, setSavingProfiles] = useState(false)
+  const [profilesSaved, setProfilesSaved] = useState(false)
+
   useEffect(() => {
     settingsApi.get().then(res => setSettings({ ...DEFAULT, ...res.data }))
   }, [])
@@ -54,6 +67,284 @@ export default function Settings() {
       loadBannedWords()
     }
   }, [user])
+
+  // Sync client profiles from backend on mount
+  useEffect(() => {
+    if (hasRole('admin', 'it')) {
+      clientsApi.list().then(res => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          const kemco = res.data.find(c => (c.code || '').toUpperCase() === 'KUSAKABE' || (c.englishName || '').toUpperCase() === 'KEMCO')
+          const agcc = res.data.find(c => (c.code || '').toUpperCase() === 'AGCC' || (c.englishName || '').toUpperCase() === 'AGCC')
+          const next = res.data.find(c => (c.companyName || '').toLowerCase().includes('next engineering'))
+
+          setClientProfiles(prev => {
+            const updated = {
+              kemco: kemco && kemco.address ? {
+                companyName: kemco.companyName || prev.kemco.companyName,
+                contactPerson: kemco.contactPerson || kemco.contact || prev.kemco.contactPerson,
+                address: kemco.address || prev.kemco.address,
+                phone: kemco.phone || prev.kemco.phone,
+              } : prev.kemco,
+              agcc: agcc && agcc.address ? {
+                companyName: agcc.companyName || prev.agcc.companyName,
+                contactPerson: agcc.contactPerson || agcc.contact || prev.agcc.contactPerson,
+                address: agcc.address || prev.agcc.address,
+                phone: agcc.phone || prev.agcc.phone,
+              } : prev.agcc,
+              next: next && next.address ? {
+                companyName: next.companyName || prev.next.companyName,
+                contactPerson: next.contactPerson || next.contact || prev.next.contactPerson,
+                address: next.address || prev.next.address,
+                phone: next.phone || prev.next.phone,
+              } : prev.next,
+            }
+            saveClientProfiles(updated)
+            return updated
+          })
+        }
+      }).catch(() => {})
+    }
+  }, [user])
+
+  const handleSaveClientProfiles = async () => {
+    setSavingProfiles(true)
+    try {
+      saveClientProfiles(clientProfiles)
+
+      // Sync with backend database records
+      try {
+        const res = await clientsApi.list()
+        if (Array.isArray(res.data)) {
+          for (const c of res.data) {
+            const code = (c.code || '').toUpperCase()
+            const eng = (c.englishName || '').toUpperCase()
+            const comp = (c.companyName || '').toLowerCase()
+
+            if (code === 'KUSAKABE' || eng === 'KEMCO') {
+              await clientsApi.update(Number(c.id), {
+                companyName: clientProfiles.kemco.companyName,
+                contactPerson: clientProfiles.kemco.contactPerson,
+                address: clientProfiles.kemco.address,
+                phone: clientProfiles.kemco.phone,
+              })
+            } else if (code === 'AGCC' || eng === 'AGCC') {
+              await clientsApi.update(Number(c.id), {
+                companyName: clientProfiles.agcc.companyName,
+                contactPerson: clientProfiles.agcc.contactPerson,
+                address: clientProfiles.agcc.address,
+                phone: clientProfiles.agcc.phone,
+              })
+            } else if (comp.includes('next engineering') || ['NIKKO', 'JFE', 'AMANO', 'TEX WAKAYAMA', 'TEX HANSHIN', 'OKINAKA'].includes(eng)) {
+              await clientsApi.update(Number(c.id), {
+                companyName: clientProfiles.next.companyName,
+                contactPerson: clientProfiles.next.contactPerson,
+                address: clientProfiles.next.address,
+                phone: clientProfiles.next.phone,
+              })
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Backend sync failed, local profiles saved', e)
+      }
+
+      setProfilesSaved(true)
+      notify('Client addresses updated successfully!', 'success')
+      setTimeout(() => setProfilesSaved(false), 2500)
+    } finally {
+      setSavingProfiles(false)
+    }
+  }
+
+  // Companies & Quotation Accounts (Admin/IT only)
+  const [companies, setCompanies] = useState<Customer[]>(getStoredCompanies)
+  const [loadingCompanies, setLoadingCompanies] = useState(false)
+  const [companySearch, setCompanySearch] = useState('')
+  const [companyModalOpen, setCompanyModalOpen] = useState(false)
+  const [editingCompany, setEditingCompany] = useState<Customer | null>(null)
+  const [formName, setFormName] = useState('')
+  const [formCode, setFormCode] = useState('')
+  const [formPrefix, setFormPrefix] = useState('')
+  const [formParent, setFormParent] = useState<'next' | 'kemco' | 'agcc'>('next')
+  const [savingCompany, setSavingCompany] = useState(false)
+
+  const loadCompanies = async () => {
+    try {
+      setLoadingCompanies(true)
+      const res = await clientsApi.list()
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        const list: Customer[] = res.data.map(c => {
+          const id = c.code || c.englishName.replace(/\s+/g, '_').toUpperCase()
+          const parentKey: 'next' | 'kemco' | 'agcc' =
+            (c.companyName || '').toLowerCase().includes('kusakabe') || id.includes('KEMCO') || id.includes('KUSAKABE')
+              ? 'kemco'
+              : (c.companyName || '').toLowerCase().includes('agc') || id.includes('AGCC')
+              ? 'agcc'
+              : 'next'
+
+          return {
+            id,
+            name: c.englishName,
+            prefix: c.prefix || 'KMTE-',
+            clientName: c.companyName || (parentKey === 'kemco' ? 'Kusakabe Electric and Machinery Co.,Ltd.' : parentKey === 'agcc' ? 'AGC Ceramics Co. Ltd.' : 'NEXT ENGINEERING Co., Ltd.'),
+            contact: c.contactPerson || c.contact || '',
+            address: c.address || '',
+            phone: c.phone || '',
+            dbId: c.id,
+          }
+        })
+        setCompanies(list)
+        saveStoredCompanies(list)
+      }
+    } catch {
+      setCompanies(getStoredCompanies())
+    } finally {
+      setLoadingCompanies(false)
+    }
+  }
+
+  useEffect(() => {
+    if (hasRole('admin', 'it')) {
+      loadCompanies()
+    }
+  }, [user])
+
+  const handleOpenAddCompany = () => {
+    setEditingCompany(null)
+    setFormName('')
+    setFormCode('')
+    setFormPrefix('KM-')
+    setFormParent('next')
+    setCompanyModalOpen(true)
+  }
+
+  const handleOpenEditCompany = (c: Customer) => {
+    setEditingCompany(c)
+    setFormName(c.name)
+    setFormCode(c.id)
+    setFormPrefix(c.prefix)
+    const pKey: 'next' | 'kemco' | 'agcc' =
+      (c.clientName || '').toLowerCase().includes('kusakabe') || c.id.includes('KEMCO') || c.id.includes('KUSAKABE')
+        ? 'kemco'
+        : (c.clientName || '').toLowerCase().includes('agc') || c.id.includes('AGCC')
+        ? 'agcc'
+        : 'next'
+    setFormParent(pKey)
+    setCompanyModalOpen(true)
+  }
+
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formName.trim()) {
+      notify('Please enter company name', 'warning')
+      return
+    }
+
+    setSavingCompany(true)
+    try {
+      const parentProfile = clientProfiles[formParent]
+      const code = (editingCompany?.id || formCode.trim() || formName.trim().replace(/\s+/g, '_')).toUpperCase()
+      const companyPayload = {
+        englishName: formName.trim(),
+        code,
+        prefix: formPrefix.trim() || 'KM-',
+        companyName: parentProfile.companyName,
+        contactPerson: parentProfile.contactPerson,
+        address: parentProfile.address,
+        phone: parentProfile.phone,
+        category: 'CLIENT'
+      }
+
+      if (editingCompany && editingCompany.dbId) {
+        await clientsApi.update(editingCompany.dbId, companyPayload)
+        
+        const updatedList = companies.map(c => {
+          if (c.dbId === editingCompany.dbId || c.id === editingCompany.id) {
+            return {
+              ...c,
+              name: formName.trim(),
+              id: code,
+              prefix: formPrefix.trim() || 'KM-',
+              clientName: parentProfile.companyName,
+              contact: parentProfile.contactPerson,
+              address: parentProfile.address,
+              phone: parentProfile.phone,
+            }
+          }
+          return c
+        })
+        setCompanies(updatedList)
+        saveStoredCompanies(updatedList)
+        notify(`Company "${formName}" updated successfully!`, 'success')
+      } else {
+        let createdDbId: number | undefined
+        try {
+          const res = await clientsApi.create(companyPayload)
+          createdDbId = res.data?.id
+        } catch (apiErr: any) {
+          console.warn('Backend create error (using local storage fallback):', apiErr)
+        }
+
+        const newCompany: Customer = {
+          id: code,
+          name: formName.trim(),
+          prefix: formPrefix.trim() || 'KM-',
+          clientName: parentProfile.companyName,
+          contact: parentProfile.contactPerson,
+          address: parentProfile.address,
+          phone: parentProfile.phone,
+          dbId: createdDbId,
+        }
+
+        const updatedList = [...companies, newCompany]
+        setCompanies(updatedList)
+        saveStoredCompanies(updatedList)
+        notify(`Company "${formName}" added successfully!`, 'success')
+      }
+
+      setCompanyModalOpen(false)
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || 'Failed to save company'
+      notify(msg, 'error')
+    } finally {
+      setSavingCompany(false)
+    }
+  }
+
+  const handleDeleteCompany = async (c: Customer) => {
+    confirm(
+      `Are you sure you want to remove "${c.name}" (${c.id})? This will remove it from the quotation and billing company list.`,
+      async () => {
+        try {
+          if (c.dbId) {
+            await clientsApi.delete(c.dbId)
+          }
+          const remaining = companies.filter(item => (c.dbId ? item.dbId !== c.dbId : item.id !== c.id))
+          setCompanies(remaining)
+          saveStoredCompanies(remaining)
+          notify(`Company "${c.name}" deleted.`, 'info')
+        } catch (err: any) {
+          const msg = err?.response?.data?.detail || err?.message || 'Failed to delete company'
+          notify(msg, 'error')
+        }
+      },
+      undefined,
+      'danger',
+      'Delete Company',
+      'Delete'
+    )
+  }
+
+  const filteredCompanies = companies.filter(c => {
+    if (!companySearch.trim()) return true
+    const q = companySearch.toLowerCase().trim()
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.id.toLowerCase().includes(q) ||
+      c.prefix.toLowerCase().includes(q) ||
+      (c.clientName || '').toLowerCase().includes(q)
+    )
+  })
 
   const loadBannedWords = async () => {
     setLoadingWords(true)
@@ -353,6 +644,414 @@ export default function Settings() {
             )}
           </div>
         </div>
+      )}
+
+      {hasRole('admin', 'it') && (
+        <>
+          <div className="card sett-card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <h2 className="sett-section-title" style={{ marginBottom: 4, paddingBottom: 0, borderBottom: 'none' }}>
+                Client Addresses (Quotation & Billing)
+              </h2>
+              <div className="sett-info-text">
+                Manage the default addresses and contacts for the 3 client accounts. Changes apply automatically to Quotations and Billing Statements.
+              </div>
+            </div>
+            <button
+              className={`btn ${profilesSaved ? 'btn-success' : 'btn-primary'}`}
+              onClick={handleSaveClientProfiles}
+              disabled={savingProfiles}
+              style={{ whiteSpace: 'nowrap', marginTop: 4 }}
+            >
+              {savingProfiles ? 'Saving...' : profilesSaved ? '✓ Saved!' : 'Save Addresses'}
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+            {/* NEXT Engineering Card */}
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}>
+              <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>
+                  NEXT Engineering Co., Ltd.
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Applies to: Nikko, JFE, Tex Wakayama, Tex Hanshin, Okinaka, Amano
+                </div>
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Contact Person</label>
+                <input
+                  className="input"
+                  value={clientProfiles.next.contactPerson}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    next: { ...prev.next, contactPerson: e.target.value }
+                  }))}
+                  placeholder="Contact person"
+                />
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Office Address</label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={clientProfiles.next.address}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    next: { ...prev.next, address: e.target.value }
+                  }))}
+                  placeholder="Address"
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Phone / Fax</label>
+                <input
+                  className="input"
+                  value={clientProfiles.next.phone}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    next: { ...prev.next, phone: e.target.value }
+                  }))}
+                  placeholder="TEL / FAX"
+                />
+              </div>
+            </div>
+
+            {/* KEMCO Card */}
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}>
+              <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>
+                  Kusakabe (KEMCO)
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Applies to: Kusakabe Electric & Machinery (KM- prefix)
+                </div>
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Contact Person</label>
+                <input
+                  className="input"
+                  value={clientProfiles.kemco.contactPerson}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    kemco: { ...prev.kemco, contactPerson: e.target.value }
+                  }))}
+                  placeholder="Contact person"
+                />
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Office Address</label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={clientProfiles.kemco.address}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    kemco: { ...prev.kemco, address: e.target.value }
+                  }))}
+                  placeholder="Address"
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Phone / Fax</label>
+                <input
+                  className="input"
+                  value={clientProfiles.kemco.phone}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    kemco: { ...prev.kemco, phone: e.target.value }
+                  }))}
+                  placeholder="TEL / FAX"
+                />
+              </div>
+            </div>
+
+            {/* AGCC Card */}
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}>
+              <div style={{ borderBottom: '1px solid var(--border)', paddingBottom: '8px' }}>
+                <div style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>
+                  AGC Ceramics (AGCC)
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Applies to: AGC Ceramics Co. Ltd. (KMAG- prefix)
+                </div>
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Contact Person</label>
+                <input
+                  className="input"
+                  value={clientProfiles.agcc.contactPerson}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    agcc: { ...prev.agcc, contactPerson: e.target.value }
+                  }))}
+                  placeholder="Contact person"
+                />
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Office Address</label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  value={clientProfiles.agcc.address}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    agcc: { ...prev.agcc, address: e.target.value }
+                  }))}
+                  placeholder="Address"
+                  style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              </div>
+
+              <div className="sett-field">
+                <label className="form-label" style={{ fontSize: '11px' }}>Phone / Fax</label>
+                <input
+                  className="input"
+                  value={clientProfiles.agcc.phone}
+                  onChange={e => setClientProfiles(prev => ({
+                    ...prev,
+                    agcc: { ...prev.agcc, phone: e.target.value }
+                  }))}
+                  placeholder="TEL / FAX"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Companies & Quotation Accounts CRUD Card */}
+        <div className="card sett-card" style={{ marginTop: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <div>
+              <h2 className="sett-section-title" style={{ marginBottom: 4, paddingBottom: 0, borderBottom: 'none' }}>
+                Companies & Quotation Accounts
+              </h2>
+              <div className="sett-info-text">
+                Manage project companies, sub-plants, and their drawing/quotation prefixes. New companies under <strong>NEXT Engineering</strong> automatically inherit NEXT's office address and contact person.
+              </div>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={handleOpenAddCompany}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+            >
+              <span style={{ fontSize: '16px', lineHeight: 1 }}>+</span> Add Company
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div style={{ marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              className="input"
+              value={companySearch}
+              onChange={e => setCompanySearch(e.target.value)}
+              placeholder="Search companies by name, code, or prefix..."
+              style={{ maxWidth: 360 }}
+            />
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+              Showing {filteredCompanies.length} of {companies.length} companies
+            </span>
+          </div>
+
+          {/* Table */}
+          <div style={{ overflowX: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Company Name</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600, width: '140px' }}>Prefix</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600 }}>Client Address</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 600, textAlign: 'right', width: '130px' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCompanies.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                      {loadingCompanies ? 'Loading companies...' : 'No companies found.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCompanies.map(c => {
+                    const isKemco = (c.clientName || '').toLowerCase().includes('kusakabe') || c.id.includes('KEMCO') || c.id.includes('KUSAKABE')
+                    const isAgcc = (c.clientName || '').toLowerCase().includes('agc') || c.id.includes('AGCC')
+                    const parentProfile = isKemco ? clientProfiles.kemco : isAgcc ? clientProfiles.agcc : clientProfiles.next
+
+                    return (
+                      <tr key={c.id || c.dbId} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                          {c.name}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#38bdf8' }}>
+                            {c.prefix}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px' }}>
+                            {parentProfile.companyName}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: 2 }}>
+                            {parentProfile.address}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: 6 }}>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              style={{ padding: '4px 10px', fontSize: '12px' }}
+                              onClick={() => handleOpenEditCompany(c)}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              style={{ padding: '4px 10px', fontSize: '12px', color: '#ef4444' }}
+                              onClick={() => handleDeleteCompany(c)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Add / Edit Company Modal */}
+        {companyModalOpen && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }}>
+            <div style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: 14,
+              width: '100%',
+              maxWidth: 480,
+              padding: 24,
+              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                {editingCompany ? 'Edit Company' : 'Add New Company'}
+              </h3>
+
+              <form onSubmit={handleSaveCompany} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div className="sett-field">
+                  <label className="form-label">Company Name *</label>
+                  <input
+                    className="input"
+                    value={formName}
+                    onChange={e => setFormName(e.target.value)}
+                    placeholder="e.g. Tex Wakayama, New Partner Co."
+                    required
+                  />
+                </div>
+
+                <div className="sett-field">
+                  <label className="form-label">Prefix *</label>
+                  <input
+                    className="input"
+                    value={formPrefix}
+                    onChange={e => setFormPrefix(e.target.value)}
+                    placeholder="e.g. KMTE-, KMNC-, KM-"
+                    required
+                  />
+                </div>
+
+                <div className="sett-field">
+                  <label className="form-label">Client Address *</label>
+                  <select
+                    className="input"
+                    value={formParent}
+                    onChange={e => setFormParent(e.target.value as 'next' | 'kemco' | 'agcc')}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <option value="next">
+                      NEXT ENGINEERING Co., Ltd. ({clientProfiles.next.address.slice(0, 42)}...)
+                    </option>
+                    <option value="kemco">
+                      KEMCO ({clientProfiles.kemco.address.slice(0, 42)}...)
+                    </option>
+                    <option value="agcc">
+                      AGCC ({clientProfiles.agcc.address.slice(0, 42)}...)
+                    </option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    onClick={() => setCompanyModalOpen(false)}
+                    disabled={savingCompany}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={savingCompany || !formName.trim()}
+                  >
+                    {savingCompany ? 'Saving...' : editingCompany ? 'Save Changes' : 'Add Company'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+        </>
       )}
 
       <div className="card sett-card">

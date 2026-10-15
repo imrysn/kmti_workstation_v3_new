@@ -186,18 +186,141 @@ export interface Customer {
   contact: string
   address: string
   phone: string
+  dbId?: number
 }
 
 export const CUSTOMERS_CONFIG: Customer[] = [
   { id: 'KUSAKABE', name: 'Kusakabe (KEMCO)', prefix: 'KM-', clientName: 'Kusakabe Electric and Machinery Co.,Ltd.', contact: 'Mr. Seiichi Fujiyama', address: '2-11-2-Chome Murotani Nishiku Kobe, Japan (651-2241)', phone: 'TEL  078-992-9145 / FAX 078-992-9149' },
-  { id: 'NIKKO', name: 'Nikko', prefix: 'KMN-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'JFE', name: 'JFE', prefix: 'KMJFE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'NIKKO', name: 'Nikko', prefix: 'KMN-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'JFE', name: 'JFE', prefix: 'KMJFE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
   { id: 'AGCC', name: 'AGCC', prefix: 'KMAG-', clientName: 'AGC Ceramics Co. Ltd.', contact: 'Mr. Nabuchi', address: '5-6-1 UMEI, TAKASAGO CITY, HYOGO PREF. 6768655 JAPAN', phone: '' },
-  { id: 'TEX_WAKAYAMA', name: 'Tex Wakayama', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'TEX_HANSHIN', name: 'Tex Hanshin', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'OKINAKA', name: 'Okinaka', prefix: 'KMOK-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
-  { id: 'AMANO', name: 'Amano', prefix: 'KMAC-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-9012 / FAX: +81-95-801-9013' },
+  { id: 'TEX_WAKAYAMA', name: 'Tex Wakayama', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'TEX_HANSHIN', name: 'Tex Hanshin', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'OKINAKA', name: 'Okinaka', prefix: 'KMOK-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'AMANO', name: 'Amano', prefix: 'KMAC-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
 ]
+
+export interface ClientAddressProfile {
+  companyName: string
+  contactPerson: string
+  address: string
+  phone: string
+}
+
+export const DEFAULT_CLIENT_PROFILES: Record<'next' | 'kemco' | 'agcc', ClientAddressProfile> = {
+  next: {
+    companyName: 'NEXT ENGINEERING Co., Ltd.',
+    contactPerson: 'MR. Masahiko Hasegawa',
+    address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
+    phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613',
+  },
+  kemco: {
+    companyName: 'Kusakabe Electric and Machinery Co.,Ltd.',
+    contactPerson: 'Mr. Seiichi Fujiyama',
+    address: '2-11-2-Chome Murotani Nishiku Kobe, Japan (651-2241)',
+    phone: 'TEL  078-992-9145 / FAX 078-992-9149',
+  },
+  agcc: {
+    companyName: 'AGC Ceramics Co. Ltd.',
+    contactPerson: 'Mr. Nabuchi',
+    address: '5-6-1 UMEI, TAKASAGO CITY, HYOGO PREF. 6768655 JAPAN',
+    phone: '',
+  },
+}
+
+export function getClientProfiles(): Record<'next' | 'kemco' | 'agcc', ClientAddressProfile> {
+  try {
+    const raw = localStorage.getItem('kmti_client_profiles')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      return {
+        next: { ...DEFAULT_CLIENT_PROFILES.next, ...(parsed.next || {}) },
+        kemco: { ...DEFAULT_CLIENT_PROFILES.kemco, ...(parsed.kemco || {}) },
+        agcc: { ...DEFAULT_CLIENT_PROFILES.agcc, ...(parsed.agcc || {}) },
+      }
+    }
+  } catch {}
+  return DEFAULT_CLIENT_PROFILES
+}
+
+export function saveClientProfiles(profiles: Record<'next' | 'kemco' | 'agcc', ClientAddressProfile>) {
+  try {
+    localStorage.setItem('kmti_client_profiles', JSON.stringify(profiles))
+    window.dispatchEvent(new CustomEvent('kmti:client_profiles_updated', { detail: profiles }))
+  } catch {}
+}
+
+export function getStoredCompanies(): Customer[] {
+  try {
+    const raw = localStorage.getItem('kmti_companies_list')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+      }
+    }
+  } catch {}
+  return CUSTOMERS_CONFIG
+}
+
+export function saveStoredCompanies(companies: Customer[]) {
+  try {
+    localStorage.setItem('kmti_companies_list', JSON.stringify(companies))
+    window.dispatchEvent(new CustomEvent('kmti:companies_list_updated', { detail: companies }))
+  } catch {}
+}
+
+export function getEffectiveCustomers(): Customer[] {
+  const companies = getStoredCompanies()
+  const profiles = getClientProfiles()
+
+  return companies.map(c => {
+    const clientNameLower = (c.clientName || '').toLowerCase()
+    const idLower = (c.id || '').toLowerCase()
+
+    let profile = profiles.next
+    if (clientNameLower.includes('kusakabe') || clientNameLower.includes('kemco') || idLower.includes('kusakabe') || idLower.includes('kemco')) {
+      profile = profiles.kemco
+    } else if (clientNameLower.includes('agc') || idLower.includes('agc')) {
+      profile = profiles.agcc
+    }
+
+    return {
+      ...c,
+      clientName: c.clientName || profile.companyName,
+      contact: c.contact || profile.contactPerson,
+      address: c.address || profile.address,
+      phone: c.phone || profile.phone,
+    }
+  })
+}
+
+export function getCustomerProfile(customerIdOrName?: string): ClientAddressProfile {
+  const profiles = getClientProfiles()
+  const lower = (customerIdOrName || '').toLowerCase().trim()
+  if (!lower) return profiles.next
+
+  if (lower.includes('kusakabe') || lower.includes('kemco')) {
+    return profiles.kemco
+  }
+  if (lower.includes('agcc') || lower.includes('agc')) {
+    return profiles.agcc
+  }
+
+  const customers = getEffectiveCustomers()
+  const match = customers.find(c => c.id.toLowerCase() === lower || c.name.toLowerCase() === lower)
+  if (match) {
+    const parentLower = (match.clientName || '').toLowerCase()
+    if (parentLower.includes('kusakabe') || parentLower.includes('kemco')) {
+      return profiles.kemco
+    }
+    if (parentLower.includes('agcc') || parentLower.includes('agc')) {
+      return profiles.agcc
+    }
+  }
+
+  return profiles.next
+}
 
 export function generateQuotationNumber(date: string, prefix = 'KMTE-', sequential = '001'): string {
   const dateObj = new Date(date + 'T00:00:00')

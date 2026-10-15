@@ -64,6 +64,23 @@ export interface IDesigner {
   japaneseName: string
 }
 
+export interface IClient {
+  id?: number
+  code?: string
+  name?: string
+  category?: string
+  englishName: string
+  companyName?: string
+  clientName?: string
+  contactPerson?: string
+  contact?: string
+  address?: string
+  phone?: string
+  prefix?: string
+  email?: string
+  japaneseName?: string
+}
+
 export interface IAppSettings {
   dbSource: string
   dbName: string

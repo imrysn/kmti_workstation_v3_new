@@ -43,6 +43,16 @@ import profileImg from '../assets/updates/profile_fms.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.13',
+    date: 'October 15, 2026',
+    entries: [
+      {
+        type: 'new',
+        text: 'Client Address & Company Settings — Admins can now manage company details, drawing prefixes, and client billing addresses directly in Settings.',
+      },
+    ],
+  },
+  {
     version: '3.8.12',
     date: 'September 29, 2026',
     entries: [

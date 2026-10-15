@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react'
 import { useDebounceCallback } from '../useDebounce'
-import { getKemcoRankAndPrice, generateQuotationNumber, CUSTOMERS_CONFIG } from '../../utils/quotation'
+import { getKemcoRankAndPrice, generateQuotationNumber, getEffectiveCustomers, getCustomerProfile } from '../../utils/quotation'
 
 export { generateQuotationNumber }
 
@@ -579,21 +579,22 @@ export function useInvoiceState() {
     const newDetails: QuotationDetails = { quotationNo: newQuotNo, referenceNo: '', date: newToday }
     const newTasks: Task[] = [makeBlankTask(0, null)]
 
-    const customer = customerId ? CUSTOMERS_CONFIG.find(c => c.id === customerId) : undefined
+    const customer = customerId ? getEffectiveCustomers().find(c => c.id === customerId) : undefined
+    const profile = getCustomerProfile(customerId || forcedQuotNo || '')
 
-    const defaultClient = customer ? {
-      company: customer.clientName,
-      contact: customer.contact,
-      address: customer.address,
-      phone: customer.phone
-    } : (variant === 'kemco' ? DEFAULT_CLIENT_KEMCO : (forcedQuotNo?.startsWith('KMAG-') || customerId === 'AGCC' ? DEFAULT_CLIENT_AGCC : DEFAULT_CLIENT))
+    const defaultClient: ClientInfo = {
+      company: customer ? customer.clientName : profile.companyName,
+      contact: customer ? customer.contact : profile.contactPerson,
+      address: profile.address,
+      phone: profile.phone
+    }
 
     const newBilling: BillingDetails = {
       ...DEFAULT_BILLING_DETAILS,
       invoiceNo: '',
       jobOrderNo: '',
-      billTo: customer ? customer.clientName : (forcedQuotNo?.startsWith('KMAG-') || customerId === 'AGCC' ? DEFAULT_CLIENT_AGCC.company : ''),
-      clientName: customer ? customer.clientName : (forcedQuotNo?.startsWith('KMAG-') || customerId === 'AGCC' ? DEFAULT_CLIENT_AGCC.company : '')
+      billTo: defaultClient.company,
+      clientName: defaultClient.company
     }
 
     // Pre-seed the new namespace before switching so useStickyState resync

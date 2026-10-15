@@ -98,10 +98,10 @@ Dimensions: Range { model: { top: 1, left: 1, bottom: 50, right: 7 } }
   E14    | DATE:                                    | font:{sz:10,bold:undefined} align:{h:left,v:middle}
   F14    | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
   G14    | 2026-04-23                               | font:{sz:10,bold:undefined} align:{h:center,v:undefined}
-  A15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  B15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  C15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
-  D15    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  A15    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  B15    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  C15    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
+  D15    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:left,v:middle}
   A17    | NO.                                      | font:{sz:11,bold:true} align:{h:center,v:middle}
   B17    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}
   C17    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}
@@ -296,10 +296,10 @@ Dimensions: Range { model: { top: 1, left: 1, bottom: 50, right: 7 } }
   C12    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
   D12    | 7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan | font:{sz:10,bold:undefined} align:{h:left,v:middle}
   E12    | Job Order No.:                           | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
-  A13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
-  B13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
-  C13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
-  D13    | TEL: TEL: +81-95-801-9012 / FAX: +81-95-801-9013 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  A13    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  B13    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  C13    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
+  D13    | TEL: TEL: +81-95-801-6612 / FAX: +81-95-801-6613 | font:{sz:10,bold:undefined} align:{h:undefined,v:middle}
   A15    | NO.                                      | font:{sz:11,bold:true} align:{h:center,v:middle}
   B15    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}
   C15    | REFERENCE NO.                            | font:{sz:11,bold:true} align:{h:center,v:middle}

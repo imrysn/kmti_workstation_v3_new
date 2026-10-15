@@ -164,6 +164,26 @@ async def lifespan(app: FastAPI):
                 logger.warning(f"  [MIGRATION WARNING] Failed to check/migrate is_postponed column: {migrate_err}")
 
             try:
+                res = await conn.execute(text("SHOW COLUMNS FROM clients"))
+                existing_cols = {row[0].lower() for row in res.fetchall()}
+                client_cols = [
+                    ("code", "VARCHAR(50) DEFAULT NULL"),
+                    ("company_name", "VARCHAR(255) DEFAULT NULL"),
+                    ("contact_person", "VARCHAR(255) DEFAULT NULL"),
+                    ("address", "TEXT DEFAULT NULL"),
+                    ("phone", "VARCHAR(255) DEFAULT NULL"),
+                    ("prefix", "VARCHAR(50) DEFAULT NULL")
+                ]
+                for col_name, col_def in client_cols:
+                    if col_name.lower() not in existing_cols:
+                        logger.info(f"  [MIGRATION] Adding '{col_name}' column to 'clients'...")
+                        await conn.execute(text(f"ALTER TABLE clients ADD COLUMN {col_name} {col_def}"))
+                        await conn.commit()
+                        logger.info(f"  [SUCCESS] '{col_name}' column added successfully.")
+            except Exception as migrate_err:
+                logger.warning(f"  [MIGRATION WARNING] Failed to migrate clients columns: {migrate_err}")
+
+            try:
                 # Use advisory locks to prevent concurrent worker processes deadlocking on DDL metadata locks
                 lock_res = await conn.execute(text("SELECT GET_LOCK('kmti_migration_lock', 10)"))
                 if lock_res.scalar() == 1:

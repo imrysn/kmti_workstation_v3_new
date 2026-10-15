@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 import axios from 'axios'
-import type { IProject, IQuotation, IQuotationHistory, ICustomPage, ICustomMapping, IMachineName } from '../types'
+import type { IProject, IQuotation, IQuotationHistory, ICustomPage, ICustomMapping, IMachineName, IClient } from '../types'
 
 export const SERVER_BASE = (() => {
   const override = typeof localStorage !== 'undefined' ? localStorage.getItem('KMTI_SERVER_OVERRIDE') : null
@@ -251,7 +251,13 @@ export const designersApi = {
 export const clientsApi = {
   list: async (category?: string, q?: string, limit: number = 50, offset: number = 0) => {
     try {
-      return await api.get('/clients', { params: { category, q, limit, offset } })
+      const res = await api.get<IClient[]>('/clients', { params: { category, q, limit, offset } })
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        try {
+          localStorage.setItem('kmti_cache_clients', JSON.stringify(res.data))
+        } catch {}
+      }
+      return res
     } catch (err) {
       const cachedStr = localStorage.getItem('kmti_cache_clients')
       if (cachedStr) {
@@ -262,7 +268,10 @@ export const clientsApi = {
         if (q) {
           const term = q.toLowerCase().trim()
           filtered = filtered.filter((c: any) =>
-            c.englishName.toLowerCase().includes(term) ||
+            (c.englishName && c.englishName.toLowerCase().includes(term)) ||
+            (c.companyName && c.companyName.toLowerCase().includes(term)) ||
+            (c.code && c.code.toLowerCase().includes(term)) ||
+            (c.address && c.address.toLowerCase().includes(term)) ||
             (c.japaneseName && c.japaneseName.toLowerCase().includes(term))
           )
         }
@@ -271,10 +280,10 @@ export const clientsApi = {
       throw err
     }
   },
-  create: (data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
-    api.post('/clients', data),
-  update: (id: number, data: { category?: string; englishName?: string; email?: string; japaneseName?: string }) =>
-    api.patch(`/clients/${id}`, data),
+  create: (data: Partial<IClient>) =>
+    api.post<IClient>('/clients', data),
+  update: (id: number, data: Partial<IClient>) =>
+    api.patch<IClient>(`/clients/${id}`, data),
   delete: (id: number) => api.delete(`/clients/${id}`),
 }
 

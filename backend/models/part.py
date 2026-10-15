@@ -84,8 +84,14 @@ class Client(Base):
     __tablename__ = "clients"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    code = Column(String(50), nullable=True)
     category = Column(String(255), index=True, nullable=True)
     english_name = Column(String(255), index=True, unique=True, nullable=False)
+    company_name = Column(String(255), nullable=True)
+    contact_person = Column(String(255), nullable=True)
+    address = Column(Text, nullable=True)
+    phone = Column(String(255), nullable=True)
+    prefix = Column(String(50), nullable=True)
     email = Column(String(255), nullable=True)
     japanese_name = Column(String(255), index=True, nullable=True)
 

@@ -10,6 +10,26 @@ from modules.clients.schemas import ClientCreate, ClientUpdate
 
 router = APIRouter()
 
+def serialize_client(c: Client) -> dict:
+    company_name = c.company_name or c.english_name
+    contact = c.contact_person or ""
+    return {
+        "id": c.id,
+        "code": c.code or c.english_name,
+        "name": c.english_name,
+        "prefix": c.prefix or "KMTE-",
+        "category": c.category or "CLIENT",
+        "englishName": c.english_name,
+        "companyName": company_name,
+        "clientName": company_name,
+        "contact": contact,
+        "contactPerson": contact,
+        "address": c.address or "",
+        "phone": c.phone or "",
+        "email": c.email or "",
+        "japaneseName": c.japanese_name or ""
+    }
+
 @router.get("/")
 async def get_clients(
     category: Optional[str] = None,
@@ -28,6 +48,10 @@ async def get_clients(
         query = query.where(
             or_(
                 Client.english_name.like(like_q),
+                Client.company_name.like(like_q),
+                Client.code.like(like_q),
+                Client.contact_person.like(like_q),
+                Client.address.like(like_q),
                 Client.japanese_name.like(like_q),
                 Client.email.like(like_q)
             )
@@ -40,16 +64,7 @@ async def get_clients(
     result = await db.execute(query)
     clients = result.scalars().all()
     
-    return [
-        {
-            "id": c.id,
-            "category": c.category,
-            "englishName": c.english_name,
-            "email": c.email,
-            "japaneseName": c.japanese_name
-        }
-        for c in clients
-    ]
+    return [serialize_client(c) for c in clients]
 
 @router.post("/", dependencies=[Depends(require_role(["admin", "it"]))])
 async def create_client(
@@ -58,28 +73,30 @@ async def create_client(
     x_socket_id: str | None = Header(None, alias="X-Socket-ID")
 ):
     """Add a new client (Admin/IT only)."""
-    # Check duplicate
     existing = await db.execute(select(Client).where(Client.english_name == data.englishName))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Client already exists")
 
+    company_val = data.companyName or data.clientName or data.englishName
+    contact_val = data.contactPerson or data.contact or ""
+
     new_client = Client(
-        category=data.category,
+        category=data.category or "CLIENT",
         english_name=data.englishName,
-        email=data.email,
-        japanese_name=data.japaneseName
+        code=data.code or data.englishName.replace(" ", "_").upper(),
+        company_name=company_val,
+        contact_person=contact_val,
+        address=data.address or "",
+        phone=data.phone or "",
+        prefix=data.prefix or "KMTE-",
+        email=data.email or "",
+        japanese_name=data.japaneseName or ""
     )
     db.add(new_client)
     await db.commit()
     await db.refresh(new_client)
     
-    res_data = {
-        "id": new_client.id,
-        "category": new_client.category,
-        "englishName": new_client.english_name,
-        "email": new_client.email,
-        "japaneseName": new_client.japanese_name
-    }
+    res_data = serialize_client(new_client)
     await broadcast_mutation("clients", "INSERT", res_data, exclude_sid=x_socket_id)
     return res_data
 
@@ -101,20 +118,31 @@ async def update_client(
         client.category = data.category
     if data.englishName is not None:
         client.english_name = data.englishName
+    if data.code is not None:
+        client.code = data.code
+    if data.companyName is not None:
+        client.company_name = data.companyName
+    elif data.clientName is not None:
+        client.company_name = data.clientName
+    if data.contactPerson is not None:
+        client.contact_person = data.contactPerson
+    elif data.contact is not None:
+        client.contact_person = data.contact
+    if data.address is not None:
+        client.address = data.address
+    if data.phone is not None:
+        client.phone = data.phone
+    if data.prefix is not None:
+        client.prefix = data.prefix
     if data.email is not None:
         client.email = data.email
     if data.japaneseName is not None:
         client.japanese_name = data.japaneseName
         
     await db.commit()
+    await db.refresh(client)
     
-    res_data = {
-        "id": client.id,
-        "category": client.category,
-        "englishName": client.english_name,
-        "email": client.email,
-        "japaneseName": client.japanese_name
-    }
+    res_data = serialize_client(client)
     await broadcast_mutation("clients", "UPDATE", res_data, exclude_sid=x_socket_id)
     return res_data
 

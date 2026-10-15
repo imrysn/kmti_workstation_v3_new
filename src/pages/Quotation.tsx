@@ -18,7 +18,7 @@ import { useAuth } from '../context/AuthContext'
 import QuotationEntryModal from '../components/Quotation/QuotationEntryModal'
 import QuotationWorkspace from '../components/Quotation/QuotationWorkspace'
 import { quotationApi } from '../services/api'
-import { CUSTOMERS_CONFIG, generateQuotationNumber } from '../utils/quotation'
+import { getEffectiveCustomers, generateQuotationNumber, getCustomerProfile } from '../utils/quotation'
 import './Quotation.css'
 
 export default function Quotation() {
@@ -100,7 +100,8 @@ export default function Quotation() {
       const workstation = user ? user.fullName : computerName
 
       // Generate a formal quotation number based on selected customer
-      const customerConfig = CUSTOMERS_CONFIG.find(c => c.id === customerId)
+      const customerConfig = getEffectiveCustomers().find(c => c.id === customerId)
+      const profile = getCustomerProfile(customerId)
       const prefix = customerConfig ? customerConfig.prefix : 'KMTE-'
       const today = new Date().toISOString().split('T')[0]
       const seq = prefix === 'KM-'
@@ -117,9 +118,9 @@ export default function Quotation() {
         display_name: displayName, 
         password,
         workstation,
-        client_name: customerConfig?.clientName || '',
-        customer_incharge: customerConfig?.contact || '',
-        bill_to: customerConfig?.clientName || '',
+        client_name: profile.companyName,
+        customer_incharge: profile.contactPerson || customerConfig?.contact || '',
+        bill_to: profile.companyName,
       })
       const { id } = res.data
 
