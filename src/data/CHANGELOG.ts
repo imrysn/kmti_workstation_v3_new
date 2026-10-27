@@ -43,16 +43,22 @@ import profileImg from '../assets/updates/profile_fms.png'
 
 export const CHANGELOG: VersionChangelog[] = [
   {
+    version: '3.8.14',
+    date: 'October 27, 2026',
+    entries: [
+      {
+        type: 'new',
+        text: 'KEMCO Billing Excel Layout provided',
+      },
+    ],
+  },
+  {
     version: '3.8.13',
     date: 'October 15, 2026',
     entries: [
       {
         type: 'new',
         text: 'Client Address & Company Settings — Admins can now manage company details, drawing prefixes, and client billing addresses directly in Settings.',
-      },
-      {
-        type: 'new',
-        text: 'KEMCO Billing Excel Layout provided',
       },
     ],
   },
