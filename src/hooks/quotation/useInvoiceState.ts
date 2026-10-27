@@ -33,7 +33,7 @@ const DEFAULT_COMPANY: CompanyInfo = {
 export const DEFAULT_CLIENT: ClientInfo = {
   company: 'NEXT ENGINEERING Co., Ltd.',
   contact: 'MR. Masahiko Hasegawa',
-  address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
+  address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan',
   phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613',
 }
 
@@ -230,6 +230,16 @@ export function useInvoiceState() {
 
   const [companyInfo, setCompanyInfo] = useStickyState<CompanyInfo>(DEFAULT_COMPANY, 'companyInfo', ns)
   const [clientInfo, setClientInfo] = useStickyState<ClientInfo>(DEFAULT_CLIENT, 'clientInfo', ns)
+
+  // Auto-migrate legacy NEXT address if found in restored session or active draft
+  useEffect(() => {
+    if (clientInfo?.address && (clientInfo.address.includes('Hashiguchi') || clientInfo.address.includes('852-8114'))) {
+      setClientInfo(prev => ({
+        ...prev,
+        address: DEFAULT_CLIENT.address,
+      }))
+    }
+  }, [clientInfo?.address, setClientInfo])
   const [quotationDetails, setQuotationDetails] = useStickyState<QuotationDetails>(() => ({
     quotationNo: '',
     referenceNo: '',

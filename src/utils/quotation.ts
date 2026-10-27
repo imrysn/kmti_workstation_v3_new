@@ -191,13 +191,13 @@ export interface Customer {
 
 export const CUSTOMERS_CONFIG: Customer[] = [
   { id: 'KUSAKABE', name: 'Kusakabe (KEMCO)', prefix: 'KM-', clientName: 'Kusakabe Electric and Machinery Co.,Ltd.', contact: 'Mr. Seiichi Fujiyama', address: '2-11-2-Chome Murotani Nishiku Kobe, Japan (651-2241)', phone: 'TEL  078-992-9145 / FAX 078-992-9149' },
-  { id: 'NIKKO', name: 'Nikko', prefix: 'KMN-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
-  { id: 'JFE', name: 'JFE', prefix: 'KMJFE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'NIKKO', name: 'Nikko', prefix: 'KMN-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'JFE', name: 'JFE', prefix: 'KMJFE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
   { id: 'AGCC', name: 'AGCC', prefix: 'KMAG-', clientName: 'AGC Ceramics Co. Ltd.', contact: 'Mr. Nabuchi', address: '5-6-1 UMEI, TAKASAGO CITY, HYOGO PREF. 6768655 JAPAN', phone: '' },
-  { id: 'TEX_WAKAYAMA', name: 'Tex Wakayama', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
-  { id: 'TEX_HANSHIN', name: 'Tex Hanshin', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
-  { id: 'OKINAKA', name: 'Okinaka', prefix: 'KMOK-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
-  { id: 'AMANO', name: 'Amano', prefix: 'KMAC-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'TEX_WAKAYAMA', name: 'Tex Wakayama', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'TEX_HANSHIN', name: 'Tex Hanshin', prefix: 'KMTE-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'OKINAKA', name: 'Okinaka', prefix: 'KMOK-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
+  { id: 'AMANO', name: 'Amano', prefix: 'KMAC-', clientName: 'NEXT ENGINEERING Co., Ltd.', contact: 'MR. Masahiko Hasegawa', address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan', phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613' },
 ]
 
 export interface ClientAddressProfile {
@@ -211,7 +211,7 @@ export const DEFAULT_CLIENT_PROFILES: Record<'next' | 'kemco' | 'agcc', ClientAd
   next: {
     companyName: 'NEXT ENGINEERING Co., Ltd.',
     contactPerson: 'MR. Masahiko Hasegawa',
-    address: '7-7, Hashiguchi-machi, Nagasaki City, Nagasaki, 852-8114, Japan',
+    address: '14-21 Sumiyoshi-machi,Nagasaki City,Nagasaki,852-8154,Japan',
     phone: 'TEL: +81-95-801-6612 / FAX: +81-95-801-6613',
   },
   kemco: {
@@ -228,16 +228,29 @@ export const DEFAULT_CLIENT_PROFILES: Record<'next' | 'kemco' | 'agcc', ClientAd
   },
 }
 
+const isLegacyNextAddress = (addr?: string): boolean => {
+  if (!addr) return false
+  return addr.includes('Hashiguchi') || addr.includes('852-8114')
+}
+
 export function getClientProfiles(): Record<'next' | 'kemco' | 'agcc', ClientAddressProfile> {
   try {
     const raw = localStorage.getItem('kmti_client_profiles')
     if (raw) {
       const parsed = JSON.parse(raw)
-      return {
+      const profiles = {
         next: { ...DEFAULT_CLIENT_PROFILES.next, ...(parsed.next || {}) },
         kemco: { ...DEFAULT_CLIENT_PROFILES.kemco, ...(parsed.kemco || {}) },
         agcc: { ...DEFAULT_CLIENT_PROFILES.agcc, ...(parsed.agcc || {}) },
       }
+      // Auto-migrate legacy NEXT address if found in localStorage
+      if (isLegacyNextAddress(profiles.next.address)) {
+        profiles.next.address = DEFAULT_CLIENT_PROFILES.next.address
+        try {
+          localStorage.setItem('kmti_client_profiles', JSON.stringify(profiles))
+        } catch {}
+      }
+      return profiles
     }
   } catch {}
   return DEFAULT_CLIENT_PROFILES
@@ -256,7 +269,20 @@ export function getStoredCompanies(): Customer[] {
     if (raw) {
       const parsed = JSON.parse(raw)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
+        let hasLegacy = false
+        const migrated = parsed.map(c => {
+          if (isLegacyNextAddress(c.address)) {
+            hasLegacy = true
+            return { ...c, address: DEFAULT_CLIENT_PROFILES.next.address }
+          }
+          return c
+        })
+        if (hasLegacy) {
+          try {
+            localStorage.setItem('kmti_companies_list', JSON.stringify(migrated))
+          } catch {}
+        }
+        return migrated
       }
     }
   } catch {}
@@ -289,7 +315,7 @@ export function getEffectiveCustomers(): Customer[] {
       ...c,
       clientName: c.clientName || profile.companyName,
       contact: c.contact || profile.contactPerson,
-      address: c.address || profile.address,
+      address: isLegacyNextAddress(c.address) ? profile.address : (c.address || profile.address),
       phone: c.phone || profile.phone,
     }
   })

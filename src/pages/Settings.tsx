@@ -10,6 +10,7 @@ import {
   saveClientProfiles,
   getStoredCompanies,
   saveStoredCompanies,
+  DEFAULT_CLIENT_PROFILES,
   type ClientAddressProfile,
   type Customer,
 } from '../utils/quotation'
@@ -77,7 +78,22 @@ export default function Settings() {
           const agcc = res.data.find(c => (c.code || '').toUpperCase() === 'AGCC' || (c.englishName || '').toUpperCase() === 'AGCC')
           const next = res.data.find(c => (c.companyName || '').toLowerCase().includes('next engineering'))
 
+          // Auto-heal legacy Hashiguchi address in backend database records
+          const isLegacyNext = next && next.address && (next.address.includes('Hashiguchi') || next.address.includes('852-8114'))
+          if (isLegacyNext) {
+            res.data.forEach(c => {
+              const comp = (c.companyName || '').toLowerCase()
+              const eng = (c.englishName || '').toUpperCase()
+              if (comp.includes('next engineering') || ['NIKKO', 'JFE', 'AMANO', 'TEX WAKAYAMA', 'TEX HANSHIN', 'OKINAKA'].includes(eng)) {
+                clientsApi.update(Number(c.id), {
+                  address: DEFAULT_CLIENT_PROFILES.next.address,
+                }).catch(() => {})
+              }
+            })
+          }
+
           setClientProfiles(prev => {
+            const nextAddress = isLegacyNext ? DEFAULT_CLIENT_PROFILES.next.address : (next?.address || prev.next.address)
             const updated = {
               kemco: kemco && kemco.address ? {
                 companyName: kemco.companyName || prev.kemco.companyName,
@@ -91,10 +107,10 @@ export default function Settings() {
                 address: agcc.address || prev.agcc.address,
                 phone: agcc.phone || prev.agcc.phone,
               } : prev.agcc,
-              next: next && next.address ? {
+              next: next ? {
                 companyName: next.companyName || prev.next.companyName,
                 contactPerson: next.contactPerson || next.contact || prev.next.contactPerson,
-                address: next.address || prev.next.address,
+                address: nextAddress,
                 phone: next.phone || prev.next.phone,
               } : prev.next,
             }
@@ -182,13 +198,14 @@ export default function Settings() {
               ? 'agcc'
               : 'next'
 
+          const isLegacy = c.address && (c.address.includes('Hashiguchi') || c.address.includes('852-8114'))
           return {
             id,
             name: c.englishName,
             prefix: c.prefix || 'KMTE-',
             clientName: c.companyName || (parentKey === 'kemco' ? 'Kusakabe Electric and Machinery Co.,Ltd.' : parentKey === 'agcc' ? 'AGC Ceramics Co. Ltd.' : 'NEXT ENGINEERING Co., Ltd.'),
             contact: c.contactPerson || c.contact || '',
-            address: c.address || '',
+            address: isLegacy ? DEFAULT_CLIENT_PROFILES.next.address : (c.address || ''),
             phone: c.phone || '',
             dbId: c.id,
           }
