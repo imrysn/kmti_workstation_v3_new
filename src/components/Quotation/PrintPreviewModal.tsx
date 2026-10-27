@@ -132,7 +132,7 @@ const PrintPreviewModal = memo(({
           const names = res.data.map((c: any) => c.englishName).filter(Boolean)
           setClientsList(names)
         }
-      }).catch(err => console.error("Error fetching clients:", err))
+      }).catch(err => console.error("Error fetching client presets:", err))
     }
   }, [isOpen])
 

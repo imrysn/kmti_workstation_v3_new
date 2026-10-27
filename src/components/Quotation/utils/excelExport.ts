@@ -38,9 +38,7 @@ export async function exportToExcel(data: ExcelExportData) {
     ? footer.price
     : (calculatedSubtotal > 0 ? calculatedSubtotal : 1848400)
   const subtotal = isKemco ? kemcoPrice : calculatedSubtotal
-  const overheadTotal = isKemco
-    ? 0
-    : (footer.overhead !== undefined ? footer.overhead : calculateOverhead(subtotal, baseRates.overheadPercentage))
+  const overheadTotal = isKemco ? 0 : (footer.overhead !== undefined ? footer.overhead : calculateOverhead(subtotal, baseRates.overheadPercentage))
   const showAdmin = isKemco ? false : baseRates.overheadPercentage > 0
   const adjustment = footer.adjustment !== undefined
     ? footer.adjustment
@@ -50,7 +48,7 @@ export async function exportToExcel(data: ExcelExportData) {
 
   // ── 2. Fetch template from backend ────────────────────────────────────────
   const templateKey = mode === 'billing'
-    ? 'billing'
+    ? (layoutVariant === 'kemco' ? 'kemco_billing' : 'billing')
     : (layoutVariant === 'kemco' ? 'kemco_quotation' : 'quotation')
   const templateRes = await fetch(`${API_BASE}/quotations/templates/${templateKey}`)
   if (!templateRes.ok) throw new Error(`Failed to load ${templateKey} template: ${templateRes.status}`)
@@ -83,10 +81,25 @@ export async function exportToExcel(data: ExcelExportData) {
     let rankSheet = workbook.getWorksheet('Rank') || workbook.addWorksheet('Rank')
     _fillRankSheet(rankSheet)
   } else {
-    _fillBilling(sheet, {
-      quotNo, clientInfo, billingDetails, mainTasks, taskTotals,
-      overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
-    })
+    if (layoutVariant === 'kemco') {
+      _fillKemcoBilling(sheet, {
+        quotNo, clientInfo, billingDetails, quotationDetails, mainTasks, taskTotals,
+        grandTotal, metaDate, signatures, manualOverrides, tasks,
+      })
+
+      // ── SHEET 2: Detailed Breakdown ─────────────────────────────────────────
+      let breakdownSheet = workbook.worksheets[1] || workbook.addWorksheet('Details')
+      _fillBreakdownSheet(breakdownSheet, { tasks, baseRates, manualOverrides, layoutVariant })
+
+      // ── SHEET 3: Rank (content later) ───────────────────────────────────────
+      let rankSheet = workbook.getWorksheet('Rank') || workbook.addWorksheet('Rank')
+      _fillRankSheet(rankSheet)
+    } else {
+      _fillBilling(sheet, {
+        quotNo, clientInfo, billingDetails, mainTasks, taskTotals,
+        overheadTotal, grandTotal, showAdmin, metaDate, signatures, manualOverrides, tasks,
+      })
+    }
   }
 
   // ── 6. Save ───────────────────────────────────────────────────────────────
@@ -750,7 +763,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
             _safeMerge(sheet, `B${r}:B${r + span - 1}`)
           }
           const refCell = sheet.getCell(`B${r}`)
-          refCell.value = row.assemblyTask.referenceNumber || ''
+          refCell.value = _resolveField(row.assemblyTask, 'referenceNumber', row.assemblyTask.referenceNumber || '')
           refCell.alignment = { horizontal: 'center', vertical: 'middle' }
           refCell.font = { name: 'Arial', size: 10, bold: true }
 
@@ -759,7 +772,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
             _safeMerge(sheet, `C${r}:C${r + span - 1}`)
           }
           const machCell = sheet.getCell(`C${r}`)
-          machCell.value = row.assemblyTask.machineCode || ''
+          machCell.value = _resolveField(row.assemblyTask, 'machineCode', row.assemblyTask.machineCode || '')
           machCell.alignment = { horizontal: 'center', vertical: 'middle' }
           machCell.font = { name: 'Arial', size: 10, bold: true }
 
@@ -778,7 +791,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
             _safeMerge(sheet, `F${r}:F${r + span - 1}`)
           }
           const pctCell = sheet.getCell(`F${r}`)
-          const pct = assemblyPercentages[row.assemblyTask.id] || 0
+          const pct = _resolveField(row.assemblyTask, 'percentage', assemblyPercentages[row.assemblyTask.id] || 0)
           pctCell.value = pct / 100
           pctCell.numFmt = '0%'
           pctCell.alignment = { horizontal: 'center', vertical: 'middle' }
@@ -790,13 +803,13 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
           }
           const typeCell = sheet.getCell(`G${r}`)
           const firstTask = row.tasks[0]
-          typeCell.value = firstTask ? (firstTask.type || '3D') : '3D'
+          typeCell.value = _resolveField(firstTask || row.assemblyTask, 'type', firstTask ? (firstTask.type || '3D') : (row.assemblyTask.type || '3D'))
           typeCell.alignment = { horizontal: 'center', vertical: 'middle' }
           typeCell.font = { name: 'Arial', size: 10 }
         }
 
         // Unit Code (2 unit codes in 1 cell)
-        const unitStr = row.tasks.map(t => t.unitCode || '').filter(Boolean).join(', ')
+        const unitStr = row.tasks.map(t => _resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
         sheet.getCell(`D${r}`).value = unitStr
         sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
         sheet.getCell(`D${r}`).font = { name: 'Arial', size: 10 }
@@ -837,15 +850,8 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     }
   }
 
-  // Programmatically merge Price column in KEMCO mode and force styling on descriptions
+  // Programmatically merge Price column in KEMCO mode
   if (isKemco) {
-    // Force all description cells in Column E to be Arial Bold, left-aligned, and have no indentation
-    for (let r = TABLE_START; r <= TABLE_END + extraRows; r++) {
-      const cell = sheet.getCell(`E${r}`)
-      cell.font = { name: 'Arial', size: 10, bold: true }
-      cell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true, indent: 0 }
-    }
-
     try { sheet.unMergeCells(`H${TABLE_START}:H${TABLE_END + extraRows}`) } catch (e) { }
 
     // Apply borders programmatically to all cells in Column H to prevent missing borders after unmerge
@@ -890,11 +896,7 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
     const leasingRow = sheet.getRow(leasingRowIdx)
 
     leasingRow.getCell(1).value = ''
-    leasingRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' }
-    leasingRow.getCell(1).font = { name: 'Arial', size: 11 }
-
     leasingRow.getCell(5).value = 'Leasing fee'
-    leasingRow.getCell(5).alignment = { horizontal: 'left', vertical: 'middle' }
     leasingRow.getCell(5).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
 
     const adjustment = manualOverrides.footer?.adjustment !== undefined
@@ -903,8 +905,31 @@ function _fillQuotation(sheet: ExcelJS.Worksheet, d: {
 
     leasingRow.getCell(8).value = adjustment
     leasingRow.getCell(8).numFmt = '"¥"#,##0;[Red]"- ¥"#,##0'
-    leasingRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' }
     leasingRow.getCell(8).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
+
+    // Normalize table alignments and decouple shared styles across all rows (TABLE_START to TABLE_END + extraRows)
+    for (let r = TABLE_START; r <= TABLE_END + extraRows; r++) {
+      for (const col of ['A', 'B', 'C', 'D', 'F', 'G']) {
+        const cell = sheet.getCell(`${col}${r}`)
+        cell.style = {
+          ...cell.style,
+          alignment: { horizontal: 'center', vertical: 'middle' },
+        }
+      }
+      const eCell = sheet.getCell(`E${r}`)
+      eCell.style = {
+        ...eCell.style,
+        font: r === leasingRowIdx
+          ? { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
+          : { name: 'Arial', size: 10, bold: true },
+        alignment: { horizontal: 'left', vertical: 'middle', wrapText: true, indent: 0 },
+      }
+      const hCell = sheet.getCell(`H${r}`)
+      hCell.style = {
+        ...hCell.style,
+        alignment: { horizontal: 'right', vertical: 'middle' },
+      }
+    }
 
     currentRow = leasingRowIdx + 1
   } else {
@@ -1128,7 +1153,8 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
   const TABLE_START = 16
   const TEMPLATE_TASK_ROWS = 10
   const TABLE_END = TABLE_START + TEMPLATE_TASK_ROWS - 1  // 25
-  const totalContentRows = mainTasks.length + (showAdmin ? 1 : 0) + 1
+  const taskCount = mainTasks.length
+  const totalContentRows = taskCount + (showAdmin ? 1 : 0) + 1
   const extraRows = Math.max(0, totalContentRows - TEMPLATE_TASK_ROWS)
 
   // Clear all pre-styled data rows
@@ -1141,6 +1167,11 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
     _insertRows(sheet, TABLE_END, extraRows, TABLE_END)
   }
 
+  const _resolveField = (task: Task, field: string, defaultValue: any) => {
+    const override = manualOverrides?.tasks?.[task.id] as any
+    return override?.[field] !== undefined ? override[field] : defaultValue
+  }
+
   // Write task rows
   mainTasks.forEach((task: Task, idx: number) => {
     const r = TABLE_START + idx
@@ -1148,23 +1179,23 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
     sheet.getCell(`A${r}`).value = idx + 1
     sheet.getCell(`A${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getCell(`A${r}`).font = { name: 'Arial', size: 10 }
-    sheet.getCell(`B${r}`).value = task.referenceNumber || ''
+    sheet.getCell(`B${r}`).value = _resolveField(task, 'referenceNumber', task.referenceNumber || '')
     sheet.getCell(`B${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getCell(`B${r}`).font = { name: 'Arial', size: 10 }
-    sheet.getCell(`D${r}`).value = task.description || ''
+    sheet.getCell(`D${r}`).value = _resolveField(task, 'description', task.description || '')
     sheet.getCell(`D${r}`).font = { name: 'Arial', size: 10 }
     sheet.getCell(`E${r}`).value = unitPage
     sheet.getCell(`E${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getCell(`E${r}`).font = { name: 'Arial', size: 10 }
-    sheet.getCell(`F${r}`).value = task.type || '3D'
+    sheet.getCell(`F${r}`).value = _resolveField(task, 'type', task.type || '3D')
     sheet.getCell(`F${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
     sheet.getCell(`F${r}`).font = { name: 'Arial', size: 10 }
-    sheet.getCell(`G${r}`).value = taskTotals[idx]
+    sheet.getCell(`G${r}`).value = _resolveField(task, 'total', taskTotals[idx])
     sheet.getCell(`G${r}`).numFmt = '"¥"#,##0'
     sheet.getCell(`G${r}`).font = { name: 'Arial', size: 10 }
   })
 
-  let currentRow = TABLE_START + mainTasks.length
+  let currentRow = TABLE_START + taskCount
 
   // ── Administrative Overhead ───────────────────────────────────────────────
   if (showAdmin) {
@@ -1288,6 +1319,508 @@ function _fillBilling(sheet: ExcelJS.Worksheet, d: {
 
   if (billingDetails.swiftCode) sheet.getCell(`D${49 + b}`).value = billingDetails.swiftCode
   if (billingDetails.branchCode) sheet.getCell(`D${50 + b}`).value = billingDetails.branchCode
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// KEMCO BILLING FILLER
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Template layout (10 pre-styled task rows: 16–25):
+//   A10–A13   client info
+//   F9–F12    document meta (date, invoice no, quotation no, job order no)
+//   A16–H25   task rows (10 default, 8 cols: No, Ref, Machine, Unit, Desc, %, Type, Price)
+//   E{lease}  Leasing fee              (dynamic — follows last task row)
+//   A26+delta Grand total              (A26 in 10-row template; shifts with insertions)
+//   A33–H41   signatures (Prepared by A, Approved by F-H, President F-H)
+//   A43–H50   bank details
+//
+function _fillKemcoBilling(sheet: ExcelJS.Worksheet, d: {
+  quotNo: string
+  clientInfo: ClientInfo
+  billingDetails: BillingDetails
+  quotationDetails: QuotationDetails
+  mainTasks: Task[]
+  taskTotals: number[]
+  grandTotal: number
+  metaDate: string
+  signatures: Signatures
+  manualOverrides: ManualOverrides
+  tasks: Task[]
+}) {
+  const {
+    quotNo, clientInfo, billingDetails, quotationDetails,
+    metaDate, signatures, manualOverrides, tasks,
+  } = d
+
+  const _resolveField = (task: Task, field: string, defaultValue: any) => {
+    const override = manualOverrides?.tasks?.[task.id] as any
+    return override?.[field] !== undefined ? override[field] : defaultValue
+  }
+
+  // 1. Group tasks into KEMCO rows (assemblies + paired subtasks)
+  interface ExcelKemcoRow {
+    assemblyTask: Task
+    tasks: Task[]
+  }
+  const kemcoRows: ExcelKemcoRow[] = []
+  const level0Tasks = tasks.filter(t => t.level === 0)
+  level0Tasks.forEach(assembly => {
+    const subTasks = tasks.filter(t => t.parentId === assembly.id && t.level === 1)
+    if (subTasks.length === 0) {
+      kemcoRows.push({ assemblyTask: assembly, tasks: [] })
+    } else {
+      for (let k = 0; k < subTasks.length; k += 2) {
+        kemcoRows.push({
+          assemblyTask: assembly,
+          tasks: subTasks.slice(k, k + 2)
+        })
+      }
+    }
+  })
+
+  const taskCount = kemcoRows.length
+  const TEMPLATE_TASK_ROWS = 10
+  const totalContentRows = taskCount + 1 // +1 for Leasing fee
+  const effectiveTaskRows = Math.max(10, totalContentRows)
+  const extraRows = Math.max(0, totalContentRows - TEMPLATE_TASK_ROWS)
+
+  // 2. Compute assembly percentages via Hare-Niemeyer (Largest Remainder Method)
+  const assemblyPercentages: Record<number, number> = {}
+  if (tasks.length > 0) {
+    const childrenMap: Record<number, number[]> = {}
+    tasks.forEach(t => {
+      if (t.parentId !== null) {
+        if (!childrenMap[t.parentId]) childrenMap[t.parentId] = []
+        childrenMap[t.parentId].push(t.id)
+      }
+    })
+
+    const countSubtree = (tid: number): number => {
+      let count = 1
+      const children = childrenMap[tid] || []
+      children.forEach(cid => {
+        count += countSubtree(cid)
+      })
+      return count
+    }
+
+    const topLevelCounts = tasks
+      .filter(t => t.level === 0)
+      .map(t => ({ id: t.id, count: countSubtree(t.id) }))
+
+    const totalWeight = topLevelCounts.reduce((acc, t) => acc + t.count, 0)
+
+    if (totalWeight > 0) {
+      const items = topLevelCounts.map(t => {
+        const exact = (t.count / totalWeight) * 100
+        const floored = Math.floor(exact)
+        const remainder = exact - floored
+        return { id: t.id, count: t.count, floored, remainder }
+      })
+
+      const currentSum = items.reduce((acc, item) => acc + item.floored, 0)
+      const difference = 100 - currentSum
+
+      items.sort((a, b) => b.remainder - a.remainder || b.count - a.count || a.id - b.id)
+
+      for (let i = 0; i < difference; i++) {
+        if (items[i]) {
+          items[i].floored += 1
+        }
+      }
+
+      items.forEach(item => {
+        assemblyPercentages[item.id] = item.floored
+      })
+    } else {
+      topLevelCounts.forEach(t => {
+        assemblyPercentages[t.id] = 0
+      })
+    }
+  }
+
+  // 3. Page Setup and View settings
+  sheet.pageSetup = {
+    paperSize: 9, // A4
+    orientation: 'portrait',
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: { left: 0.25, right: 0.25, top: 0.5, bottom: 0.5, header: 0, footer: 0 }
+  }
+  sheet.views = [{ showGridLines: false, zoomScale: 70 }]
+
+  // Hide unused Columns (Col 9 [I] onwards) and Rows (after Bank Details)
+  for (let i = 9; i <= 26; i++) {
+    sheet.getColumn(i).hidden = true
+  }
+  const lastVisibleRow = 51 + extraRows
+  for (let r = lastVisibleRow + 1; r <= lastVisibleRow + 50; r++) {
+    sheet.getRow(r).hidden = true
+  }
+
+  // 4. Client info (Rows 10-13)
+  sheet.getCell('A10').value = clientInfo.company
+  sheet.getCell('A10').font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell('A11').value = clientInfo.contact
+  sheet.getCell('A11').font = { name: 'Arial', size: 10, bold: true, underline: true }
+  sheet.getCell('A12').value = clientInfo.address
+  sheet.getCell('A12').font = { name: 'Arial', size: 10 }
+  sheet.getCell('A13').value = `TEL: ${clientInfo.phone || ''}`
+  sheet.getCell('A13').font = { name: 'Arial', size: 10 }
+
+  // 5. Document meta (Rows 9-12)
+  const billingDate = (billingDetails.billingDate || quotationDetails.date || metaDate).replace(/-/g, '/')
+  const billingQuotNo = billingDetails.quotationNo || quotNo
+
+  ;(['F9', 'F10', 'F11', 'F12'] as const).forEach(cell => {
+    sheet.getCell(cell).font = { name: 'Arial', size: 10, bold: true }
+  })
+  sheet.getCell('G9').value = billingDate
+  sheet.getCell('G9').font = { name: 'Arial', size: 10 }
+  sheet.getCell('G10').value = billingDetails.invoiceNo || ''
+  sheet.getCell('G10').font = { name: 'Arial', size: 10 }
+  sheet.getCell('G11').value = billingQuotNo
+  sheet.getCell('G11').font = { name: 'Arial', size: 10 }
+  sheet.getCell('G12').value = billingDetails.jobOrderNo || ''
+  sheet.getCell('G12').font = { name: 'Arial', size: 10 }
+
+  // 6. Task table (Rows 16-25 in template)
+  const TABLE_START = 16
+  const TABLE_END = TABLE_START + TEMPLATE_TASK_ROWS - 1
+
+  // Clear all pre-styled data rows
+  for (let r = TABLE_START; r <= TABLE_END; r++) {
+    sheet.getRow(r).eachCell({ includeEmpty: true }, cell => { cell.value = null })
+  }
+
+  // Insert extra rows when task count exceeds template capacity
+  if (extraRows > 0) {
+    _insertRows(sheet, TABLE_END, extraRows, TABLE_END)
+  }
+
+  const getExcelAssemblyRowSpan = (rowIndex: number) => {
+    const row = kemcoRows[rowIndex]
+    if (!row) return 0
+
+    if (rowIndex > 0 && kemcoRows[rowIndex - 1].assemblyTask.id === row.assemblyTask.id) {
+      return 0
+    }
+
+    let span = 1
+    for (let j = rowIndex + 1; j < kemcoRows.length; j++) {
+      if (kemcoRows[j].assemblyTask.id === row.assemblyTask.id) {
+        span++
+      } else {
+        break
+      }
+    }
+    return span
+  }
+
+  for (let idx = 0; idx < effectiveTaskRows; idx++) {
+    const r = TABLE_START + idx
+    const row = kemcoRows[idx]
+
+    if (row) {
+      const span = getExcelAssemblyRowSpan(idx)
+
+      if (span > 0) {
+        // No. (row-spanned, based on Assembly)
+        if (span > 1) {
+          _safeMerge(sheet, `A${r}:A${r + span - 1}`)
+        }
+        const allAssemblies = tasks.filter(t => t.level === 0)
+        const assemblyIdx = allAssemblies.findIndex(t => t.id === row.assemblyTask.id)
+        const displayNo = assemblyIdx !== -1 ? assemblyIdx + 1 : ''
+
+        const noCell = sheet.getCell(`A${r}`)
+        noCell.value = displayNo
+        noCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        noCell.font = { name: 'Arial', size: 10 }
+
+        // Construction No (row-spanned)
+        if (span > 1) {
+          _safeMerge(sheet, `B${r}:B${r + span - 1}`)
+        }
+        const refCell = sheet.getCell(`B${r}`)
+        refCell.value = _resolveField(row.assemblyTask, 'referenceNumber', row.assemblyTask.referenceNumber || '')
+        refCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        refCell.font = { name: 'Arial', size: 10, bold: true }
+
+        // Machine Code (row-spanned)
+        if (span > 1) {
+          _safeMerge(sheet, `C${r}:C${r + span - 1}`)
+        }
+        const machCell = sheet.getCell(`C${r}`)
+        machCell.value = _resolveField(row.assemblyTask, 'machineCode', row.assemblyTask.machineCode || '')
+        machCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        machCell.font = { name: 'Arial', size: 10, bold: true }
+
+        // Description (row-spanned, strictly in column E!)
+        if (span > 1) {
+          _safeMerge(sheet, `E${r}:E${r + span - 1}`)
+        }
+        const descCell = sheet.getCell(`E${r}`)
+        const resDesc = _resolveField(row.assemblyTask, 'description', row.assemblyTask.description || '')
+        descCell.value = (resDesc || '').replace(/^[ \u3000\t]+/g, '')
+        descCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true }
+        descCell.font = { name: 'Arial', size: 10, bold: true }
+
+        // Percent% (row-spanned)
+        if (span > 1) {
+          _safeMerge(sheet, `F${r}:F${r + span - 1}`)
+        }
+        const pctCell = sheet.getCell(`F${r}`)
+        const pct = _resolveField(row.assemblyTask, 'percentage', assemblyPercentages[row.assemblyTask.id] || 0)
+        pctCell.value = pct / 100
+        pctCell.numFmt = '0%'
+        pctCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        pctCell.font = { name: 'Arial', size: 10 }
+
+        // Type (row-spanned)
+        if (span > 1) {
+          _safeMerge(sheet, `G${r}:G${r + span - 1}`)
+        }
+        const typeCell = sheet.getCell(`G${r}`)
+        const firstTask = row.tasks[0]
+        typeCell.value = _resolveField(firstTask || row.assemblyTask, 'type', firstTask ? (firstTask.type || '3D') : (row.assemblyTask.type || '3D'))
+        typeCell.alignment = { horizontal: 'center', vertical: 'middle' }
+        typeCell.font = { name: 'Arial', size: 10 }
+      }
+
+      // Unit Code (2 unit codes in 1 cell)
+      const unitStr = row.tasks.map(t => _resolveField(t, 'unitCode', t.unitCode || '')).filter(Boolean).join(', ')
+      sheet.getCell(`D${r}`).value = unitStr
+      sheet.getCell(`D${r}`).alignment = { horizontal: 'center', vertical: 'middle' }
+      sheet.getCell(`D${r}`).font = { name: 'Arial', size: 10 }
+
+      sheet.getCell(`H${r}`).value = null
+    } else {
+      // Empty filler row to pad up to 10 rows
+      for (let col = 2; col <= 8; col++) {
+        sheet.getCell(r, col).value = ''
+      }
+    }
+  }
+
+  try { sheet.unMergeCells(`H${TABLE_START}:H${TABLE_END + extraRows}`) } catch (e) { }
+
+  // Apply borders programmatically to all cells in Column H
+  for (let r = TABLE_START; r <= TABLE_END + extraRows; r++) {
+    const cell = sheet.getCell(`H${r}`)
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: r === (TABLE_END + extraRows) ? { style: 'medium' } : { style: 'thin' },
+      right: { style: 'medium' }
+    }
+  }
+
+  const lastTaskRow = TABLE_START + taskCount - 1
+  if (lastTaskRow >= TABLE_START) {
+    _safeMerge(sheet, `H${TABLE_START}:H${lastTaskRow}`)
+
+    const priceCell = sheet.getCell(`H${TABLE_START}`)
+    const kemcoPrice = manualOverrides.footer?.price !== undefined
+      ? manualOverrides.footer.price
+      : 1848400
+    priceCell.value = kemcoPrice
+    priceCell.numFmt = '"¥"#,##0'
+    priceCell.alignment = { horizontal: 'right', vertical: 'middle' }
+    priceCell.font = { name: 'Arial', size: 11, bold: true }
+  }
+
+  // 7. Leasing Fee (KEMCO Mode Only)
+  const leasingRowIdx = TABLE_START + taskCount
+  const totalAmountRow = TABLE_END + extraRows + 1
+
+  const leasingRow = sheet.getRow(leasingRowIdx)
+  leasingRow.getCell(1).value = ''
+  leasingRow.getCell(5).value = 'Leasing fee'
+  leasingRow.getCell(5).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
+
+  const adjustment = manualOverrides.footer?.adjustment !== undefined
+    ? manualOverrides.footer.adjustment
+    : -148400
+
+  leasingRow.getCell(8).value = adjustment
+  leasingRow.getCell(8).numFmt = '"¥"#,##0;[Red]"- ¥"#,##0'
+  leasingRow.getCell(8).font = { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
+
+  // 8. Explicitly normalize alignments and font styles across ALL table data rows (TABLE_START to TABLE_END + extraRows)
+  // This detaches shared style references and guarantees:
+  // - Columns A, B, C, D, F, G are Center aligned across every single row (including merged and filler rows)
+  // - Column E is Arial Bold (size 10), Left aligned, wrapText, no indentation (Leasing fee retains size 11 red)
+  // - Column H is Right aligned
+  for (let r = TABLE_START; r <= TABLE_END + extraRows; r++) {
+    for (const col of ['A', 'B', 'C', 'D', 'F', 'G']) {
+      const cell = sheet.getCell(`${col}${r}`)
+      cell.style = {
+        ...cell.style,
+        alignment: { horizontal: 'center', vertical: 'middle' },
+      }
+    }
+    const eCell = sheet.getCell(`E${r}`)
+    eCell.style = {
+      ...eCell.style,
+      font: r === leasingRowIdx
+        ? { name: 'Arial', size: 11, bold: true, color: { argb: 'FFFF0000' } }
+        : { name: 'Arial', size: 10, bold: true },
+      alignment: { horizontal: 'left', vertical: 'middle', wrapText: true, indent: 0 },
+    }
+    const hCell = sheet.getCell(`H${r}`)
+    hCell.style = {
+      ...hCell.style,
+      alignment: { horizontal: 'right', vertical: 'middle' },
+    }
+  }
+
+  // 8. Total Amount Row
+  const kemcoPrice = manualOverrides.footer?.price !== undefined
+    ? manualOverrides.footer.price
+    : 1848400
+
+  _cleanAndReMerge(sheet, totalAmountRow, 'A', 'G')
+  const lblCell = sheet.getCell(`A${totalAmountRow}`)
+  lblCell.value = 'Total Amount'
+  lblCell.alignment = { horizontal: 'center', vertical: 'middle' }
+  lblCell.font = { name: 'Arial', size: 11, bold: true }
+
+  sheet.getCell(`H${totalAmountRow}`).value = kemcoPrice + adjustment
+  sheet.getCell(`H${totalAmountRow}`).numFmt = '"¥"#,##0'
+  sheet.getCell(`H${totalAmountRow}`).alignment = { horizontal: 'right', vertical: 'middle' }
+  sheet.getCell(`H${totalAmountRow}`).font = { name: 'Arial', size: 11, bold: true }
+
+  for (let c = 1; c <= 8; c++) {
+    const cell = sheet.getRow(totalAmountRow).getCell(c)
+    cell.border = {
+      top: { style: 'thin' },
+      bottom: { style: 'medium' },
+      left: c === 1 ? { style: 'medium' } : { style: 'thin' },
+      right: c === 8 ? { style: 'medium' } : (c === 7 ? { style: 'thin' } : undefined)
+    }
+  }
+
+  // 9. Signatures (shifted by extraRows)
+  const s = extraRows
+  if (s > 0) {
+    try { sheet.unMergeCells('A33:C33') } catch (e) { }
+    try { sheet.unMergeCells('A34:C34') } catch (e) { }
+    try { sheet.unMergeCells('F33:H33') } catch (e) { }
+    try { sheet.unMergeCells('F34:H34') } catch (e) { }
+    try { sheet.unMergeCells('F40:H40') } catch (e) { }
+    try { sheet.unMergeCells('F41:H41') } catch (e) { }
+  }
+
+  // Prepared by: A33 name, A34 title
+  _cleanAndReMerge(sheet, 33 + s, 'A', 'C')
+  _cleanAndReMerge(sheet, 34 + s, 'A', 'C')
+  sheet.getCell(`A${33 + s}`).value = signatures.billing.preparedBy.name
+  sheet.getCell(`A${33 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`A${33 + s}`).font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell(`A${34 + s}`).value = signatures.billing.preparedBy.title || 'Accounting Staff'
+  sheet.getCell(`A${34 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`A${34 + s}`).font = { name: 'Arial', size: 10, italic: true }
+
+  // Approved by (Manager): F33 name, F34 title
+  _cleanAndReMerge(sheet, 33 + s, 'F', 'H')
+  _cleanAndReMerge(sheet, 34 + s, 'F', 'H')
+  sheet.getCell(`F${33 + s}`).value = signatures.billing.approvedBy.name
+  sheet.getCell(`F${33 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`F${33 + s}`).font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell(`F${34 + s}`).value = signatures.billing.approvedBy.title || 'Engineering Manager'
+  sheet.getCell(`F${34 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`F${34 + s}`).font = { name: 'Arial', size: 10, italic: true }
+
+  // Approved by (President): F40 name, F41 title
+  _cleanAndReMerge(sheet, 40 + s, 'F', 'H')
+  _cleanAndReMerge(sheet, 41 + s, 'F', 'H')
+  sheet.getCell(`F${40 + s}`).value = signatures.billing.finalApprover.name
+  sheet.getCell(`F${40 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`F${40 + s}`).font = { name: 'Arial', size: 10, bold: true }
+  sheet.getCell(`F${41 + s}`).value = signatures.billing.finalApprover.title || 'President'
+  sheet.getCell(`F${41 + s}`).alignment = { horizontal: 'center', vertical: 'middle' }
+  sheet.getCell(`F${41 + s}`).font = { name: 'Arial', size: 10, italic: true }
+
+  // Underlines
+  for (let c = 1; c <= 3; c++) {
+    const cell = sheet.getRow(32 + s).getCell(c)
+    cell.border = { ...cell.border, bottom: { style: 'medium' } }
+  }
+  for (let c = 6; c <= 8; c++) {
+    const cell = sheet.getRow(32 + s).getCell(c)
+    cell.border = { ...cell.border, bottom: { style: 'medium' } }
+  }
+  for (let c = 6; c <= 8; c++) {
+    const cell = sheet.getRow(39 + s).getCell(c)
+    cell.border = { ...cell.border, bottom: { style: 'medium' } }
+  }
+
+  // 10. Bank Details (shifted by extraRows)
+  const b = extraRows
+  if (b > 0) {
+    try { sheet.unMergeCells('A43:C43') } catch (e) { }
+    try { sheet.unMergeCells('B44:C44') } catch (e) { }
+    try { sheet.unMergeCells('D44:H44') } catch (e) { }
+    try { sheet.unMergeCells('B45:C45') } catch (e) { }
+    try { sheet.unMergeCells('D45:H45') } catch (e) { }
+    try { sheet.unMergeCells('B46:C46') } catch (e) { }
+    try { sheet.unMergeCells('D46:H46') } catch (e) { }
+    try { sheet.unMergeCells('B47:C47') } catch (e) { }
+    try { sheet.unMergeCells('D47:H47') } catch (e) { }
+    try { sheet.unMergeCells('D48:H48') } catch (e) { }
+    try { sheet.unMergeCells('B49:C49') } catch (e) { }
+    try { sheet.unMergeCells('D49:H49') } catch (e) { }
+    try { sheet.unMergeCells('B50:C50') } catch (e) { }
+    try { sheet.unMergeCells('D50:H50') } catch (e) { }
+  }
+
+  _cleanAndReMerge(sheet, 43 + b, 'A', 'C')
+  const bankTitle = sheet.getCell(`A${43 + b}`)
+  bankTitle.value = 'BANK DETAILS (Yen)'
+  bankTitle.font = { name: 'Arial', size: 11, bold: true, underline: true }
+
+  const bankFields = [
+    { row: 44, label: 'BANK NAME:', val: billingDetails.bankName },
+    { row: 45, label: 'SAVINGS ACCOUNT NAME:', val: billingDetails.accountName },
+    { row: 46, label: 'SAVINGS ACCOUNT NUMBER:', val: billingDetails.accountNumber },
+    { row: 47, label: 'BANK ADDRESS:', val: billingDetails.bankAddress },
+    { row: 49, label: 'SWIFT CODE:', val: billingDetails.swiftCode },
+    { row: 50, label: 'BRANCH CODE:', val: billingDetails.branchCode },
+  ]
+
+  for (const bf of bankFields) {
+    _cleanAndReMerge(sheet, bf.row + b, 'B', 'C')
+    sheet.getCell(`B${bf.row + b}`).value = bf.label
+    sheet.getCell(`B${bf.row + b}`).font = { name: 'Arial', size: 10 }
+
+    _cleanAndReMerge(sheet, bf.row + b, 'D', 'H')
+    if (bf.row === 47 && bf.val) {
+      const addressStr = bf.val
+      const splitIdx = addressStr.toUpperCase().indexOf('LANGKAAN')
+      if (splitIdx > 0) {
+        sheet.getCell(`D${47 + b}`).value = addressStr.substring(0, splitIdx).trim()
+        _cleanAndReMerge(sheet, 48 + b, 'D', 'H')
+        sheet.getCell(`D${48 + b}`).value = addressStr.substring(splitIdx).trim()
+        sheet.getCell(`D${48 + b}`).font = { name: 'Arial', size: 10 }
+      } else {
+        const mid = Math.floor(addressStr.length / 2)
+        const commaIdx = addressStr.lastIndexOf(',', mid + 20)
+        if (commaIdx > 0) {
+          sheet.getCell(`D${47 + b}`).value = addressStr.substring(0, commaIdx + 1).trim()
+          _cleanAndReMerge(sheet, 48 + b, 'D', 'H')
+          sheet.getCell(`D${48 + b}`).value = addressStr.substring(commaIdx + 1).trim()
+          sheet.getCell(`D${48 + b}`).font = { name: 'Arial', size: 10 }
+        } else {
+          sheet.getCell(`D${47 + b}`).value = addressStr
+        }
+      }
+    } else if (bf.val !== undefined) {
+      sheet.getCell(`D${bf.row + b}`).value = bf.val
+    }
+    sheet.getCell(`D${bf.row + b}`).font = { name: 'Arial', size: 10 }
+  }
 }
 
 function _fillRankSheet(sheet: ExcelJS.Worksheet) {

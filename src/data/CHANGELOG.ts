@@ -50,6 +50,10 @@ export const CHANGELOG: VersionChangelog[] = [
         type: 'new',
         text: 'Client Address & Company Settings — Admins can now manage company details, drawing prefixes, and client billing addresses directly in Settings.',
       },
+      {
+        type: 'new',
+        text: 'KEMCO Billing Excel Layout provided',
+      },
     ],
   },
   {

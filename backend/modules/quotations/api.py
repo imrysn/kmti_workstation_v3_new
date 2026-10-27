@@ -386,6 +386,7 @@ _TEMPLATE_MAP = {
     "quotation": "Quotation Template.xlsx",
     "billing":   "Billing Template.xlsx",
     "kemco_quotation": "KEMCO Quotation Template.xlsx",
+    "kemco_billing": "KEMCO Billing Template.xlsx",
 }
 
 @router.get("/templates/{template_name}")

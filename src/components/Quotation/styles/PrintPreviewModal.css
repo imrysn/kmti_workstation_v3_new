@@ -438,6 +438,14 @@
   min-height: 80px;
 }
 
+/* ── Editable Cell Empty Placeholder ──────────────────────────────── */
+.ppm-unit-input[contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  font-weight: normal;
+  pointer-events: none;
+}
+
 /* Print Styles - Only for actual print media */
 @media print {
   .ppm-header, .ppm-footer-bar, .ppm-backdrop, .ppm-page-break-indicator, .ppm-sidebar {
